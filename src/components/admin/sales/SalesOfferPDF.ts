@@ -30,6 +30,9 @@ interface SalesOfferParams {
   // EMI fields
   interestRate?: number;
   tenureMonths?: number;
+  discountAmount?: number;
+  discountLabel?: string;
+  discountRemarks?: string;
 }
 
 /** Always show full INR — never abbreviate to L/Cr */
@@ -49,6 +52,9 @@ export function generateSalesOfferPDF(params: SalesOfferParams): { doc: jsPDF; f
   const colValue = w - 25;
   const rowH = 7;
   let y = 20;
+  const discountAmount = Math.max(params.discountAmount || 0, 0);
+  const rawTotalPrice = params.onRoadPrice || params.dealValue || 0;
+  const totalPrice = Math.max(rawTotalPrice - discountAmount, 0);
 
   // ── Header ──
   doc.setFillColor(30, 41, 59);
@@ -127,10 +133,43 @@ export function generateSalesOfferPDF(params: SalesOfferParams): { doc: jsPDF; f
     doc.setLineWidth(0.5);
     doc.line(colLabel - 2, y, w - 13, y);
     y += 6;
+
+    const basePrice = rawTotalPrice > 0 ? rawTotalPrice : runningTotal;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
+    doc.text("Sub Total On-Road", colLabel, y);
+    doc.text(formatINR(basePrice), colValue, y, { align: "right" });
+    y += rowH;
+
+    if (discountAmount > 0) {
+      doc.setTextColor(16, 124, 65);
+      doc.text(`Less: ${params.discountLabel || "Special Discount"}`, colLabel, y);
+      doc.text(`- ${formatINR(discountAmount)}`, colValue, y, { align: "right" });
+      y += rowH;
+
+      doc.setDrawColor(30, 41, 59);
+      doc.setLineWidth(0.5);
+      doc.line(colLabel - 2, y - 2, w - 13, y - 2);
+      doc.setFont("helvetica", "bold");
+      doc.text("Offer Price After Discount", colLabel, y + 3);
+      doc.text(formatINR(totalPrice), colValue, y + 3, { align: "right" });
+      y += 9;
+
+      if (params.discountRemarks) {
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(8);
+        doc.setTextColor(90, 90, 90);
+        const discountLines = doc.splitTextToSize(params.discountRemarks, w - 30);
+        doc.text(discountLines, colLabel, y);
+        y += discountLines.length * 4 + 2;
+      }
+
+      doc.setTextColor(30, 41, 59);
+    }
   }
 
   // ── SECTION A: Total Car Price ──
-  const totalPrice = params.onRoadPrice || params.dealValue || 0;
   if (totalPrice > 0) {
     doc.setFillColor(236, 253, 245);
     doc.rect(colLabel - 2, y - 4, w - 26, 10, "F");
@@ -422,6 +461,8 @@ export function generateSalesOfferPDF(params: SalesOfferParams): { doc: jsPDF; f
   doc.text("Grabyourcar | Phone: +91 98559 24442 | www.grabyourcar.com", w / 2, footerY, { align: "center" });
   doc.text("This is a quotation only. Final pricing subject to change.", w / 2, footerY + 5, { align: "center" });
 
-  const fileName = `Car_Offer_${params.customerName.replace(/\s/g, "_")}_${params.carModel.replace(/\s/g, "_")}.pdf`;
+  const safeCustomer = params.customerName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "") || "Customer";
+  const safeCar = params.carModel.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "") || "Car";
+  const fileName = `Car_Offer_${safeCustomer}_${safeCar}_${Date.now()}.pdf`;
   return { doc, fileName };
 }
