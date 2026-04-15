@@ -2786,6 +2786,111 @@ export type Database = {
           },
         ]
       }
+      car_sales_quote_history: {
+        Row: {
+          bank_name: string | null
+          booking_amount: number | null
+          car_brand: string | null
+          car_color: string | null
+          car_model: string | null
+          car_variant: string | null
+          city: string | null
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          discount_amount: number | null
+          discount_type: string | null
+          emi_amount: number | null
+          ex_showroom_price: number | null
+          final_price: number | null
+          id: string
+          include_loan_offer: boolean | null
+          interest_rate: number | null
+          loan_amount: number | null
+          notes: string | null
+          on_road_price: number | null
+          other_loan_expenses: number | null
+          pdf_storage_path: string | null
+          price_breakup: Json | null
+          processing_fees: number | null
+          quote_ref: string | null
+          share_method: string
+          source: string | null
+          tenure_months: number | null
+          total_interest: number | null
+          total_payment: number | null
+        }
+        Insert: {
+          bank_name?: string | null
+          booking_amount?: number | null
+          car_brand?: string | null
+          car_color?: string | null
+          car_model?: string | null
+          car_variant?: string | null
+          city?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          discount_amount?: number | null
+          discount_type?: string | null
+          emi_amount?: number | null
+          ex_showroom_price?: number | null
+          final_price?: number | null
+          id?: string
+          include_loan_offer?: boolean | null
+          interest_rate?: number | null
+          loan_amount?: number | null
+          notes?: string | null
+          on_road_price?: number | null
+          other_loan_expenses?: number | null
+          pdf_storage_path?: string | null
+          price_breakup?: Json | null
+          processing_fees?: number | null
+          quote_ref?: string | null
+          share_method?: string
+          source?: string | null
+          tenure_months?: number | null
+          total_interest?: number | null
+          total_payment?: number | null
+        }
+        Update: {
+          bank_name?: string | null
+          booking_amount?: number | null
+          car_brand?: string | null
+          car_color?: string | null
+          car_model?: string | null
+          car_variant?: string | null
+          city?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          discount_amount?: number | null
+          discount_type?: string | null
+          emi_amount?: number | null
+          ex_showroom_price?: number | null
+          final_price?: number | null
+          id?: string
+          include_loan_offer?: boolean | null
+          interest_rate?: number | null
+          loan_amount?: number | null
+          notes?: string | null
+          on_road_price?: number | null
+          other_loan_expenses?: number | null
+          pdf_storage_path?: string | null
+          price_breakup?: Json | null
+          processing_fees?: number | null
+          quote_ref?: string | null
+          share_method?: string
+          source?: string | null
+          tenure_months?: number | null
+          total_interest?: number | null
+          total_payment?: number | null
+        }
+        Relationships: []
+      }
       car_specifications: {
         Row: {
           car_id: string
