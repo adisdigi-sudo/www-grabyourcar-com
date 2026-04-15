@@ -58,7 +58,8 @@ export const performSafePreviewReload = (): void => {
   try {
     window.location.replace(buildSafePreviewReloadUrl().toString());
   } catch {
-    window.location.reload();
+    const fallbackUrl = buildSafePreviewReloadUrl().toString();
+    window.location.assign(fallbackUrl);
   }
 };
 
