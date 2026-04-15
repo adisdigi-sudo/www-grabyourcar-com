@@ -436,12 +436,12 @@ export default function StateCityPricingManager() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Select Car</Label>
-                <Select value={selectedCar} onValueChange={setSelectedCar}>
+                <Select value={selectedCar || "__all__"} onValueChange={(v) => setSelectedCar(v === "__all__" ? "" : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="All Cars" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Cars</SelectItem>
+                    <SelectItem value="__all__">All Cars</SelectItem>
                     {cars.map(car => (
                       <SelectItem key={car.id} value={car.id}>
                         {car.brand} {car.name}
@@ -452,12 +452,12 @@ export default function StateCityPricingManager() {
               </div>
               <div className="space-y-2">
                 <Label>Select State</Label>
-                <Select value={selectedState} onValueChange={(v) => { setSelectedState(v); setSelectedCity(""); }}>
+                <Select value={selectedState || "__all__"} onValueChange={(v) => { setSelectedState(v === "__all__" ? "" : v); setSelectedCity(""); }}>
                   <SelectTrigger>
                     <SelectValue placeholder="All States" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All States</SelectItem>
+                    <SelectItem value="__all__">All States</SelectItem>
                     {states.map(state => (
                       <SelectItem key={state.code} value={state.code}>
                         {state.name} ({state.rto_percentage}% RTO)
@@ -468,12 +468,12 @@ export default function StateCityPricingManager() {
               </div>
               <div className="space-y-2">
                 <Label>Select City</Label>
-                <Select value={selectedCity} onValueChange={setSelectedCity} disabled={!selectedState}>
+                <Select value={selectedCity || "__all__"} onValueChange={(v) => setSelectedCity(v === "__all__" ? "" : v)} disabled={!selectedState}>
                   <SelectTrigger>
                     <SelectValue placeholder={selectedState ? "Select City" : "Select State First"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Cities</SelectItem>
+                    <SelectItem value="__all__">All Cities</SelectItem>
                     {cities.map(city => (
                       <SelectItem key={city.id} value={city.name}>
                         {city.name} {city.is_metro && <Badge variant="secondary" className="ml-1">Metro</Badge>}
