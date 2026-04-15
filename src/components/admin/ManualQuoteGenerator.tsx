@@ -916,8 +916,13 @@ export const ManualQuoteGenerator = () => {
                   )}
                   <Separator />
                   <div className="flex justify-between font-bold text-blue-700 dark:text-blue-400 text-base">
-                    <span>Final Loan Amount</span>
+                    <span>Net Loan Amount</span>
                     <span>{formatPrice(loanOfferFinalAmount)}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between font-bold text-primary text-base">
+                    <span>Balance Payable by You</span>
+                    <span>{formatPrice(Math.max(0, finalPrice - loanOfferFinalAmount))}</span>
                   </div>
                   {loanOfferEMI > 0 && (
                     <>
