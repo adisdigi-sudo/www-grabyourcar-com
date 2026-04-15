@@ -21,6 +21,8 @@ import {
 import { SalesCustomerTimeline } from "./SalesCustomerTimeline";
 import { OmniShareDialog } from "@/components/admin/shared/OmniShareDialog";
 import { generateSalesOfferPDF } from "./SalesOfferPDF";
+import { calculateLoanSalesBreakdown } from "@/components/admin/loans/loanSalesCalculator";
+import { UnifiedSalesCalculator } from "@/components/admin/shared/UnifiedSalesCalculator";
 
 const CALL_STATUSES = ["Interested", "Not Interested", "Call Back", "No Answer", "Wrong Number", "Busy", "Follow Up"];
 const BUYING_INTENTS = ["Immediate (This Week)", "Within 15 Days", "Within 1 Month", "Exploring Options", "Not Sure"];
@@ -61,17 +63,28 @@ export function SalesLeadDetailModal({
   const [bookingAmount, setBookingAmount] = useState(lead.booking_amount || "");
   const [processingFees, setProcessingFees] = useState(lead.processing_fees || "");
   const [otherExpenses, setOtherExpenses] = useState(lead.other_expenses || "");
-  const [otherExpensesLabel, setOtherExpensesLabel] = useState(lead.other_expenses_label || "Other Expenses");
+  const [otherExpensesLabel, setOtherExpensesLabel] = useState(lead.other_expenses_label || "Other Bank Charges");
+  const [grossLoanAmount, setGrossLoanAmount] = useState(lead.gross_loan_amount || "");
+  const [loanProtectionAmount, setLoanProtectionAmount] = useState(lead.loan_protection_amount || "");
+  const [advancePaid, setAdvancePaid] = useState(lead.advance_paid || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showShareOffer, setShowShareOffer] = useState(false);
 
   // Full INR formatter — never abbreviate
   const fmtINR = (v: number) => `Rs. ${Math.round(v).toLocaleString("en-IN")}`;
 
-  // Computed deal summary
+  // Unified calculator breakdown
   const totalCarPrice = Number(lead.on_road_price) || Number(dealValue) || 0;
-  const totalDeductions = (Number(bookingAmount) || 0) + (Number(processingFees) || 0) + (Number(otherExpenses) || 0);
-  const balancePayable = totalCarPrice - totalDeductions;
+  const salesBreakdown = calculateLoanSalesBreakdown({
+    finalCarPrice: dealValue || lead.on_road_price || 0,
+    bookingAmount,
+    advancePaid,
+    grossLoanAmount,
+    loanProtectionAmount,
+    processingFees,
+    otherCharges: otherExpenses,
+  });
+  const balancePayable = salesBreakdown.balancePayableByYou;
 
   const pendingStage = lead._targetStage;
   const currentStage = pendingStage || lead.pipeline_stage;
@@ -830,91 +843,39 @@ export function SalesLeadDetailModal({
                 {/* ── Deal Calculator ── */}
                 <Separator />
                 <h3 className="font-semibold text-sm flex items-center gap-2 mt-2">
-                  <BarChart3 className="h-4 w-4" /> Deal Calculator — Share with Client
+                  <BarChart3 className="h-4 w-4" /> Automotive Car Sales Calculator
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-[10px]">On-Road / Total Car Price (Rs.)</Label>
-                    <Input
-                      type="number"
-                      value={dealValue}
-                      onChange={(e) => {
-                        setDealValue(e.target.value);
-                        onUpdate({ deal_value: Number(e.target.value) }, "deal_value_set", `Deal: Rs. ${Number(e.target.value).toLocaleString("en-IN")}`);
-                      }}
-                      placeholder="e.g. 850000"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[10px]">Booking Amount Received (Rs.)</Label>
-                    <Input
-                      type="number"
-                      value={bookingAmount}
-                      onChange={(e) => {
-                        setBookingAmount(e.target.value);
-                        onUpdate({ booking_amount: Number(e.target.value) });
-                      }}
-                      placeholder="e.g. 50000"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[10px]">Processing Fees (Rs.)</Label>
-                    <Input
-                      type="number"
-                      value={processingFees}
-                      onChange={(e) => {
-                        setProcessingFees(e.target.value);
-                        onUpdate({ processing_fees: Number(e.target.value) });
-                      }}
-                      placeholder="e.g. 10000"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[10px]">Other Expenses (Rs.)</Label>
-                    <Input
-                      type="number"
-                      value={otherExpenses}
-                      onChange={(e) => {
-                        setOtherExpenses(e.target.value);
-                        onUpdate({ other_expenses: Number(e.target.value) });
-                      }}
-                      placeholder="e.g. 5000"
-                    />
-                  </div>
-                </div>
-
-                {/* Summary Card */}
-                {totalCarPrice > 0 && (
-                  <div className="rounded-lg border bg-muted/20 p-3 space-y-1.5 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Car Price</span>
-                      <span className="font-semibold">{fmtINR(totalCarPrice)}</span>
-                    </div>
-                    {Number(bookingAmount) > 0 && (
-                      <div className="flex justify-between text-destructive">
-                        <span>Less: Booking Amount</span>
-                        <span>- {fmtINR(Number(bookingAmount))}</span>
-                      </div>
-                    )}
-                    {Number(processingFees) > 0 && (
-                      <div className="flex justify-between text-destructive">
-                        <span>Less: Processing Fees</span>
-                        <span>- {fmtINR(Number(processingFees))}</span>
-                      </div>
-                    )}
-                    {Number(otherExpenses) > 0 && (
-                      <div className="flex justify-between text-destructive">
-                        <span>Less: {otherExpensesLabel}</span>
-                        <span>- {fmtINR(Number(otherExpenses))}</span>
-                      </div>
-                    )}
-                    <Separator />
-                    <div className="flex justify-between font-bold text-base">
-                      <span>Balance Payable</span>
-                      <span className="text-emerald-600">{fmtINR(balancePayable)}</span>
-                    </div>
-                  </div>
-                )}
+                <UnifiedSalesCalculator
+                  finalCarPrice={dealValue}
+                  setFinalCarPrice={(v) => {
+                    setDealValue(v);
+                    onUpdate({ deal_value: Number(v) }, "deal_value_set", `Deal: Rs. ${Number(v).toLocaleString("en-IN")}`);
+                  }}
+                  grossLoanAmount={grossLoanAmount}
+                  setGrossLoanAmount={setGrossLoanAmount}
+                  loanProtectionAmount={loanProtectionAmount}
+                  setLoanProtectionAmount={setLoanProtectionAmount}
+                  processingFees={processingFees}
+                  setProcessingFees={(v) => {
+                    setProcessingFees(v);
+                    onUpdate({ processing_fees: Number(v) });
+                  }}
+                  otherCharges={otherExpenses}
+                  setOtherCharges={(v) => {
+                    setOtherExpenses(v);
+                    onUpdate({ other_expenses: Number(v) });
+                  }}
+                  otherChargesLabel={otherExpensesLabel}
+                  setOtherChargesLabel={setOtherExpensesLabel}
+                  bookingAmount={bookingAmount}
+                  setBookingAmount={(v) => {
+                    setBookingAmount(v);
+                    onUpdate({ booking_amount: Number(v) });
+                  }}
+                  advancePaid={advancePaid}
+                  setAdvancePaid={setAdvancePaid}
+                  breakdown={salesBreakdown}
+                />
 
                 {/* One-Click Share */}
                 <Button onClick={() => setShowShareOffer(true)} className="w-full gap-2">
@@ -962,12 +923,17 @@ export function SalesLeadDetailModal({
           const name = lead.name || lead.customer_name || "";
           const car = lead.car_model || lead.interested_model || "your dream car";
           let msg = `Hi ${name}! Here is your car deal offer for *${car}*.\n\n`;
-          if (totalCarPrice > 0) {
-            msg += `🚗 Total Car Price: ${fmtINR(totalCarPrice)}\n`;
-            if (Number(bookingAmount) > 0) msg += `💰 Less Booking: - ${fmtINR(Number(bookingAmount))}\n`;
-            if (Number(processingFees) > 0) msg += `📋 Less Processing: - ${fmtINR(Number(processingFees))}\n`;
-            if (Number(otherExpenses) > 0) msg += `📎 Less ${otherExpensesLabel}: - ${fmtINR(Number(otherExpenses))}\n`;
-            if (totalDeductions > 0) msg += `\n✅ *Balance Payable: ${fmtINR(balancePayable)}*\n`;
+          if (totalCarPrice > 0 || salesBreakdown.grossLoanAmount > 0) {
+            msg += `🚗 Total Car Price: ${fmtINR(salesBreakdown.finalCarPrice)}\n`;
+            if (salesBreakdown.grossLoanAmount > 0) msg += `🏦 Gross Loan: ${fmtINR(salesBreakdown.grossLoanAmount)}\n`;
+            if (salesBreakdown.processingFees > 0) msg += `📋 Less Processing: - ${fmtINR(salesBreakdown.processingFees)}\n`;
+            if (salesBreakdown.loanProtectionAmount > 0) msg += `🛡️ Less Loan Suraksha: - ${fmtINR(salesBreakdown.loanProtectionAmount)}\n`;
+            if (salesBreakdown.otherCharges > 0) msg += `📎 Less ${otherExpensesLabel}: - ${fmtINR(salesBreakdown.otherCharges)}\n`;
+            if (salesBreakdown.grossLoanAmount > 0) msg += `💵 Bank Net Disbursal: ${fmtINR(salesBreakdown.bankNetDisbursal)}\n`;
+            msg += `\n📊 Down Payment: ${fmtINR(salesBreakdown.downPaymentNeeded)}\n`;
+            if (salesBreakdown.bookingAmount > 0) msg += `💰 Less Booking: - ${fmtINR(salesBreakdown.bookingAmount)}\n`;
+            if (salesBreakdown.advancePaid > 0) msg += `💰 Less Advance: - ${fmtINR(salesBreakdown.advancePaid)}\n`;
+            msg += `\n✅ *Balance Payable: ${fmtINR(salesBreakdown.balancePayableByYou)}*\n`;
           } else if (lead.deal_value) {
             msg += `Deal Value: ${fmtINR(Number(lead.deal_value))}\n`;
           }
