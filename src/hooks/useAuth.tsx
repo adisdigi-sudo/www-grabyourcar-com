@@ -2,7 +2,35 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 15000;
+const AUTH_STORAGE_KEY = import.meta.env.VITE_SUPABASE_PROJECT_ID
+  ? `sb-${import.meta.env.VITE_SUPABASE_PROJECT_ID}-auth-token`
+  : null;
+
+const readPersistedSession = (): Session | null => {
+  if (typeof window === "undefined" || !AUTH_STORAGE_KEY) {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      const candidate = parsed.find((entry) => entry && typeof entry === "object" && "access_token" in entry);
+      return (candidate as Session | undefined) ?? null;
+    }
+
+    if (parsed && typeof parsed === "object" && "access_token" in parsed) {
+      return parsed as Session;
+    }
+  } catch (error) {
+    console.warn("[Auth] Failed to read persisted session cache", error);
+  }
+
+  return null;
+};
 
 interface AuthContextType {
   user: User | null;
@@ -52,17 +80,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     };
 
+    const persistedSession = readPersistedSession();
+    if (persistedSession) {
+      applySession(persistedSession);
+    }
+
     bootstrapTimeout = window.setTimeout(() => {
       if (!isMounted) return;
 
-      console.warn("[Auth] Session bootstrap timed out; continuing with safe fallback state");
-      bootstrapResolved = true;
-      setInitialized(true);
-      setLoading(false);
+      const fallbackSession = readPersistedSession();
+      console.warn("[Auth] Session bootstrap timed out; continuing with cached session fallback", {
+        hasCachedSession: !!fallbackSession,
+      });
+      finishBootstrap(fallbackSession);
     }, AUTH_BOOTSTRAP_TIMEOUT_MS);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      applySession(nextSession);
+      applySession(nextSession ?? readPersistedSession());
 
       if (bootstrapResolved || event !== "INITIAL_SESSION") {
         clearBootstrapTimeout();
@@ -76,13 +110,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth
       .getSession()
       .then(({ data: { session: activeSession } }) => {
-        finishBootstrap(activeSession);
+        finishBootstrap(activeSession ?? readPersistedSession());
       })
       .catch((error) => {
         console.warn("[Auth] Failed to restore session during bootstrap", error);
 
         if (!isMounted) return;
-        finishBootstrap(null);
+        finishBootstrap(readPersistedSession());
       });
 
     return () => {
