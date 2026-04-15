@@ -174,6 +174,43 @@ export const HROnboarding = () => {
   const [showNew, setShowNew] = useState(false);
   const [step, setStep] = useState(1); // wizard step
   const [form, setForm] = useState<Record<string, any>>({});
+  const [showComplianceForm, setShowComplianceForm] = useState(false);
+  const [complianceForm, setComplianceForm] = useState<Record<string, string>>({});
+
+  // Fetch company compliance registration IDs
+  const { data: complianceData } = useQuery({
+    queryKey: ["company-compliance-ids"],
+    queryFn: async () => {
+      const { data } = await supabase.from("admin_settings").select("setting_value").eq("setting_key", "company_compliance_ids").single();
+      return (data?.setting_value as any) || {};
+    },
+  });
+
+  const saveComplianceIds = useMutation({
+    mutationFn: async (ids: Record<string, string>) => {
+      const payload = {
+        setting_key: "company_compliance_ids",
+        setting_value: ids as any,
+        description: "PF/ESI/PT Registration Numbers (auto-enforced by HR system)",
+        updated_by: user?.id || null,
+        updated_at: new Date().toISOString(),
+      };
+      const { data: existing } = await supabase.from("admin_settings").select("id").eq("setting_key", "company_compliance_ids").single();
+      if (existing) {
+        const { error } = await supabase.from("admin_settings").update(payload).eq("setting_key", "company_compliance_ids");
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("admin_settings").insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["company-compliance-ids"] });
+      toast.success("Compliance IDs saved! Accounts team will be notified. ✅");
+      setShowComplianceForm(false);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const { data: verticals = [] } = useQuery({
     queryKey: ["business-verticals"],
@@ -399,6 +436,13 @@ export const HROnboarding = () => {
   const calcPT = govtDed.pt;
   const calcTDS = govtDed.tds;
   const calcNet = monthlyCTC - calcPF - calcESI - calcPT - calcTDS;
+
+  // Compliance blockers — check if this hire will cross the threshold
+  const needsPF = totalEmployees >= 19; // will become 20 after this hire
+  const needsESI = totalEmployees >= 9; // will become 10 after this hire
+  const hasPFId = !!complianceData?.pf_registration_number;
+  const hasESIId = !!complianceData?.esi_registration_number;
+  const complianceBlocked = (needsPF && !hasPFId) || (needsESI && !hasESIId);
 
   const renderWizardStep = () => {
     switch (step) {
@@ -638,7 +682,8 @@ export const HROnboarding = () => {
                     </div>
                   </CardContent>
                 </Card>
-                {totalEmployees < 20 && (
+                {/* Compliance status for small companies */}
+                {!complianceBlocked && totalEmployees < 20 && (
                   <Card className="border-blue-200 bg-blue-50">
                     <CardContent className="p-3 text-sm text-blue-800">
                       <p className="font-medium">📋 Govt Compliance Status:</p>
@@ -648,6 +693,97 @@ export const HROnboarding = () => {
                         <li><strong>Professional Tax:</strong> {calcPT === 0 ? "Exempt — monthly income below ₹15,000" : "₹200/month applicable"}</li>
                         <li><strong>TDS:</strong> {calcTDS === 0 ? "Not applicable — annual CTC below ₹3,00,000" : `~₹${calcTDS}/month estimated`}</li>
                       </ul>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* 🚨 COMPLIANCE BLOCKER — PF/ESI registration required */}
+                {complianceBlocked && (
+                  <Card className="border-red-300 bg-red-50">
+                    <CardContent className="p-4 space-y-3">
+                      <p className="font-semibold text-red-800 flex items-center gap-2">
+                        <Shield className="h-4 w-4" /> ⚠️ Compliance Registration Required
+                      </p>
+                      <p className="text-sm text-red-700">
+                        This hire will bring your team to <strong>{totalEmployees + 1} employees</strong>. 
+                        As per Indian Govt norms, the following registrations are now <strong>mandatory</strong> before you can proceed:
+                      </p>
+                      <div className="space-y-2">
+                        {needsPF && !hasPFId && (
+                          <div className="flex items-center gap-2 p-2 rounded bg-red-100 border border-red-200">
+                            <span className="text-red-600 font-bold text-lg">①</span>
+                            <div>
+                              <p className="text-sm font-semibold text-red-800">EPFO (PF) Registration Number</p>
+                              <p className="text-xs text-red-600">Mandatory for 20+ employees. Register at epfindia.gov.in</p>
+                            </div>
+                          </div>
+                        )}
+                        {needsESI && !hasESIId && (
+                          <div className="flex items-center gap-2 p-2 rounded bg-red-100 border border-red-200">
+                            <span className="text-red-600 font-bold text-lg">②</span>
+                            <div>
+                              <p className="text-sm font-semibold text-red-800">ESIC (ESI) Registration Number</p>
+                              <p className="text-xs text-red-600">Mandatory for 10+ employees. Register at esic.gov.in</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {!showComplianceForm ? (
+                        <Button variant="destructive" size="sm" onClick={() => {
+                          setShowComplianceForm(true);
+                          setComplianceForm({
+                            pf_registration_number: complianceData?.pf_registration_number || "",
+                            esi_registration_number: complianceData?.esi_registration_number || "",
+                            pt_registration_number: complianceData?.pt_registration_number || "",
+                          });
+                        }}>
+                          Enter Registration IDs to Continue →
+                        </Button>
+                      ) : (
+                        <div className="space-y-2 p-3 rounded border border-red-200 bg-white">
+                          <p className="text-xs font-semibold text-muted-foreground">Enter your company registration IDs (will be saved & sent to Accounts):</p>
+                          {needsPF && (
+                            <div>
+                              <Label className="text-xs">PF Registration Number *</Label>
+                              <Input placeholder="e.g. MH/BOM/12345/000" value={complianceForm.pf_registration_number || ""} onChange={e => setComplianceForm(p => ({ ...p, pf_registration_number: e.target.value }))} />
+                            </div>
+                          )}
+                          {needsESI && (
+                            <div>
+                              <Label className="text-xs">ESI Registration Number *</Label>
+                              <Input placeholder="e.g. 31-12345-67" value={complianceForm.esi_registration_number || ""} onChange={e => setComplianceForm(p => ({ ...p, esi_registration_number: e.target.value }))} />
+                            </div>
+                          )}
+                          <div>
+                            <Label className="text-xs">PT Registration Number (optional)</Label>
+                            <Input placeholder="State PT number" value={complianceForm.pt_registration_number || ""} onChange={e => setComplianceForm(p => ({ ...p, pt_registration_number: e.target.value }))} />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" disabled={
+                              (needsPF && !complianceForm.pf_registration_number?.trim()) ||
+                              (needsESI && !complianceForm.esi_registration_number?.trim()) ||
+                              saveComplianceIds.isPending
+                            } onClick={() => saveComplianceIds.mutate(complianceForm)}>
+                              {saveComplianceIds.isPending ? "Saving..." : "✅ Save & Unlock Onboarding"}
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setShowComplianceForm(false)}>Cancel</Button>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Show saved compliance IDs if they exist */}
+                {(hasPFId || hasESIId) && (
+                  <Card className="border-green-200 bg-green-50">
+                    <CardContent className="p-3 text-sm text-green-800">
+                      <p className="font-medium">✅ Registered Compliance IDs (Accounts notified):</p>
+                      <div className="mt-1 space-y-0.5 text-xs">
+                        {hasPFId && <p><strong>PF:</strong> {complianceData.pf_registration_number}</p>}
+                        {hasESIId && <p><strong>ESI:</strong> {complianceData.esi_registration_number}</p>}
+                        {complianceData?.pt_registration_number && <p><strong>PT:</strong> {complianceData.pt_registration_number}</p>}
+                      </div>
                     </CardContent>
                   </Card>
                 )}
@@ -838,7 +974,9 @@ export const HROnboarding = () => {
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
               {step < 5 ? (
-                <Button disabled={step === 1 && !form.employee_name?.trim()} onClick={() => setStep(s => s + 1)}>Next</Button>
+                <Button disabled={(step === 1 && !form.employee_name?.trim()) || (step === 3 && complianceBlocked)} onClick={() => setStep(s => s + 1)}>
+                  {step === 3 && complianceBlocked ? "🔒 Enter Compliance IDs First" : "Next"}
+                </Button>
               ) : (
                 <Button onClick={() => completeOnboarding.mutate()} disabled={completeOnboarding.isPending}>
                   {completeOnboarding.isPending ? "Creating..." : "🚀 Complete Onboarding & Generate Docs"}
