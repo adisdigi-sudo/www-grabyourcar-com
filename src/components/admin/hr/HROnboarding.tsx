@@ -49,6 +49,26 @@ const WIZARD_STEPS = [
 const ROLES = ["employee", "team_lead", "manager", "senior_manager", "head"];
 const EMPLOYMENT_TYPES = ["full_time", "part_time", "contract", "intern", "freelancer"];
 
+const DESIGNATIONS = [
+  { value: "revenue_growth_associate", label: "Revenue Growth Associate" },
+  { value: "revenue_enhancer", label: "Revenue Enhancer" },
+  { value: "client_success_advisor", label: "Client Success Advisor" },
+  { value: "business_development_executive", label: "Business Development Executive" },
+  { value: "growth_catalyst", label: "Growth Catalyst" },
+  { value: "relationship_manager", label: "Relationship Manager" },
+  { value: "senior_relationship_manager", label: "Senior Relationship Manager" },
+  { value: "revenue_strategist", label: "Revenue Strategist" },
+  { value: "client_acquisition_lead", label: "Client Acquisition Lead" },
+  { value: "performance_coach", label: "Performance Coach" },
+  { value: "operations_executive", label: "Operations Executive" },
+  { value: "operations_manager", label: "Operations Manager" },
+  { value: "team_leader", label: "Team Leader" },
+  { value: "assistant_manager", label: "Assistant Manager" },
+  { value: "branch_manager", label: "Branch Manager" },
+  { value: "zonal_head", label: "Zonal Head" },
+  { value: "custom", label: "✏️ Custom Designation" },
+];
+
 const fmt = (v: number) => `₹${Math.round(v || 0).toLocaleString("en-IN")}`;
 
 export const HROnboarding = () => {
@@ -309,8 +329,25 @@ export const HROnboarding = () => {
                 </Select>
               </div>
               <div>
-                <Label>Designation</Label>
-                <Input value={form.designation || ""} onChange={e => updateField("designation", e.target.value)} placeholder="e.g. Sales Executive" />
+                <Label>Designation *</Label>
+                <Select value={form.designation_key || ""} onValueChange={v => {
+                  updateField("designation_key", v);
+                  if (v !== "custom") {
+                    const found = DESIGNATIONS.find(d => d.value === v);
+                    updateField("designation", found?.label || v);
+                    updateField("custom_designation", "");
+                  } else {
+                    updateField("designation", "");
+                  }
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Select designation" /></SelectTrigger>
+                  <SelectContent>
+                    {DESIGNATIONS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {form.designation_key === "custom" && (
+                  <Input className="mt-2" value={form.custom_designation || ""} onChange={e => { updateField("custom_designation", e.target.value); updateField("designation", e.target.value); }} placeholder="Type custom designation..." />
+                )}
               </div>
               <div>
                 <Label>Department</Label>
@@ -639,7 +676,7 @@ export const HROnboarding = () => {
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
               {step < 5 ? (
-                <Button disabled={step === 1 && !form.employee_id} onClick={() => setStep(s => s + 1)}>Next</Button>
+                <Button disabled={step === 1 && !form.employee_name?.trim()} onClick={() => setStep(s => s + 1)}>Next</Button>
               ) : (
                 <Button onClick={() => completeOnboarding.mutate()} disabled={completeOnboarding.isPending}>
                   {completeOnboarding.isPending ? "Creating..." : "🚀 Complete Onboarding & Generate Docs"}
