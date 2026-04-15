@@ -38,6 +38,11 @@ interface SendMessageRequest {
   name?: string;
   logEvent?: string;
   lead_id?: string;
+  message_context?: string;
+  vertical?: string;
+  fallback_template_name?: string;
+  fallback_template_variables?: Record<string, string>;
+  fallback_template_components?: unknown[];
 }
 
 interface SendResult {
@@ -54,7 +59,61 @@ interface ManagedTemplateMeta {
   variables?: unknown;
 }
 
+interface CategoryRule {
+  meta_category?: string | null;
+  requires_template?: boolean | null;
+  opt_out_footer_required?: boolean | null;
+}
+
+const FREEFORM_TYPES = new Set(["text", "image", "document", "video", "audio"]);
+const WINDOW_CLOSED_ERROR = /(re-engagement message|131047)/i;
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function buildImplicitFallbackTemplate(params: {
+  explicitName?: string;
+  explicitVariables?: Record<string, string>;
+  explicitComponents?: unknown[];
+  vertical?: string;
+  messageContext?: string;
+  name?: string;
+  mediaUrl?: string;
+}) {
+  if (params.explicitName) {
+    return {
+      name: params.explicitName,
+      variables: params.explicitVariables,
+      components: params.explicitComponents,
+    };
+  }
+
+  const safeName = params.name || "Customer";
+  const linkText = params.mediaUrl ? `Open here: ${params.mediaUrl}` : "Reply to receive details";
+  const isInsurance = params.vertical === "insurance" || /insurance|renewal|policy/i.test(params.messageContext || "");
+
+  if (isInsurance) {
+    return {
+      name: "renewal_reminder",
+      variables: {
+        customer_name: safeName,
+        vehicle: "your policy",
+        premium: linkText,
+        var_1: safeName,
+        var_2: "your policy",
+        var_3: linkText,
+      },
+      components: undefined,
+    };
+  }
+
+  return {
+    name: "welcome_new_lead",
+    variables: {
+      var_1: params.mediaUrl ? `${safeName} - View your document: ${params.mediaUrl}` : safeName,
+    },
+    components: undefined,
+  };
+}
 
 function normalizePhone(phone: string): { full: string; short: string; valid: boolean } {
   const clean = phone.replace(/\D/g, "").replace(/^0+/, "");
@@ -432,7 +491,7 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const body = await req.json();
+    const body = await req.json() as SendMessageRequest & Record<string, unknown>;
 
     // Health check
     if (body.action === "health_check") {
@@ -462,24 +521,100 @@ serve(async (req) => {
     const template_name = body.template_name || body.templateName;
     const template_variables = body.template_variables || body.templateVariables;
     const template_components = body.template_components || body.templateComponents;
+    const fallback_template_name = body.fallback_template_name || body.fallbackTemplateName;
+    const fallback_template_variables = body.fallback_template_variables || body.fallbackTemplateVariables;
+    const fallback_template_components = body.fallback_template_components || body.fallbackTemplateComponents;
     const mediaUrl = body.mediaUrl || body.media_url;
     const mediaFileName = body.mediaFileName || body.media_file_name;
     const name = body.name;
     const logEvent = body.logEvent || body.log_event;
     const lead_id = body.lead_id || body.leadId;
     const message = body.message || "";
-    const messageType = body.messageType || body.message_type || (template_name ? "template" : "text");
+    const vertical = body.vertical;
+    const message_context = body.message_context || body.messageContext || logEvent || "crm_followup";
+    const originalMessageType = body.messageType || body.message_type || (template_name ? "template" : mediaUrl ? "document" : "text");
+    const phoneNorm = normalizePhone(to);
+
+    const { data: convoRows } = await supabase
+      .from("wa_conversations")
+      .select("window_expires_at, customer_name")
+      .eq("phone", phoneNorm.full)
+      .order("updated_at", { ascending: false })
+      .limit(1);
+
+    const convo = convoRows?.[0];
+    const windowOpen = Boolean(convo?.window_expires_at && new Date(convo.window_expires_at) > new Date());
+
+    const { data: categoryRuleRows } = await supabase
+      .from("wa_category_rules")
+      .select("meta_category, requires_template, opt_out_footer_required")
+      .eq("message_context", message_context)
+      .eq("is_active", true)
+      .limit(1);
+
+    const categoryRule = categoryRuleRows?.[0] as CategoryRule | undefined;
+    const fallbackTemplate = buildImplicitFallbackTemplate({
+      explicitName: fallback_template_name as string | undefined,
+      explicitVariables: fallback_template_variables as Record<string, string> | undefined,
+      explicitComponents: fallback_template_components as unknown[] | undefined,
+      vertical: typeof vertical === "string" ? vertical : undefined,
+      messageContext: typeof message_context === "string" ? message_context : undefined,
+      name: typeof name === "string" ? name : convo?.customer_name || undefined,
+      mediaUrl: typeof mediaUrl === "string" ? mediaUrl : undefined,
+    });
+
+    let effectiveMessageType = originalMessageType;
+    let effectiveTemplateName = template_name as string | undefined;
+    let effectiveTemplateVariables = template_variables as Record<string, string> | undefined;
+    let effectiveTemplateComponents = template_components as unknown[] | undefined;
+    let templateFallbackUsed = false;
+
+    if (FREEFORM_TYPES.has(originalMessageType)) {
+      const mustUseTemplate = Boolean(categoryRule?.requires_template);
+      if (mustUseTemplate || !windowOpen) {
+        if (!fallbackTemplate?.name) {
+          return respond({
+            ok: false,
+            success: false,
+            fallback: false,
+            status: mustUseTemplate ? "template_required" : "window_closed",
+            error: mustUseTemplate
+              ? `Approved WhatsApp template required for ${message_context}`
+              : "24-hour window closed and no approved fallback template configured",
+            window_open: windowOpen,
+            message_context,
+          });
+        }
+
+        effectiveMessageType = "template";
+        effectiveTemplateName = fallbackTemplate.name;
+        effectiveTemplateVariables = fallbackTemplate.variables;
+        effectiveTemplateComponents = fallbackTemplate.components;
+        templateFallbackUsed = true;
+      }
+    }
 
     let templateMeta: ManagedTemplateMeta | undefined;
-    if (messageType === "template" && template_name) {
+    if (effectiveMessageType === "template" && effectiveTemplateName) {
       const { data: templateRows } = await supabase
         .from("wa_templates")
         .select("body, language, status, variables")
-        .eq("name", template_name)
+        .eq("name", effectiveTemplateName)
         .order("created_at", { ascending: false })
         .limit(1);
 
       templateMeta = templateRows?.[0] as ManagedTemplateMeta | undefined;
+
+      if (templateMeta?.status && templateMeta.status !== "approved") {
+        return respond({
+          ok: false,
+          success: false,
+          fallback: false,
+          status: "template_not_approved",
+          error: `Template ${effectiveTemplateName} is not approved`,
+          template_name: effectiveTemplateName,
+        });
+      }
     }
 
     // Get active WhatsApp provider from DB
@@ -504,32 +639,64 @@ serve(async (req) => {
     }
 
     // Send via the active provider
-    const result = await sendMessage(
+    let result = await sendMessage(
       providerName,
       providerConfig,
       to,
-      messageType,
+      effectiveMessageType,
       message,
-      template_name,
-      template_variables,
+      effectiveTemplateName,
+      effectiveTemplateVariables,
       mediaUrl,
       mediaFileName,
       name,
-      template_components,
+      effectiveTemplateComponents,
       templateMeta,
     );
+
+    if (!result.success && FREEFORM_TYPES.has(originalMessageType) && WINDOW_CLOSED_ERROR.test(result.error || "") && fallbackTemplate?.name) {
+      effectiveMessageType = "template";
+      effectiveTemplateName = fallbackTemplate.name;
+      effectiveTemplateVariables = fallbackTemplate.variables;
+      effectiveTemplateComponents = fallbackTemplate.components;
+      templateFallbackUsed = true;
+
+      if (!templateMeta || effectiveTemplateName !== template_name) {
+        const { data: retryTemplateRows } = await supabase
+          .from("wa_templates")
+          .select("body, language, status, variables")
+          .eq("name", effectiveTemplateName)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        templateMeta = retryTemplateRows?.[0] as ManagedTemplateMeta | undefined;
+      }
+
+      result = await sendMessage(
+        providerName,
+        providerConfig,
+        to,
+        effectiveMessageType,
+        message,
+        effectiveTemplateName,
+        effectiveTemplateVariables,
+        undefined,
+        undefined,
+        name,
+        effectiveTemplateComponents,
+        templateMeta,
+      );
+    }
 
     const deliveryStatus = result.success ? "sent" : "failed";
 
     // Log to wa_message_logs
-    const phoneNorm = normalizePhone(to);
     try {
       await supabase.from("wa_message_logs").insert({
         phone: phoneNorm.full,
         customer_name: name || null,
-        message_type: messageType,
+        message_type: effectiveMessageType,
         message_content: message || null,
-        template_name: template_name || null,
+        template_name: effectiveTemplateName || null,
         trigger_event: logEvent || "api_send",
         lead_id: lead_id || null,
         status: deliveryStatus,
@@ -581,12 +748,12 @@ serve(async (req) => {
           await supabase.from("wa_inbox_messages").insert({
             conversation_id: convoId,
             direction: "outbound",
-            message_type: messageType === "document" ? "document" : messageType === "image" ? "image" : messageType === "template" ? "template" : "text",
+            message_type: effectiveMessageType === "document" ? "document" : effectiveMessageType === "image" ? "image" : effectiveMessageType === "template" ? "template" : "text",
             content: message || null,
-            media_url: mediaUrl || null,
-            media_filename: mediaFileName || null,
-            template_name: template_name || null,
-            template_variables: template_variables ? template_variables : null,
+            media_url: templateFallbackUsed ? null : (mediaUrl || null),
+            media_filename: templateFallbackUsed ? null : (mediaFileName || null),
+            template_name: effectiveTemplateName || null,
+            template_variables: effectiveTemplateVariables ? effectiveTemplateVariables : null,
             wa_message_id: result.messageId || null,
             status: "sent",
             sent_by_name: "System",
@@ -605,6 +772,9 @@ serve(async (req) => {
         success: true,
         messageId: result.messageId,
         provider: result.provider,
+        fallback: templateFallbackUsed,
+        window_open: windowOpen,
+        message_context,
         status: deliveryStatus,
       });
     }
@@ -612,10 +782,12 @@ serve(async (req) => {
     return respond({
       ok: false,
       success: false,
-      fallback: false,
+      fallback: templateFallbackUsed,
       status: "provider_error",
       error: result.error,
       provider: result.provider,
+      window_open: windowOpen,
+      message_context,
     });
   } catch (error) {
     console.error("whatsapp-send error:", error);

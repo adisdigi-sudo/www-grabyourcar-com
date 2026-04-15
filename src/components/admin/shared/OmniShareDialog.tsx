@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { MessageCircle, Mail, Download, Send, Loader2, Zap, Radio } from "lucide-react";
 import { omniSend } from "@/lib/omniSend";
+import { supabase } from "@/integrations/supabase/client";
 import jsPDF from "jspdf";
 
 type TabValue = "whatsapp" | "whatsapp_api" | "email" | "rcs" | "download";
@@ -42,6 +43,64 @@ export function OmniShareDialog({
   const [sendingApi, setSendingApi] = useState(false);
   const [sendingRcs, setSendingRcs] = useState(false);
 
+  const getMessageContext = () => {
+    if (/renewal/i.test(title)) return "renewal_reminder";
+    if (/quote|offer|quotation/i.test(title)) return "quote_share";
+    return "document_share";
+  };
+
+  const getStorageBucket = () => (vertical === "loans" ? "loan-documents" : "quote-pdfs");
+
+  const uploadPdfAndGetUrl = async (doc: jsPDF, fileName: string) => {
+    try {
+      const pdfBlob = doc.output("blob");
+      const safeName = fileName.replace(/\s+/g, "_");
+      const storagePath = `shares/${new Date().toISOString().slice(0, 10)}/${Date.now()}_${safeName}`;
+      const bucket = getStorageBucket();
+      const { error } = await supabase.storage
+        .from(bucket)
+        .upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
+
+      if (error) {
+        console.error("PDF upload failed:", error);
+        return null;
+      }
+
+      const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath);
+      return data.publicUrl || null;
+    } catch (error) {
+      console.error("PDF upload exception:", error);
+      return null;
+    }
+  };
+
+  const buildFallbackTemplate = (pdfUrl: string | null) => {
+    const safeName = customerName || "Customer";
+
+    if (vertical === "insurance") {
+      const subject = /renewal/i.test(title) ? "your policy" : "your insurance quote";
+      const linkText = pdfUrl ? `Open here: ${pdfUrl}` : "Reply to view your quote";
+      return {
+        fallbackTemplateName: "renewal_reminder",
+        fallbackTemplateVariables: {
+          customer_name: safeName,
+          vehicle: subject,
+          premium: linkText,
+          var_1: safeName,
+          var_2: subject,
+          var_3: linkText,
+        },
+      };
+    }
+
+    return {
+      fallbackTemplateName: "welcome_new_lead",
+      fallbackTemplateVariables: {
+        var_1: pdfUrl ? `${safeName} - View your ${title}: ${pdfUrl}` : safeName,
+      },
+    };
+  };
+
   const handleOpenChange = (v: boolean) => {
     if (v) {
       setPhone(defaultPhone);
@@ -56,9 +115,11 @@ export function OmniShareDialog({
     const cleanPhone = (phone || "").replace(/\D/g, "");
     if (cleanPhone.length < 10) { toast.error("Please enter a valid phone number"); return; }
     const { doc, fileName } = generatePdf();
+    const pdfUrl = await uploadPdfAndGetUrl(doc, fileName);
     doc.save(fileName);
     const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
-    const waUrl = `https://wa.me/${fullPhone}?text=${encodeURIComponent(defaultMsg + `\n\nDocument: ${fileName}`)}`;
+    const waText = [defaultMsg, pdfUrl ? `View PDF: ${pdfUrl}` : `Document: ${fileName}`].filter(Boolean).join("\n\n");
+    const waUrl = `https://wa.me/${fullPhone}?text=${encodeURIComponent(waText)}`;
     window.open(waUrl, "_blank");
     toast.success("📋 PDF downloaded & WhatsApp opened!");
     onShared?.();
@@ -71,6 +132,8 @@ export function OmniShareDialog({
     setSendingApi(true);
     try {
       const { doc, fileName } = generatePdf();
+      const pdfUrl = await uploadPdfAndGetUrl(doc, fileName);
+      const { fallbackTemplateName, fallbackTemplateVariables } = buildFallbackTemplate(pdfUrl);
       const result = await omniSend({
         channel: "whatsapp",
         phone: cleanPhone,
@@ -78,13 +141,15 @@ export function OmniShareDialog({
         name: customerName,
         logEvent: "omni_share_wa_api",
         vertical,
+        messageContext: getMessageContext(),
+        messageType: pdfUrl ? "document" : "text",
+        mediaUrl: pdfUrl || undefined,
+        mediaFileName: pdfUrl ? fileName : undefined,
+        fallbackTemplateName,
+        fallbackTemplateVariables,
       });
       if (result.success) {
         toast.success(`🚀 ${title} sent via WhatsApp API!`);
-        onShared?.();
-        onOpenChange(false);
-      } else if (result.fallback) {
-        toast.info("📱 Opened WhatsApp — send manually");
         onShared?.();
         onOpenChange(false);
       } else {

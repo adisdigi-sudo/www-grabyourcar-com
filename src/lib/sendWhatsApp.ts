@@ -8,9 +8,14 @@ interface SendWhatsAppParams {
   name?: string;
   logEvent?: string;
   silent?: boolean;
+  messageContext?: string;
+  vertical?: string;
   templateName?: string;
   templateComponents?: unknown[];
   templateVariables?: Record<string, string>;
+  fallbackTemplateName?: string;
+  fallbackTemplateComponents?: unknown[];
+  fallbackTemplateVariables?: Record<string, string>;
   messageType?: "text" | "template" | "image" | "document" | "video" | "audio";
   mediaUrl?: string;
   mediaFileName?: string;
@@ -79,9 +84,14 @@ export async function sendWhatsApp({
   name,
   logEvent,
   silent = false,
+  messageContext,
+  vertical,
   templateName,
   templateComponents,
   templateVariables,
+  fallbackTemplateName,
+  fallbackTemplateComponents,
+  fallbackTemplateVariables,
   messageType,
   mediaUrl,
   mediaFileName,
@@ -113,9 +123,14 @@ export async function sendWhatsApp({
       name,
       logEvent: logEvent || "manual_send",
     };
+    if (messageContext) body.message_context = messageContext;
+    if (vertical) body.vertical = vertical;
     if (templateName) body.template_name = templateName;
     if (templateComponents) body.template_components = templateComponents;
     if (templateVariables) body.template_variables = templateVariables;
+    if (fallbackTemplateName) body.fallback_template_name = fallbackTemplateName;
+    if (fallbackTemplateComponents) body.fallback_template_components = fallbackTemplateComponents;
+    if (fallbackTemplateVariables) body.fallback_template_variables = fallbackTemplateVariables;
     if (mediaUrl) body.mediaUrl = mediaUrl;
     if (mediaFileName) body.mediaFileName = mediaFileName;
 

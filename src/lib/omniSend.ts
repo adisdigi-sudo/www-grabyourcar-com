@@ -13,6 +13,16 @@ export interface OmniSendParams {
   logEvent?: string;
   silent?: boolean;
   vertical?: string;
+  messageContext?: string;
+  templateName?: string;
+  templateComponents?: unknown[];
+  templateVariables?: Record<string, string>;
+  fallbackTemplateName?: string;
+  fallbackTemplateComponents?: unknown[];
+  fallbackTemplateVariables?: Record<string, string>;
+  messageType?: "text" | "template" | "image" | "document" | "video" | "audio";
+  mediaUrl?: string;
+  mediaFileName?: string;
 }
 
 export interface OmniSendResult {
@@ -74,7 +84,25 @@ function normalizePhone(phone: string): string {
  * Unified omni-channel send — routes through omni-channel-send edge function.
  */
 export async function omniSend(params: OmniSendParams): Promise<OmniSendResult> {
-  const { channel, message, subject, name, logEvent, silent = false, vertical } = params;
+  const {
+    channel,
+    message,
+    subject,
+    name,
+    logEvent,
+    silent = false,
+    vertical,
+    messageContext,
+    templateName,
+    templateComponents,
+    templateVariables,
+    fallbackTemplateName,
+    fallbackTemplateComponents,
+    fallbackTemplateVariables,
+    messageType,
+    mediaUrl,
+    mediaFileName,
+  } = params;
   const phone = params.phone ? normalizePhone(params.phone) : undefined;
   const email = params.email;
 
@@ -90,6 +118,16 @@ export async function omniSend(params: OmniSendParams): Promise<OmniSendResult> 
         name,
         logEvent: logEvent || "omni_send",
         vertical,
+        messageContext,
+        templateName,
+        templateComponents,
+        templateVariables,
+        fallbackTemplateName,
+        fallbackTemplateComponents,
+        fallbackTemplateVariables,
+        messageType,
+        mediaUrl,
+        mediaFileName,
       },
     });
 
