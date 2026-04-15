@@ -63,17 +63,28 @@ export function SalesLeadDetailModal({
   const [bookingAmount, setBookingAmount] = useState(lead.booking_amount || "");
   const [processingFees, setProcessingFees] = useState(lead.processing_fees || "");
   const [otherExpenses, setOtherExpenses] = useState(lead.other_expenses || "");
-  const [otherExpensesLabel, setOtherExpensesLabel] = useState(lead.other_expenses_label || "Other Expenses");
+  const [otherExpensesLabel, setOtherExpensesLabel] = useState(lead.other_expenses_label || "Other Bank Charges");
+  const [grossLoanAmount, setGrossLoanAmount] = useState(lead.gross_loan_amount || "");
+  const [loanProtectionAmount, setLoanProtectionAmount] = useState(lead.loan_protection_amount || "");
+  const [advancePaid, setAdvancePaid] = useState(lead.advance_paid || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showShareOffer, setShowShareOffer] = useState(false);
 
   // Full INR formatter — never abbreviate
   const fmtINR = (v: number) => `Rs. ${Math.round(v).toLocaleString("en-IN")}`;
 
-  // Computed deal summary
+  // Unified calculator breakdown
   const totalCarPrice = Number(lead.on_road_price) || Number(dealValue) || 0;
-  const totalDeductions = (Number(bookingAmount) || 0) + (Number(processingFees) || 0) + (Number(otherExpenses) || 0);
-  const balancePayable = totalCarPrice - totalDeductions;
+  const salesBreakdown = calculateLoanSalesBreakdown({
+    finalCarPrice: dealValue || lead.on_road_price || 0,
+    bookingAmount,
+    advancePaid,
+    grossLoanAmount,
+    loanProtectionAmount,
+    processingFees,
+    otherCharges: otherExpenses,
+  });
+  const balancePayable = salesBreakdown.balancePayableByYou;
 
   const pendingStage = lead._targetStage;
   const currentStage = pendingStage || lead.pipeline_stage;
