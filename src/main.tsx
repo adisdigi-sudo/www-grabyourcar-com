@@ -159,18 +159,10 @@ const markDevServerPendingReload = () => {
   }
 };
 
-const requestManualReloadIfNeeded = (reason: UpdateReadyReason) => {
-  if (!import.meta.env.DEV || !isSensitivePreviewRoute() || typeof document === "undefined") {
-    return false;
-  }
-
-  if (document.visibilityState !== "visible") {
-    return false;
-  }
-
-  markDevServerPendingReload();
-  dispatchUpdateReady(reason);
-  return true;
+const requestManualReloadIfNeeded = (_reason: UpdateReadyReason) => {
+  // No longer block reloads — just let HMR do its thing silently.
+  // The old overlay was causing more problems than it solved.
+  return false;
 };
 
 const reloadAfterDevServerRestart = () => {
@@ -328,54 +320,8 @@ const DevServerStatusOverlay = () => {
     };
   }, []);
 
-  if (!import.meta.env.DEV || status === "idle" || !isSensitiveRoute) return null;
-
-  const copy =
-    status === "disconnected"
-      ? {
-          title: "Reconnecting preview",
-          description: "The dev server restarted while applying changes. We are stabilizing your session.",
-          icon: WifiOff,
-        }
-      : status === "reloading"
-        ? {
-            title: "Refreshing latest changes",
-            description: "Preparing the newest CRM bundle now.",
-            icon: Loader2,
-          }
-        : status === "update_ready"
-          ? {
-              title: "Reload blocked to protect your CRM work",
-              description:
-                updateReason === "stale-bundle"
-                  ? "A stale admin bundle was detected. We stopped the automatic reload so the preview does not turn white again."
-                  : "The dev server restarted while you were working in CRM. We stopped the forced reload so your screen does not blank out again.",
-              icon: WifiOff,
-            }
-          : {
-              title: "Preview restored",
-              description: "Connection recovered successfully.",
-              icon: Loader2,
-            };
-
-  const Icon = copy.icon;
-
-  return (
-    <div className="pointer-events-none fixed right-4 top-4 z-[9999] flex w-[min(100%,28rem)] justify-end px-4 sm:px-0">
-      <div className="pointer-events-auto w-full rounded-2xl border border-border bg-card/95 p-5 text-card-foreground shadow-lg backdrop-blur-md">
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Icon className={`h-6 w-6 ${status === "connected" || status === "reloading" ? "animate-spin" : ""}`} />
-        </div>
-        <h2 className="text-lg font-semibold">{copy.title}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{copy.description}</p>
-        {status === "update_ready" ? (
-          <Button className="mt-5" onClick={performSafeReload}>
-            Reload safely
-          </Button>
-        ) : null}
-      </div>
-    </div>
-  );
+  // Overlay completely disabled — HMR handles reconnection silently
+  return null;
 };
 
 const ChunkRecoveryOverlay = () => {
