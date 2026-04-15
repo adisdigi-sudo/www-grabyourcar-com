@@ -6870,6 +6870,90 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_monthly_attendance: {
+        Row: {
+          absent_days: number | null
+          avg_login_time: string | null
+          avg_logout_time: string | null
+          created_at: string
+          deduction_amount: number | null
+          effective_working_days: number | null
+          employee_name: string | null
+          employee_user_id: string
+          half_day_count: number | null
+          id: string
+          late_count: number | null
+          month_year: string
+          notes: string | null
+          overtime_hours: number | null
+          per_day_salary: number | null
+          salary_earned: number | null
+          shift_hours: number | null
+          synced_at: string | null
+          synced_to_payroll: boolean | null
+          total_active_seconds: number | null
+          total_break_seconds: number | null
+          total_idle_seconds: number | null
+          total_login_days: number | null
+          total_working_days: number | null
+          updated_at: string
+        }
+        Insert: {
+          absent_days?: number | null
+          avg_login_time?: string | null
+          avg_logout_time?: string | null
+          created_at?: string
+          deduction_amount?: number | null
+          effective_working_days?: number | null
+          employee_name?: string | null
+          employee_user_id: string
+          half_day_count?: number | null
+          id?: string
+          late_count?: number | null
+          month_year: string
+          notes?: string | null
+          overtime_hours?: number | null
+          per_day_salary?: number | null
+          salary_earned?: number | null
+          shift_hours?: number | null
+          synced_at?: string | null
+          synced_to_payroll?: boolean | null
+          total_active_seconds?: number | null
+          total_break_seconds?: number | null
+          total_idle_seconds?: number | null
+          total_login_days?: number | null
+          total_working_days?: number | null
+          updated_at?: string
+        }
+        Update: {
+          absent_days?: number | null
+          avg_login_time?: string | null
+          avg_logout_time?: string | null
+          created_at?: string
+          deduction_amount?: number | null
+          effective_working_days?: number | null
+          employee_name?: string | null
+          employee_user_id?: string
+          half_day_count?: number | null
+          id?: string
+          late_count?: number | null
+          month_year?: string
+          notes?: string | null
+          overtime_hours?: number | null
+          per_day_salary?: number | null
+          salary_earned?: number | null
+          shift_hours?: number | null
+          synced_at?: string | null
+          synced_to_payroll?: boolean | null
+          total_active_seconds?: number | null
+          total_break_seconds?: number | null
+          total_idle_seconds?: number | null
+          total_login_days?: number | null
+          total_working_days?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employee_profiles: {
         Row: {
           aadhaar_number: string | null
@@ -8177,6 +8261,12 @@ export type Database = {
           salary_range: string | null
           source: string | null
           status: string | null
+          test_max_score: number | null
+          test_notes: string | null
+          test_passed: boolean | null
+          test_score: number | null
+          test_taken_at: string | null
+          test_type: string | null
           updated_at: string | null
         }
         Insert: {
@@ -8200,6 +8290,12 @@ export type Database = {
           salary_range?: string | null
           source?: string | null
           status?: string | null
+          test_max_score?: number | null
+          test_notes?: string | null
+          test_passed?: boolean | null
+          test_score?: number | null
+          test_taken_at?: string | null
+          test_type?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -8223,6 +8319,12 @@ export type Database = {
           salary_range?: string | null
           source?: string | null
           status?: string | null
+          test_max_score?: number | null
+          test_notes?: string | null
+          test_passed?: boolean | null
+          test_score?: number | null
+          test_taken_at?: string | null
+          test_type?: string | null
           updated_at?: string | null
         }
         Relationships: []
