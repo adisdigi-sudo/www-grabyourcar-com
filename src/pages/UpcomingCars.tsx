@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Helmet } from "react-helmet-async";
+import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { 
   Car, Calendar, IndianRupee, Sparkles, Clock, Zap, 
   RefreshCw, Filter, ChevronRight, Star, Fuel, Settings
@@ -105,10 +105,13 @@ export default function UpcomingCars() {
 
   return (
     <>
-      <Helmet>
-        <title>Upcoming Cars in India 2025-2026 | GrabYourCar</title>
-        <meta name="description" content="Discover upcoming car launches in India. Get the latest updates on new car models, expected prices, and launch dates from top brands." />
-      </Helmet>
+      <GlobalSEO
+        pageKey="upcoming_cars"
+        title="Upcoming Cars in India 2025-2026 | GrabYourCar"
+        description="Discover upcoming car launches in India. Get the latest updates on new car models, expected prices, and launch dates from top brands."
+        path="/upcoming-cars"
+        keywords="upcoming cars India, new car launches 2025, 2026 cars, expected car prices India"
+      />
 
       <Header />
 
@@ -126,7 +129,7 @@ export default function UpcomingCars() {
               transition={{ duration: 0.6 }}
               className="text-center max-w-3xl mx-auto"
             >
-              <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/20 px-4 py-1.5">
+              <Badge className="mb-4 bg-primary/10 text-foreground hover:bg-primary/20 px-4 py-1.5">
                 <Sparkles className="h-3.5 w-3.5 mr-1.5" />
                 AI-Powered Updates
               </Badge>
@@ -265,7 +268,7 @@ export default function UpcomingCars() {
 
                           {/* Price */}
                           <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-primary/5">
-                            <IndianRupee className="h-5 w-5 text-primary" />
+                            <IndianRupee className="h-5 w-5 text-foreground" />
                             <span className="font-semibold text-lg">{car.expectedPrice}</span>
                             <span className="text-xs text-muted-foreground">(Expected)</span>
                           </div>
@@ -278,7 +281,7 @@ export default function UpcomingCars() {
                             <ul className="space-y-1.5">
                               {car.highlights.slice(0, 3).map((highlight, i) => (
                                 <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                                  <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                                  <ChevronRight className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
                                   <span>{highlight}</span>
                                 </li>
                               ))}

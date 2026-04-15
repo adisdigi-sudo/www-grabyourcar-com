@@ -11,7 +11,7 @@ import {
   Phone, FileText, RefreshCw, Loader2, UserCheck, ShieldCheck, ListChecks,
   DollarSign, TrendingUp, FolderOpen, Briefcase, FileSpreadsheet, Zap,
   MessageSquare, GitBranch, Settings, Search, Globe, Package, HelpCircle,
-  ArrowRight, CheckCircle2, Clock, BarChart3, Calendar, Wrench
+  ArrowRight, CheckCircle2, Clock, BarChart3, Calendar, Wrench, Send
 } from "lucide-react";
 
 // Insurance sub-components
@@ -29,7 +29,7 @@ import { InsuranceImportExport } from "./insurance/InsuranceImportExport";
 import { InsuranceCrossSellEngine } from "./insurance/InsuranceCrossSellEngine";
 import { InsuranceAutomationPanel } from "./insurance/InsuranceAutomationPanel";
 import { InsuranceTemplatesManager } from "./insurance/InsuranceTemplatesManager";
-import { InsuranceStatusPipeline } from "./insurance/InsuranceStatusPipeline";
+import { InsurancePipelineBoard } from "./insurance/InsurancePipelineBoard";
 import { InsuranceReportsModule } from "./insurance/InsuranceReportsModule";
 import { InsuranceVehicleDocValidity } from "./insurance/InsuranceVehicleDocValidity";
 import { InsuranceManageAgents } from "./insurance/InsuranceManageAgents";
@@ -49,6 +49,8 @@ import { LoansVerticalWorkspace } from "./verticals/LoansVerticalWorkspace";
 import { AccessoriesVerticalWorkspace } from "./verticals/AccessoriesVerticalWorkspace";
 import { HSRPVerticalWorkspace } from "./verticals/HSRPVerticalWorkspace";
 import { RentalVerticalWorkspace } from "./verticals/RentalVerticalWorkspace";
+import { FleetVerticalWorkspace } from "./verticals/FleetVerticalWorkspace";
+import { OmniMessagingWorkspace } from "./shared/OmniMessagingWorkspace";
 type Vertical = "overview" | "insurance" | "car-sales" | "loans" | "accessories" | "hsrp" | "rentals" | "fleet";
 
 const VERTICALS = [
@@ -125,7 +127,7 @@ export function UnifiedMasterCRM() {
       {vertical === "accessories" && <AccessoriesVerticalWorkspace />}
       {vertical === "hsrp" && <HSRPVerticalWorkspace />}
       {vertical === "rentals" && <RentalVerticalWorkspace />}
-      {vertical === "fleet" && <RentalVerticalWorkspace />}
+      {vertical === "fleet" && <FleetVerticalWorkspace />}
     </div>
   );
 }
@@ -271,6 +273,7 @@ function InsuranceVerticalWorkspace() {
     { id: "advisors", label: "Advisors", icon: Briefcase },
     { id: "automation", label: "Automation", icon: Zap },
     { id: "templates", label: "Templates", icon: MessageSquare },
+    
     { id: "extractor", label: "AI Extractor", icon: Sparkles },
     { id: "crosssell", label: "Cross-Sell", icon: Package },
     { id: "analytics", label: "Analytics", icon: TrendingUp },
@@ -296,7 +299,7 @@ function InsuranceVerticalWorkspace() {
       case "clients": return <InsuranceClientsManager />;
       case "policies": return <InsurancePoliciesManager />;
       case "renewals": return <InsuranceRenewalsEngine />;
-      case "pipeline": return <InsuranceStatusPipeline />;
+      case "pipeline": return <InsurancePipelineBoard />;
       case "tasks": return <InsuranceTasksManager />;
       case "commissions": return <InsuranceCommissionsTracker />;
       case "documents": return <InsuranceDocumentVault />;
@@ -304,6 +307,7 @@ function InsuranceVerticalWorkspace() {
       case "advisors": return <InsuranceAdvisorsManager />;
       case "automation": return <InsuranceAutomationPanel />;
       case "templates": return <InsuranceTemplatesManager />;
+      
       case "extractor": return <InsuranceSmartExtractor />;
       case "crosssell": return <InsuranceCrossSellEngine />;
       case "analytics": return <InsuranceAnalyticsDashboard />;

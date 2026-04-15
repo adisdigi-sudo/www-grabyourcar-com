@@ -1,26 +1,60 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
+
+const respond = (payload: Record<string, unknown>) =>
+  new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: jsonHeaders,
+  });
+
 /**
- * WhatsApp Send — Direct Meta Cloud API
- * Base URL: https://graph.facebook.com/v21.0/{PHONE_NUMBER_ID}/messages
- * Auth: Bearer WHATSAPP_ACCESS_TOKEN (permanent system user token)
+ * WhatsApp Send — Provider-Agnostic Gateway
+ *
+ * Reads active WhatsApp provider from `channel_providers` table.
+ * Supported providers: meta, waab
  *
  * Supports: text, template, image, document, video, audio
  */
 
 interface SendMessageRequest {
   to: string;
+  phone?: string;
   message?: string;
   messageType?: "text" | "template" | "image" | "document" | "video" | "audio";
   template_name?: string;
   template_variables?: Record<string, string>;
+  template_components?: unknown[];
   mediaUrl?: string;
+  mediaFileName?: string;
+  action?: string;
+  name?: string;
+  logEvent?: string;
+  lead_id?: string;
 }
+
+interface SendResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+  provider?: string;
+}
+
+interface ManagedTemplateMeta {
+  body?: string | null;
+  language?: string | null;
+  status?: string | null;
+  variables?: unknown;
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function normalizePhone(phone: string): { full: string; short: string; valid: boolean } {
   const clean = phone.replace(/\D/g, "").replace(/^0+/, "");
@@ -32,13 +66,79 @@ function normalizePhone(phone: string): { full: string; short: string; valid: bo
   return { full: `91${short}`, short, valid };
 }
 
+function extractTemplateVariableOrder(templateMeta?: ManagedTemplateMeta) {
+  const explicit = Array.isArray(templateMeta?.variables)
+    ? templateMeta.variables
+        .map((value) => String(value).replace(/[{}]/g, "").trim())
+        .filter(Boolean)
+    : [];
+
+  if (explicit.length > 0) return explicit;
+
+  const body = templateMeta?.body || "";
+  const matches = Array.from(body.matchAll(/\{\{\s*([a-zA-Z_]\w*)\s*\}\}/g)).map((match) => match[1]);
+  return Array.from(new Set(matches));
+}
+
+function buildTemplateParameters(templateVariables?: Record<string, unknown>, orderedKeys: string[] = [], templateHasVariables?: boolean) {
+  if (!templateVariables) return [];
+
+  // If the template explicitly has 0 variables, never send parameters
+  if (templateHasVariables === false) return [];
+
+  const entries = Object.entries(templateVariables).filter(([, value]) => {
+    if (value === null || value === undefined) return false;
+    return String(value).trim().length > 0;
+  });
+
+  if (entries.length === 0) return [];
+
+  if (orderedKeys.length > 0) {
+    const orderedValues = orderedKeys
+      .map((key, index) => {
+        const fallbackKeys = [key, `var_${index + 1}`, String(index + 1)];
+        const matchedKey = fallbackKeys.find((candidate) => {
+          const value = templateVariables[candidate];
+          return value !== null && value !== undefined && String(value).trim().length > 0;
+        });
+
+        if (!matchedKey) return null;
+        return templateVariables[matchedKey];
+      })
+      .filter((value): value is unknown => value !== null);
+
+    if (orderedValues.length === orderedKeys.length) {
+      return orderedValues.map((value) => ({ type: "text", text: String(value) }));
+    }
+  }
+
+  const positionalEntries = entries
+    .map(([key, value]) => {
+      const match = key.match(/^var_(\d+)$/) || key.match(/^(\d+)$/);
+      return match ? { index: Number(match[1]), value } : null;
+    })
+    .filter((entry): entry is { index: number; value: unknown } => entry !== null)
+    .sort((a, b) => a.index - b.index);
+
+  if (positionalEntries.length === entries.length) {
+    return positionalEntries.map(({ value }) => ({ type: "text", text: String(value) }));
+  }
+
+  return entries.map(([key, value]) => ({
+    type: "text",
+    parameter_name: key,
+    text: String(value),
+  }));
+}
+
+// ── Meta Cloud API Provider ──
 async function sendViaMeta(
   token: string,
   phoneNumberId: string,
   to: string,
   payload: Record<string, unknown>
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const url = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
+): Promise<SendResult> {
+  const url = `https://graph.facebook.com/v25.0/${phoneNumberId}/messages`;
   const body = {
     messaging_product: "whatsapp",
     recipient_type: "individual",
@@ -61,11 +161,265 @@ async function sendViaMeta(
   console.log("Meta API response:", JSON.stringify(result));
 
   if (response.ok && result.messages?.[0]?.id) {
-    return { success: true, messageId: result.messages[0].id };
+    return { success: true, messageId: result.messages[0].id, provider: "meta" };
   }
 
-  const errorMsg = result.error?.message || JSON.stringify(result);
-  return { success: false, error: errorMsg };
+  return { success: false, error: result.error?.message || JSON.stringify(result), provider: "meta" };
+}
+
+// ── WAAB Provider (legacy REST API) ──
+async function sendViaWaab(
+  apiKey: string,
+  baseUrl: string,
+  to: string,
+  payload: { type: "text"; message: string } | { type: "template"; template_name: string; variables?: Record<string, string> }
+): Promise<SendResult> {
+  const endpoint = `${baseUrl}/api/v1/messages/send`;
+
+  let body: Record<string, unknown>;
+  if (payload.type === "template") {
+    body = {
+      to,
+      type: "template",
+      template: { name: payload.template_name, language: "en" },
+    };
+    if (payload.variables && Object.keys(payload.variables).length > 0) {
+      (body.template as any).parameters = Object.values(payload.variables).map(v => ({ type: "text", text: v }));
+    }
+  } else {
+    body = { to, type: "text", text: { body: payload.message } };
+  }
+
+  console.log("WAAB API request:", JSON.stringify(body));
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    const result = await response.json();
+    console.log("WAAB API response:", JSON.stringify(result));
+    if (response.ok && (result.success || result.messages?.[0]?.id || result.message_id)) {
+      return { success: true, messageId: result.messages?.[0]?.id || result.message_id || result.id, provider: "waab" };
+    }
+    return { success: false, error: JSON.stringify(result), provider: "waab" };
+  }
+
+  const text = await response.text();
+  console.error("WAAB non-JSON:", text.substring(0, 300));
+  return { success: false, error: `Non-JSON response (${response.status})`, provider: "waab" };
+}
+
+// ── WABB.in Provider (Webhook-based) ──
+async function sendViaWabb(
+  webhookUrl: string,
+  to: string,
+  message: string,
+  name?: string,
+): Promise<SendResult> {
+  const payload = {
+    Phone: to,
+    Name: (name || "Customer").trim(),
+    Message: message.trim() || "Hello from GrabYourCar!",
+  };
+
+  console.log("WABB webhook request:", JSON.stringify({ ...payload, webhookUrl: webhookUrl.substring(0, 40) + "..." }));
+
+  let lastError = "Unknown WABB error";
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json, text/plain, */*",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseText = await response.text();
+      const trimmedResponse = responseText.trim();
+      console.log(`WABB webhook response attempt ${attempt}:`, response.status, trimmedResponse.substring(0, 300));
+
+      if (response.ok) {
+        let parsed: Record<string, unknown> | null = null;
+        if (trimmedResponse) {
+          try {
+            parsed = JSON.parse(trimmedResponse);
+          } catch {
+            parsed = null;
+          }
+        }
+
+        const messageId = typeof parsed?.id === "string"
+          ? parsed.id
+          : typeof parsed?.message_id === "string"
+            ? parsed.message_id
+            : undefined;
+
+        const accepted =
+          typeof parsed?.success === "boolean"
+            ? parsed.success
+            : typeof parsed?.status === "string"
+              ? ["success", "accepted", "queued", "sent"].includes(parsed.status.toLowerCase())
+              : false;
+
+        if (messageId || accepted) {
+          return { success: true, messageId: messageId || `wabb_${Date.now()}`, provider: "wabb" };
+        }
+
+        // WABB Catch Webhook uses fire-and-forget model:
+        // A 200 response (even empty {} or empty body) means the webhook accepted the payload.
+        // The message will be processed and delivered asynchronously.
+        if (trimmedResponse.length === 0 || trimmedResponse === "{}") {
+          console.log(`WABB webhook accepted payload (fire-and-forget) on attempt ${attempt}`);
+          return { success: true, messageId: `wabb_${Date.now()}`, provider: "wabb" };
+        }
+
+        // If we got a 200 with unexpected content, still treat as accepted but log warning
+        console.warn(`WABB webhook returned 200 with unexpected body: ${trimmedResponse.substring(0, 200)}`);
+        return { success: true, messageId: `wabb_${Date.now()}`, provider: "wabb" };
+      } else {
+        lastError = `WABB webhook error (${response.status}): ${trimmedResponse.substring(0, 200) || "empty response"}`;
+        const shouldRetry =
+          attempt < 3 && (
+            response.status === 429 ||
+            response.status >= 500 ||
+            ((response.status === 400 || response.status === 405) && trimmedResponse.length === 0)
+          );
+
+        if (!shouldRetry) {
+          return { success: false, error: lastError, provider: "wabb" };
+        }
+
+        console.warn(`Retrying WABB webhook after attempt ${attempt} failed with status ${response.status}`);
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : "Unknown WABB network error";
+
+      if (attempt === 3) {
+        return { success: false, error: `WABB webhook network error: ${lastError}`, provider: "wabb" };
+      }
+
+      console.warn(`Retrying WABB webhook after network failure on attempt ${attempt}:`, lastError);
+    }
+
+    await sleep(400 * attempt);
+  }
+
+  return { success: false, error: lastError, provider: "wabb" };
+}
+
+// ── Provider Router ──
+async function sendMessage(
+  providerName: string,
+  providerConfig: Record<string, any>,
+  to: string,
+  messageType: string,
+  message: string,
+  templateName?: string,
+  templateVars?: Record<string, string>,
+  mediaUrl?: string,
+  mediaFileName?: string,
+  name?: string,
+  templateComponents?: unknown[],
+  templateMeta?: ManagedTemplateMeta,
+): Promise<SendResult> {
+  const phone = normalizePhone(to);
+  if (!phone.valid) {
+    return { success: false, error: "Invalid phone number format" };
+  }
+
+  if (providerName === "meta") {
+    const token = providerConfig?.access_token || Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+    const phoneNumberId = providerConfig?.phone_number_id || Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+    if (!token || !phoneNumberId) {
+      return { success: false, error: "Meta API credentials not configured", provider: "meta" };
+    }
+
+    let payload: Record<string, unknown>;
+    if (messageType === "template" && templateName) {
+      const components: unknown[] = [];
+      const varOrder = extractTemplateVariableOrder(templateMeta);
+      const templateHasVariables = varOrder.length > 0;
+      const derivedParameters = buildTemplateParameters(templateVars, varOrder, templateHasVariables);
+      const templateLanguage = templateMeta?.language || "en";
+      if (templateComponents && templateComponents.length > 0) {
+        components.push(...templateComponents);
+      } else if (derivedParameters.length > 0) {
+        components.push({
+          type: "body",
+          parameters: derivedParameters,
+        });
+      }
+
+      payload = {
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: templateLanguage },
+          ...(components.length > 0 ? { components } : {}),
+        },
+      };
+    } else if (messageType === "image" && mediaUrl) {
+      payload = { type: "image", image: { link: mediaUrl, caption: message || "" } };
+    } else if (messageType === "document" && mediaUrl) {
+      payload = { type: "document", document: { link: mediaUrl, caption: message || "", filename: mediaFileName || "document.pdf" } };
+    } else {
+      payload = { type: "text", text: { preview_url: false, body: message || "Hello from GrabYourCar!" } };
+    }
+
+    return sendViaMeta(token, phoneNumberId, phone.full, payload);
+  }
+
+  if (providerName === "waab") {
+    const apiKey = providerConfig?.api_key || Deno.env.get("WAAB_API_KEY");
+    const baseUrl = providerConfig?.base_url || Deno.env.get("WAAB_BASE_URL") || "";
+    if (!apiKey || !baseUrl) {
+      return { success: false, error: "WAAB credentials not configured. Add API Key and Base URL in Channel Providers.", provider: "waab" };
+    }
+
+    if (messageType === "template" && templateName) {
+      return sendViaWaab(apiKey, baseUrl, phone.full, { type: "template", template_name: templateName, variables: templateVars });
+    }
+    return sendViaWaab(apiKey, baseUrl, phone.full, { type: "text", message: message || "" });
+  }
+
+  if (providerName === "wabb") {
+    // WABB Catch Webhook doesn't support templates — use Meta API for template sends
+    if (messageType === "template" && templateName) {
+      const metaToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+      const metaPhoneId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+      if (metaToken && metaPhoneId) {
+        console.log("WABB: Template message — routing via Meta Cloud API");
+        const components: unknown[] = [];
+        if (templateVars && Object.keys(templateVars).length > 0) {
+          components.push({
+            type: "body",
+            parameters: Object.values(templateVars).map(val => ({ type: "text", text: val })),
+          });
+        }
+        const payload = { type: "template", template: { name: templateName, language: { code: "en" }, ...(components.length > 0 ? { components } : {}) } };
+        return sendViaMeta(metaToken, metaPhoneId, phone.full, payload);
+      }
+      console.warn("WABB: Template requested but Meta API credentials missing, falling back to text");
+    }
+
+    const webhookUrl = providerConfig?.webhook_url || Deno.env.get("WABB_WEBHOOK_URL");
+    if (!webhookUrl) {
+      return { success: false, error: "WABB webhook URL not configured. Add it in Channel Providers or set WABB_WEBHOOK_URL secret.", provider: "wabb" };
+    }
+    return sendViaWabb(webhookUrl, phone.full, message || "Hello from GrabYourCar!", name);
+  }
+
+  return { success: false, error: `Unknown provider: ${providerName}` };
 }
 
 serve(async (req) => {
@@ -74,88 +428,203 @@ serve(async (req) => {
   }
 
   try {
-    const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-    const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
+    const body = await req.json();
+
+    // Health check
+    if (body.action === "health_check") {
+      const { data: provider } = await supabase
+        .from("channel_providers")
+        .select("*")
+        .eq("channel", "whatsapp")
+        .single();
+
       return new Response(
-        JSON.stringify({ error: "WhatsApp Meta API not configured. Missing WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          ok: true,
+          status: "ok",
+          configured: !!provider?.is_active,
+          provider: provider?.provider_name || "none",
+        }),
+        { status: 200, headers: jsonHeaders }
       );
     }
 
-    const { to, message, messageType = "text", template_name, template_variables, mediaUrl }: SendMessageRequest = await req.json();
-
+    // Resolve target phone
+    const to = body.to || body.phone;
     if (!to) {
-      return new Response(
-        JSON.stringify({ error: "Phone number required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return respond({ ok: false, success: false, status: "validation_error", error: "Phone number required (to or phone)" });
     }
 
-    const phone = normalizePhone(to);
-    if (!phone.valid) {
-      return new Response(
-        JSON.stringify({ error: "Invalid phone number format" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const template_name = body.template_name || body.templateName;
+    const template_variables = body.template_variables || body.templateVariables;
+    const template_components = body.template_components || body.templateComponents;
+    const mediaUrl = body.mediaUrl || body.media_url;
+    const mediaFileName = body.mediaFileName || body.media_file_name;
+    const name = body.name;
+    const logEvent = body.logEvent || body.log_event;
+    const lead_id = body.lead_id || body.leadId;
+    const message = body.message || "";
+    const messageType = body.messageType || body.message_type || (template_name ? "template" : "text");
 
-    let result: { success: boolean; messageId?: string; error?: string };
-
+    let templateMeta: ManagedTemplateMeta | undefined;
     if (messageType === "template" && template_name) {
-      const components: unknown[] = [];
-      if (template_variables && Object.keys(template_variables).length > 0) {
-        components.push({
-          type: "body",
-          parameters: Object.values(template_variables).map((val) => ({
-            type: "text",
-            text: val,
-          })),
-        });
-      }
+      const { data: templateRows } = await supabase
+        .from("wa_templates")
+        .select("body, language, status, variables")
+        .eq("name", template_name)
+        .order("created_at", { ascending: false })
+        .limit(1);
 
-      result = await sendViaMeta(WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, phone.full, {
-        type: "template",
-        template: {
-          name: template_name,
-          language: { code: "en_US" },
-          ...(components.length > 0 ? { components } : {}),
-        },
+      templateMeta = templateRows?.[0] as ManagedTemplateMeta | undefined;
+    }
+
+    // Get active WhatsApp provider from DB
+    const { data: provider } = await supabase
+      .from("channel_providers")
+      .select("*")
+      .eq("channel", "whatsapp")
+      .single();
+
+    const providerName = provider?.provider_name || "meta";
+    const providerConfig = provider?.config_json || {};
+    const isActive = provider?.is_active ?? false;
+
+    if (!isActive) {
+      return respond({
+        ok: false,
+        success: false,
+        fallback: false,
+        status: "not_configured",
+        error: "WhatsApp channel is not active. Enable it in Channel Providers settings.",
       });
-    } else if (messageType === "image" && mediaUrl) {
-      result = await sendViaMeta(WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, phone.full, {
-        type: "image",
-        image: { link: mediaUrl, caption: message || "" },
+    }
+
+    // Send via the active provider
+    const result = await sendMessage(
+      providerName,
+      providerConfig,
+      to,
+      messageType,
+      message,
+      template_name,
+      template_variables,
+      mediaUrl,
+      mediaFileName,
+      name,
+      template_components,
+      templateMeta,
+    );
+
+    const deliveryStatus = result.success ? "sent" : "failed";
+
+    // Log to wa_message_logs
+    const phoneNorm = normalizePhone(to);
+    try {
+      await supabase.from("wa_message_logs").insert({
+        phone: phoneNorm.full,
+        customer_name: name || null,
+        message_type: messageType,
+        message_content: message || null,
+        template_name: template_name || null,
+        trigger_event: logEvent || "api_send",
+        lead_id: lead_id || null,
+        status: deliveryStatus,
+        provider: result.provider || providerName,
+        provider_message_id: result.messageId || null,
+        error_message: result.error || null,
+        sent_at: result.success ? new Date().toISOString() : null,
+        failed_at: result.success ? null : new Date().toISOString(),
       });
-    } else if (messageType === "document" && mediaUrl) {
-      result = await sendViaMeta(WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, phone.full, {
-        type: "document",
-        document: { link: mediaUrl, caption: message || "", filename: "document.pdf" },
-      });
-    } else {
-      result = await sendViaMeta(WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, phone.full, {
-        type: "text",
-        text: { preview_url: false, body: message || "Hello from GrabYourCar!" },
-      });
+    } catch (logError) {
+      console.error("Failed to log wa_message_logs (non-fatal):", logError);
+    }
+
+    // ── Also log to wa_inbox_messages + wa_conversations for Hub visibility ──
+    if (result.success) {
+      try {
+        // Upsert conversation by phone
+        const convoPhone = phoneNorm.full;
+        const msgPreview = message ? message.substring(0, 100) : (template_name ? `[Template: ${template_name}]` : "Message sent");
+
+        const { data: existingConvo } = await supabase
+          .from("wa_conversations")
+          .select("id")
+          .eq("phone", convoPhone)
+          .maybeSingle();
+
+        let convoId: string;
+
+        if (existingConvo) {
+          convoId = existingConvo.id;
+          await supabase.from("wa_conversations").update({
+            last_message: msgPreview,
+            last_message_at: new Date().toISOString(),
+            customer_name: name || undefined,
+            updated_at: new Date().toISOString(),
+          }).eq("id", convoId);
+        } else {
+          const { data: newConvo } = await supabase.from("wa_conversations").insert({
+            phone: convoPhone,
+            customer_name: name || convoPhone,
+            last_message: msgPreview,
+            last_message_at: new Date().toISOString(),
+            status: "active",
+          }).select("id").single();
+          convoId = newConvo?.id;
+        }
+
+        if (convoId) {
+          await supabase.from("wa_inbox_messages").insert({
+            conversation_id: convoId,
+            direction: "outbound",
+            message_type: messageType === "document" ? "document" : messageType === "image" ? "image" : messageType === "template" ? "template" : "text",
+            content: message || null,
+            media_url: mediaUrl || null,
+            media_filename: mediaFileName || null,
+            template_name: template_name || null,
+            template_variables: template_variables ? template_variables : null,
+            wa_message_id: result.messageId || null,
+            status: "sent",
+            sent_by_name: "System",
+          });
+        }
+
+        console.log(`Logged outbound message to wa_inbox_messages for conversation ${convoId}`);
+      } catch (inboxErr) {
+        console.error("Failed to log to wa_inbox_messages (non-fatal):", inboxErr);
+      }
     }
 
     if (result.success) {
-      return new Response(
-        JSON.stringify({ success: true, messageId: result.messageId }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return respond({
+        ok: true,
+        success: true,
+        messageId: result.messageId,
+        provider: result.provider,
+        status: deliveryStatus,
+      });
     }
 
-    return new Response(
-      JSON.stringify({ error: "Failed to send message", details: result.error }),
-      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return respond({
+      ok: false,
+      success: false,
+      fallback: false,
+      status: "provider_error",
+      error: result.error,
+      provider: result.provider,
+    });
   } catch (error) {
-    console.error("Send message error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.error("whatsapp-send error:", error);
+    return respond({
+      ok: false,
+      success: false,
+      fallback: false,
+      status: "runtime_error",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
   }
 });

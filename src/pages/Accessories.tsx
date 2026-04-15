@@ -19,12 +19,14 @@ import {
   Package,
   Eye
 } from "lucide-react";
-import { accessoriesData, categories, Accessory } from "@/data/accessoriesData";
+import { useAccessoriesCatalog } from "@/hooks/useAccessoriesCatalog";
+import type { AccessoryCatalogProduct } from "@/lib/accessoriesCatalog";
 import { useCart } from "@/hooks/useCart";
 import { useAccessoryWishlist } from "@/hooks/useAccessoryWishlist";
 import { useAuth } from "@/hooks/useAuth";
 import { CartSheet } from "@/components/CartSheet";
 import { AccessoryDetailModal } from "@/components/AccessoryDetailModal";
+import { ShopRocketEmbed } from "@/components/ShopRocketEmbed";
 import { toast } from "sonner";
 import {
   Select,
@@ -39,13 +41,14 @@ const Accessories = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("featured");
   const [addedItems, setAddedItems] = useState<number[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Accessory | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<AccessoryCatalogProduct | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist, wishlist } = useAccessoryWishlist();
   const { user } = useAuth();
+  const { products, categories } = useAccessoriesCatalog();
 
-  const filteredProducts = accessoriesData
+  const filteredProducts = products
     .filter(product => {
       const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -65,7 +68,7 @@ const Accessories = () => {
       }
     });
 
-  const handleAddToCart = (product: Accessory) => {
+  const handleAddToCart = (product: AccessoryCatalogProduct) => {
     addToCart({
       id: product.id,
       name: product.name,
@@ -97,7 +100,7 @@ const Accessories = () => {
     }
   };
 
-  const handleViewDetails = (product: Accessory) => {
+  const handleViewDetails = (product: AccessoryCatalogProduct) => {
     setSelectedProduct(product);
     setDetailModalOpen(true);
   };
@@ -138,15 +141,15 @@ const Accessories = () => {
               </p>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <Package className="h-4 w-4 text-primary" />
+                  <Package className="h-4 w-4 text-foreground" />
                   <span>Free Delivery</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-primary" />
+                  <Check className="h-4 w-4 text-foreground" />
                   <span>Genuine Products</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Star className="h-4 w-4 text-primary" />
+                  <Star className="h-4 w-4 text-foreground" />
                   <span>Top Rated</span>
                 </div>
               </div>
@@ -298,7 +301,7 @@ const Accessories = () => {
                       </div>
                       
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="text-lg font-bold text-primary">
+                        <span className="text-lg font-bold text-foreground">
                           ₹{product.price.toLocaleString()}
                         </span>
                         {product.originalPrice && (
@@ -343,28 +346,28 @@ const Accessories = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
               <div>
                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Package className="h-6 w-6 text-primary" />
+                  <Package className="h-6 w-6 text-foreground" />
                 </div>
                 <h4 className="font-semibold mb-1">Free Delivery</h4>
                 <p className="text-sm text-muted-foreground">On all orders</p>
               </div>
               <div>
                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Check className="h-6 w-6 text-primary" />
+                  <Check className="h-6 w-6 text-foreground" />
                 </div>
                 <h4 className="font-semibold mb-1">Genuine Products</h4>
                 <p className="text-sm text-muted-foreground">100% authentic</p>
               </div>
               <div>
                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Star className="h-6 w-6 text-primary" />
+                  <Star className="h-6 w-6 text-foreground" />
                 </div>
                 <h4 className="font-semibold mb-1">Top Quality</h4>
                 <p className="text-sm text-muted-foreground">Premium materials</p>
               </div>
               <div>
                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Heart className="h-6 w-6 text-primary" />
+                  <Heart className="h-6 w-6 text-foreground" />
                 </div>
                 <h4 className="font-semibold mb-1">Easy Returns</h4>
                 <p className="text-sm text-muted-foreground">7-day return policy</p>
@@ -380,6 +383,16 @@ const Accessories = () => {
                 size="lg"
               />
             </div>
+          </div>
+        </section>
+        {/* ShopRocket Store Embed */}
+        <section className="py-12 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <h2 className="text-2xl font-bold text-center mb-2">Shop Online</h2>
+            <p className="text-muted-foreground text-center mb-8">
+              Browse and order accessories directly — powered by ShopRocket
+            </p>
+            <ShopRocketEmbed />
           </div>
         </section>
       </main>

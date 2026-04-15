@@ -71,7 +71,7 @@ export const CorporateStats = () => {
 
       <div className="container mx-auto px-4 relative z-10" ref={containerRef}>
         <div className="text-center mb-10 md:mb-14">
-          <span className="text-primary text-sm font-semibold uppercase tracking-wider mb-2 block">
+          <span className="text-foreground text-sm font-semibold uppercase tracking-wider mb-2 block">
             Our Impact
           </span>
           <h2 className="font-heading text-3xl md:text-4xl font-bold text-white mb-4">
@@ -98,7 +98,7 @@ export const CorporateStats = () => {
               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 md:p-8 text-center transition-all duration-300 hover:bg-white/10 hover:border-primary/30">
                 {/* Icon */}
                 <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-primary/20 flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/30 transition-colors">
-                  <stat.icon className="h-6 w-6 md:h-7 md:w-7 text-primary" />
+                  <stat.icon className="h-6 w-6 md:h-7 md:w-7 text-foreground" />
                 </div>
 
                 {/* Counter */}

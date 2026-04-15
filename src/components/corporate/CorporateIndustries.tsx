@@ -40,7 +40,7 @@ export const CorporateIndustries = () => {
                 "hover:border-primary/30 hover:bg-primary/5"
               )}
             >
-              <industry.icon className="h-4 w-4 text-primary" />
+              <industry.icon className="h-4 w-4 text-foreground" />
               <span className="text-sm font-medium text-foreground">
                 {industry.name}
               </span>

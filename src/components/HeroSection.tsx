@@ -36,7 +36,7 @@ export const HeroSection = () => {
 
           {/* Main Heading - Stronger Tagline */}
           <h1 className="font-heading text-4xl md:text-5xl lg:text-7xl font-bold text-card mb-4 leading-tight tracking-tight">
-            Grab Your <span className="text-success">New Car</span>{" "}
+            Grab Your <span className="text-foreground">New Car</span>{" "}
             <br className="hidden md:block" />
             Hassle-Free & Memorable
           </h1>
@@ -49,11 +49,11 @@ export const HeroSection = () => {
           {/* USP Pills */}
           <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 mb-8">
             <Badge variant="outline" className="bg-card/10 backdrop-blur-sm text-card border-card/30 py-1.5 px-3">
-              <Zap className="h-3.5 w-3.5 mr-1.5 text-accent" />
+              <Zap className="h-3.5 w-3.5 mr-1.5 text-foreground" />
               No Waiting Period
             </Badge>
             <Badge variant="outline" className="bg-card/10 backdrop-blur-sm text-card border-card/30 py-1.5 px-3">
-              <Shield className="h-3.5 w-3.5 mr-1.5 text-success" />
+              <Shield className="h-3.5 w-3.5 mr-1.5 text-foreground" />
               500+ Verified Dealers
             </Badge>
             <Badge variant="outline" className="bg-card/10 backdrop-blur-sm text-card border-card/30 py-1.5 px-3">
@@ -94,7 +94,7 @@ export const HeroSection = () => {
           <div className="mt-14 flex flex-wrap items-center justify-center gap-8 md:gap-16">
             <div className="flex items-center gap-3 text-card/90">
               <div className="w-14 h-14 rounded-2xl bg-card/10 backdrop-blur-sm flex items-center justify-center border border-card/20">
-                <Shield className="h-7 w-7 text-success" />
+                <Shield className="h-7 w-7 text-foreground" />
               </div>
               <div className="text-left">
                 <p className="font-heading font-bold text-lg">
@@ -106,7 +106,7 @@ export const HeroSection = () => {
             
             <div className="flex items-center gap-3 text-card/90">
               <div className="w-14 h-14 rounded-2xl bg-card/10 backdrop-blur-sm flex items-center justify-center border border-card/20">
-                <Award className="h-7 w-7 text-accent" />
+                <Award className="h-7 w-7 text-foreground" />
               </div>
               <div className="text-left">
                 <p className="font-heading font-bold text-lg">Best Price</p>

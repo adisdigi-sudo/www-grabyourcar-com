@@ -61,6 +61,8 @@ Deno.serve(async (req) => {
           phone: phone || null,
           designation: designation || null,
           department: department || null,
+          role_tier: payload.roleTier || "caller",
+          reporting_to: payload.reportingTo || null,
           is_active: true,
           created_by: caller.id,
         });
@@ -72,11 +74,13 @@ Deno.serve(async (req) => {
           email,
         });
 
-        // Assign vertical access
+        // Assign vertical access with access_level
         if (verticalIds?.length) {
+          const accessLevels = payload.accessLevels || {};
           const accessRows = verticalIds.map((vid: string) => ({
             user_id: userId,
             vertical_id: vid,
+            access_level: accessLevels[vid] || "member",
             granted_by: caller.id,
           }));
           await supabase.from("user_vertical_access").insert(accessRows);
@@ -99,6 +103,8 @@ Deno.serve(async (req) => {
         if (isActive !== undefined) updates.is_active = isActive;
         if (designation !== undefined) updates.designation = designation;
         if (department !== undefined) updates.department = department;
+        if (payload.roleTier !== undefined) updates.role_tier = payload.roleTier;
+        if (payload.reportingTo !== undefined) updates.reporting_to = payload.reportingTo || null;
 
         if (Object.keys(updates).length > 0) {
           await supabase.from("team_members").update(updates).eq("user_id", userId);
@@ -114,9 +120,11 @@ Deno.serve(async (req) => {
         if (verticalIds) {
           await supabase.from("user_vertical_access").delete().eq("user_id", userId);
           if (verticalIds.length > 0) {
+            const accessLevels = payload.accessLevels || {};
             const accessRows = verticalIds.map((vid: string) => ({
               user_id: userId,
               vertical_id: vid,
+              access_level: accessLevels[vid] || "member",
               granted_by: caller.id,
             }));
             await supabase.from("user_vertical_access").insert(accessRows);

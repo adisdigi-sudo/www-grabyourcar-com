@@ -70,14 +70,13 @@ const allSearchItems: SearchResult[] = [
   { id: "content-intelligence", label: "Auto Intelligence", category: "Content", icon: Sparkles, keywords: ["intelligence", "insights", "data", "ai"] },
   
   // Marketing
-  { id: "marketing-templates", label: "WhatsApp Templates", category: "Marketing", icon: MessageSquare, keywords: ["whatsapp", "templates", "message", "broadcast"] },
+  { id: "whatsapp-hub", label: "WhatsApp Hub", category: "Marketing", icon: MessageSquare, keywords: ["whatsapp", "templates", "message", "broadcast", "campaigns", "inbox", "api"] },
   { id: "marketing-automation", label: "Email Automation", category: "Marketing", icon: Settings, keywords: ["email", "automation", "drip", "sequence", "campaign"] },
   { id: "marketing-email", label: "Email Campaigns", category: "Marketing", icon: MessageSquare, keywords: ["email", "campaign", "newsletter", "blast"] },
   { id: "marketing-bulk", label: "Bulk Data Manager", category: "Marketing", icon: Settings, keywords: ["bulk", "data", "export", "import", "csv"] },
   
   // Integrations
   { id: "integrations-api", label: "API Portal", category: "Integrations", icon: Settings, keywords: ["api", "endpoint", "webhook", "key", "token"] },
-  { id: "integrations-whatsapp", label: "WhatsApp API", category: "Integrations", icon: MessageSquare, keywords: ["whatsapp", "api", "finbite", "config"] },
   { id: "integrations-chatbot", label: "AI Chatbot", category: "Integrations", icon: Brain, keywords: ["chatbot", "ai", "assistant", "conversation"] },
   
   // Settings
@@ -95,11 +94,7 @@ interface AdminGlobalSearchProps {
 
 // Map search items to their vertical
 const itemVerticalMap: Record<string, string[]> = {
-  "cars-list": ["car-database"], "cars-brands": ["car-database"], "cars-ai-entry": ["car-database"],
-  "cars-bulk-import": ["car-database"], "cars-quick-import": ["car-database"], "cars-city-pricing": ["car-database"],
-  "cars-attributes": ["car-database"], "cars-colors": ["car-database"], "cars-image-sync": ["car-database"],
-  "cars-images": ["car-database"], "cars-variants": ["car-database"], "cars-pricing": ["car-database"],
-  "cars-migration": ["car-database"], "cars-ai": ["car-database"],
+  "cars-workspace": ["car-database"],
 };
 
 export const AdminGlobalSearch = ({ onNavigate, activeVerticalSlug }: AdminGlobalSearchProps) => {

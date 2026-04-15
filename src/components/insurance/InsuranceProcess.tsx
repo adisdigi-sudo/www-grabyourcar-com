@@ -21,7 +21,7 @@ export function InsuranceProcess() {
           className="text-center max-w-2xl mx-auto mb-16"
         >
           <h2 className="text-3xl md:text-5xl font-heading font-bold mb-4">
-            Get insured in <span className="text-primary">4 simple steps</span>
+            Get insured in <span className="text-foreground">4 simple steps</span>
           </h2>
           <p className="text-lg text-muted-foreground">
             Our streamlined process makes buying car insurance quick and hassle-free
@@ -42,7 +42,7 @@ export function InsuranceProcess() {
               className="relative text-center group"
             >
               <div className="relative z-10 mx-auto w-24 h-24 rounded-3xl bg-card border-2 border-border/60 group-hover:border-primary/50 flex items-center justify-center mb-6 shadow-lg group-hover:shadow-[0_15px_40px_-10px_hsl(var(--primary)/0.2)] transition-all duration-500">
-                <item.icon className="h-10 w-10 text-primary" />
+                <item.icon className="h-10 w-10 text-foreground" />
                 <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center shadow-lg ring-4 ring-background">
                   {item.step}
                 </div>

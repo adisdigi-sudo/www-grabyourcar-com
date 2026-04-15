@@ -54,7 +54,7 @@ export const CarLoanCrossSell = ({ maxBudget }: Props) => {
     <section className="py-16 md:py-20 bg-primary/5">
       <div className="container mx-auto px-4">
         <div className="text-center mb-10">
-          <Badge className="bg-primary/10 text-primary border-primary/20 mb-3">
+          <Badge className="bg-primary/10 text-foreground border-primary/20 mb-3">
             <Sparkles className="w-3.5 h-3.5 mr-1.5" />
             Cars Within Your Budget
           </Badge>
@@ -94,7 +94,7 @@ export const CarLoanCrossSell = ({ maxBudget }: Props) => {
                   <CardContent className="p-4">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider">{car.brand}</p>
                     <h3 className="font-bold text-foreground text-sm mt-0.5 line-clamp-1">{car.name}</h3>
-                    <p className="text-primary font-bold text-sm mt-1">{car.price_range || "Price on Request"}</p>
+                    <p className="text-foreground font-bold text-sm mt-1">{car.price_range || "Price on Request"}</p>
                   </CardContent>
                 </Card>
               </Link>

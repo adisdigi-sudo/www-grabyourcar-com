@@ -1,5 +1,5 @@
 import { LoanWorkspace } from "../loans/LoanWorkspace";
 
 export function LoansVerticalWorkspace() {
-  return <LoanWorkspace />;
+  return <LoanWorkspace initialView="pipeline" />;
 }

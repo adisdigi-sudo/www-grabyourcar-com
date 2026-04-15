@@ -9,7 +9,7 @@ export const CorporateSocialProof = () => {
           
           <blockquote className="font-heading text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground leading-snug mb-8">
             "From legacy institutions to fast-growing enterprises, organizations trust Grabyourcar 
-            for <span className="text-primary">reliable automotive solutions</span> that scale with their business."
+            for <span className="text-foreground">reliable automotive solutions</span> that scale with their business."
           </blockquote>
 
           <div className="flex items-center justify-center gap-2">

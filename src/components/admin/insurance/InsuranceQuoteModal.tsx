@@ -1,17 +1,76 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Download, MessageCircle, Mail, Copy, FileText, Shield, IndianRupee } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { persistInsuranceQuoteHistory } from "@/lib/insuranceQuotePersistence";
+import {
+  Download, MessageCircle, Mail, Copy, Shield, IndianRupee,
+  Plus, Check, X, Car, Percent, Zap, Info, Calculator,
+  ChevronDown, ChevronUp, AlertTriangle, CalendarClock
+} from "lucide-react";
+import { format } from "date-fns";
 import { generateInsuranceQuotePdf, InsuranceQuoteData } from "@/lib/generateInsuranceQuotePdf";
+import { INSURANCE_COMPANIES, getShortName } from "@/lib/insuranceCompanies";
+import { InsuranceComparisonBuilder } from "./InsuranceComparisonBuilder";
+import { motion, AnimatePresence } from "framer-motion";
+import { sendWhatsApp } from "@/lib/sendWhatsApp";
+
+// ── Zone logic ──
+const METRO_CITIES = ["delhi", "delhi ncr", "ncr", "new delhi", "noida", "gurgaon", "gurugram", "faridabad", "ghaziabad", "bangalore", "bengaluru"];
+function getZone(city: string): "A" | "B" {
+  return METRO_CITIES.includes(city.trim().toLowerCase()) ? "A" : "B";
+}
+
+// ── OD rate table (% of IDV) ──
+const OD_RATES = {
+  A: { above1500: 3.440, upto1500: 3.283 },
+  B: { above1500: 3.343, upto1500: 3.191 },
+};
+
+// ── TP rates (FY 2026) ──
+function getTPPremium(cc: number): number {
+  if (cc < 1000) return 2094;
+  if (cc <= 1500) return 3416;
+  return 7897;
+}
+
+// ── NCB slabs ──
+const NCB_OPTIONS = [
+  { label: "0% — New / 1st Year", value: 0 },
+  { label: "20% — 2nd Year", value: 20 },
+  { label: "25% — 3rd Year", value: 25 },
+  { label: "35% — 4th Year", value: 35 },
+  { label: "45% — 5th Year", value: 45 },
+  { label: "50% — 6th Year+", value: 50 },
+];
+
+const DEFAULT_ADDONS = [
+  { id: "zero_dep", name: "Zero Depreciation", price: 3500, enabled: true },
+  { id: "engine", name: "Engine Protector", price: 2500, enabled: true },
+  { id: "rsa", name: "Roadside Assistance (RSA)", price: 500, enabled: true },
+  { id: "rti", name: "Return to Invoice", price: 1200, enabled: false },
+  { id: "ncb_protect", name: "NCB Protect", price: 800, enabled: false },
+  { id: "consumable", name: "Consumable Cover", price: 1500, enabled: false },
+  { id: "key_replace", name: "Key Replacement", price: 600, enabled: false },
+  { id: "tyre_cover", name: "Tyre Protect", price: 1000, enabled: false },
+  { id: "pa_cover", name: "PA Cover (Owner)", price: 900, enabled: false },
+];
+type Addon = typeof DEFAULT_ADDONS[number];
+
+const FUEL_TYPES = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid", "LPG"];
 
 interface ClientData {
+  id?: string;
   customer_name: string | null;
   phone: string;
   email: string | null;
@@ -24,6 +83,8 @@ interface ClientData {
   current_policy_type: string | null;
   ncb_percentage: number | null;
   current_premium: number | null;
+  policy_expiry_date?: string | null;
+  previous_claim?: boolean | null;
 }
 
 interface PolicyData {
@@ -43,238 +104,761 @@ interface Props {
   onQuoteSent?: () => void;
 }
 
-const INSURERS = [
-  "ICICI Lombard", "HDFC ERGO", "Bajaj Allianz", "New India Assurance",
-  "United India Insurance", "Oriental Insurance", "National Insurance",
-  "Tata AIG", "Reliance General", "SBI General", "Cholamandalam MS",
-  "Bharti AXA", "Royal Sundaram", "Acko", "Digit Insurance",
-  "Kotak General", "Iffco Tokio", "Magma HDI", "Liberty General",
-];
+const fmt = (n: number) => `Rs. ${Math.round(n).toLocaleString("en-IN")}`;
 
-const ALL_ADDONS = [
-  "Zero Depreciation", "Consumables Cover", "Engine Protection",
-  "Tyre Protection", "Roadside Assistance (RSA)", "Key Replacement",
-  "Personal Belongings Cover", "Return to Invoice", "NCB Protection",
-  "Passenger Cover", "Driver Cover", "Windshield Cover",
-];
-
-const FUEL_TYPES = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid", "LPG"];
+const getDaysSinceDate = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+};
 
 export default function InsuranceQuoteModal({ open, onOpenChange, client, policy, onQuoteSent }: Props) {
-  const [form, setForm] = useState(() => ({
-    insuranceCompany: policy?.insurer || client.current_insurer || "ICICI Lombard",
-    policyType: policy?.policy_type || client.current_policy_type || "comprehensive",
-    idv: policy?.idv || 500000,
-    fuelType: "Petrol",
-    basicOD: policy?.premium_amount ? Math.round(policy.premium_amount * 0.4) : 8000,
-    odDiscount: 1500,
-    ncbDiscount: policy?.ncb_discount || client.ncb_percentage ? Math.round((policy?.ncb_discount || client.ncb_percentage || 0) * 80) : 2000,
-    thirdParty: 6521,
-    securePremium: 500,
-    addonPremium: 3500,
-    addons: policy?.addons?.length ? policy.addons : ["Zero Depreciation", "Engine Protection", "Roadside Assistance (RSA)"],
-  }));
+  const queryClient = useQueryClient();
+  // Saved quote confirmation state
+  const [lastSavedQuote, setLastSavedQuote] = useState<{ ref: string; total: number; insurer: string; method: string } | null>(null);
+  // Insurer
+  const [showCustomInsurer, setShowCustomInsurer] = useState(false);
+  const [customInsurerInput, setCustomInsurerInput] = useState("");
+  const [insuranceCompany, setInsuranceCompany] = useState(
+    policy?.insurer || client.current_insurer || "ICICI Lombard General Insurance Co Ltd"
+  );
+  const [policyType, setPolicyType] = useState(
+    policy?.policy_type || client.current_policy_type || "comprehensive"
+  );
+  const [fuelType, setFuelType] = useState("Petrol");
 
-  const update = (key: string, value: any) => setForm(f => ({ ...f, [key]: value }));
+  // Calculator inputs
+  const [idv, setIdv] = useState<string>(String(policy?.idv || 500000));
+  const [cc, setCc] = useState<string>("1199");
+  const [city, setCity] = useState<string>(client.city || "Delhi NCR");
+  const claimLockedByExpiry = (getDaysSinceDate(client.policy_expiry_date) ?? -1) > 90;
+  const [ncb, setNcb] = useState<number>(
+    claimLockedByExpiry || client.previous_claim
+      ? 0
+      : policy?.ncb_discount ? policy.ncb_discount : client.ncb_percentage ? client.ncb_percentage : 0
+  );
+  const [claimTaken, setClaimTaken] = useState(Boolean(client.previous_claim || claimLockedByExpiry));
+  const [odDiscountPct, setOdDiscountPct] = useState<string>("0");
+  const [addons, setAddons] = useState<Addon[]>(DEFAULT_ADDONS);
+  const [securePremium, setSecurePremium] = useState<string>("500");
+  const [showAddons, setShowAddons] = useState(true);
+  const [prefilled, setPrefilled] = useState(false);
 
-  const netOD = useMemo(() => Math.max(0, form.basicOD - form.odDiscount - form.ncbDiscount), [form.basicOD, form.odDiscount, form.ncbDiscount]);
-  const netPremium = useMemo(() => netOD + form.thirdParty + form.securePremium + form.addonPremium, [netOD, form.thirdParty, form.securePremium, form.addonPremium]);
-  const gst = useMemo(() => Math.round(netPremium * 0.18), [netPremium]);
-  const totalPremium = useMemo(() => netPremium + gst, [netPremium, gst]);
+  // Auto-fill from last saved/shared quote
+  useEffect(() => {
+    if (!open || prefilled) return;
+    const cleanPhone = (client.phone || "").replace(/\D/g, "").slice(-10);
+    const cleanVehicle = (client.vehicle_number || "").replace(/\s+/g, "").toUpperCase();
+    if (!cleanPhone && !cleanVehicle) return;
 
-  const formatINR = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+    const fetchLastQuote = async () => {
+      let query = supabase
+        .from("quote_share_history")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1);
 
-  const buildQuoteData = (): InsuranceQuoteData => ({
-    customerName: client.customer_name || "Customer",
-    phone: client.phone,
-    email: client.email || undefined,
-    city: client.city || undefined,
-    vehicleMake: client.vehicle_make || "N/A",
-    vehicleModel: client.vehicle_model || "N/A",
-    vehicleNumber: client.vehicle_number || "N/A",
-    vehicleYear: client.vehicle_year || new Date().getFullYear(),
-    fuelType: form.fuelType,
-    insuranceCompany: form.insuranceCompany,
-    policyType: form.policyType,
-    idv: form.idv,
-    basicOD: form.basicOD,
-    odDiscount: form.odDiscount,
-    ncbDiscount: form.ncbDiscount,
-    thirdParty: form.thirdParty,
-    securePremium: form.securePremium,
-    addonPremium: form.addonPremium,
-    addons: form.addons,
-  });
+      if (cleanPhone && cleanVehicle) {
+        query = query.or(`customer_phone.ilike.%${cleanPhone},vehicle_number.ilike.%${cleanVehicle}`);
+      } else if (cleanPhone) {
+        query = query.ilike("customer_phone", `%${cleanPhone}`);
+      } else {
+        query = query.ilike("vehicle_number", `%${cleanVehicle}`);
+      }
 
-  const handleDownload = () => {
-    generateInsuranceQuotePdf(buildQuoteData());
-    toast.success("📄 Insurance Quote PDF downloaded!");
+      const { data } = await query;
+      if (!data?.length) return;
+
+      const q = data[0];
+      const breakup = q.premium_breakup as any;
+
+      if (q.insurance_company) setInsuranceCompany(q.insurance_company);
+      if (q.policy_type) setPolicyType(q.policy_type);
+      if (q.idv) setIdv(String(q.idv));
+      if (breakup?.odDiscount && breakup?.basicOD && breakup.basicOD > 0) {
+        const pct = Math.round((breakup.odDiscount / breakup.basicOD) * 100);
+        setOdDiscountPct(String(pct));
+      }
+      if (breakup?.securePremium != null) setSecurePremium(String(breakup.securePremium));
+      if (q.addons?.length) {
+        setAddons(prev => prev.map(a => ({
+          ...a,
+          enabled: q.addons!.includes(a.name),
+        })));
+      }
+      if (q.notes) {
+        const ncbMatch = q.notes.match(/NCB:\s*(\d+)%/);
+        if (ncbMatch && !claimLockedByExpiry && !client.previous_claim) {
+          setNcb(parseInt(ncbMatch[1]));
+        }
+      }
+
+      setPrefilled(true);
+      toast.info("Last quote details auto-filled", { duration: 2000 });
+    };
+
+    fetchLastQuote();
+  }, [open, prefilled, client.phone, client.vehicle_number, claimLockedByExpiry, client.previous_claim]);
+
+  // Reset prefilled flag when modal closes
+  useEffect(() => {
+    if (!open) setPrefilled(false);
+  }, [open]);
+
+
+  const zone = getZone(city);
+  const ccNum = parseInt(cc) || 0;
+  const idvNum = parseFloat(idv) || 0;
+  const discountPct = parseFloat(odDiscountPct) || 0;
+  const securePremiumNum = parseFloat(securePremium) || 0;
+  const ncbLocked = claimTaken || claimLockedByExpiry;
+  const expiryDays = getDaysSinceDate(client.policy_expiry_date);
+  const ncbLockReason = claimLockedByExpiry
+    ? "Policy expired more than 90 days ago — NCB is not eligible."
+    : claimTaken
+      ? "Claim declared — NCB is locked to 0%."
+      : null;
+
+  const isThirdPartyOnly = policyType === "third_party";
+
+  const calc = useMemo(() => {
+    if (isThirdPartyOnly) {
+      if (!ccNum) return null;
+      const tp = getTPPremium(ccNum);
+      const subtotal = tp;
+      const gst = Math.round(subtotal * 0.18);
+      const total = subtotal + gst;
+      return { odRate: 0, basicOD: 0, odDiscount: 0, ncbDiscount: 0, netOD: 0, tp, addonTotal: 0, subtotal, gst, total };
+    }
+    if (!idvNum || !ccNum) return null;
+    const ccKey = ccNum > 1500 ? "above1500" : "upto1500";
+    const odRate = OD_RATES[zone][ccKey];
+    const basicOD = (idvNum * odRate) / 100;
+    const odDiscount = (basicOD * discountPct) / 100;
+    const odAfterDiscount = basicOD - odDiscount;
+    const ncbDiscount = (odAfterDiscount * (ncbLocked ? 0 : ncb)) / 100;
+    const netOD = odAfterDiscount - ncbDiscount;
+    const tp = getTPPremium(ccNum);
+    const addonTotal = addons.filter(a => a.enabled).reduce((s, a) => s + a.price, 0);
+    const subtotal = netOD + tp + securePremiumNum + addonTotal;
+    const gst = Math.round(subtotal * 0.18);
+    const total = subtotal + gst;
+    return { odRate, basicOD, odDiscount, ncbDiscount, netOD, tp, addonTotal, subtotal, gst, total };
+  }, [idvNum, ccNum, zone, discountPct, ncb, addons, securePremiumNum, ncbLocked, isThirdPartyOnly]);
+
+  const toggleAddon = (id: string) => {
+    setAddons(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a));
+  };
+  const updateAddonPrice = (id: string, price: number) => {
+    setAddons(prev => prev.map(a => a.id === id ? { ...a, price } : a));
+  };
+
+  const buildQuoteData = (): InsuranceQuoteData | null => {
+    if (!calc) return null;
+    return {
+      customerName: client.customer_name || "Customer",
+      phone: client.phone,
+      email: client.email || undefined,
+      city: client.city || undefined,
+      vehicleMake: client.vehicle_make || "N/A",
+      vehicleModel: client.vehicle_model || "N/A",
+      vehicleNumber: client.vehicle_number || "N/A",
+      vehicleYear: client.vehicle_year || new Date().getFullYear(),
+      fuelType,
+      insuranceCompany,
+      policyType,
+      idv: idvNum,
+      basicOD: Math.round(calc.basicOD),
+      odDiscount: Math.round(calc.odDiscount),
+      ncbDiscount: Math.round(calc.ncbDiscount),
+      thirdParty: calc.tp,
+      securePremium: securePremiumNum,
+      addonPremium: calc.addonTotal,
+      addons: addons.filter(a => a.enabled).map(a => a.name),
+      claimTaken: ncbLocked,
+    };
+  };
+
+  const saveQuoteHistory = async (doc: ReturnType<typeof generateInsuranceQuotePdf>["doc"], fileName: string, shareMethod: string) => {
+    if (!calc) return;
+
+    const result = await persistInsuranceQuoteHistory({
+      doc,
+      fileName,
+      shareMethod,
+      customerName: client.customer_name || "Customer",
+      customerPhone: client.phone,
+      customerEmail: client.email || null,
+      vehicleNumber: client.vehicle_number || null,
+      vehicleMake: client.vehicle_make || null,
+      vehicleModel: client.vehicle_model || null,
+      vehicleYear: client.vehicle_year || null,
+      insuranceCompany,
+      policyType,
+      idv: idvNum,
+      totalPremium: Math.round(calc.total),
+      premiumBreakup: {
+        basicOD: Math.round(calc.basicOD),
+        odDiscount: Math.round(calc.odDiscount),
+        ncbDiscount: Math.round(calc.ncbDiscount),
+        netOD: Math.round(calc.netOD),
+        tp: Math.round(calc.tp),
+        securePremium: Math.round(securePremiumNum),
+        addonTotal: Math.round(calc.addonTotal),
+        subtotal: Math.round(calc.subtotal),
+        gst: Math.round(calc.gst),
+        total: Math.round(calc.total),
+      },
+      addons: addons.filter(a => a.enabled).map(a => a.name),
+      notes: `Claim Taken: ${ncbLocked ? "Yes" : "No"} | NCB: ${ncbLocked ? 0 : ncb}% | OD Discount: ${discountPct}%${claimLockedByExpiry ? ` | Expired ${expiryDays} days ago | ⚠ Vehicle inspection required (policy lapsed >90 days) — IRDAI` : ""}`,
+      clientId: client.id,
+      quoteAmount: Math.round(calc.total),
+      quoteInsurer: insuranceCompany,
+      ncbPercentage: ncbLocked ? 0 : ncb,
+      previousClaim: ncbLocked,
+    });
+
+    // Show confirmation banner
+    setLastSavedQuote({
+      ref: result.quoteRef,
+      total: Math.round(calc.total),
+      insurer: insuranceCompany,
+      method: shareMethod,
+    });
+
+    // Auto-refresh quote history
+    queryClient.invalidateQueries({ queryKey: ["client-quote-history"] });
+  };
+
+  const handleDownload = async () => {
+    const data = buildQuoteData();
+    if (!data) { toast.error("Enter IDV & CC first"); return; }
+    try {
+      const { doc, fileName } = generateInsuranceQuotePdf(data);
+      await saveQuoteHistory(doc, fileName, "pdf_download");
+      toast.success("📄 Quote saved and downloaded!");
+      onQuoteSent?.();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save quote");
+      return;
+    }
     onQuoteSent?.();
   };
 
-  const handleWhatsApp = () => {
-    generateInsuranceQuotePdf(buildQuoteData());
-    const msg = `Hi ${client.customer_name || ""}! 🚗\n\nHere's your *Motor Insurance Quotation* from Grabyourcar:\n\n🏢 Insurer: ${form.insuranceCompany}\n🚘 Vehicle: ${client.vehicle_make || ""} ${client.vehicle_model || ""}\n📋 Reg: ${client.vehicle_number || "N/A"}\n💰 IDV: ${formatINR(form.idv)}\n\n📊 *Premium Breakup:*\nNet Premium: ${formatINR(netPremium)}\nGST (18%): ${formatINR(gst)}\n*Total: ${formatINR(totalPremium)}*\n\n✅ Coverage: ${form.addons.join(", ")}\n\nPlease find the detailed PDF quote attached. Let us know to proceed!\n\n— Grabyourcar Insurance Desk\n📞 +91 98559 24442`;
-    const cleanPhone = (client.phone || "").replace(/\D/g, "");
-    const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
-    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, "_blank");
-    toast.success("📱 PDF downloaded & WhatsApp opened – attach the PDF!");
+  const handleWhatsApp = async () => {
+    const data = buildQuoteData();
+    if (!data || !calc) { toast.error("Enter IDV & CC first"); return; }
+    let pdfUrl: string | null = null;
+    let fileName = "insurance-quote.pdf";
+    try {
+      const { doc, fileName: generatedFileName } = generateInsuranceQuotePdf(data);
+      fileName = generatedFileName;
+      const result = await persistInsuranceQuoteHistory({
+        doc,
+        fileName,
+        shareMethod: "whatsapp",
+        customerName: client.customer_name || "Customer",
+        customerPhone: client.phone,
+        customerEmail: client.email || null,
+        vehicleNumber: client.vehicle_number || null,
+        vehicleMake: client.vehicle_make || null,
+        vehicleModel: client.vehicle_model || null,
+        vehicleYear: client.vehicle_year || null,
+        insuranceCompany,
+        policyType,
+        idv: idvNum,
+        totalPremium: Math.round(calc.total),
+        premiumBreakup: {
+          basicOD: Math.round(calc.basicOD),
+          odDiscount: Math.round(calc.odDiscount),
+          ncbDiscount: Math.round(calc.ncbDiscount),
+          netOD: Math.round(calc.netOD),
+          tp: Math.round(calc.tp),
+          securePremium: Math.round(securePremiumNum),
+          addonTotal: Math.round(calc.addonTotal),
+          subtotal: Math.round(calc.subtotal),
+          gst: Math.round(calc.gst),
+          total: Math.round(calc.total),
+        },
+        addons: addons.filter(a => a.enabled).map(a => a.name),
+        notes: `Claim Taken: ${ncbLocked ? "Yes" : "No"} | NCB: ${ncbLocked ? 0 : ncb}% | OD Discount: ${discountPct}%${claimLockedByExpiry ? ` | Expired ${expiryDays} days ago | ⚠ Vehicle inspection required (policy lapsed >90 days) — IRDAI` : ""}`,
+        clientId: client.id,
+        quoteAmount: Math.round(calc.total),
+        quoteInsurer: insuranceCompany,
+        ncbPercentage: ncbLocked ? 0 : ncb,
+        previousClaim: ncbLocked,
+      });
+
+      setLastSavedQuote({
+        ref: result.quoteRef,
+        total: Math.round(calc.total),
+        insurer: insuranceCompany,
+        method: "whatsapp",
+      });
+      queryClient.invalidateQueries({ queryKey: ["client-quote-history"] });
+
+      if (result.pdfStoragePath) {
+        pdfUrl = supabase.storage.from("quote-pdfs").getPublicUrl(result.pdfStoragePath).data.publicUrl;
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save quote");
+      return;
+    }
+    const inspectionNote = claimLockedByExpiry ? "\n\n⚠ *Vehicle Inspection Required*: Policy lapsed >90 days. Physical inspection mandatory as per IRDAI guidelines." : "";
+    const msg = `Hi ${client.customer_name || ""}! 🚗\n\nHere's your *Motor Insurance Quotation* from Grabyourcar:\n\n🏢 Insurer: ${insuranceCompany}\n🚘 Vehicle: ${client.vehicle_make || ""} ${client.vehicle_model || ""}\n📋 Reg: ${client.vehicle_number || "N/A"}\n💰 IDV: ${fmt(idvNum)}\n\n📊 *Premium Breakup:*\nNet OD: ${fmt(calc.netOD)}\nThird Party: ${fmt(calc.tp)}\nAdd-ons: ${fmt(calc.addonTotal)}\nGST (18%): ${fmt(calc.gst)}\n*Total: ${fmt(calc.total)}*\n\n✅ Coverage: ${addons.filter(a => a.enabled).map(a => a.name).join(", ")}${inspectionNote}\n\nPlease find the detailed PDF quote attached.\n\n— Grabyourcar Insurance Desk\n📞 +91 98559 24442`;
+    const result = await sendWhatsApp({
+      phone: client.phone || "",
+      message: msg,
+      name: client.customer_name || undefined,
+      logEvent: "quote_modal_share",
+      messageType: pdfUrl ? "document" : "text",
+      mediaUrl: pdfUrl || undefined,
+      mediaFileName: fileName,
+    });
+    if (!result.success) return;
     onQuoteSent?.();
   };
 
-  const handleEmail = () => {
-    generateInsuranceQuotePdf(buildQuoteData());
+  const handleEmail = async () => {
+    const data = buildQuoteData();
+    if (!data || !calc) { toast.error("Enter IDV & CC first"); return; }
+    try {
+      const { doc, fileName } = generateInsuranceQuotePdf(data);
+      await saveQuoteHistory(doc, fileName, "email");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save quote");
+      return;
+    }
     const subject = `Motor Insurance Quote – ${client.vehicle_make || ""} ${client.vehicle_model || ""} | Grabyourcar`;
-    const body = `Dear ${client.customer_name || "Customer"},\n\nPlease find your motor insurance quotation:\n\nInsurer: ${form.insuranceCompany}\nVehicle: ${client.vehicle_make || ""} ${client.vehicle_model || ""}\nReg: ${client.vehicle_number || "N/A"}\nIDV: ${formatINR(form.idv)}\n\nTotal Premium: ${formatINR(totalPremium)}\n\nPlease find the detailed PDF attached.\n\nRegards,\nGrabyourcar Insurance Desk\n+91 98559 24442`;
+    const body = `Dear ${client.customer_name || "Customer"},\n\nInsurer: ${insuranceCompany}\nVehicle: ${client.vehicle_make || ""} ${client.vehicle_model || ""}\nReg: ${client.vehicle_number || "N/A"}\nIDV: ${fmt(idvNum)}\n\nTotal Premium: ${fmt(calc.total)}\n\nRegards,\nGrabyourcar Insurance Desk\n+91 98559 24442`;
     window.open(`mailto:${client.email || ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank");
-    toast.success("📧 PDF downloaded & Email client opened – attach the PDF!");
+    toast.success("📧 Quote saved & Email opened");
     onQuoteSent?.();
   };
 
   const handleCopy = () => {
-    const text = `MOTOR INSURANCE QUOTATION\n\nInsurer: ${form.insuranceCompany}\nVehicle: ${client.vehicle_make || ""} ${client.vehicle_model || ""}\nReg: ${client.vehicle_number || "N/A"}\nIDV: ${formatINR(form.idv)}\n\nBasic OD: ${formatINR(form.basicOD)}\nOD Discount: -${formatINR(form.odDiscount)}\nNCB Discount: -${formatINR(form.ncbDiscount)}\nNet OD: ${formatINR(netOD)}\nThird Party: ${formatINR(form.thirdParty)}\nAdd-ons: ${formatINR(form.addonPremium)}\nNet Premium: ${formatINR(netPremium)}\nGST (18%): ${formatINR(gst)}\nTOTAL: ${formatINR(totalPremium)}\n\nCoverage: ${form.addons.join(", ")}\n\n— Grabyourcar Insurance Desk`;
-    navigator.clipboard.writeText(text);
-    toast.success("📋 Quote summary copied!");
-  };
-
-  const toggleAddon = (addon: string) => {
-    setForm(f => ({
-      ...f,
-      addons: f.addons.includes(addon) ? f.addons.filter(a => a !== addon) : [...f.addons, addon],
-    }));
+    if (!calc) { toast.error("Enter IDV & CC first"); return; }
+    const lines = [
+      `🚗 MOTOR INSURANCE QUOTATION`,
+      `Customer: ${client.customer_name}`,
+      `Vehicle: ${client.vehicle_make} ${client.vehicle_model} | ${client.vehicle_number}`,
+      `Insurer: ${insuranceCompany}`,
+      `IDV: ${fmt(idvNum)} | CC: ${ccNum} | Zone: ${zone}`,
+      `──────────────────`,
+      `Basic OD: ${fmt(calc.basicOD)} (${calc.odRate}%)`,
+      discountPct > 0 ? `OD Discount: -${fmt(calc.odDiscount)} (${discountPct}%)` : null,
+      ncb > 0 ? `NCB Discount: -${fmt(calc.ncbDiscount)} (${ncb}%)` : null,
+      `Net OD: ${fmt(calc.netOD)}`,
+      `Third Party: ${fmt(calc.tp)}`,
+      securePremiumNum > 0 ? `Secure Premium: ${fmt(securePremiumNum)}` : null,
+      calc.addonTotal > 0 ? `Add-ons: ${fmt(calc.addonTotal)}` : null,
+      `──────────────────`,
+      `Subtotal: ${fmt(calc.subtotal)}`,
+      `GST (18%): ${fmt(calc.gst)}`,
+      `✅ Total Premium: ${fmt(calc.total)}`,
+      ``,
+      `Coverage: ${addons.filter(a => a.enabled).map(a => a.name).join(", ")}`,
+      claimLockedByExpiry ? `⚠ Vehicle inspection required (policy lapsed >90 days) — IRDAI` : null,
+      `— Grabyourcar Insurance Desk | +91 98559 24442`,
+    ].filter(Boolean).join("\n");
+    navigator.clipboard.writeText(lines);
+    toast.success("📋 Quote copied!");
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0 overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[92vh] p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-5 pb-3 bg-gradient-to-r from-emerald-500 to-green-600">
           <DialogTitle className="text-white text-lg flex items-center gap-2">
-            <Shield className="h-5 w-5" /> Insurance Quote Generator
+            <Calculator className="h-5 w-5" /> Auto Quote Calculator
           </DialogTitle>
           <DialogDescription className="text-emerald-100 text-xs">
-            {client.customer_name || "Customer"} • {client.vehicle_make} {client.vehicle_model} • {client.vehicle_number}
+            {client.customer_name} • {client.vehicle_make} {client.vehicle_model} • {client.vehicle_number}
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-80px)]">
-          <div className="px-6 py-4 space-y-5">
-            {/* Insurance Company & Policy Type */}
-            <div className="grid grid-cols-2 gap-3">
+        <ScrollArea className="max-h-[calc(92vh-80px)]">
+          <div className="px-6 py-4 space-y-4">
+
+            {/* ✅ Quote Saved Confirmation Banner */}
+            <AnimatePresence>
+              {lastSavedQuote && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="flex items-start gap-3 p-3 rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30"
+                >
+                  <Check className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">✅ Quote Saved Successfully!</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-emerald-700 dark:text-emerald-400">
+                      <span>Ref: <span className="font-mono font-bold">{lastSavedQuote.ref}</span></span>
+                      <span>Premium: <span className="font-bold">{fmt(lastSavedQuote.total)}</span></span>
+                      <span>Insurer: {lastSavedQuote.insurer}</span>
+                      <span>Via: {lastSavedQuote.method}</span>
+                    </div>
+                    <p className="text-[10px] text-emerald-600 dark:text-emerald-500 mt-1">
+                      Saved to Quote History • Client pipeline updated • PDF stored
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0 text-emerald-600 hover:text-emerald-800"
+                    onClick={() => setLastSavedQuote(null)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {client.policy_expiry_date && (
+              <div className={cn(
+                "flex items-start gap-2 p-3 rounded-lg border text-xs",
+                claimLockedByExpiry
+                  ? "bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-700"
+                  : (expiryDays !== null && expiryDays > 0)
+                    ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700"
+                    : "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700"
+              )}>
+                <CalendarClock className={cn(
+                  "h-4 w-4 mt-0.5 shrink-0",
+                  claimLockedByExpiry ? "text-red-600" : (expiryDays !== null && expiryDays > 0) ? "text-amber-600" : "text-emerald-600"
+                )} />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-foreground">
+                      Policy Expiry: {format(new Date(client.policy_expiry_date), "dd MMM yyyy")}
+                    </span>
+                    <Badge className={cn(
+                      "text-[10px] border-0",
+                      claimLockedByExpiry
+                        ? "bg-red-500 text-white"
+                        : (expiryDays !== null && expiryDays > 0)
+                          ? "bg-amber-500 text-white"
+                          : "bg-emerald-500 text-white"
+                    )}>
+                      {expiryDays === null
+                        ? "Unknown"
+                        : expiryDays > 0
+                          ? `Expired ${expiryDays} days ago`
+                          : expiryDays === 0
+                            ? "Expires today"
+                            : `Expires in ${Math.abs(expiryDays)} days`}
+                    </Badge>
+                  </div>
+                  {claimLockedByExpiry && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5 text-red-600 shrink-0" />
+                      <p className="text-[11px] font-bold text-red-700 dark:text-red-400">
+                        ⚠ VEHICLE INSPECTION MANDATORY — Policy lapsed &gt;90 days. NCB benefit forfeited as per IRDAI guidelines. Physical vehicle inspection is required before issuing a new policy.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            {/* Row 1: Insurer + Fuel + Policy */}
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs font-semibold text-muted-foreground">Insurance Company</Label>
-                <Select value={form.insuranceCompany} onValueChange={v => update("insuranceCompany", v)}>
-                  <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {INSURERS.map(ins => <SelectItem key={ins} value={ins}>{ins}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                {showCustomInsurer ? (
+                  <div className="flex gap-1 mt-1">
+                    <Input value={customInsurerInput} onChange={e => setCustomInsurerInput(e.target.value)} placeholder="Company name" className="h-8 text-xs flex-1" autoFocus
+                      onKeyDown={e => { if (e.key === "Enter" && customInsurerInput.trim()) { setInsuranceCompany(customInsurerInput.trim()); setShowCustomInsurer(false); } }} />
+                    <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => { if (customInsurerInput.trim()) setInsuranceCompany(customInsurerInput.trim()); setShowCustomInsurer(false); }}><Check className="h-3.5 w-3.5" /></Button>
+                    <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => setShowCustomInsurer(false)}><X className="h-3.5 w-3.5" /></Button>
+                  </div>
+                ) : (
+                  <Select
+                    value={INSURANCE_COMPANIES.includes(insuranceCompany) ? insuranceCompany : "__custom_current__"}
+                    onValueChange={v => {
+                      if (v === "__add_new__") { setShowCustomInsurer(true); setCustomInsurerInput(""); }
+                      else if (v !== "__custom_current__") setInsuranceCompany(v);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue>{getShortName(insuranceCompany)}</SelectValue></SelectTrigger>
+                    <SelectContent>
+                      {!INSURANCE_COMPANIES.includes(insuranceCompany) && <SelectItem value="__custom_current__">{insuranceCompany}</SelectItem>}
+                      {INSURANCE_COMPANIES.map(ins => <SelectItem key={ins} value={ins}>{ins}</SelectItem>)}
+                      <SelectItem value="__add_new__"><span className="flex items-center gap-1"><Plus className="h-3 w-3" /> Add Custom</span></SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div>
                 <Label className="text-xs font-semibold text-muted-foreground">Fuel Type</Label>
-                <Select value={form.fuelType} onValueChange={v => update("fuelType", v)}>
-                  <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+                <Select value={fuelType} onValueChange={setFuelType}>
+                  <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>{FUEL_TYPES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-muted-foreground">Policy Type</Label>
+                <Select value={policyType} onValueChange={setPolicyType}>
+                  <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {FUEL_TYPES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                    <SelectItem value="comprehensive">Comprehensive</SelectItem>
+                    <SelectItem value="third_party">Third Party Only</SelectItem>
+                    <SelectItem value="standalone_od">Standalone OD</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            {/* IDV */}
-            <div>
-              <Label className="text-xs font-semibold text-muted-foreground">Insured Declared Value (IDV)</Label>
-              <Input type="number" className="h-9 text-sm mt-1" value={form.idv} onChange={e => update("idv", Number(e.target.value))} />
+            {/* Row 2: IDV, CC, City — hide IDV for Third Party Only */}
+            <div className={cn("grid gap-3", isThirdPartyOnly ? "grid-cols-2" : "grid-cols-3")}>
+              {!isThirdPartyOnly && (
+                <div>
+                  <Label className="text-xs font-semibold text-muted-foreground">IDV (Rs.)</Label>
+                  <Input type="number" value={idv} onChange={e => setIdv(e.target.value)} className="h-8 text-xs mt-1" placeholder="500000" />
+                </div>
+              )}
+              <div>
+                <Label className="text-xs font-semibold text-muted-foreground">Engine CC</Label>
+                <Input type="number" value={cc} onChange={e => setCc(e.target.value)} className="h-8 text-xs mt-1" placeholder="1199" />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-muted-foreground">City / Zone</Label>
+                <Input value={city} onChange={e => setCity(e.target.value)} className="h-8 text-xs mt-1" placeholder="Delhi NCR" />
+                <p className="text-[9px] text-muted-foreground mt-0.5">Zone {zone} ({zone === "A" ? "Metro" : "Non-Metro"})</p>
+              </div>
             </div>
 
-            <Separator />
-
-            {/* Premium Breakup */}
-            <div>
-              <h4 className="text-sm font-bold flex items-center gap-2 mb-3">
-                <IndianRupee className="h-4 w-4 text-emerald-600" /> Premium Breakup
-              </h4>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "Basic OD", key: "basicOD" },
-                  { label: "OD Discount", key: "odDiscount" },
-                  { label: "NCB Discount", key: "ncbDiscount" },
-                  { label: "Third Party", key: "thirdParty" },
-                  { label: "Secure Premium", key: "securePremium" },
-                  { label: "Add-on Premium", key: "addonPremium" },
-                ].map(field => (
-                  <div key={field.key}>
-                    <Label className="text-[11px] text-muted-foreground">{field.label}</Label>
-                    <Input
-                      type="number"
-                      className="h-8 text-sm mt-0.5"
-                      value={(form as any)[field.key]}
-                      onChange={e => update(field.key, Number(e.target.value))}
-                    />
+            {/* Row 3: Claim Taken + NCB — hide for Third Party Only */}
+            {!isThirdPartyOnly && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-semibold text-muted-foreground">Claim Taken in Previous Year?</Label>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <button
+                          onClick={() => { if (!claimLockedByExpiry) setClaimTaken(false); }}
+                          disabled={claimLockedByExpiry}
+                        className={cn(
+                          "px-3 py-1.5 rounded-md text-xs font-semibold border transition-all",
+                            !ncbLocked
+                            ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
+                            : "bg-muted text-muted-foreground border-border hover:bg-accent"
+                        )}
+                      >
+                        No Claim
+                      </button>
+                      <button
+                          onClick={() => { setClaimTaken(true); setNcb(0); }}
+                        className={cn(
+                          "px-3 py-1.5 rounded-md text-xs font-semibold border transition-all",
+                            ncbLocked
+                            ? "bg-red-500 text-white border-red-500 shadow-sm"
+                            : "bg-muted text-muted-foreground border-border hover:bg-accent"
+                        )}
+                      >
+                        Yes, Claim Taken
+                      </button>
+                    </div>
+                    {ncbLockReason && (
+                      <p className="text-[10px] text-red-500 font-medium mt-1">⚠ {ncbLockReason}</p>
+                    )}
                   </div>
-                ))}
-              </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-muted-foreground">NCB</Label>
+                    <Select
+                      value={String(ncbLocked ? 0 : ncb)}
+                      onValueChange={v => { if (!ncbLocked) setNcb(Number(v)); }}
+                      disabled={ncbLocked}
+                    >
+                      <SelectTrigger className={cn("h-8 text-xs mt-1", ncbLocked && "opacity-50")}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>{NCB_OPTIONS.map(o => <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                    {ncbLocked && <p className="text-[9px] text-red-400 mt-0.5">NCB locked to 0% and cannot be edited</p>}
+                  </div>
+                </div>
 
-              {/* Live calculation preview */}
-              <div className="mt-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 space-y-1.5">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Net OD Premium</span><span className="font-semibold text-foreground">{formatINR(netOD)}</span>
+                {/* NCB Claim Disclaimer */}
+                <div className={cn(
+                  "flex items-start gap-1.5 p-2.5 rounded-lg border",
+                   ncbLocked
+                    ? "bg-red-500/10 border-red-500/30"
+                    : "bg-amber-500/10 border-amber-500/20"
+                )}>
+                   <Info className={cn("h-3.5 w-3.5 mt-0.5 shrink-0", ncbLocked ? "text-red-600" : "text-amber-600")} />
+                  <div>
+                     <p className={cn("text-[10px] font-bold", ncbLocked ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400")}>
+                       {ncbLocked
+                        ? "CLAIM DECLARED — NCB Not Applicable"
+                        : "NCB Eligibility Declaration Required"}
+                    </p>
+                     <p className={cn("text-[9px] mt-0.5", ncbLocked ? "text-red-600 dark:text-red-300" : "text-amber-600 dark:text-amber-300")}>
+                      {claimLockedByExpiry
+                        ? "As per IRDAI guidelines, if previous policy has lapsed for more than 90 days, NCB benefit is forfeited and a physical vehicle inspection is mandatory before issuing a new policy."
+                        : "NCB is only applicable if no claim was made during the previous policy period (up to 5 years)."}
+                      {" "}Providing false information about claim/NCB status will void the NCB discount and the insurer reserves the right to reject claims.
+                     </p>
+                  </div>
                 </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Net Premium</span><span className="font-semibold text-foreground">{formatINR(netPremium)}</span>
+
+                {/* OD Discount + Secure Premium */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-semibold text-muted-foreground">OD Discount (%)</Label>
+                    <Input type="number" min={0} max={100} value={odDiscountPct} onChange={e => setOdDiscountPct(e.target.value)} className="h-8 text-xs mt-1" placeholder="0" />
+                    <p className="text-[9px] text-muted-foreground mt-0.5">Deal-specific discount on OD</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-muted-foreground">Secure Premium (Rs.)</Label>
+                    <Input type="number" value={securePremium} onChange={e => setSecurePremium(e.target.value)} className="h-8 text-xs mt-1" placeholder="500" />
+                  </div>
                 </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>GST (18%)</span><span className="font-semibold text-foreground">{formatINR(gst)}</span>
-                </div>
-                <Separator className="my-1" />
-                <div className="flex justify-between text-sm font-bold text-emerald-700 dark:text-emerald-400">
-                  <span>Total Premium Payable</span><span>{formatINR(totalPremium)}</span>
+              </>
+            )}
+
+            {/* Third Party Only info banner */}
+            {isThirdPartyOnly && (
+              <div className="flex items-start gap-2 p-3 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30">
+                <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-blue-800 dark:text-blue-300">Third Party Only Policy</p>
+                  <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">
+                    IDV, NCB, OD discount, and add-on coverages are not applicable for Third Party policies. Premium is based on engine CC capacity as per IRDAI tariff.
+                  </p>
                 </div>
               </div>
-            </div>
+            )}
+
+            {!isThirdPartyOnly && <Separator />}
+
+            {/* Add-ons — hide for Third Party Only */}
+            {!isThirdPartyOnly && (
+              <div>
+                <button onClick={() => setShowAddons(!showAddons)} className="flex items-center gap-2 w-full">
+                  <Zap className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-bold text-foreground">Coverage Add-ons</span>
+                  <Badge variant="outline" className="ml-1 text-[10px]">{addons.filter(a => a.enabled).length} selected</Badge>
+                  <div className="ml-auto">{showAddons ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</div>
+                </button>
+
+                <AnimatePresence>
+                  {showAddons && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="space-y-1.5 overflow-hidden mt-3">
+                      {addons.map(addon => (
+                        <div key={addon.id} className={cn(
+                          "flex items-center gap-3 p-2 rounded-lg border transition-colors",
+                          addon.enabled ? "border-primary/30 bg-primary/5" : "border-border/50"
+                        )}>
+                          <Switch checked={addon.enabled} onCheckedChange={() => toggleAddon(addon.id)} className="scale-75" />
+                          <span className={cn("text-xs flex-1", addon.enabled ? "font-semibold text-foreground" : "text-muted-foreground")}>{addon.name}</span>
+                          <div className="relative w-20">
+                            <IndianRupee className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                            <Input type="number" value={addon.price} onChange={e => updateAddonPrice(addon.id, parseFloat(e.target.value) || 0)} className="h-7 text-xs pl-5 pr-1" />
+                          </div>
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
 
             <Separator />
 
-            {/* Coverage Add-ons */}
-            <div>
-              <h4 className="text-sm font-bold flex items-center gap-2 mb-3">
-                <Shield className="h-4 w-4 text-blue-600" /> Coverage Add-ons
-              </h4>
-              <div className="grid grid-cols-2 gap-2">
-                {ALL_ADDONS.map(addon => (
-                  <label
-                    key={addon}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border/50 hover:bg-muted/50 cursor-pointer transition-colors text-xs"
-                  >
-                    <Checkbox
-                      checked={form.addons.includes(addon)}
-                      onCheckedChange={() => toggleAddon(addon)}
-                    />
-                    <span>{addon}</span>
-                  </label>
-                ))}
+            {/* LIVE CALCULATION */}
+            {calc ? (
+              <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-background p-4 space-y-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calculator className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-bold text-foreground">Auto-Calculated Breakup</span>
+                  {!isThirdPartyOnly && <Badge className="ml-auto bg-primary/20 text-primary border-0 text-[10px]">Zone {zone} • {calc.odRate}%</Badge>}
+                  {isThirdPartyOnly && <Badge className="ml-auto bg-blue-500/20 text-blue-700 dark:text-blue-300 border-0 text-[10px]">Third Party Only</Badge>}
+                </div>
+
+                {!isThirdPartyOnly && (
+                  <>
+                    <PremRow label={`Basic OD (${calc.odRate}% of IDV)`} value={fmt(calc.basicOD)} />
+                    {discountPct > 0 && <PremRow label={`OD Discount (${discountPct}%)`} value={`-${fmt(calc.odDiscount)}`} negative />}
+                    {!ncbLocked && ncb > 0 && <PremRow label={`NCB Discount (${ncb}%)`} value={`-${fmt(calc.ncbDiscount)}`} negative />}
+                    <div className="border-t border-dashed border-border/60 pt-1">
+                      <PremRow label="Net OD Premium" value={fmt(calc.netOD)} bold />
+                    </div>
+                  </>
+                )}
+                <PremRow label={`Third Party (${ccNum < 1000 ? "<1000" : ccNum <= 1500 ? "1000-1500" : ">1500"}cc)`} value={fmt(calc.tp)} bold={isThirdPartyOnly} />
+                {!isThirdPartyOnly && securePremiumNum > 0 && <PremRow label="Secure Premium" value={fmt(securePremiumNum)} />}
+                {!isThirdPartyOnly && calc.addonTotal > 0 && <PremRow label={`Add-ons (${addons.filter(a => a.enabled).length})`} value={fmt(calc.addonTotal)} />}
+
+                <div className="border-t border-border pt-1">
+                  <PremRow label="Net Premium" value={fmt(calc.subtotal)} />
+                  <PremRow label="GST (18%)" value={fmt(calc.gst)} />
+                </div>
+
+                <div className="border-t-2 border-primary/30 pt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-bold text-foreground">Total Premium Payable</span>
+                    <span className="text-xl font-black text-primary">{fmt(calc.total)}</span>
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-border bg-muted/30 p-6 text-center">
+                <Calculator className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">{isThirdPartyOnly ? "Enter Engine CC to auto-calculate premium" : "Enter IDV & Engine CC to auto-calculate premium"}</p>
+              </div>
+            )}
 
             <Separator />
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-2 pb-2">
-              <Button onClick={handleDownload} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white h-11">
+            <div className="grid grid-cols-2 gap-2">
+              <Button onClick={handleDownload} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white h-10" disabled={!calc}>
                 <Download className="h-4 w-4" /> Download PDF
               </Button>
-              <Button onClick={handleWhatsApp} className="gap-2 bg-green-600 hover:bg-green-700 text-white h-11">
+              <Button onClick={handleWhatsApp} className="gap-2 bg-green-600 hover:bg-green-700 text-white h-10" disabled={!calc}>
                 <MessageCircle className="h-4 w-4" /> WhatsApp
               </Button>
-              <Button onClick={handleEmail} variant="outline" className="gap-2 h-11">
+              <Button onClick={handleEmail} variant="outline" className="gap-2 h-10" disabled={!calc}>
                 <Mail className="h-4 w-4" /> Send Email
               </Button>
-              <Button onClick={handleCopy} variant="outline" className="gap-2 h-11">
-                <Copy className="h-4 w-4" /> Copy Summary
+              <Button onClick={handleCopy} variant="outline" className="gap-2 h-10" disabled={!calc}>
+                <Copy className="h-4 w-4" /> Copy Quote
               </Button>
             </div>
+
+            <Separator />
+
+            {/* Multi-Insurer Comparison Builder */}
+            <InsuranceComparisonBuilder
+              customerName={client.customer_name || undefined}
+              customerPhone={client.phone}
+              vehicleMake={client.vehicle_make || undefined}
+              vehicleModel={client.vehicle_model || undefined}
+              vehicleNumber={client.vehicle_number || undefined}
+              vehicleYear={client.vehicle_year || undefined}
+              fuelType={fuelType}
+              cc={ccNum}
+              city={client.city || undefined}
+              policyType={policyType}
+              idv={idvNum}
+              ncb={ncb}
+              ncbLocked={ncbLocked}
+              clientId={client.id}
+              onQuoteSaved={onQuoteSent}
+            />
           </div>
         </ScrollArea>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PremRow({ label, value, bold, negative }: { label: string; value: string; bold?: boolean; negative?: boolean }) {
+  return (
+    <div className="flex justify-between items-center">
+      <span className={cn("text-xs", bold ? "font-semibold text-foreground" : "text-muted-foreground")}>{label}</span>
+      <span className={cn("text-xs font-mono", bold ? "font-bold text-foreground" : negative ? "text-green-600" : "text-foreground")}>{value}</span>
+    </div>
   );
 }

@@ -106,7 +106,13 @@ const getStoredConnections = (): APIConnection[] => {
 };
 
 const saveConnections = (connections: APIConnection[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(connections));
+  // Strip sensitive credentials before storing in localStorage
+  const sanitized = connections.map(({ apiKey, secretKey, ...rest }) => ({
+    ...rest,
+    apiKey: apiKey ? '••••' + apiKey.slice(-4) : '',
+    secretKey: undefined,
+  }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
 };
 
 export const APIIntegrationPortal = () => {

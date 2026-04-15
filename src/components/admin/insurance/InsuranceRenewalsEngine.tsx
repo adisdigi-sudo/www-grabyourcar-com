@@ -263,14 +263,12 @@ export function InsuranceRenewalsEngine() {
     }
   };
 
-  const sendDirectWhatsApp = (p: any, type: "notice" | "quote" = "notice") => {
+  const sendDirectWhatsApp = async (p: any, type: "notice" | "quote" = "notice") => {
     const client = p.insurance_clients;
     if (!client?.phone || client.phone.startsWith("IB_")) { toast.error("No phone number"); return; }
     const message = getPreviewMessage(p, type);
-    const phone = client.phone.replace(/\D/g, "");
-    const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
-    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`, "_blank");
-    toast.success(`WhatsApp opened for ${client.customer_name || client.phone}`);
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone: client.phone, message, name: client.customer_name, logEvent: `renewal_${type}` });
   };
 
   const sendRenewalEmail = (p: any) => {

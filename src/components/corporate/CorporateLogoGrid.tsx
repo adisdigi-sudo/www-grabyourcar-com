@@ -92,7 +92,7 @@ const LogoCard = ({ client, index }: { client: CorporateClient; index: number })
     <div className="absolute top-0 right-0 w-24 h-24">
       <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-primary/20 to-transparent rounded-bl-[100px]" />
       <div className="absolute top-3 right-3">
-        <CheckCircle2 className="w-5 h-5 text-primary" />
+        <CheckCircle2 className="w-5 h-5 text-foreground" />
       </div>
     </div>
 
@@ -130,7 +130,7 @@ const LogoCard = ({ client, index }: { client: CorporateClient; index: number })
       </p>
       
       {/* Verified Partner Badge */}
-      <div className="mt-4 flex items-center gap-2 text-xs text-primary font-medium">
+      <div className="mt-4 flex items-center gap-2 text-xs text-foreground font-medium">
         <Award className="w-4 h-4" />
         <span>Verified Corporate Partner</span>
       </div>
@@ -167,7 +167,7 @@ export const CorporateLogoGrid = () => {
             whileInView={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5 }}
             viewport={{ once: true }}
-            className="inline-flex items-center gap-2 px-5 py-2 mb-6 text-sm font-semibold uppercase tracking-wider text-primary bg-primary/10 rounded-full border border-primary/20"
+            className="inline-flex items-center gap-2 px-5 py-2 mb-6 text-sm font-semibold uppercase tracking-wider text-foreground bg-primary/10 rounded-full border border-primary/20"
           >
             <Building2 className="w-4 h-4" />
             Trusted Corporate Partners
@@ -226,7 +226,7 @@ export const CorporateLogoGrid = () => {
               className="text-center p-6 rounded-2xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/30 transition-colors"
             >
               <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-primary/10 flex items-center justify-center">
-                <stat.icon className="w-6 h-6 text-primary" />
+                <stat.icon className="w-6 h-6 text-foreground" />
               </div>
               <div className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent mb-1">
                 {stat.value}

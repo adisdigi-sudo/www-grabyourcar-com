@@ -1,8 +1,14 @@
+import { shouldAvoidDevAutoReload } from "@/lib/adminPreviewStability";
+
 const DYNAMIC_IMPORT_ERROR_PATTERNS = [
   "Failed to fetch dynamically imported module",
   "Importing a module script failed",
   "Failed to fetch module script",
   "error loading dynamically imported module",
+  "Unable to preload",
+  "Unable to preload CSS",
+  "Failed to load url /node_modules/.vite/deps/",
+  "Failed to load url /@fs/",
 ];
 
 // Patterns that should NOT trigger recovery (API/fetch errors)
@@ -17,6 +23,10 @@ const FALSE_POSITIVE_PATTERNS = [
 
 const DEFAULT_MAX_ATTEMPTS = 3;
 const CACHE_BUST_PARAM = "__v";
+const EXHAUSTED_SUFFIX = ":exhausted";
+const DEFAULT_STABLE_RESET_DELAY_MS = 15000;
+
+const getExhaustedKey = (storageKey: string) => `${storageKey}${EXHAUSTED_SUFFIX}`;
 
 const getErrorMessage = (error: unknown): string => {
   if (typeof error === "string") return error;
@@ -27,16 +37,25 @@ const getErrorMessage = (error: unknown): string => {
   return "";
 };
 
+const isViteOptimizedDepError = (message: string): boolean => {
+  const normalizedMessage = message.toLowerCase();
+
+  return (
+    (normalizedMessage.includes(".vite/deps") || normalizedMessage.includes("/@fs/")) &&
+    (normalizedMessage.includes("failed to load url") || normalizedMessage.includes("does the file exist"))
+  );
+};
+
 export const isDynamicImportError = (error: unknown): boolean => {
   const message = getErrorMessage(error).toLowerCase();
   // Must match a dynamic import pattern
-  const isImportError = DYNAMIC_IMPORT_ERROR_PATTERNS.some((pattern) => 
-    message.toLowerCase().includes(pattern.toLowerCase())
+  const isImportError = DYNAMIC_IMPORT_ERROR_PATTERNS.some((pattern) =>
+    message.toLowerCase().includes(pattern.toLowerCase()),
   );
-  if (!isImportError) return false;
+  if (!isImportError && !isViteOptimizedDepError(message)) return false;
   // Must NOT match a false positive (API/Supabase error)
-  const isFalsePositive = FALSE_POSITIVE_PATTERNS.some((pattern) => 
-    message.toLowerCase().includes(pattern.toLowerCase())
+  const isFalsePositive = FALSE_POSITIVE_PATTERNS.some((pattern) =>
+    message.toLowerCase().includes(pattern.toLowerCase()),
   );
   return !isFalsePositive;
 };
@@ -46,12 +65,19 @@ export const recoverFromChunkLoadError = (
   maxAttempts = DEFAULT_MAX_ATTEMPTS
 ): boolean => {
   try {
+    if (shouldAvoidDevAutoReload()) {
+      sessionStorage.setItem(getExhaustedKey(storageKey), "1");
+      return false;
+    }
+
     const currentAttempts = Number.parseInt(sessionStorage.getItem(storageKey) ?? "0", 10);
     if (!Number.isNaN(currentAttempts) && currentAttempts >= maxAttempts) {
+      sessionStorage.setItem(getExhaustedKey(storageKey), "1");
       return false;
     }
 
     sessionStorage.setItem(storageKey, String(Number.isNaN(currentAttempts) ? 1 : currentAttempts + 1));
+    sessionStorage.removeItem(getExhaustedKey(storageKey));
 
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set(CACHE_BUST_PARAM, Date.now().toString());
@@ -66,7 +92,36 @@ export const recoverFromChunkLoadError = (
 export const resetChunkLoadRecovery = (storageKey = "chunk_load_recovery"): void => {
   try {
     sessionStorage.removeItem(storageKey);
+    sessionStorage.removeItem(getExhaustedKey(storageKey));
   } catch {
     // ignore
+  }
+};
+
+export const isChunkLoadRecoveryExhausted = (storageKey = "chunk_load_recovery"): boolean => {
+  try {
+    return sessionStorage.getItem(getExhaustedKey(storageKey)) === "1";
+  } catch {
+    return false;
+  }
+};
+
+export const scheduleChunkLoadRecoveryReset = (
+  storageKey = "chunk_load_recovery",
+  delayMs = DEFAULT_STABLE_RESET_DELAY_MS,
+): number | null => {
+  try {
+    const attempts = Number.parseInt(sessionStorage.getItem(storageKey) ?? "0", 10);
+    const hasRecoveryState = (!Number.isNaN(attempts) && attempts > 0) || isChunkLoadRecoveryExhausted(storageKey);
+
+    if (!hasRecoveryState) {
+      return null;
+    }
+
+    return window.setTimeout(() => {
+      resetChunkLoadRecovery(storageKey);
+    }, delayMs);
+  } catch {
+    return null;
   }
 };

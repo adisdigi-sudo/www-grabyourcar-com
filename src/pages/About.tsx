@@ -118,22 +118,22 @@
              </Badge>
              <h1 className="font-heading text-3xl md:text-5xl font-bold text-foreground mb-6">
                India's Smarter Way to<br />
-               <span className="text-primary">Buy New Cars</span>
+               <span className="text-foreground">Buy New Cars</span>
              </h1>
              <p className="text-muted-foreground text-lg md:text-xl max-w-3xl mx-auto mb-8">
                {companyStory.mission}
              </p>
                <div className="flex flex-wrap justify-center gap-6 text-sm">
                  <div className="flex items-center gap-2 text-muted-foreground">
-                   <Car className="h-5 w-5 text-primary" />
+                   <Car className="h-5 w-5 text-foreground" />
                    <span>87+ Car Models</span>
                  </div>
                  <div className="flex items-center gap-2 text-muted-foreground">
-                   <MapPin className="h-5 w-5 text-primary" />
+                   <MapPin className="h-5 w-5 text-foreground" />
                    <span>Delhi NCR & Pan-India</span>
                  </div>
                  <div className="flex items-center gap-2 text-muted-foreground">
-                   <Users className="h-5 w-5 text-primary" />
+                   <Users className="h-5 w-5 text-foreground" />
                    <span>500+ Happy Customers</span>
                  </div>
                </div>
@@ -159,19 +159,19 @@
                    
                    <div className="mt-8 pt-6 border-t border-border grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                      <div>
-                         <p className="text-2xl font-bold text-primary">{companyStory.founded}</p>
+                         <p className="text-2xl font-bold text-foreground">{companyStory.founded}</p>
                          <p className="text-sm text-muted-foreground">Founded</p>
                        </div>
                        <div>
-                         <p className="text-2xl font-bold text-primary">87+</p>
+                         <p className="text-2xl font-bold text-foreground">87+</p>
                          <p className="text-sm text-muted-foreground">Car Models</p>
                        </div>
                        <div>
-                         <p className="text-2xl font-bold text-primary">500+</p>
+                         <p className="text-2xl font-bold text-foreground">500+</p>
                          <p className="text-sm text-muted-foreground">Customers</p>
                        </div>
                        <div>
-                         <p className="text-2xl font-bold text-primary">₹25L+</p>
+                         <p className="text-2xl font-bold text-foreground">₹25L+</p>
                          <p className="text-sm text-muted-foreground">Saved</p>
                        </div>
                    </div>
@@ -199,7 +199,7 @@
                  <Card key={index} className="text-center hover:shadow-lg transition-shadow">
                    <CardContent className="p-6">
                      <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                       <value.icon className="h-7 w-7 text-primary" />
+                       <value.icon className="h-7 w-7 text-foreground" />
                      </div>
                      <h3 className="font-semibold text-lg mb-2">{value.title}</h3>
                      <p className="text-sm text-muted-foreground">{value.description}</p>
@@ -245,7 +245,7 @@
                      {/* Info */}
                      <div className="md:col-span-3 p-6 md:p-10 flex flex-col justify-center">
                        <h3 className="font-heading text-2xl font-bold mb-1">{founderInfo.name}</h3>
-                       <p className="text-primary font-medium mb-4">{founderInfo.role}</p>
+                       <p className="text-foreground font-medium mb-4">{founderInfo.role}</p>
                        <p className="text-muted-foreground mb-6 leading-relaxed">{founderInfo.bio}</p>
                        <div className="flex gap-3">
                          <a href={founderInfo.linkedin} target="_blank" rel="noopener noreferrer">
@@ -291,10 +291,10 @@
                            )}
                          </div>
                          <h3 className="font-semibold text-lg">{member.name}</h3>
-                         <p className="text-sm text-primary mb-2">{member.role}</p>
+                         <p className="text-sm text-foreground mb-2">{member.role}</p>
                          <p className="text-xs text-muted-foreground mb-3">{member.bio}</p>
                          {member.linkedin && (
-                           <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-primary hover:underline">
+                           <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-foreground hover:underline">
                              <Linkedin className="h-3 w-3 mr-1" />
                              LinkedIn
                            </a>
@@ -332,7 +332,7 @@
                    </div>
                    <Card className="flex-1">
                      <CardContent className="p-4">
-                       <p className="text-xs text-primary font-medium mb-1">{milestone.year}</p>
+                       <p className="text-xs text-foreground font-medium mb-1">{milestone.year}</p>
                        <p className="text-foreground">{milestone.event}</p>
                      </CardContent>
                    </Card>
@@ -353,7 +353,7 @@
              </p>
                <div className="flex justify-center">
                   <a href="https://wa.me/1155578093?text=Hi%20Grabyourcar!%20I%27m%20interested%20in%20buying%20a%20new%20car%20and%20would%20like%20to%20know%20about%20the%20best%20offers." target="_blank" rel="noopener noreferrer">
-                   <Button size="lg" className="font-semibold bg-primary-foreground text-primary hover:bg-primary-foreground/90 px-8">
+                   <Button size="lg" className="font-semibold bg-primary-foreground text-foreground hover:bg-primary-foreground/90 px-8">
                      <MessageCircle className="h-5 w-5 mr-2" />
                      Talk to Our Expert
                    </Button>

@@ -129,14 +129,14 @@ export default function AutoIntelligence() {
               transition={{ duration: 0.6 }}
               className="text-center max-w-4xl mx-auto"
             >
-              <Badge className="mb-6 bg-primary/10 text-primary border-primary/20 px-5 py-2 text-sm">
+              <Badge className="mb-6 bg-primary/10 text-foreground border-primary/20 px-5 py-2 text-sm">
                 <Brain className="h-4 w-4 mr-2" />
                 AI-Powered Automotive Intelligence
               </Badge>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold mb-6 leading-tight">
                 Your{" "}
-                <span className="text-primary relative">
+                <span className="text-foreground relative">
                   Automobile Intelligence
                   <Sparkles className="absolute -top-2 -right-4 h-5 w-5 text-amber-500 animate-pulse" />
                 </span>
@@ -159,7 +159,7 @@ export default function AutoIntelligence() {
                     transition={{ delay: 0.2 + index * 0.1 }}
                     className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-4 text-center"
                   >
-                    <stat.icon className="h-6 w-6 text-primary mx-auto mb-2" />
+                    <stat.icon className="h-6 w-6 text-foreground mx-auto mb-2" />
                     <p className="text-2xl font-bold">{stat.value}</p>
                     <p className="text-xs text-muted-foreground">{stat.label}</p>
                   </motion.div>
@@ -179,7 +179,7 @@ export default function AutoIntelligence() {
               className="text-center mb-12"
             >
               <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-                Explore <span className="text-primary">Intelligence Sections</span>
+                Explore <span className="text-foreground">Intelligence Sections</span>
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 Dive deep into automotive knowledge with our specialized sections
@@ -211,7 +211,7 @@ export default function AutoIntelligence() {
                           <CardContent className="p-6">
                             <div className="flex items-start justify-between mb-4">
                               <div className="w-14 h-14 rounded-2xl bg-background/80 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <IconComponent className="h-7 w-7 text-primary" />
+                                <IconComponent className="h-7 w-7 text-foreground" />
                               </div>
                               <Badge variant="secondary" className="text-xs">
                                 {section.badge}
@@ -225,7 +225,7 @@ export default function AutoIntelligence() {
                               {section.description}
                             </p>
 
-                            <div className="flex items-center text-primary font-medium text-sm">
+                            <div className="flex items-center text-foreground font-medium text-sm">
                               Explore
                               <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
                             </div>
@@ -255,7 +255,7 @@ export default function AutoIntelligence() {
                   Featured Content
                 </Badge>
                 <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-                  Trending in <span className="text-primary">Auto World</span>
+                  Trending in <span className="text-foreground">Auto World</span>
                 </h2>
               </motion.div>
 

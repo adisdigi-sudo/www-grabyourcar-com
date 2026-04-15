@@ -8,13 +8,29 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Car, Zap, Shield, CheckCircle, Loader2, Gift, Clock, X } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import confetti from "canvas-confetti";
+import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
 
 const STORAGE_KEY = "gyc_entry_lead_captured";
 const DISMISS_KEY = "gyc_entry_lead_dismissed";
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+const getStoredValue = (key: string) => {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const setStoredValue = (key: string, value: string) => {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // ignore blocked storage
+  }
+};
 
 const formSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(100),
@@ -41,8 +57,8 @@ export const EntryLeadCaptureModal = () => {
 
   useEffect(() => {
     // Check if already captured or dismissed within 7 days
-    const captured = localStorage.getItem(STORAGE_KEY);
-    const dismissed = localStorage.getItem(DISMISS_KEY);
+    const captured = getStoredValue(STORAGE_KEY);
+    const dismissed = getStoredValue(DISMISS_KEY);
 
     if (captured) return;
     if (dismissed) {
@@ -50,13 +66,14 @@ export const EntryLeadCaptureModal = () => {
       if (Date.now() - dismissedAt < SEVEN_DAYS_MS) return;
     }
 
-    const timer = setTimeout(() => setIsOpen(true), 5000);
+    const isMobile = window.innerWidth < 768;
+    const timer = setTimeout(() => setIsOpen(true), isMobile ? 20000 : 8000);
     return () => clearTimeout(timer);
   }, []);
 
   const handleDismiss = useCallback(() => {
     setIsOpen(false);
-    localStorage.setItem(DISMISS_KEY, Date.now().toString());
+    setStoredValue(DISMISS_KEY, Date.now().toString());
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,35 +92,26 @@ export const EntryLeadCaptureModal = () => {
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from("leads").insert({
-        name: formData.name.trim(),
-        customer_name: formData.name.trim(),
-        phone: formData.phone.trim(),
-        city: formData.city.trim(),
-        car_model: formData.carInterest.trim() || null,
-        buying_timeline: formData.purchaseTimeline || null,
+      await captureWebsiteLead({
+        name: formData.name,
+        phone: formData.phone,
+        city: formData.city,
+        carInterest: formData.carInterest,
         source: "entry_popup",
-        lead_type: "high_intent",
-        status: "new",
+        vertical: "car",
+        type: "high_intent",
         priority: "high",
-        notes: formData.budgetRange ? `Budget: ${formData.budgetRange}` : null,
+        message: [
+          formData.purchaseTimeline && `Timeline: ${formData.purchaseTimeline}`,
+          formData.budgetRange && `Budget: ${formData.budgetRange}`,
+        ].filter(Boolean).join(" | ") || null,
       });
 
-      if (error) throw error;
-
-      // Trigger WhatsApp notification
-      try {
-        await supabase.functions.invoke("whatsapp-send", {
-          body: {
-            phone: `91${formData.phone}`,
-            template: "lead_created",
-            params: { name: formData.name, car: formData.carInterest || "New Car" },
-          },
-        });
-      } catch { /* WhatsApp is best-effort */ }
+      const { trackLeadConversion } = await import("@/lib/adTracking");
+      trackLeadConversion("entry_popup");
 
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
-      localStorage.setItem(STORAGE_KEY, "true");
+      setStoredValue(STORAGE_KEY, "true");
       setIsSubmitted(true);
 
       setTimeout(() => setIsOpen(false), 3000);
@@ -130,7 +138,7 @@ export const EntryLeadCaptureModal = () => {
                 transition={{ type: "spring", bounce: 0.5 }}
                 className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4"
               >
-                <CheckCircle className="h-10 w-10 text-success" />
+                <CheckCircle className="h-10 w-10 text-foreground" />
               </motion.div>
               <h3 className="text-2xl font-heading font-bold mb-2">You're In! 🎉</h3>
               <p className="text-muted-foreground">
@@ -257,8 +265,8 @@ export const EntryLeadCaptureModal = () => {
                 </Button>
 
                 <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><Shield className="h-3 w-3 text-success" /> 100% Free</span>
-                  <span className="flex items-center gap-1"><Clock className="h-3 w-3 text-success" /> Callback in 30 min</span>
+                  <span className="flex items-center gap-1"><Shield className="h-3 w-3 text-foreground" /> 100% Free</span>
+                  <span className="flex items-center gap-1"><Clock className="h-3 w-3 text-foreground" /> Callback in 30 min</span>
                 </div>
               </form>
             </>

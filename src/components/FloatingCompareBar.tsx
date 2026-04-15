@@ -19,7 +19,7 @@ export const FloatingCompareBar = () => {
       <div className="bg-card border border-border shadow-2xl rounded-2xl p-4 animate-in slide-in-from-bottom-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <GitCompare className="h-5 w-5 text-primary" />
+            <GitCompare className="h-5 w-5 text-foreground" />
             <span className="font-semibold text-sm">
               Compare Cars ({selectedCars.length}/3)
             </span>
@@ -48,7 +48,7 @@ export const FloatingCompareBar = () => {
                   className="w-12 h-8 object-cover rounded"
                 />
                 <div className="min-w-0">
-                  <p className="text-xs font-medium truncate max-w-[100px]">
+                  <p className="text-xs font-medium truncate max-w-[120px] sm:max-w-[160px]">
                     {car.name}
                   </p>
                   <p className="text-[10px] text-muted-foreground">{car.price.split(" - ")[0]}</p>

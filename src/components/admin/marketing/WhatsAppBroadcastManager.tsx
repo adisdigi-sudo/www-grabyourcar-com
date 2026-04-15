@@ -88,16 +88,16 @@ export function WhatsAppBroadcastManager() {
     try {
       const [broadcastsRes, templatesRes, leadsRes] = await Promise.all([
         supabase.from("whatsapp_broadcasts").select("*").order("created_at", { ascending: false }),
-        supabase.from("whatsapp_templates").select("id, name, category, content, variables").eq("is_active", true),
+        supabase.from("wa_templates").select("id, name, category, body, variables").eq("status", "approved"),
         supabase.from("leads").select("id, priority, service_category, created_at", { count: "exact" }),
       ]);
 
       if (broadcastsRes.data) setBroadcasts(broadcastsRes.data);
       if (templatesRes.data) {
-        // Map to expected shape
         const mapped = templatesRes.data.map(t => ({
-          ...t,
-          variables: t.variables as string[] | null
+          id: t.id, name: t.name, category: t.category,
+          content: t.body, // wa_templates uses 'body', map to 'content'
+          variables: t.variables as string[] | null,
         }));
         setTemplates(mapped);
       }
@@ -164,7 +164,7 @@ export function WhatsAppBroadcastManager() {
   };
 
   const handleStartBroadcast = async (broadcast: Broadcast) => {
-    if (!confirm(`Send WhatsApp messages to ${broadcast.total_recipients} recipients via Finbite API? This will use your WhatsApp credits.`)) return;
+    if (!confirm(`Send WhatsApp messages to ${broadcast.total_recipients} recipients via WhatsApp API? This will use your WhatsApp credits.`)) return;
 
     try {
       toast({ title: "Broadcast started", description: "Sending messages via WhatsApp API..." });

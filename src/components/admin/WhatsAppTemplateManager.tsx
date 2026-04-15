@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { deleteMetaManagedTemplate, normalizeTemplateName, syncTemplateToMeta } from "@/lib/whatsappTemplateMirror";
 
 interface WhatsAppTemplate {
   id: string;
@@ -69,8 +70,8 @@ export default function WhatsAppTemplateManager() {
   const [isAIGenerating, setIsAIGenerating] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
-  const [isFinbiteCopyOpen, setIsFinbiteCopyOpen] = useState(false);
-  const [finbiteCopyText, setFinbiteCopyText] = useState("");
+  const [isProviderCopyOpen, setIsProviderCopyOpen] = useState(false);
+  const [providerCopyText, setProviderCopyText] = useState("");
   const { toast } = useToast();
 
   useEffect(() => { fetchTemplates(); }, []);
@@ -79,11 +80,20 @@ export default function WhatsAppTemplateManager() {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from("whatsapp_templates")
+        .from("wa_templates")
         .select("*")
-        .order("category", { ascending: true });
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      setTemplates((data || []).map(item => ({ ...item, example_data: item.example_data as Record<string, unknown> | null })));
+      // Map wa_templates fields to WhatsAppTemplate interface
+      setTemplates((data || []).map(item => ({
+        id: item.id, name: item.name, category: item.category || "utility",
+        template_type: "text", content: item.body || "",
+        variables: (item.variables as string[]) || null, preview: null,
+        is_approved: item.status === "approved", is_active: item.status !== "disabled",
+        approval_status: item.status, wbiztool_template_id: item.meta_template_id,
+        language: item.language, use_cases: null, example_data: null,
+        created_at: item.created_at, updated_at: item.created_at,
+      })));
     } catch (error) {
       console.error("Error fetching templates:", error);
     } finally {
@@ -98,30 +108,60 @@ export default function WhatsAppTemplateManager() {
     }
     try {
       const variableRegex = /\{[a-z_]+\}/g;
-      const extractedVariables = editingTemplate.content.match(variableRegex) || [];
+      const extractedVariables = editingTemplate.content?.match(variableRegex) || [];
+      const normalizedName = normalizeTemplateName(editingTemplate.name);
+      
+      // Save directly to wa_templates
       const templateData = {
-        name: editingTemplate.name,
-        category: editingTemplate.category || "welcome",
-        template_type: editingTemplate.template_type || "text",
-        content: editingTemplate.content,
-        variables: Array.from(new Set(extractedVariables)),
-        preview: editingTemplate.content.substring(0, 100) + "...",
-        is_active: editingTemplate.is_active ?? true,
-        is_approved: editingTemplate.is_approved ?? false,
-        approval_status: editingTemplate.approval_status || "pending",
+        name: normalizedName,
+        display_name: editingTemplate.name,
+        category: (editingTemplate.category || "utility").toLowerCase(),
+        body: editingTemplate.content,
         language: editingTemplate.language || "en",
-        use_cases: editingTemplate.use_cases || [],
-        example_data: (editingTemplate.example_data || {}) as Record<string, string>,
+        variables: Array.from(new Set(extractedVariables.map(v => v.replace(/[{}]/g, "")))),
+        status: "draft" as string,
       };
+
+      let savedId = editingTemplate.id;
       if (editingTemplate.id) {
-        const { error } = await supabase.from("whatsapp_templates").update(templateData).eq("id", editingTemplate.id);
-        if (error) throw error;
-        toast({ title: "Template updated successfully" });
+        await supabase.from("wa_templates").update(templateData).eq("id", editingTemplate.id);
       } else {
-        const { error } = await supabase.from("whatsapp_templates").insert([templateData]);
+        const { data, error } = await supabase.from("wa_templates").insert([templateData]).select("id").single();
         if (error) throw error;
-        toast({ title: "Template created successfully" });
+        savedId = data.id;
       }
+
+      const normalizedBody = (editingTemplate.content || "").replace(/\{\{([^}]+)\}\}/g, (_match, inner: string) => `{{${inner.trim()}}}`);
+      const totalVariables = [
+        ...(normalizedBody.match(/\{\{\d+\}\}/g) || []),
+        ...(normalizedBody.match(/\{\{[a-zA-Z_][a-zA-Z0-9_]*\}\}/g) || []),
+      ].length;
+      const plainWords = normalizedBody
+        .replace(/\{\{[^}]+\}\}/g, " ")
+        .replace(/[^\p{L}\p{N}\s]/gu, " ")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+      const ratioBlocked = totalVariables > 0 && plainWords.length < totalVariables * 3;
+
+      // Auto-submit to Meta
+      if (savedId && !ratioBlocked) {
+        const { data: syncData, error: syncError } = await supabase.functions.invoke("meta-templates", {
+          body: { action: "submit_template", template_id: savedId },
+        });
+        if (syncError || syncData?.error) {
+          toast({ title: "Saved locally", description: `Meta: ${syncData?.error || syncError?.message}`, variant: "destructive" });
+        } else {
+          toast({ title: editingTemplate.id ? "Template updated & submitted to Meta" : "Template created & submitted to Meta" });
+        }
+      } else if (savedId && ratioBlocked) {
+        toast({
+          title: "Saved as draft",
+          description: `Meta submit block kiya gaya: ${totalVariables} variables ke liye around ${totalVariables * 3} real words chahiye, abhi ${plainWords.length} words hain.`,
+          variant: "destructive",
+        });
+      }
+
       setIsEditing(false);
       setEditingTemplate(null);
       fetchTemplates();
@@ -133,7 +173,15 @@ export default function WhatsAppTemplateManager() {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this template?")) return;
     try {
-      await supabase.from("whatsapp_templates").delete().eq("id", id);
+      const template = templates.find((item) => item.id === id);
+      if (template) {
+        try {
+          await supabase.functions.invoke("meta-templates", {
+            body: { action: "delete_template", template_name: template.name },
+          });
+        } catch {}
+      }
+      await supabase.from("wa_templates").delete().eq("id", id);
       toast({ title: "Template deleted" });
       fetchTemplates();
     } catch (error: any) {
@@ -142,7 +190,7 @@ export default function WhatsAppTemplateManager() {
   };
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
-    await supabase.from("whatsapp_templates").update({ is_active: !isActive }).eq("id", id);
+    await supabase.from("wa_templates").update({ status: isActive ? "disabled" : "approved" }).eq("id", id);
     fetchTemplates();
   };
 
@@ -249,19 +297,16 @@ Return ONLY the template text, nothing else.`,
       if (!Array.isArray(imported)) throw new Error("Invalid format");
 
       const toInsert = imported.map((t: any) => ({
-        name: t.name || "Imported Template",
-        category: t.category || "welcome",
-        template_type: t.template_type || "text",
-        content: t.content || "",
-        variables: t.variables || [],
-        preview: (t.content || "").substring(0, 100) + "...",
+        name: normalizeTemplateName(t.name || "imported_template"),
+        display_name: t.name || "Imported Template",
+        category: (t.category || "utility").toLowerCase(),
+        body: t.content || t.body || "",
+        variables: (t.variables || []).map((v: string) => v.replace(/[{}]/g, "")),
         language: t.language || "en",
-        is_active: true,
-        is_approved: false,
-        approval_status: "pending",
+        status: "draft",
       }));
 
-      const { error } = await supabase.from("whatsapp_templates").insert(toInsert);
+      const { error } = await supabase.from("wa_templates").insert(toInsert);
       if (error) throw error;
 
       toast({ title: "Imported!", description: `${toInsert.length} templates imported` });
@@ -272,8 +317,8 @@ Return ONLY the template text, nothing else.`,
     event.target.value = '';
   };
 
-  // ─── COPY FOR FINBITE SETUP ────────────────────────
-  const generateFinbiteCopyText = (template?: WhatsAppTemplate) => {
+  // ─── COPY FOR PROVIDER SETUP ────────────────────────
+  const generateProviderCopyText = (template?: WhatsAppTemplate) => {
     const templatesToExport = template ? [template] : templates;
     const lines = templatesToExport.map((t, i) => {
       const vars = (t.variables || []).map((v, idx) => `  {{${idx + 1}}} = ${v}`).join('\n');
@@ -292,7 +337,6 @@ ${vars || '  (No variables)'}
     }).join('\n\n');
 
     const header = `=== GRABYOURCAR WHATSAPP TEMPLATES ===
-Provider: Finbite
 Date: ${new Date().toLocaleDateString('en-IN')}
 Total Templates: ${templatesToExport.length}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -303,14 +347,14 @@ Please set up the following templates on our WhatsApp Business Account:
     return header + lines;
   };
 
-  const openFinbiteCopy = (template?: WhatsAppTemplate) => {
-    setFinbiteCopyText(generateFinbiteCopyText(template));
-    setIsFinbiteCopyOpen(true);
+  const openProviderCopy = (template?: WhatsAppTemplate) => {
+    setProviderCopyText(generateProviderCopyText(template));
+    setIsProviderCopyOpen(true);
   };
 
-  const copyFinbiteText = () => {
-    navigator.clipboard.writeText(finbiteCopyText);
-    toast({ title: "📋 Copied!", description: "Share this text with Finbite support to set up templates" });
+  const copyProviderText = () => {
+    navigator.clipboard.writeText(providerCopyText);
+    toast({ title: "📋 Copied!", description: "Share this text with your provider to set up templates" });
   };
 
   const filteredTemplates = templates.filter((t) => {
@@ -344,14 +388,14 @@ Please set up the following templates on our WhatsApp Business Account:
             <MessageSquare className="h-6 w-6 text-green-500" />
             WhatsApp Marketing Templates
           </h2>
-          <p className="text-muted-foreground">Create, manage & share templates with Finbite for setup</p>
+          <p className="text-muted-foreground">Create, manage & export templates for your WhatsApp provider</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={() => setIsAIDialogOpen(true)}>
             <Sparkles className="h-4 w-4 mr-1" /> AI Generate
           </Button>
-          <Button variant="outline" size="sm" onClick={() => openFinbiteCopy()}>
-            <Share2 className="h-4 w-4 mr-1" /> Copy All for Finbite
+          <Button variant="outline" size="sm" onClick={() => openProviderCopy()}>
+            <Share2 className="h-4 w-4 mr-1" /> Copy All for Provider
           </Button>
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="h-4 w-4 mr-1" /> Export
@@ -429,7 +473,7 @@ Please set up the following templates on our WhatsApp Business Account:
                     </div>
                     <div className="flex gap-1">
                       <Button size="sm" variant="ghost" onClick={() => setPreviewTemplate(template)}><Eye className="h-4 w-4" /></Button>
-                      <Button size="sm" variant="ghost" onClick={() => openFinbiteCopy(template)} title="Copy for Finbite"><Share2 className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => openProviderCopy(template)} title="Copy for Provider"><Share2 className="h-4 w-4" /></Button>
                       <Button size="sm" variant="ghost" onClick={() => { setEditingTemplate(template); setIsEditing(true); }}><Edit className="h-4 w-4" /></Button>
                       <Button size="sm" variant="ghost" onClick={() => handleDelete(template.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
@@ -468,7 +512,7 @@ Please set up the following templates on our WhatsApp Business Account:
                       <TableCell>
                         <div className="flex gap-1">
                           <Button size="sm" variant="ghost" onClick={() => setPreviewTemplate(template)}><Eye className="h-4 w-4" /></Button>
-                          <Button size="sm" variant="ghost" onClick={() => openFinbiteCopy(template)}><Share2 className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="ghost" onClick={() => openProviderCopy(template)}><Share2 className="h-4 w-4" /></Button>
                           <Button size="sm" variant="ghost" onClick={() => { setEditingTemplate(template); setIsEditing(true); }}><Edit className="h-4 w-4" /></Button>
                           <Button size="sm" variant="ghost" onClick={() => handleDelete(template.id)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
@@ -531,29 +575,29 @@ Please set up the following templates on our WhatsApp Business Account:
         </DialogContent>
       </Dialog>
 
-      {/* ─── FINBITE COPY DIALOG ──────────────────── */}
-      <Dialog open={isFinbiteCopyOpen} onOpenChange={setIsFinbiteCopyOpen}>
+      {/* ─── PROVIDER COPY DIALOG ──────────────────── */}
+      <Dialog open={isProviderCopyOpen} onOpenChange={setIsProviderCopyOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Share2 className="h-5 w-5 text-green-500" /> Copy for Finbite Setup</DialogTitle>
-            <DialogDescription>Copy this formatted text and share with Finbite support to set up your templates</DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><Share2 className="h-5 w-5 text-green-500" /> Copy for Provider Setup</DialogTitle>
+            <DialogDescription>Copy this formatted text and share with your WhatsApp provider to set up templates</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <Alert>
               <AlertDescription className="text-sm">
-                📋 Copy the text below → Share it with Finbite support via WhatsApp/Email → They will set up these templates on your WhatsApp Business Account
+                📋 Copy the text below → Share it with your WhatsApp provider via WhatsApp/Email → They will set up these templates on your WhatsApp Business Account
               </AlertDescription>
             </Alert>
             <Textarea
-              value={finbiteCopyText}
-              onChange={(e) => setFinbiteCopyText(e.target.value)}
+              value={providerCopyText}
+              onChange={(e) => setProviderCopyText(e.target.value)}
               rows={16}
               className="font-mono text-xs"
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsFinbiteCopyOpen(false)}>Close</Button>
-            <Button onClick={copyFinbiteText}>
+            <Button variant="outline" onClick={() => setIsProviderCopyOpen(false)}>Close</Button>
+            <Button onClick={copyProviderText}>
               <ClipboardCopy className="h-4 w-4 mr-2" /> Copy to Clipboard
             </Button>
           </DialogFooter>
@@ -667,8 +711,8 @@ Please set up the following templates on our WhatsApp Business Account:
                 <Button variant="outline" onClick={() => { navigator.clipboard.writeText(previewTemplate.content); toast({ title: "Copied!" }); }}>
                   <Copy className="h-4 w-4 mr-2" /> Copy Text
                 </Button>
-                <Button variant="outline" onClick={() => openFinbiteCopy(previewTemplate)}>
-                  <Share2 className="h-4 w-4 mr-2" /> Copy for Finbite
+                <Button variant="outline" onClick={() => openProviderCopy(previewTemplate)}>
+                  <Share2 className="h-4 w-4 mr-2" /> Copy for Provider
                 </Button>
               </div>
             </div>

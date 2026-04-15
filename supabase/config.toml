@@ -1,189 +1,166 @@
 project_id = "ynoiwioypxpurwdbjvyt"
 
-[functions.scrape-maruti-launches]
-verify_jwt = false
-
-[functions.admin-otp]
-verify_jwt = false
-
-[functions.admin-password-reset]
-verify_jwt = false
-
-[functions.auto-news]
-verify_jwt = false
-
-[functions.car-advisor]
-verify_jwt = true
-
-[functions.car-finder]
-verify_jwt = false
-
-[functions.car-recommendations]
-verify_jwt = false
-
-[functions.enhance-car-data]
-verify_jwt = false
-
-[functions.enrich-car-data]
-verify_jwt = false
-
-[functions.fetch-brand-data]
-verify_jwt = false
-
-[functions.fetch-car-images]
-verify_jwt = false
-
-[functions.firecrawl-oem-data]
-verify_jwt = false
-
-[functions.firecrawl-scrape]
-verify_jwt = false
-
-[functions.generate-blog]
-verify_jwt = false
-
-[functions.generate-car-data]
-verify_jwt = false
-
-[functions.generate-car-images]
-verify_jwt = false
-
-[functions.generate-emi-content]
-verify_jwt = false
-
-[functions.migrate-all-cars]
-verify_jwt = false
-
-[functions.migrate-brands]
-verify_jwt = false
-
-[functions.migrate-car-data]
-verify_jwt = false
-
-[functions.og-image]
-verify_jwt = false
-
-[functions.partner-booking]
-verify_jwt = false
-
-[functions.razorpay-create-order]
-verify_jwt = true
-
-[functions.razorpay-verify-payment]
-verify_jwt = true
-
-[functions.scheduled-sync]
-verify_jwt = false
-
-[functions.scrape-car-pricing]
-verify_jwt = false
-
-[functions.scrape-new-brands]
-verify_jwt = false
-
-[functions.scrape-car-images]
-verify_jwt = false
-
-[functions.scrape-maruti-car]
-verify_jwt = false
-
-[functions.send-alert-email]
-verify_jwt = false
-
-[functions.send-automated-email]
-verify_jwt = false
-
-[functions.send-dashboard-report]
-verify_jwt = false
-
-[functions.sitemap]
-verify_jwt = false
-
-[functions.submit-lead]
-verify_jwt = true
-
-[functions.sync-car-database]
-verify_jwt = false
-
-[functions.upcoming-cars]
-verify_jwt = false
-
-[functions.update-pricing]
-verify_jwt = false
-
-[functions.validate-car-data]
-verify_jwt = false
-
-[functions.whatsapp-otp]
-verify_jwt = false
-
-[functions.whatsapp-send]
-verify_jwt = false
-
-[functions.whatsapp-webhook]
-verify_jwt = false
-
-[functions.enrich-new-brands]
-verify_jwt = false
-
-[functions.migrate-images-to-storage]
-verify_jwt = false
-
-[functions.extract-oem-catalog]
-verify_jwt = false
-
-[functions.batch-extract-brands]
-verify_jwt = false
-
-[functions.download-brochure]
-verify_jwt = false
-
-[functions.sync-brochure]
-verify_jwt = false
-
-[functions.sync-all-brochures]
-verify_jwt = false
-
-[functions.broadcast-send]
-verify_jwt = false
-
-[functions.wa-queue-processor]
-verify_jwt = false
-
-[functions.wa-campaign-launcher]
-verify_jwt = false
-
-[functions.wa-automation-trigger]
-verify_jwt = false
-
-[functions.send-bulk-email]
-verify_jwt = false
-
-[functions.messaging-service]
-verify_jwt = false
-
-[functions.batch-sync-brochures]
-verify_jwt = false
-
-[functions.ai-generate]
-verify_jwt = false
-
-[functions.lead-scoring]
-verify_jwt = false
-
-[functions.lead-import]
-verify_jwt = false
-
-[functions.extract-policy-data]
-
-[functions.insurance-renewal-engine]
-verify_jwt = false
-
-[functions.admin-manage-users]
-verify_jwt = false
-
-[functions.lead-intake-engine]
-verify_jwt = false
-
-[functions.lead-followup-checker]
-verify_jwt = false
+[functions]
+  [functions.admin-manage-users]
+    verify_jwt = false
+  [functions.admin-otp]
+    verify_jwt = false
+  [functions.admin-password-reset]
+    verify_jwt = false
+  [functions.ai-brain]
+    verify_jwt = false
+  [functions.ai-email-writer]
+    verify_jwt = false
+  [functions.ai-generate]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.auto-news]
+    verify_jwt = false
+  [functions.batch-extract-brands]
+    verify_jwt = false
+  [functions.batch-sync-brochures]
+    verify_jwt = false
+  [functions.broadcast-send]
+    verify_jwt = false
+  [functions.car-advisor]
+    verify_jwt = true
+  [functions.car-finder]
+    verify_jwt = false
+  [functions.car-recommendations]
+    verify_jwt = false
+  [functions.cart-recovery-engine]
+    verify_jwt = false
+  [functions.crm-ai-assistant]
+    verify_jwt = false
+  [functions.download-brochure]
+    verify_jwt = false
+  [functions.email-poll-vote]
+    verify_jwt = false
+  [functions.email-unsubscribe]
+    verify_jwt = false
+  [functions.enhance-car-data]
+    verify_jwt = false
+  [functions.enrich-car-data]
+    verify_jwt = false
+  [functions.enrich-new-brands]
+    verify_jwt = false
+  [functions.extract-oem-catalog]
+    verify_jwt = false
+  [functions.extract-policy-data]
+  [functions.fetch-brand-data]
+    verify_jwt = false
+  [functions.fetch-car-images]
+    verify_jwt = false
+  [functions.firecrawl-oem-data]
+    verify_jwt = false
+  [functions.firecrawl-scrape]
+    verify_jwt = false
+  [functions.generate-blog]
+    verify_jwt = false
+  [functions.generate-car-data]
+    verify_jwt = false
+  [functions.generate-car-images]
+    verify_jwt = false
+  [functions.generate-emi-content]
+    verify_jwt = false
+  [functions.handle-email-suppression]
+    verify_jwt = false
+  [functions.handle-email-unsubscribe]
+    verify_jwt = false
+  [functions.insurance-renewal-engine]
+    verify_jwt = false
+  [functions.lead-followup-checker]
+    verify_jwt = false
+  [functions.lead-import]
+    verify_jwt = false
+  [functions.lead-intake-engine]
+    verify_jwt = false
+  [functions.lead-scoring]
+    verify_jwt = false
+  [functions.messaging-service]
+    verify_jwt = false
+  [functions.migrate-all-cars]
+    verify_jwt = false
+  [functions.migrate-brands]
+    verify_jwt = false
+  [functions.migrate-car-data]
+    verify_jwt = false
+  [functions.migrate-images-to-storage]
+    verify_jwt = false
+  [functions.og-image]
+    verify_jwt = false
+  [functions.omni-campaign-send]
+    verify_jwt = false
+  [functions.partner-booking]
+    verify_jwt = false
+  [functions.popup-form-submit]
+    verify_jwt = false
+  [functions.preview-transactional-email]
+    verify_jwt = false
+  [functions.process-drip-sequences]
+    verify_jwt = false
+  [functions.process-email-queue]
+    verify_jwt = true
+  [functions.razorpay-create-order]
+    verify_jwt = true
+  [functions.razorpay-verify-payment]
+    verify_jwt = true
+  [functions.resend-webhook]
+    verify_jwt = false
+  [functions.scheduled-sync]
+    verify_jwt = false
+  [functions.scrape-car-images]
+    verify_jwt = false
+  [functions.scrape-car-pricing]
+    verify_jwt = false
+  [functions.scrape-maruti-car]
+    verify_jwt = false
+  [functions.scrape-maruti-launches]
+    verify_jwt = false
+  [functions.scrape-new-brands]
+    verify_jwt = false
+  [functions.send-alert-email]
+    verify_jwt = false
+  [functions.send-automated-email]
+    verify_jwt = false
+  [functions.send-bulk-email]
+    verify_jwt = false
+  [functions.send-dashboard-report]
+    verify_jwt = false
+  [functions.send-direct-email]
+    verify_jwt = false
+  [functions.send-transactional-email]
+    verify_jwt = true
+  [functions.seo-agent]
+    verify_jwt = false
+  [functions.sitemap]
+    verify_jwt = false
+  [functions.submit-lead]
+    verify_jwt = false
+  [functions.sync-all-brochures]
+    verify_jwt = false
+  [functions.sync-brochure]
+    verify_jwt = false
+  [functions.sync-car-database]
+    verify_jwt = false
+  [functions.upcoming-cars]
+    verify_jwt = false
+  [functions.update-pricing]
+    verify_jwt = false
+  [functions.validate-car-data]
+    verify_jwt = false
+  [functions.wa-automation-trigger]
+    verify_jwt = false
+  [functions.wa-campaign-launcher]
+    verify_jwt = false
+  [functions.wa-queue-processor]
+    verify_jwt = false
+  [functions.webhook-receiver]
+    verify_jwt = false
+  [functions.whatsapp-otp]
+    verify_jwt = false
+  [functions.whatsapp-send]
+    verify_jwt = false
+  [functions.whatsapp-webhook]
+    verify_jwt = false

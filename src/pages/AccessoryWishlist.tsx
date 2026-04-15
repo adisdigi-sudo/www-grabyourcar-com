@@ -174,7 +174,7 @@ const AccessoryWishlist = () => {
                     </div>
                     
                     <div className="flex items-center gap-2 mb-3">
-                      <span className="text-lg font-bold text-primary">
+                      <span className="text-lg font-bold text-foreground">
                         ₹{product.price.toLocaleString()}
                       </span>
                       {product.originalPrice && (

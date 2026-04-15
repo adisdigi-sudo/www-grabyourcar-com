@@ -6,9 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const FINBITE_V2_URL = "https://app.finbite.in/api/v2/whatsapp-business/messages";
-const PHONE_NUMBER_ID = "998733619990657";
-
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -19,13 +16,14 @@ serve(async (req) => {
   }
 
   try {
-    const FINBITE_BEARER_TOKEN = Deno.env.get("FINBITE_BEARER_TOKEN");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+    const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
-    if (!FINBITE_BEARER_TOKEN) {
+    if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
       return new Response(
-        JSON.stringify({ error: "WhatsApp OTP not configured" }),
+        JSON.stringify({ error: "WhatsApp OTP not configured — Meta API credentials missing" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -93,46 +91,50 @@ serve(async (req) => {
         );
       }
 
-      // Send OTP via Finbite v2
+      // Send OTP via Meta Cloud API
+      const url = `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
       const requestBody = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
         to: phoneKey,
-        phoneNoId: PHONE_NUMBER_ID,
         type: "template",
-        name: "otp",
-        language: "en",
-        bodyParams: [newOtp],
-        buttons: [{ type: "button", sub_type: "url", text: newOtp }],
+        template: {
+          name: "otp",
+          language: { code: "en" },
+          components: [
+            {
+              type: "body",
+              parameters: [{ type: "text", text: newOtp }],
+            },
+            {
+              type: "button",
+              sub_type: "url",
+              index: "0",
+              parameters: [{ type: "text", text: newOtp }],
+            },
+          ],
+        },
       };
 
-      console.log("Sending OTP via Finbite v2:", { phone: phoneKey });
+      console.log("Sending OTP via Meta API:", { phone: phoneKey });
 
-      const response = await fetch(FINBITE_V2_URL, {
+      const response = await fetch(url, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${FINBITE_BEARER_TOKEN}`,
+          Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
       });
 
-      const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        const result = await response.json();
-        console.log("Finbite v2 response:", result);
-        if (!response.ok || result.status === false || result.error) {
-          console.error("Finbite v2 error:", result);
-          await supabase.from("whatsapp_otps").delete().eq("phone", phoneKey);
-          return new Response(
-            JSON.stringify({ error: "Failed to send OTP. Please try again." }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-      } else {
-        const textBody = await response.text();
-        console.error("Finbite v2 non-JSON:", textBody.substring(0, 200));
+      const result = await response.json();
+      console.log("Meta API OTP response:", result);
+
+      if (!response.ok || result.error) {
+        console.error("Meta API OTP error:", result);
         await supabase.from("whatsapp_otps").delete().eq("phone", phoneKey);
         return new Response(
-          JSON.stringify({ error: "WhatsApp service temporarily unavailable." }),
+          JSON.stringify({ error: "Failed to send OTP. Please try again." }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }

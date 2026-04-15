@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import InsuranceQuoteModal from "./InsuranceQuoteModal";
-import { SharePdfDialog } from "./SharePdfDialog";
+import { OmniShareDialog } from "@/components/admin/shared/OmniShareDialog";
 import { generateInsuranceQuotePdf } from "@/lib/generateInsuranceQuotePdf";
 import { generateRenewalReminderPdf } from "@/lib/generateRenewalReminderPdf";
 import { InsuranceBulkQuoteImport } from "./InsuranceBulkQuoteImport";
@@ -220,11 +220,9 @@ export function InsuranceQuoteHub() {
                           <Send className="h-3.5 w-3.5" /> Share
                         </Button>
                         {phone && (
-                          <a href={`https://wa.me/91${phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
-                            <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-green-50 dark:hover:bg-green-950/30">
-                              <MessageCircle className="h-4 w-4 text-green-600" />
-                            </Button>
-                          </a>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-green-50 dark:hover:bg-green-950/30" onClick={() => setShareClient(client)}>
+                            <MessageCircle className="h-4 w-4 text-green-600" />
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -252,13 +250,14 @@ export function InsuranceQuoteHub() {
 
       {/* Share Dialog */}
       {shareClient && (
-        <SharePdfDialog
+        <OmniShareDialog
           open={!!shareClient}
           onOpenChange={() => setShareClient(null)}
           title="Insurance Quote"
           defaultPhone={displayPhone(shareClient.phone) || ""}
           defaultEmail={shareClient.email || ""}
           customerName={shareClient.customer_name}
+          vertical="insurance"
           shareMessage={`Hi ${shareClient.customer_name}! Here is your insurance quote for your ${shareClient.vehicle_make || ""} ${shareClient.vehicle_model || ""}.\n\nVehicle: ${shareClient.vehicle_number || "N/A"}\nInsurer: ${shareClient.current_insurer || "Best Available"}\n\nPlease review and let us know if you'd like to proceed.\n\nPhone: +91 98559 24442\nwww.grabyourcar.com\n- Grabyourcar Insurance`}
           generatePdf={() => generateInsuranceQuotePdf({
             customerName: shareClient.customer_name || "Customer",

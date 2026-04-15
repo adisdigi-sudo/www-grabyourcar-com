@@ -122,7 +122,7 @@ export const CarListings = () => {
       <section id="cars" className="py-10 md:py-16 lg:py-24">
         <div className="container mx-auto px-3 sm:px-4">
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="h-8 w-8 animate-spin text-foreground" />
             <span className="ml-3 text-muted-foreground">Loading cars...</span>
           </div>
         </div>
@@ -243,18 +243,18 @@ export const CarListings = () => {
                   {/* Specs Row - Compact */}
                   <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[9px] sm:text-[10px] text-muted-foreground mb-1.5">
                     <span className="flex items-center gap-0.5">
-                      <Fuel className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary" />
+                      <Fuel className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-foreground" />
                       {car.fuel_types?.[0] || "Petrol"}
                     </span>
                     <span className="flex items-center gap-0.5">
-                      <Cog className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary" />
+                      <Cog className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-foreground" />
                       {car.transmission_types?.[0] || "Manual"}
                     </span>
                   </div>
 
                   {/* Availability */}
                   {!car.is_upcoming && (
-                    <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-medium text-primary">
+                    <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-medium text-foreground">
                       <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                       <span>Ready Stock</span>
                     </div>

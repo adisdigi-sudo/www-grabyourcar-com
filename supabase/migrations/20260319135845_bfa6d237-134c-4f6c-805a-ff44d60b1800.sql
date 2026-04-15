@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Public can insert insurance journey" ON public.insurance_client_journey;

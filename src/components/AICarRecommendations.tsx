@@ -1,18 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, ArrowRight, RefreshCw } from "lucide-react";
+import { Sparkles, ArrowRight, Fuel, Eye } from "lucide-react";
 import { toast } from "sonner";
-import { allCars } from "@/data/cars";
+import { allCars, Car } from "@/data/cars";
+import { motion } from "framer-motion";
 
 interface Recommendation {
   name: string;
   brand: string;
   reason: string;
   priceRange: string;
+}
+
+interface EnrichedRecommendation extends Recommendation {
+  car?: Car;
+  slug?: string;
+  image?: string;
+  fuelTypes?: string[];
+  bodyType?: string;
+  highlights?: string[];
 }
 
 interface AICarRecommendationsProps {
@@ -24,6 +32,32 @@ interface AICarRecommendationsProps {
   transmission?: string[];
 }
 
+const matchCarFromCatalog = (recName: string, recBrand: string): Car | undefined => {
+  // Try exact match first
+  let found = allCars.find(
+    (car) =>
+      car.name.toLowerCase() === recName.toLowerCase() &&
+      car.brand.toLowerCase() === recBrand.toLowerCase()
+  );
+  if (found) return found;
+
+  // Try partial match
+  found = allCars.find(
+    (car) =>
+      (car.name.toLowerCase().includes(recName.toLowerCase()) ||
+        recName.toLowerCase().includes(car.name.toLowerCase())) &&
+      car.brand.toLowerCase() === recBrand.toLowerCase()
+  );
+  if (found) return found;
+
+  // Fallback: name-only match
+  return allCars.find(
+    (car) =>
+      car.name.toLowerCase().includes(recName.toLowerCase()) ||
+      recName.toLowerCase().includes(car.name.toLowerCase())
+  );
+};
+
 export const AICarRecommendations = ({
   carName,
   brand,
@@ -32,11 +66,13 @@ export const AICarRecommendations = ({
   bodyType,
   transmission,
 }: AICarRecommendationsProps) => {
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [recommendations, setRecommendations] = useState<EnrichedRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [cycleCount, setCycleCount] = useState(0);
 
-  const fetchRecommendations = async () => {
+  const fetchRecommendations = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await fetch(
@@ -47,127 +83,184 @@ export const AICarRecommendations = ({
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({
-            carName,
-            brand,
-            price,
-            fuelTypes,
-            bodyType,
-            transmission,
-          }),
+          body: JSON.stringify({ carName, brand, price, fuelTypes, bodyType, transmission }),
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch recommendations");
-      }
+      if (!response.ok) throw new Error("Failed to fetch recommendations");
 
       const data = await response.json();
-      setRecommendations(data.recommendations || []);
+      const rawRecs: Recommendation[] = data.recommendations || [];
+
+      // Enrich with actual car catalog data
+      const enriched: EnrichedRecommendation[] = rawRecs.map((rec) => {
+        const car = matchCarFromCatalog(rec.name, rec.brand);
+        return {
+          ...rec,
+          car,
+          slug: car?.slug,
+          image: car?.image || car?.gallery?.[0],
+          fuelTypes: car?.fuelTypes,
+          bodyType: car?.bodyType,
+          highlights: car?.keyHighlights?.slice(0, 3),
+        };
+      });
+
+      setRecommendations(enriched);
       setHasLoaded(true);
+      setActiveIndex(0);
     } catch (error) {
       console.error("Error fetching recommendations:", error);
       toast.error("Could not load recommendations");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [carName, brand, price, fuelTypes, bodyType, transmission]);
 
   useEffect(() => {
-    // Auto-fetch on mount
     fetchRecommendations();
   }, [carName]);
 
-  const findCarSlug = (recName: string, recBrand: string) => {
-    const foundCar = allCars.find(
-      (car) =>
-        car.name.toLowerCase().includes(recName.toLowerCase()) ||
-        recName.toLowerCase().includes(car.name.toLowerCase())
-    );
-    return foundCar?.slug;
-  };
+  // Auto-cycle featured card every 5s
+  useEffect(() => {
+    if (recommendations.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % recommendations.length);
+      setCycleCount((c) => c + 1);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [recommendations.length]);
 
-  if (!hasLoaded && !isLoading) {
-    return null;
-  }
+  // Re-fetch with fresh AI thinking every 3 cycles
+  useEffect(() => {
+    if (cycleCount > 0 && cycleCount % 9 === 0) {
+      fetchRecommendations();
+    }
+  }, [cycleCount]);
+
+  if (!hasLoaded && !isLoading) return null;
+
+  const featured = recommendations[activeIndex];
 
   return (
-    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Sparkles className="h-5 w-5 text-primary" />
-            AI Recommendations
-          </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={fetchRecommendations}
-            disabled={isLoading}
-            className="text-primary hover:text-primary/80"
-          >
-            <RefreshCw className={`h-4 w-4 mr-1.5 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="p-1.5 bg-success/10 rounded-lg">
+          <Sparkles className="h-4 w-4 text-foreground" />
         </div>
-        <p className="text-sm text-muted-foreground">
-          Similar cars you might like based on {carName}
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {isLoading ? (
-          <>
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-4 p-3 bg-card rounded-lg border">
-                <Skeleton className="h-12 w-12 rounded-lg" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-48" />
-                </div>
-              </div>
-            ))}
-          </>
-        ) : recommendations.length > 0 ? (
-          recommendations.map((rec, index) => {
-            const slug = findCarSlug(rec.name, rec.brand);
-            const content = (
-              <div
-                key={index}
-                className="flex items-start gap-4 p-4 bg-card rounded-xl border border-border hover:border-primary/50 hover:shadow-md transition-all group cursor-pointer"
-              >
-                <div className="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <span className="text-lg font-bold text-primary">{index + 1}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                      {rec.name}
-                    </h4>
-                    <Badge variant="secondary" className="text-xs">
-                      {rec.brand}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">{rec.reason}</p>
-                  <p className="text-sm font-medium text-primary">{rec.priceRange}</p>
-                </div>
-                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0 mt-2" />
-              </div>
-            );
+        <h3 className="font-bold text-base">AI Picks For You</h3>
+      </div>
 
-            return slug ? (
-              <Link key={index} to={`/car/${slug}`}>
-                {content}
-              </Link>
-            ) : (
-              content
-            );
-          })
-        ) : (
-          <div className="text-center py-6 text-muted-foreground">
-            <p>No recommendations available</p>
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-3">
+          {[1, 2].map((i) => (
+            <Skeleton key={i} className="h-52 rounded-xl" />
+          ))}
+        </div>
+      ) : recommendations.length > 0 ? (
+        <>
+          {/* 2-column car cards */}
+          <div className="grid grid-cols-2 gap-3">
+            {recommendations.slice(0, 2).map((rec, index) => (
+              <motion.div
+                key={`${rec.name}-${cycleCount}`}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <Link to={rec.slug ? `/car/${rec.slug}` : "#"}>
+                  <div className="rounded-xl border border-border/60 bg-card overflow-hidden hover:border-success/50 hover:shadow-md transition-all active:scale-[0.97] group h-full">
+                    {/* Car Image */}
+                    {rec.image ? (
+                      <div className="relative h-28 bg-card overflow-hidden">
+                        <img
+                          src={rec.image}
+                          alt={rec.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                        />
+                        <Badge className="absolute top-1.5 left-1.5 bg-success text-success-foreground text-[8px] px-1 py-0 shadow-sm">
+                          <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                          AI Pick
+                        </Badge>
+                      </div>
+                    ) : (
+                      <div className="h-28 bg-success/5 flex items-center justify-center">
+                        <span className="text-3xl font-bold text-success/30">{rec.brand?.charAt(0)}</span>
+                      </div>
+                    )}
+
+                    {/* Info */}
+                    <div className="p-3 space-y-1.5">
+                      <h4 className="font-bold text-xs leading-tight line-clamp-1">
+                        {rec.brand} {rec.name}
+                      </h4>
+                      <p className="text-[10px] text-muted-foreground italic line-clamp-2 leading-tight">
+                        💡 {rec.reason}
+                      </p>
+
+                      {/* Fuel badges */}
+                      <div className="flex flex-wrap gap-1">
+                        {rec.fuelTypes?.slice(0, 2).map((fuel) => (
+                          <Badge key={fuel} variant="outline" className="text-[8px] px-1 py-0 gap-0.5">
+                            <Fuel className="h-2.5 w-2.5" />
+                            {fuel}
+                          </Badge>
+                        ))}
+                      </div>
+
+                      <p className="text-xs font-bold text-foreground">{rec.priceRange}</p>
+
+                      {rec.slug && (
+                        <div className="flex items-center justify-center gap-1 text-[10px] font-medium text-foreground pt-1">
+                          <Eye className="h-3 w-3" />
+                          View Details
+                          <ArrowRight className="h-3 w-3" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {/* Third recommendation as a compact strip */}
+          {recommendations[2] && (
+            <Link to={recommendations[2].slug ? `/car/${recommendations[2].slug}` : "#"}>
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-card hover:border-success/50 transition-all group"
+              >
+                {recommendations[2].image ? (
+                  <img
+                    src={recommendations[2].image}
+                    alt={recommendations[2].name}
+                    className="h-12 w-16 object-cover rounded-lg shrink-0"
+                  />
+                ) : (
+                  <div className="h-12 w-16 rounded-lg bg-success/10 flex items-center justify-center shrink-0 text-foreground font-bold">
+                    {recommendations[2].brand?.charAt(0)}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-xs truncate">{recommendations[2].brand} {recommendations[2].name}</h4>
+                  <p className="text-[10px] text-muted-foreground truncate">{recommendations[2].reason}</p>
+                  <p className="text-xs font-bold text-foreground">{recommendations[2].priceRange}</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-foreground shrink-0 group-hover:translate-x-0.5 transition-transform" />
+              </motion.div>
+            </Link>
+          )}
+
+        </>
+      ) : (
+        <div className="text-center py-4 text-muted-foreground text-sm">
+          No recommendations available
+        </div>
+      )}
+    </div>
   );
 };

@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle, Shield, Clock, Gift, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import confetti from "canvas-confetti";
+import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
 
 interface LeadFormProps {
   prefillCarInterest?: string;
@@ -49,35 +49,21 @@ export const LeadForm = ({ prefillCarInterest }: LeadFormProps) => {
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.from("leads").insert({
-        name: formData.name.trim(),
-        customer_name: formData.name.trim(),
-        phone: formData.phone.trim(),
-        city: formData.city.trim() || null,
-        car_model: formData.carInterest.trim() || null,
-        buying_timeline: formData.purchaseTimeline || null,
+      await captureWebsiteLead({
+        name: formData.name,
+        phone: formData.phone,
+        city: formData.city,
+        carInterest: formData.carInterest,
         source: "homepage_form",
-        lead_type: "car_inquiry",
-        status: "new",
+        vertical: "car",
+        type: "car_inquiry",
         priority: formData.purchaseTimeline === "immediate" ? "high" : "medium",
-        notes: [
+        message: [
+          formData.purchaseTimeline && `Timeline: ${formData.purchaseTimeline}`,
           formData.budgetRange && `Budget: ${formData.budgetRange}`,
           formData.financeRequired && `Finance: ${formData.financeRequired}`,
         ].filter(Boolean).join(" | ") || null,
       });
-
-      if (error) throw error;
-
-      // Trigger WhatsApp
-      try {
-        await supabase.functions.invoke("whatsapp-send", {
-          body: {
-            phone: `91${formData.phone}`,
-            template: "lead_created",
-            params: { name: formData.name, car: formData.carInterest || "New Car" },
-          },
-        });
-      } catch { /* best effort */ }
 
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
       setIsSubmitted(true);
@@ -133,7 +119,7 @@ export const LeadForm = ({ prefillCarInterest }: LeadFormProps) => {
             <Card className="p-8">
               {isSubmitted ? (
                 <div className="text-center py-8">
-                  <CheckCircle className="h-16 w-16 text-success mx-auto mb-4" />
+                  <CheckCircle className="h-16 w-16 text-foreground mx-auto mb-4" />
                   <h3 className="text-xl font-bold mb-2">We've Got Your Request! 🎉</h3>
                   <p className="text-muted-foreground">Our expert will call you within 30 minutes.</p>
                 </div>

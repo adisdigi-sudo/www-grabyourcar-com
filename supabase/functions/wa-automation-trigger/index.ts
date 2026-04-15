@@ -259,14 +259,18 @@ serve(async (req) => {
 
       // Trigger processor for legacy queue
       if (triggered > 0) {
-        fetch(`${SUPABASE_URL}/functions/v1/wa-queue-processor`, {
+        const processorResponse = await fetch(`${SUPABASE_URL}/functions/v1/wa-queue-processor`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
           },
           body: JSON.stringify({ batchSize: 10 }),
-        }).catch(err => console.error("Failed to trigger processor:", err));
+        });
+
+        if (!processorResponse.ok) {
+          console.error("Failed to trigger processor:", await processorResponse.text());
+        }
       }
     }
 

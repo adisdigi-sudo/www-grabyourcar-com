@@ -1,0 +1,1 @@
+UPDATE channel_providers SET provider_name = 'meta', config_json = jsonb_build_object('access_token_from_env', true, 'phone_number_id_from_env', true), updated_at = now() WHERE channel = 'whatsapp';

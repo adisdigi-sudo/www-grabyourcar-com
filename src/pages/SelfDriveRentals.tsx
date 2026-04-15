@@ -5,13 +5,16 @@ import { ServiceBanner } from "@/components/ServiceBanner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Phone, MessageCircle, Car, User, MapPin } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RentalSearchFilters, RentalFilters } from "@/components/rentals/RentalSearchFilters";
 import { RentalBookingModal } from "@/components/rentals/RentalBookingModal";
 import { RentalServiceTabs } from "@/components/rentals/RentalServiceTabs";
 import { RentalVehicleCard } from "@/components/rentals/RentalVehicleCard";
 import { DriverBookingModal } from "@/components/rentals/DriverBookingModal";
+import { RentalPolicies } from "@/components/rentals/RentalPolicies";
+import { RentalDocRequirements } from "@/components/rentals/RentalDocRequirements";
 import { useRentalServices, useRentalVehicles, RentalVehicle, RentalService } from "@/hooks/useRentalServices";
+import { captureRentalJourneyStep, ensureRentalJourneySession, syncRentalJourneySnapshot } from "@/lib/rentalJourney";
 
 // Fallback static data for when DB is empty
 import swiftImage from "@/assets/car-swift.jpg";
@@ -62,6 +65,7 @@ const locations = [
 const SelfDriveRentals = () => {
   const { data: dbServices } = useRentalServices();
   const { data: dbVehicles } = useRentalVehicles();
+  const hasTrackedLanding = useRef(false);
   
   const services = dbServices?.length ? dbServices : defaultServices;
   
@@ -142,6 +146,23 @@ const SelfDriveRentals = () => {
   const availableCount = filteredVehicles.filter((v) => v.is_available).length;
   const currentService = services.find(s => s.slug === activeService);
 
+  useEffect(() => {
+    ensureRentalJourneySession();
+  }, []);
+
+  useEffect(() => {
+    syncRentalJourneySnapshot({ activeService });
+    captureRentalJourneyStep(hasTrackedLanding.current ? "service_changed" : "landing_viewed", {
+      activeService,
+      vehiclesVisible: filteredVehicles.length,
+    });
+    hasTrackedLanding.current = true;
+  }, [activeService, filteredVehicles.length]);
+
+  useEffect(() => {
+    syncRentalJourneySnapshot({ filters: { ...filters } });
+  }, [filters]);
+
   return (
     <>
       <GlobalSEO
@@ -200,13 +221,16 @@ const SelfDriveRentals = () => {
 
             <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <Car className="h-4 w-4 text-primary" />
+                <Car className="h-4 w-4 text-foreground" />
                 <span>{vehicles.length} Vehicles</span>
               </div>
               <Badge variant="secondary">{availableCount} Available Now</Badge>
             </div>
           </div>
         </section>
+
+        {/* Document Requirements Bar */}
+        <RentalDocRequirements />
 
         {/* Filters */}
         <section className="py-6 border-b border-border">
@@ -255,6 +279,9 @@ const SelfDriveRentals = () => {
             )}
           </div>
         </section>
+
+        {/* Rental Policies */}
+        <RentalPolicies />
 
         {/* Contact CTA */}
         <section className="py-12 bg-primary/5">

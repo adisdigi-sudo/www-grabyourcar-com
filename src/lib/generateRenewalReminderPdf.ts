@@ -23,7 +23,7 @@ export interface RenewalReminderData {
 const formatINR = (amount: number): string =>
   `Rs. ${Math.round(amount).toLocaleString("en-IN")}`;
 
-export const generateRenewalReminderPdf = (data: RenewalReminderData) => {
+export const generateRenewalReminderPdf = (data: RenewalReminderData, options?: { skipDownload?: boolean }) => {
   const doc = new jsPDF();
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
@@ -298,6 +298,8 @@ export const generateRenewalReminderPdf = (data: RenewalReminderData) => {
   doc.text("MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana - 122001", pw - m, footerY + 15, { align: "right" });
 
   const fileName = `${(data.customerName || "Customer").replace(/\s+/g, "_")}_Renewal_Reminder.pdf`;
-  doc.save(fileName);
+  if (!options?.skipDownload) {
+    doc.save(fileName);
+  }
   return { doc, fileName };
 };

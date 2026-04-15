@@ -50,6 +50,7 @@ export const SEOBuilder = () => {
   const queryClient = useQueryClient();
   const [selectedPage, setSelectedPage] = useState<string>("home");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isAutoOptimizing, setIsAutoOptimizing] = useState(false);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -211,6 +212,23 @@ export const SEOBuilder = () => {
     }
   };
 
+  const autoOptimizeAll = async () => {
+    setIsAutoOptimizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("seo-agent", {
+        body: { action: "optimize_all" },
+      });
+      if (error) throw error;
+      const successCount = data?.results?.filter((r: any) => r.status === "success").length || 0;
+      toast.success(`Auto-optimized ${successCount}/${defaultPages.length} pages!`);
+      queryClient.invalidateQueries({ queryKey: ["seoSettings"] });
+    } catch (e) {
+      toast.error("Auto-optimize failed: " + (e as Error).message);
+    } finally {
+      setIsAutoOptimizing(false);
+    }
+  };
+
   const handlePageChange = (pageKey: string) => {
     setSelectedPage(pageKey);
   };
@@ -240,6 +258,20 @@ export const SEOBuilder = () => {
           </p>
         </div>
       </div>
+
+      {/* Auto Optimize All */}
+      <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+        <CardContent className="pt-4 flex items-center justify-between">
+          <div>
+            <p className="font-medium text-sm">AI Auto-Optimize</p>
+            <p className="text-xs text-muted-foreground">Generate SEO for all pages at once</p>
+          </div>
+          <Button onClick={autoOptimizeAll} disabled={isAutoOptimizing} size="sm">
+            {isAutoOptimizing ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
+            {isAutoOptimizing ? "Optimizing..." : "Auto-Optimize All"}
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-4">
         {/* Page Selector */}

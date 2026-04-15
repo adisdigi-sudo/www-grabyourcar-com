@@ -3,20 +3,16 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import {
   CorporateHero,
-  CorporateLogoGrid,
-  CorporateStats,
-  CorporateWhyChoose,
-  CorporateIndustries,
-  CorporateCaseStudies,
-  CorporateComparison,
-  CorporateTestimonials,
-  CorporateBrochureDownload,
-  CorporateFAQ,
-  CorporateSocialProof,
-  CorporateCTA,
+  CorporateValueProposition,
   CorporateProcessTimeline,
-  CorporateScrollProgress,
+  CorporateFleetTools,
+  CorporateTrustSection,
+  CorporateComparison,
+  CorporateFAQ,
+  CorporateCTA,
+  CorporateFloatingCTA,
 } from "@/components/corporate";
+import { CorporateBrochureDownload } from "@/components/corporate/CorporateBrochureDownload";
 
 const CorporateBuying = () => {
   return (
@@ -27,51 +23,41 @@ const CorporateBuying = () => {
         description="Corporate fleet solutions for businesses. Get special pricing on bulk car orders, dedicated account management, and hassle-free procurement for your organization."
         path="/corporate"
       />
-      
+
       <div className="min-h-screen bg-background">
-      <Header />
-      <CorporateScrollProgress />
+        <Header />
 
-      {/* Hero Section */}
-      <CorporateHero />
+        {/* 1. Hero — Bold headline, dual CTAs, trust stats, inline logo strip */}
+        <CorporateHero />
 
-      {/* Logo Trust Section */}
-      <CorporateLogoGrid />
+        {/* 2. Value Proposition — Problem→Solution narrative */}
+        <CorporateValueProposition />
 
-      {/* Animated Stats */}
-      <CorporateStats />
+        {/* 3. How It Works — 4-step process timeline */}
+        <CorporateProcessTimeline />
 
-      {/* Industries We Serve */}
-      <CorporateIndustries />
+        {/* 4. Fleet Tools — Tabbed: Planner | Lease vs Buy | Pricing */}
+        <CorporateFleetTools />
 
-      {/* Process Timeline */}
-      <CorporateProcessTimeline />
+        {/* 5. Trust Section — Merged case studies + testimonials + metrics */}
+        <CorporateTrustSection />
 
-      {/* Why Choose Us */}
-      <CorporateWhyChoose />
+        {/* 5b. Comparison Table */}
+        <CorporateComparison />
 
-      {/* Comparison Table */}
-      <CorporateComparison />
+        {/* 6. FAQ + Brochure Download */}
+        <CorporateFAQ />
+        <CorporateBrochureDownload />
 
-      {/* Case Studies */}
-      <CorporateCaseStudies />
+        {/* 7. CTA + Form */}
+        <div id="corporate-cta">
+          <CorporateCTA />
+        </div>
 
-      {/* Client Testimonials */}
-      <CorporateTestimonials />
+        {/* 8. Sticky Floating CTA Bar */}
+        <CorporateFloatingCTA />
 
-      {/* Brochure Download */}
-      <CorporateBrochureDownload />
-
-      {/* FAQ Section */}
-      <CorporateFAQ />
-
-      {/* Social Proof */}
-      <CorporateSocialProof />
-
-      {/* CTA with Form */}
-      <CorporateCTA />
-
-      <Footer />
+        <Footer />
       </div>
     </>
   );

@@ -26,12 +26,12 @@ export const HomepageSEOContent = () => {
             <p className="text-muted-foreground leading-relaxed">
               GrabYourCar is India's fastest-growing new car buying platform, designed to eliminate the biggest pain point in car buying — <strong>the waiting period</strong>. 
               We partner with 500+ authorized dealers across India to source ready-stock vehicles across 50+ car brands including 
-              <Link to="/cars?brand=Maruti+Suzuki" className="text-primary hover:underline"> Maruti Suzuki</Link>, 
-              <Link to="/cars?brand=Hyundai" className="text-primary hover:underline"> Hyundai</Link>, 
-              <Link to="/cars?brand=Tata+Motors" className="text-primary hover:underline"> Tata Motors</Link>, 
-              <Link to="/cars?brand=Mahindra" className="text-primary hover:underline"> Mahindra</Link>, 
-              <Link to="/cars?brand=Kia" className="text-primary hover:underline"> Kia</Link>, and 
-              <Link to="/cars?brand=Toyota" className="text-primary hover:underline"> Toyota</Link>. 
+              <Link to="/cars?brand=Maruti+Suzuki" className="text-foreground hover:underline"> Maruti Suzuki</Link>, 
+              <Link to="/cars?brand=Hyundai" className="text-foreground hover:underline"> Hyundai</Link>, 
+              <Link to="/cars?brand=Tata+Motors" className="text-foreground hover:underline"> Tata Motors</Link>, 
+              <Link to="/cars?brand=Mahindra" className="text-foreground hover:underline"> Mahindra</Link>, 
+              <Link to="/cars?brand=Kia" className="text-foreground hover:underline"> Kia</Link>, and 
+              <Link to="/cars?brand=Toyota" className="text-foreground hover:underline"> Toyota</Link>. 
               Whether you're looking for a compact hatchback, a family sedan, a rugged SUV, or a luxury car — we deliver it faster and at the best on-road price.
             </p>
           </div>
@@ -45,11 +45,11 @@ export const HomepageSEOContent = () => {
               Tired of waiting 3–6 months for your dream car? At GrabYourCar, we specialize in sourcing <strong>cars without waiting period</strong>. 
               Our real-time inventory tracking system monitors dealer stock across India, enabling us to find your preferred model, variant, and color 
               with significantly reduced or <strong>zero waiting time</strong>. Popular models like the 
-              <Link to="/car/hyundai-creta" className="text-primary hover:underline"> Hyundai Creta</Link>, 
-              <Link to="/car/tata-nexon" className="text-primary hover:underline"> Tata Nexon</Link>, 
-              <Link to="/car/maruti-suzuki-brezza" className="text-primary hover:underline"> Maruti Brezza</Link>, 
-              <Link to="/car/mahindra-xuv700" className="text-primary hover:underline"> Mahindra XUV700</Link>, and 
-              <Link to="/car/kia-seltos" className="text-primary hover:underline"> Kia Seltos</Link> — 
+              <Link to="/car/hyundai-creta" className="text-foreground hover:underline"> Hyundai Creta</Link>, 
+              <Link to="/car/tata-nexon" className="text-foreground hover:underline"> Tata Nexon</Link>, 
+              <Link to="/car/maruti-suzuki-brezza" className="text-foreground hover:underline"> Maruti Brezza</Link>, 
+              <Link to="/car/mahindra-xuv700" className="text-foreground hover:underline"> Mahindra XUV700</Link>, and 
+              <Link to="/car/kia-seltos" className="text-foreground hover:underline"> Kia Seltos</Link> — 
               all available for <strong>immediate delivery</strong> through our dealer network.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-4">
@@ -67,14 +67,14 @@ export const HomepageSEOContent = () => {
             <p className="text-muted-foreground leading-relaxed">
               Getting the best deal on a new car requires comparing prices across multiple dealers — a time-consuming process. 
               GrabYourCar simplifies this by aggregating quotes from authorized dealers in your city and negotiating exclusive discounts on your behalf. 
-              Our <Link to="/car-loans" className="text-primary hover:underline">car loan services</Link> start at just 8.5% interest rate from leading banks, 
-              and our <Link to="/car-insurance" className="text-primary hover:underline">car insurance partnerships</Link> with 15+ insurers 
+              Our <Link to="/car-loans" className="text-foreground hover:underline">car loan services</Link> start at just 8.5% interest rate from leading banks, 
+              and our <Link to="/car-insurance" className="text-foreground hover:underline">car insurance partnerships</Link> with 15+ insurers 
               like HDFC ERGO, ICICI Lombard, and Bajaj Allianz ensure you get comprehensive coverage at the most competitive premiums.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-4">
               Every purchase through GrabYourCar includes a transparent <strong>on-road price breakup</strong> — ex-showroom price, RTO registration charges, 
               insurance, TCS, handling charges, and accessories cost. No hidden fees, no surprises. Use our 
-              <Link to="/#emi-calculator" className="text-primary hover:underline"> EMI calculator</Link> to plan your budget 
+              <Link to="/#emi-calculator" className="text-foreground hover:underline"> EMI calculator</Link> to plan your budget 
               and get pre-approved loan offers instantly.
             </p>
           </div>
@@ -88,7 +88,7 @@ export const HomepageSEOContent = () => {
               <div className="p-5 rounded-xl border border-border bg-card">
                 <h3 className="font-heading text-lg font-semibold text-foreground mb-2">🚗 New Car Deals</h3>
                 <p className="text-sm text-muted-foreground">
-                  Browse <Link to="/cars" className="text-primary hover:underline">200+ car models</Link> from all major brands. Filter by body type, fuel type, 
+                  Browse <Link to="/cars" className="text-foreground hover:underline">200+ car models</Link> from all major brands. Filter by body type, fuel type, 
                   transmission, and price range. Every listing includes detailed specifications, high-resolution images, and real-time pricing.
                 </p>
               </div>
@@ -102,28 +102,28 @@ export const HomepageSEOContent = () => {
               <div className="p-5 rounded-xl border border-border bg-card">
                 <h3 className="font-heading text-lg font-semibold text-foreground mb-2">💰 Car Loans &amp; Finance</h3>
                 <p className="text-sm text-muted-foreground">
-                  <Link to="/car-loans" className="text-primary hover:underline">Car loan rates starting 8.5%</Link> from SBI, HDFC, ICICI, 
+                  <Link to="/car-loans" className="text-foreground hover:underline">Car loan rates starting 8.5%</Link> from SBI, HDFC, ICICI, 
                   Axis Bank, and more. Quick approval, minimal documentation, up to 100% on-road funding available.
                 </p>
               </div>
               <div className="p-5 rounded-xl border border-border bg-card">
                 <h3 className="font-heading text-lg font-semibold text-foreground mb-2">🛡️ Car Insurance</h3>
                 <p className="text-sm text-muted-foreground">
-                  <Link to="/car-insurance" className="text-primary hover:underline">Compare insurance quotes</Link> from 15+ top insurers. 
+                  <Link to="/car-insurance" className="text-foreground hover:underline">Compare insurance quotes</Link> from 15+ top insurers. 
                   Comprehensive, third-party, and zero-depreciation covers at the best premiums with instant policy issuance.
                 </p>
               </div>
               <div className="p-5 rounded-xl border border-border bg-card">
                 <h3 className="font-heading text-lg font-semibold text-foreground mb-2">🏢 Corporate Car Buying</h3>
                 <p className="text-sm text-muted-foreground">
-                  <Link to="/corporate" className="text-primary hover:underline">Fleet and bulk car buying</Link> for businesses, 
+                  <Link to="/corporate" className="text-foreground hover:underline">Fleet and bulk car buying</Link> for businesses, 
                   corporates, and institutions. Dedicated account managers, volume discounts, and end-to-end procurement support.
                 </p>
               </div>
               <div className="p-5 rounded-xl border border-border bg-card">
                 <h3 className="font-heading text-lg font-semibold text-foreground mb-2">📊 Compare &amp; Decide</h3>
                 <p className="text-sm text-muted-foreground">
-                  <Link to="/compare" className="text-primary hover:underline">Compare cars side-by-side</Link> on price, features, 
+                  <Link to="/compare" className="text-foreground hover:underline">Compare cars side-by-side</Link> on price, features, 
                   mileage, safety ratings, and more. Make informed decisions with our detailed comparison tool.
                 </p>
               </div>
@@ -151,17 +151,17 @@ export const HomepageSEOContent = () => {
             </h2>
             <p className="text-muted-foreground leading-relaxed">
               Explore new cars from every major manufacturer in India. Our catalog includes popular brands like 
-              <Link to="/cars?brand=Maruti+Suzuki" className="text-primary hover:underline"> Maruti Suzuki</Link> (Swift, Baleno, Brezza, Ertiga, Grand Vitara), 
-              <Link to="/cars?brand=Hyundai" className="text-primary hover:underline"> Hyundai</Link> (Creta, Venue, i20, Verna, Tucson), 
-              <Link to="/cars?brand=Tata+Motors" className="text-primary hover:underline"> Tata Motors</Link> (Nexon, Punch, Harrier, Safari, Curvv), 
-              <Link to="/cars?brand=Mahindra" className="text-primary hover:underline"> Mahindra</Link> (XUV700, Thar, Scorpio N, XUV 3XO, BE 6), 
-              <Link to="/cars?brand=Kia" className="text-primary hover:underline"> Kia</Link> (Seltos, Sonet, Carens, EV6), 
-              <Link to="/cars?brand=Toyota" className="text-primary hover:underline"> Toyota</Link> (Innova Hycross, Fortuner, Urban Cruiser), 
-              and luxury marques like <Link to="/cars?brand=BMW" className="text-primary hover:underline">BMW</Link>, 
-              <Link to="/cars?brand=Mercedes-Benz" className="text-primary hover:underline"> Mercedes-Benz</Link>, 
-              <Link to="/cars?brand=Audi" className="text-primary hover:underline"> Audi</Link>, and more. 
-              Check out our <Link to="/upcoming-cars" className="text-primary hover:underline">upcoming cars</Link> section for the latest launches and 
-              <Link to="/auto-news" className="text-primary hover:underline"> auto news</Link> for industry updates.
+              <Link to="/cars?brand=Maruti+Suzuki" className="text-foreground hover:underline"> Maruti Suzuki</Link> (Swift, Baleno, Brezza, Ertiga, Grand Vitara), 
+              <Link to="/cars?brand=Hyundai" className="text-foreground hover:underline"> Hyundai</Link> (Creta, Venue, i20, Verna, Tucson), 
+              <Link to="/cars?brand=Tata+Motors" className="text-foreground hover:underline"> Tata Motors</Link> (Nexon, Punch, Harrier, Safari, Curvv), 
+              <Link to="/cars?brand=Mahindra" className="text-foreground hover:underline"> Mahindra</Link> (XUV700, Thar, Scorpio N, XUV 3XO, BE 6), 
+              <Link to="/cars?brand=Kia" className="text-foreground hover:underline"> Kia</Link> (Seltos, Sonet, Carens, EV6), 
+              <Link to="/cars?brand=Toyota" className="text-foreground hover:underline"> Toyota</Link> (Innova Hycross, Fortuner, Urban Cruiser), 
+              and luxury marques like <Link to="/cars?brand=BMW" className="text-foreground hover:underline">BMW</Link>, 
+              <Link to="/cars?brand=Mercedes-Benz" className="text-foreground hover:underline"> Mercedes-Benz</Link>, 
+              <Link to="/cars?brand=Audi" className="text-foreground hover:underline"> Audi</Link>, and more. 
+              Check out our <Link to="/upcoming-cars" className="text-foreground hover:underline">upcoming cars</Link> section for the latest launches and 
+              <Link to="/auto-news" className="text-foreground hover:underline"> auto news</Link> for industry updates.
             </p>
           </div>
 
@@ -202,8 +202,8 @@ export const HomepageSEOContent = () => {
             </h2>
             <p className="text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-6">
               Join 500+ happy customers who bought their cars through GrabYourCar. Call us at 
-              <a href="tel:+1155578093" className="text-primary font-semibold hover:underline"> +1 155578093</a> or 
-              <a href="https://wa.me/1155578093" className="text-primary font-semibold hover:underline" target="_blank" rel="noopener noreferrer"> WhatsApp us</a> for 
+              <a href="tel:+1155578093" className="text-foreground font-semibold hover:underline"> +1 155578093</a> or 
+              <a href="https://wa.me/1155578093" className="text-foreground font-semibold hover:underline" target="_blank" rel="noopener noreferrer"> WhatsApp us</a> for 
               instant quotes. Visit our office at MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana 122001.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
@@ -213,7 +213,7 @@ export const HomepageSEOContent = () => {
                 </button>
               </Link>
               <Link to="/car-finder">
-                <button className="px-8 py-3 border border-primary text-primary rounded-full font-semibold hover:bg-primary/5 transition-colors">
+                <button className="px-8 py-3 border border-primary text-foreground rounded-full font-semibold hover:bg-primary/5 transition-colors">
                   Find My Perfect Car
                 </button>
               </Link>

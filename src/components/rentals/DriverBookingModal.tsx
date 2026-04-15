@@ -107,7 +107,7 @@ export const DriverBookingModal = ({ vehicle, isOpen, onClose, serviceType }: Dr
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Car className="h-5 w-5 text-primary" />
+            <Car className="h-5 w-5 text-foreground" />
             {serviceType === 'outstation' ? 'Book Outstation Trip' : 'Book with Driver'}
           </DialogTitle>
           <DialogDescription>
@@ -282,7 +282,7 @@ export const DriverBookingModal = ({ vehicle, isOpen, onClose, serviceType }: Dr
             </div>
             <div className="border-t pt-1 flex justify-between font-bold">
               <span>Estimated Total</span>
-              <span className="text-primary">
+              <span className="text-foreground">
                 ₹{(() => {
                   const base = (serviceType === 'outstation' ? (vehicle?.rent_outstation_per_km || 12) * 200 : (vehicle?.rent_with_driver || 1499)) * form.duration_days;
                   const driver = form.duration_days > 1 ? 300 * form.duration_days : 0;

@@ -197,7 +197,7 @@
  
        {/* Trust line below banners */}
        <div className="flex items-center justify-center gap-2 mt-4">
-         <Sparkles className="h-3.5 w-3.5 text-accent" />
+         <Sparkles className="h-3.5 w-3.5 text-foreground" />
          <p className="text-xs text-card/70 font-medium">
            Trusted by 10,000+ car buyers across India
          </p>

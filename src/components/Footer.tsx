@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,9 +34,11 @@ const footerLinks = {
   ],
 };
 
-export const Footer = () => {
+export const Footer = forwardRef<HTMLElement, React.ComponentPropsWithoutRef<"footer">>((props, ref) => {
+  const { className, ...restProps } = props;
+
   return (
-    <footer className="bg-foreground text-background">
+    <footer ref={ref} className={className ?? "bg-foreground text-background"} {...restProps}>
       {/* Main Footer */}
       <div className="container mx-auto px-4 py-12 md:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
@@ -60,12 +63,12 @@ export const Footer = () => {
             {/* Newsletter */}
             <div className="pt-2">
               <p className="text-sm font-medium text-background/80 mb-3">Subscribe to Updates</p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Input
                   placeholder="Enter your email"
-                  className="bg-background/10 border-background/20 text-background placeholder:text-background/50 max-w-xs"
+                  className="bg-background/10 border-background/20 text-background placeholder:text-background/50 min-w-0 flex-1"
                 />
-                <Button variant="accent">Subscribe</Button>
+                <Button variant="accent" className="flex-shrink-0">Subscribe</Button>
               </div>
             </div>
 
@@ -138,7 +141,7 @@ export const Footer = () => {
                 <h4 className="font-heading font-semibold mb-4 text-background">Contact Us</h4>
                 <ul className="space-y-4">
                   <li className="flex items-start gap-3">
-                    <Phone className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                    <Phone className="h-4 w-4 text-foreground mt-0.5 flex-shrink-0" />
                     <div>
                      <a href="tel:+1155578093" className="text-sm text-background/70 hover:text-accent transition-colors">
                         +1 155578093
@@ -147,7 +150,7 @@ export const Footer = () => {
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
-                    <MessageCircle className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                    <MessageCircle className="h-4 w-4 text-foreground mt-0.5 flex-shrink-0" />
                      <a 
                       href="https://wa.me/1155578093" 
                       target="_blank" 
@@ -158,13 +161,13 @@ export const Footer = () => {
                     </a>
                   </li>
                   <li className="flex items-start gap-3">
-                    <Mail className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                    <Mail className="h-4 w-4 text-foreground mt-0.5 flex-shrink-0" />
                     <a href="mailto:hello@grabyourcar.com" className="text-sm text-background/70 hover:text-accent transition-colors">
                       hello@grabyourcar.com
                     </a>
                   </li>
                   <li className="flex items-start gap-3">
-                    <MapPin className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                    <MapPin className="h-4 w-4 text-foreground mt-0.5 flex-shrink-0" />
                     <p className="text-sm text-background/70">MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana – 122001</p>
                   </li>
                 </ul>
@@ -183,7 +186,7 @@ export const Footer = () => {
             </p>
             
             {/* Legal Links */}
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 md:gap-6">
               {footerLinks.legal.map((link) => (
                 <a
                   key={link.label}
@@ -199,4 +202,6 @@ export const Footer = () => {
       </div>
     </footer>
   );
-};
+});
+
+Footer.displayName = "Footer";

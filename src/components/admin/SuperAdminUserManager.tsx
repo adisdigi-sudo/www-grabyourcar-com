@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { 
   Users, UserPlus, Trash2, Loader2, Search, Shield, KeyRound,
-  Ban, CheckCircle2, Copy, Eye, EyeOff, RefreshCw
+  Ban, CheckCircle2, Copy, Eye, EyeOff, RefreshCw, Lock
 } from "lucide-react";
 
 interface ManagedUser {
@@ -26,10 +26,12 @@ interface ManagedUser {
   phone: string | null;
   designation: string | null;
   department: string | null;
+  role_tier: string | null;
+  reporting_to: string | null;
   is_active: boolean;
   created_at: string;
   roles: { role: string }[];
-  verticalAccess: { vertical_id: string; business_verticals: { name: string; slug: string; color: string; icon: string } }[];
+  verticalAccess: { vertical_id: string; access_level?: string; business_verticals: { name: string; slug: string; color: string; icon: string } }[];
 }
 
 interface BusinessVertical {
@@ -49,6 +51,8 @@ const roleOptions = [
   { value: "marketing", label: "Marketing" },
   { value: "dealer", label: "Dealer" },
   { value: "admin", label: "Admin" },
+  { value: "team_leader", label: "Team Leader" },
+  { value: "manager", label: "Manager" },
 ];
 
 const roleColors: Record<string, string> = {
@@ -61,7 +65,15 @@ const roleColors: Record<string, string> = {
   operations: "bg-indigo-500/10 text-indigo-600 border-indigo-200",
   marketing: "bg-pink-500/10 text-pink-600 border-pink-200",
   dealer: "bg-green-500/10 text-green-600 border-green-200",
+  team_leader: "bg-orange-500/10 text-orange-600 border-orange-200",
+  manager: "bg-teal-500/10 text-teal-600 border-teal-200",
 };
+
+const roleTierOptions = [
+  { value: "caller", label: "Caller / Executive" },
+  { value: "team_leader", label: "Team Leader" },
+  { value: "manager", label: "Manager" },
+];
 
 export const SuperAdminUserManager = () => {
   const queryClient = useQueryClient();
@@ -83,6 +95,8 @@ export const SuperAdminUserManager = () => {
     department: "",
     password: "",
     verticalIds: [] as string[],
+    roleTier: "caller",
+    reportingTo: "",
   });
 
   // Fetch all users
@@ -116,6 +130,8 @@ export const SuperAdminUserManager = () => {
           designation: form.designation || null,
           department: form.department || null,
           password: form.password || undefined,
+          roleTier: form.roleTier,
+          reportingTo: form.reportingTo || null,
         },
       });
       if (res.error) throw res.error;
@@ -126,7 +142,7 @@ export const SuperAdminUserManager = () => {
       queryClient.invalidateQueries({ queryKey: ["managed-users"] });
       setIsCreateOpen(false);
       setShowCredentials(data.credentials);
-      setForm({ username: "", displayName: "", phone: "", role: "sales", designation: "", department: "", password: "", verticalIds: [] });
+      setForm({ username: "", displayName: "", phone: "", role: "sales", designation: "", department: "", password: "", verticalIds: [], roleTier: "caller", reportingTo: "" });
       toast.success("User created successfully!");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -263,7 +279,8 @@ export const SuperAdminUserManager = () => {
         </Card>
       </div>
 
-      {/* Users Table */}
+      {/* Vertical Passwords */}
+      <VerticalPasswordManager verticals={verticals} />
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-3">
@@ -420,6 +437,33 @@ export const SuperAdminUserManager = () => {
                 <Label>Department</Label>
                 <Input placeholder="Insurance" value={form.department}
                   onChange={e => setForm({ ...form, department: e.target.value })} />
+              </div>
+            </div>
+
+            {/* Hierarchy */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Role Tier *</Label>
+                <Select value={form.roleTier} onValueChange={v => setForm({ ...form, roleTier: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {roleTierOptions.map(o => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Reports To</Label>
+                <Select value={form.reportingTo} onValueChange={v => setForm({ ...form, reportingTo: v === "none" ? "" : v })}>
+                  <SelectTrigger><SelectValue placeholder="Select supervisor" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No supervisor</SelectItem>
+                    {users.filter(u => u.role_tier === "team_leader" || u.role_tier === "manager").map(u => (
+                      <SelectItem key={u.user_id} value={u.id}>{u.display_name} ({u.role_tier})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-1.5">
@@ -647,5 +691,100 @@ function EditUserDialog({ user, verticals, onClose, onSave, isPending }: {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ── Vertical Password Manager ──
+function VerticalPasswordManager({ verticals }: { verticals: BusinessVertical[] }) {
+  const [passwords, setPasswords] = useState<Record<string, string>>({});
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  const [saving, setSaving] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  // Fetch current passwords
+  const { data: verticalData = [], isLoading } = useQuery({
+    queryKey: ["vertical-passwords-admin"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("business_verticals")
+        .select("id, name, slug, vertical_password")
+        .eq("is_active", true)
+        .order("sort_order");
+      return data || [];
+    },
+  });
+
+  useEffect(() => {
+    const map: Record<string, string> = {};
+    verticalData.forEach((v: any) => {
+      map[v.id] = v.vertical_password || "";
+    });
+    setPasswords(map);
+  }, [verticalData]);
+
+  const handleSave = async (verticalId: string) => {
+    setSaving(verticalId);
+    const pw = passwords[verticalId]?.trim() || null;
+    const { error } = await supabase
+      .from("business_verticals")
+      .update({ vertical_password: pw })
+      .eq("id", verticalId);
+
+    if (error) {
+      toast.error("Failed to update password");
+    } else {
+      toast.success(pw ? "Password set" : "Password removed");
+      queryClient.invalidateQueries({ queryKey: ["vertical-passwords-admin"] });
+    }
+    setSaving(null);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Lock className="h-5 w-5" /> Vertical Passwords
+        </CardTitle>
+        <CardDescription>Set a password for each workspace. Leave empty for no password.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>
+        ) : (
+          <div className="grid gap-3">
+            {verticalData.map((v: any) => (
+              <div key={v.id} className="flex items-center gap-3">
+                <span className="text-sm font-medium w-32 truncate">{v.name}</span>
+                <div className="relative flex-1 max-w-xs">
+                  <Input
+                    type={showPasswords[v.id] ? "text" : "password"}
+                    placeholder="No password"
+                    value={passwords[v.id] || ""}
+                    onChange={(e) => setPasswords(p => ({ ...p, [v.id]: e.target.value }))}
+                    className="pr-8 h-8 text-sm"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    onClick={() => setShowPasswords(p => ({ ...p, [v.id]: !p[v.id] }))}
+                  >
+                    {showPasswords[v.id] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  disabled={saving === v.id}
+                  onClick={() => handleSave(v.id)}
+                >
+                  {saving === v.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

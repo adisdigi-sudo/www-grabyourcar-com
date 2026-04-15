@@ -171,7 +171,7 @@ const BlogPost = () => {
               <CardContent className="p-6">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="h-8 w-8 text-primary" />
+                    <User className="h-8 w-8 text-foreground" />
                   </div>
                   <div>
                     <h3 className="font-heading font-semibold text-lg">{post.author}</h3>

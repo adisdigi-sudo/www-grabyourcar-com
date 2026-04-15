@@ -4,38 +4,32 @@ import { Footer } from "@/components/Footer";
 import { ServiceBanner } from "@/components/ServiceBanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { WhatsAppCTA, whatsappMessages } from "@/components/WhatsAppCTA";
 import { 
   Car, 
-  Search, 
   Shield, 
+  Search,
   CheckCircle2, 
   FileText, 
   Clock, 
   MapPin, 
   Phone, 
-  AlertCircle,
   Calendar,
   Home,
-  Loader2,
   Package,
   Sparkles,
   IndianRupee,
   Bike,
   Truck,
-  CreditCard
 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { CrossSellWidget } from "@/components/CrossSellWidget";
 import { HSRPUnifiedBookingForm } from "@/components/hsrp/HSRPUnifiedBookingForm";
+import { HSRPOrderTracker } from "@/components/hsrp/HSRPOrderTracker";
+import { HSRPComplianceChecker } from "@/components/hsrp/HSRPComplianceChecker";
+import { HSRPTestimonials } from "@/components/hsrp/HSRPTestimonials";
 import { useHSRPPricing, formatPrice } from "@/hooks/useHSRPPricing";
 
 const benefits = [
@@ -84,43 +78,6 @@ const faqs = [
 
 const HSRP = () => {
   const { data: pricing } = useHSRPPricing();
-  const [trackingNumber, setTrackingNumber] = useState("");
-  const [isTracking, setIsTracking] = useState(false);
-  const [trackingResult, setTrackingResult] = useState<any>(null);
-
-  const handleServiceSelect = () => {
-    document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const handleTrackOrder = async () => {
-    if (!trackingNumber.trim()) {
-      toast.error("Please enter your order/booking number");
-      return;
-    }
-
-    setIsTracking(true);
-    setTrackingResult(null);
-
-    try {
-      const { data, error } = await supabase
-        .from("hsrp_bookings")
-        .select("*")
-        .or(`tracking_id.eq.${trackingNumber},registration_number.ilike.${trackingNumber}`)
-        .maybeSingle();
-
-      if (error || !data) {
-        toast.error("No booking found with this order number");
-        setTrackingResult({ found: false });
-      } else {
-        setTrackingResult({ found: true, booking: data });
-        toast.success("Booking found!");
-      }
-    } catch {
-      toast.error("Failed to track order. Please try again.");
-    } finally {
-      setIsTracking(false);
-    }
-  };
 
   return (
     <>
@@ -227,7 +184,7 @@ const HSRP = () => {
               {/* Main Booking Form */}
               <div className="min-w-0">
                 <div className="mb-6 text-center lg:mb-8 lg:text-left">
-                  <Badge className="mb-3 border-primary/20 bg-primary/10 text-primary">
+                  <Badge className="mb-3 border-primary/20 bg-primary/10 text-foreground">
                     <Sparkles className="mr-1 h-3 w-3" />
                     Quick & Easy Booking
                   </Badge>
@@ -244,57 +201,11 @@ const HSRP = () => {
 
               {/* Sidebar - Track Order & Info */}
               <div id="track" className="space-y-4 md:space-y-6">
-                {/* Track Order Card */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Search className="h-5 w-5 text-primary" />
-                      Track Your Order
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="trackingNumber">Order ID / Reg. Number</Label>
-                        <div className="flex flex-col gap-2 sm:flex-row">
-                          <Input
-                            id="trackingNumber"
-                            placeholder="e.g., HSRP12345 or DL01AB1234"
-                            value={trackingNumber}
-                            onChange={(e) => setTrackingNumber(e.target.value)}
-                            className="min-w-0"
-                          />
-                          <Button type="button" onClick={handleTrackOrder} disabled={isTracking} className="w-full sm:w-auto">
-                            {isTracking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Track"}
-                          </Button>
-                        </div>
-                      </div>
+                {/* Enhanced Order Tracker */}
+                <HSRPOrderTracker />
 
-                      {trackingResult?.found && (
-                        <div className="rounded-lg border border-primary/20 bg-primary/10 p-4">
-                          <div className="mb-2 flex items-center gap-2 text-primary">
-                            <CheckCircle2 className="h-5 w-5" />
-                            <span className="font-semibold">Order Found</span>
-                          </div>
-                          <div className="space-y-1 text-sm">
-                            <p><strong>Status:</strong> {trackingResult.booking.order_status}</p>
-                            <p><strong>Vehicle:</strong> {trackingResult.booking.registration_number}</p>
-                            <p><strong>Service:</strong> {trackingResult.booking.service_type}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {trackingResult && !trackingResult.found && (
-                        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
-                          <div className="flex items-center gap-2 text-destructive">
-                            <AlertCircle className="h-5 w-5" />
-                            <span>No order found with this ID</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Compliance Checker */}
+                <HSRPComplianceChecker />
 
                 {/* Benefits Card */}
                 <Card>
@@ -307,7 +218,7 @@ const HSRP = () => {
                       return (
                         <div key={idx} className="flex items-start gap-3">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                            <Icon className="h-4 w-4 text-primary" />
+                            <Icon className="h-4 w-4 text-foreground" />
                           </div>
                           <div>
                             <p className="text-sm font-medium">{benefit.title}</p>
@@ -322,7 +233,7 @@ const HSRP = () => {
                 {/* Help Card */}
                 <Card className="border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5">
                   <CardContent className="pt-6 text-center">
-                    <Phone className="mx-auto mb-3 h-10 w-10 text-primary" />
+                    <Phone className="mx-auto mb-3 h-10 w-10 text-foreground" />
                     <p className="font-semibold">Need Help?</p>
                     <p className="mb-4 text-sm text-muted-foreground">Our team is available 24/7</p>
                     <Button variant="outline" className="w-full gap-2" asChild>
@@ -354,7 +265,7 @@ const HSRP = () => {
                 <Card key={index} className="text-center border-border/50 hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <benefit.icon className="h-6 w-6 text-primary" />
+                      <benefit.icon className="h-6 w-6 text-foreground" />
                     </div>
                     <h3 className="font-semibold text-foreground text-sm mb-1">{benefit.title}</h3>
                     <p className="text-xs text-muted-foreground">{benefit.description}</p>
@@ -372,7 +283,7 @@ const HSRP = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
+                    <FileText className="h-5 w-5 text-foreground" />
                     Required Documents
                   </CardTitle>
                 </CardHeader>
@@ -380,7 +291,7 @@ const HSRP = () => {
                   <ul className="space-y-3">
                     {requiredDocuments.map((doc, index) => (
                       <li key={index} className="flex items-start gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                        <CheckCircle2 className="h-5 w-5 text-foreground flex-shrink-0 mt-0.5" />
                         <span className="text-foreground">{doc}</span>
                       </li>
                     ))}
@@ -391,7 +302,7 @@ const HSRP = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <IndianRupee className="h-5 w-5 text-primary" />
+                    <IndianRupee className="h-5 w-5 text-foreground" />
                     HSRP Pricing
                   </CardTitle>
                 </CardHeader>
@@ -402,35 +313,35 @@ const HSRP = () => {
                         <Car className="h-4 w-4 text-muted-foreground" />
                         <span>4-Wheeler (Car/SUV)</span>
                       </div>
-                      <span className="font-bold text-primary">{formatPrice(pricing?.fourWheeler || 1500)}</span>
+                      <span className="font-bold text-foreground">{formatPrice(pricing?.fourWheeler || 1500)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-border">
                       <div className="flex items-center gap-2">
                         <Bike className="h-4 w-4 text-muted-foreground" />
                         <span>2-Wheeler (Bike/Scooter)</span>
                       </div>
-                      <span className="font-bold text-primary">{formatPrice(pricing?.twoWheeler || 850)}</span>
+                      <span className="font-bold text-foreground">{formatPrice(pricing?.twoWheeler || 850)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-border">
                       <div className="flex items-center gap-2">
                         <Truck className="h-4 w-4 text-muted-foreground" />
                         <span>Tractor & Trailer</span>
                       </div>
-                      <span className="font-bold text-primary">{formatPrice(pricing?.tractor || 600)}</span>
+                      <span className="font-bold text-foreground">{formatPrice(pricing?.tractor || 600)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-border">
                       <div className="flex items-center gap-2">
                         <Package className="h-4 w-4 text-muted-foreground" />
                         <span>Colour Sticker Only</span>
                       </div>
-                      <span className="font-bold text-primary">{formatPrice(pricing?.colourSticker || 100)}</span>
+                      <span className="font-bold text-foreground">{formatPrice(pricing?.colourSticker || 100)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2">
                       <div className="flex items-center gap-2">
                         <Home className="h-4 w-4 text-muted-foreground" />
                         <span>Home Installation (Additional)</span>
                       </div>
-                      <span className="font-bold text-primary">+{formatPrice(pricing?.homeInstallationFee || 200)}</span>
+                      <span className="font-bold text-foreground">+{formatPrice(pricing?.homeInstallationFee || 200)}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -465,6 +376,9 @@ const HSRP = () => {
             </div>
           </div>
         </section>
+
+        {/* Customer Testimonials */}
+        <HSRPTestimonials />
 
         {/* Cross-Sell Services */}
         <section className="py-12 bg-muted/30">
