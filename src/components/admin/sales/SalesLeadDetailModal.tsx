@@ -958,18 +958,37 @@ export function SalesLeadDetailModal({
         defaultEmail={lead.email || ""}
         customerName={lead.name || lead.customer_name || "Customer"}
         vertical="car_sales"
-        shareMessage={`Hi ${lead.name || lead.customer_name || ""}! Here is your car offer for ${lead.car_model || lead.interested_model || "your dream car"}.\n\n${lead.deal_value ? `Deal Value: Rs. ${Number(lead.deal_value).toLocaleString("en-IN")}` : ""}\n\nFor queries, call +91 98559 24442\nwww.grabyourcar.com\n- Grabyourcar`}
+        shareMessage={(() => {
+          const name = lead.name || lead.customer_name || "";
+          const car = lead.car_model || lead.interested_model || "your dream car";
+          let msg = `Hi ${name}! Here is your car deal offer for *${car}*.\n\n`;
+          if (totalCarPrice > 0) {
+            msg += `🚗 Total Car Price: ${fmtINR(totalCarPrice)}\n`;
+            if (Number(bookingAmount) > 0) msg += `💰 Less Booking: - ${fmtINR(Number(bookingAmount))}\n`;
+            if (Number(processingFees) > 0) msg += `📋 Less Processing: - ${fmtINR(Number(processingFees))}\n`;
+            if (Number(otherExpenses) > 0) msg += `📎 Less ${otherExpensesLabel}: - ${fmtINR(Number(otherExpenses))}\n`;
+            if (totalDeductions > 0) msg += `\n✅ *Balance Payable: ${fmtINR(balancePayable)}*\n`;
+          } else if (lead.deal_value) {
+            msg += `Deal Value: ${fmtINR(Number(lead.deal_value))}\n`;
+          }
+          msg += `\nFor queries, call +91 98559 24442\nwww.grabyourcar.com\n- Grabyourcar`;
+          return msg;
+        })()}
         generatePdf={() => generateSalesOfferPDF({
           customerName: lead.name || lead.customer_name || "Customer",
           phone: lead.phone || "",
           carModel: lead.car_model || lead.interested_model || "N/A",
           variant: lead.variant || undefined,
           color: lead.color || undefined,
-          dealValue: lead.deal_value ? Number(lead.deal_value) : undefined,
+          dealValue: totalCarPrice > 0 ? totalCarPrice : (lead.deal_value ? Number(lead.deal_value) : undefined),
           exShowroomPrice: lead.ex_showroom_price ? Number(lead.ex_showroom_price) : undefined,
           onRoadPrice: lead.on_road_price ? Number(lead.on_road_price) : undefined,
           specialTerms: lead.special_terms || undefined,
           dealership: lead.dealership || undefined,
+          bookingAmount: Number(bookingAmount) || undefined,
+          processingFees: Number(processingFees) || undefined,
+          otherExpenses: Number(otherExpenses) || undefined,
+          otherExpensesLabel: otherExpensesLabel !== "Other Expenses" ? otherExpensesLabel : undefined,
         })}
       />
     </Dialog>
