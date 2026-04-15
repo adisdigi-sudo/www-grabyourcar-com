@@ -38,6 +38,7 @@ import { LoanAfterSales } from "./LoanAfterSales";
 import { calculateLoanSalesBreakdown, getLoanSalesCalculatorDefaults } from "./loanSalesCalculator";
 import { cn } from "@/lib/utils";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
 
 // ─── Source color map ───
 const SOURCE_COLORS: Record<string, string> = {
@@ -55,6 +56,27 @@ const SOURCE_COLORS: Record<string, string> = {
 
 const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+const buildLoanFollowupWhatsAppMessage = ({
+  customerName,
+  carModel,
+}: {
+  customerName?: string | null;
+  carModel?: string | null;
+}) => {
+  const safeName = customerName?.trim() || "Sir/Madam";
+  const carLine = carModel ? `
+🚗 Car: *${carModel}*` : "";
+
+  return `Hi ${safeName},
+
+This is *GrabYourCar Finance Team* regarding your car loan inquiry.${carLine}
+
+Please let us know if you need any help with eligibility, EMI, or documents.
+
+Regards,
+*GrabYourCar Finance Team*`;
+};
 
 // ─── Main Workspace ───
 type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator" | "performance";
@@ -312,11 +334,8 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
   }, [applications, quickMoveMutation]);
 
   const handleCardClick = (app: any) => { setSelectedApp(app); setShowStageModal(true); };
-  const handleWhatsApp = async (phone: string, name: string) => {
-    const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
-    const msg = await getCrmMessage("loan_inquiry", { customer_name: name });
-    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-    await sendWhatsApp({ phone, message: msg, name, logEvent: "loan_inquiry" });
+  const handleWhatsApp = (phone: string, name: string, carModel?: string | null) => {
+    openWhatsAppChat(phone, buildLoanFollowupWhatsAppMessage({ customerName: name, carModel }));
   };
 
   const pipelineStages = LOAN_STAGES.filter(s => s !== 'lost');
@@ -640,8 +659,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
                               <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => window.open(`tel:${app.phone}`)}>
                                 <PhoneCall className="h-3 w-3" />
                               </Button>
-                              <Button size="icon" variant="outline" className="h-7 w-7 text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => handleWhatsApp(app.phone, app.customer_name || 'Customer')}>
-                                <MessageCircle className="h-3 w-3" />
+                              <Button size="icon" variant="outline" className="h-7 w-7 text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => handleWhatsApp(app.phone, app.customer_name || 'Customer', app.car_model)}>                                <MessageCircle className="h-3 w-3" />
                               </Button>
                             </>
                           )}
@@ -694,7 +712,7 @@ const LoanCard = ({ app, stage, onDragStart, onDragEnd, onClick, onWhatsApp, isD
             <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e: React.MouseEvent) => { e.stopPropagation(); window.open(`tel:+91${app.phone.replace(/\D/g, '').slice(-10)}`, '_self'); }}>
               <PhoneCall className="h-3 w-3 text-emerald-600" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onWhatsApp(app.phone, app.customer_name); }}>
+            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onWhatsApp(app.phone, app.customer_name, app.car_model); }}>
               <MessageCircle className="h-3 w-3 text-green-600" />
             </Button>
           </div>
@@ -906,41 +924,32 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   };
 
   // ── Auto-send WhatsApp on offer share ──
-  const autoShareOfferWhatsApp = async (bankName: string, rate: string, tenure: string, emi: string) => {
-    try {
-      const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-      const summaryLines = [
-        `🏦 Bank: *${bankName}*`,
-        salesBreakdown.grossLoanAmount > 0 ? `💰 Gross Loan Amount: *${formatDetailedAmount(salesBreakdown.grossLoanAmount)}*` : null,
-        `📊 Interest Rate: *${rate}%*`,
-        `📅 Tenure: *${tenure} months*`,
-        `💵 EMI: *₹${Number(emi).toLocaleString('en-IN')}/mo*`,
-        salesBreakdown.finalCarPrice > 0 ? `🚗 Final Car Price: *${formatDetailedAmount(salesBreakdown.finalCarPrice)}*` : null,
-        salesBreakdown.bookingAmount > 0 ? `🤝 Booking / Token Paid: *${formatDetailedAmount(salesBreakdown.bookingAmount)}*` : null,
-        salesBreakdown.loanProtectionAmount > 0 ? `🛡 Loan Suraksha / Insurance: *-${formatDetailedAmount(salesBreakdown.loanProtectionAmount)}*` : null,
-        salesBreakdown.processingFees > 0 ? `📋 Processing Fees: *-${formatDetailedAmount(salesBreakdown.processingFees)}*` : null,
-        salesBreakdown.otherCharges > 0 ? `🧾 ${otherBankChargesLabel || 'Other Bank Charges'}: *-${formatDetailedAmount(salesBreakdown.otherCharges)}*` : null,
-        salesBreakdown.bankNetDisbursal > 0 ? `🏁 Bank Net Disbursal: *${formatDetailedAmount(salesBreakdown.bankNetDisbursal)}*` : null,
-        salesBreakdown.balancePayableByYou > 0 ? `👤 Total Balance Payable by You: *${formatDetailedAmount(salesBreakdown.balancePayableByYou)}*` : null,
-      ].filter(Boolean).join('\n');
+  const autoShareOfferWhatsApp = (bankName: string, rate: string, tenure: string, emi: string) => {
+    const summaryLines = [
+      `🏦 Bank: *${bankName}*`,
+      salesBreakdown.grossLoanAmount > 0 ? `💰 Gross Loan Amount: *${formatDetailedAmount(salesBreakdown.grossLoanAmount)}*` : null,
+      `📊 Interest Rate: *${rate}%*`,
+      `📅 Tenure: *${tenure} months*`,
+      `💵 EMI: *₹${Number(emi).toLocaleString('en-IN')}/mo*`,
+      salesBreakdown.finalCarPrice > 0 ? `🚗 Final Car Price: *${formatDetailedAmount(salesBreakdown.finalCarPrice)}*` : null,
+      salesBreakdown.bookingAmount > 0 ? `🤝 Booking / Token Paid: *${formatDetailedAmount(salesBreakdown.bookingAmount)}*` : null,
+      salesBreakdown.loanProtectionAmount > 0 ? `🛡 Loan Suraksha / Insurance: *-${formatDetailedAmount(salesBreakdown.loanProtectionAmount)}*` : null,
+      salesBreakdown.processingFees > 0 ? `📋 Processing Fees: *-${formatDetailedAmount(salesBreakdown.processingFees)}*` : null,
+      salesBreakdown.otherCharges > 0 ? `🧾 ${otherBankChargesLabel || 'Other Bank Charges'}: *-${formatDetailedAmount(salesBreakdown.otherCharges)}*` : null,
+      salesBreakdown.bankNetDisbursal > 0 ? `🏁 Bank Net Disbursal: *${formatDetailedAmount(salesBreakdown.bankNetDisbursal)}*` : null,
+      salesBreakdown.balancePayableByYou > 0 ? `👤 Total Balance Payable by You: *${formatDetailedAmount(salesBreakdown.balancePayableByYou)}*` : null,
+    ].filter(Boolean).join('\n');
 
-      const msg = `🏦 *Loan Offer — GrabYourCar*\n\nHi ${application.customer_name},\n\nGreat news! Here's your loan offer:\n\n${summaryLines}\n\nPlease review and let us know if you'd like to proceed.\n\nRegards,\n*GrabYourCar Finance Team*`;
-      await sendWhatsApp({ phone: application.phone, message: msg, name: application.customer_name, logEvent: "loan_offer_shared", silent: false });
-    } catch (err) {
-      console.error("Auto WhatsApp offer share failed:", err);
-      toast.error("WhatsApp offer share failed — offer saved but message not sent");
-    }
+    const msg = `🏦 *Loan Offer — GrabYourCar*\n\nHi ${application.customer_name},\n\nGreat news! Here's your loan offer:\n\n${summaryLines}\n\nPlease review and let us know if you'd like to proceed.\n\nRegards,\n*GrabYourCar Finance Team*`;
+    openWhatsAppChat(application.phone, msg);
+    toast.success("WhatsApp share opened");
   };
 
   // ── Auto-send WhatsApp on loan approval ──
-  const autoShareApprovalWhatsApp = async (sanctionAmt: string) => {
-    try {
-      const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-      const msg = `✅ *Loan Approved — GrabYourCar*\n\nHi ${application.customer_name},\n\nYour loan has been approved! 🎉\n\n💰 Sanction Amount: *₹${Number(sanctionAmt).toLocaleString('en-IN')}*\n🚗 Car: *${application.car_model || 'N/A'}*\n\nOur team will guide you through the next steps for disbursement.\n\nRegards,\n*GrabYourCar Finance Team*`;
-      await sendWhatsApp({ phone: application.phone, message: msg, name: application.customer_name, logEvent: "loan_approved", silent: false });
-    } catch (err) {
-      console.error("Auto WhatsApp approval share failed:", err);
-    }
+  const autoShareApprovalWhatsApp = (sanctionAmt: string) => {
+    const msg = `✅ *Loan Approved — GrabYourCar*\n\nHi ${application.customer_name},\n\nYour loan has been approved! 🎉\n\n💰 Sanction Amount: *₹${Number(sanctionAmt).toLocaleString('en-IN')}*\n🚗 Car: *${application.car_model || 'N/A'}*\n\nOur team will guide you through the next steps for disbursement.\n\nRegards,\n*GrabYourCar Finance Team*`;
+    openWhatsAppChat(application.phone, msg);
+    toast.success("WhatsApp share opened");
   };
 
   const handleSmartCallingSave = () => {
@@ -1177,15 +1186,11 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                         <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => window.open(`tel:+91${application.phone.replace(/\D/g, '').slice(-10)}`)}>
                           <PhoneCall className="h-3 w-3 text-emerald-600" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={async () => {
-                          try {
-                            const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-                            const msg = `Hi ${application.customer_name},\n\nThis is a follow-up regarding your car loan inquiry with GrabYourCar.\n\nPlease let us know if you need any assistance.\n\nRegards,\n*GrabYourCar Finance Team*`;
-                            await sendWhatsApp({ phone: application.phone, message: msg, name: application.customer_name, logEvent: "loan_followup" });
-                          } catch (err) {
-                            console.error("WhatsApp send failed:", err);
-                            toast.error("WhatsApp message failed to send");
-                          }
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => {
+                          openWhatsAppChat(application.phone, buildLoanFollowupWhatsAppMessage({
+                            customerName: application.customer_name,
+                            carModel: application.car_model,
+                          }));
                         }}>
                           <MessageCircle className="h-3 w-3 text-green-600" />
                         </Button>
