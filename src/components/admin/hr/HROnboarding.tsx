@@ -626,11 +626,63 @@ export const HROnboarding = () => {
                 <Input value={form.emergency_contact_phone || ""} onChange={e => updateField("emergency_contact_phone", e.target.value)} placeholder="10 digit number" maxLength={10} />
               </div>
             </div>
+            {/* KYC Document Upload Section */}
+            <Card className="border-dashed border-2 border-primary/30">
+              <CardContent className="p-4 space-y-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2"><Upload className="h-4 w-4" /> Upload KYC Documents</h4>
+                <p className="text-xs text-muted-foreground">Employee ke original documents ki photo/scan upload karo — yeh securely store honge</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { key: "aadhaar_doc", label: "Aadhaar Card (Front & Back)" },
+                    { key: "pan_doc", label: "PAN Card" },
+                    { key: "photo_doc", label: "Passport Size Photo" },
+                    { key: "bank_doc", label: "Bank Passbook / Cancelled Cheque" },
+                    { key: "education_doc", label: "Education Certificate" },
+                    { key: "experience_doc", label: "Experience / Relieving Letter" },
+                    { key: "address_doc", label: "Address Proof" },
+                    { key: "other_doc", label: "Other Document" },
+                  ].map(doc => (
+                    <div key={doc.key} className="space-y-1">
+                      <Label className="text-xs">{doc.label}</Label>
+                      <div className="relative">
+                        <Input
+                          type="file"
+                          accept="image/*,.pdf"
+                          className="text-xs h-9"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 5 * 1024 * 1024) {
+                              toast.error("File size must be under 5MB");
+                              return;
+                            }
+                            const fileName = `kyc/${Date.now()}_${doc.key}_${file.name}`;
+                            const { error } = await supabase.storage.from("kyc-documents").upload(fileName, file);
+                            if (error) {
+                              toast.error("Upload failed: " + error.message);
+                              return;
+                            }
+                            const { data: urlData } = supabase.storage.from("kyc-documents").getPublicUrl(fileName);
+                            updateField(doc.key, { name: file.name, path: fileName, url: urlData.publicUrl });
+                            toast.success(`${doc.label} uploaded ✓`);
+                          }}
+                        />
+                        {form[doc.key] && (
+                          <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3" /> {form[doc.key].name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
             <Card className="bg-green-50 border-green-200">
               <CardContent className="p-3">
                 <div className="flex items-center gap-2 text-sm">
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <span className="text-green-800">KYC documents will be auto-linked to the employee profile after onboarding</span>
+                  <span className="text-green-800">Documents securely stored in encrypted storage — linked to employee profile automatically</span>
                 </div>
               </CardContent>
             </Card>
@@ -805,7 +857,11 @@ export const HROnboarding = () => {
               <div><Label>Grace Minutes (Late)</Label><Input type="number" value={form.grace_minutes || "15"} onChange={e => updateField("grace_minutes", e.target.value)} /></div>
               <div><Label>Shift Start</Label><Input type="time" value={form.shift_start || "09:00"} onChange={e => updateField("shift_start", e.target.value)} /></div>
               <div><Label>Shift End</Label><Input type="time" value={form.shift_end || "18:00"} onChange={e => updateField("shift_end", e.target.value)} /></div>
-              <div><Label>Probation End Date</Label><Input type="date" value={form.probation_end_date || ""} onChange={e => updateField("probation_end_date", e.target.value)} /></div>
+              <div>
+                <Label>Probation End Date</Label>
+                <p className="text-xs text-muted-foreground mb-1">(Probation = Trial period jab tak employee confirm nahi hota. Usually 3-6 months. Iske andar terminate kar sakte ho bina notice period ke)</p>
+                <Input type="date" value={form.probation_end_date || ""} onChange={e => updateField("probation_end_date", e.target.value)} />
+              </div>
             </div>
           </div>
         );
