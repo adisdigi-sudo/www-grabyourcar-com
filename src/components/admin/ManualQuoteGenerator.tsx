@@ -781,7 +781,109 @@ export const ManualQuoteGenerator = () => {
             )}
           </Card>
 
-          {/* Discount Section */}
+          {/* Loan Offer Section */}
+          <Card className="border-blue-500/30 bg-blue-500/5">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-blue-600" />
+                  Loan Offer Details
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="show-loan-offer">Include Loan Offer</Label>
+                  <Switch id="show-loan-offer" checked={showLoanOffer} onCheckedChange={setShowLoanOffer} />
+                </div>
+              </div>
+              <CardDescription>
+                Calculate final loan amount after deductions and share complete loan offer
+              </CardDescription>
+            </CardHeader>
+            {showLoanOffer && (
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Bank / NBFC Name</Label>
+                    <Input placeholder="e.g., HDFC Bank" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Interest Rate (%)</Label>
+                    <Input type="number" step="0.1" placeholder="8.5" value={interestRate || ''} onChange={(e) => setInterestRate(Number(e.target.value))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tenure (Months)</Label>
+                    <Input type="number" placeholder="60" value={tenure || ''} onChange={(e) => setTenure(Number(e.target.value))} />
+                  </div>
+                </div>
+                <Separator />
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Deductions from On-Road Price</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Booking Amount</Label>
+                    <Input type="number" placeholder="0" value={bookingAmount || ''} onChange={(e) => setBookingAmount(Number(e.target.value))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Processing Fees</Label>
+                    <Input type="number" placeholder="0" value={processingFees || ''} onChange={(e) => setProcessingFees(Number(e.target.value))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{otherLoanExpensesLabel || 'Other Expenses'}</Label>
+                    <Input type="number" placeholder="0" value={otherLoanExpenses || ''} onChange={(e) => setOtherLoanExpenses(Number(e.target.value))} />
+                  </div>
+                </div>
+                {otherLoanExpenses > 0 && (
+                  <div className="space-y-2">
+                    <Label>Other Expenses Label</Label>
+                    <Input placeholder="e.g., Insurance Advance, File Charges" value={otherLoanExpensesLabel} onChange={(e) => setOtherLoanExpensesLabel(e.target.value)} />
+                  </div>
+                )}
+                {/* Loan Calculation Preview */}
+                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-4 space-y-2 text-sm border border-blue-200 dark:border-blue-800">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Car Price (On-Road)</span>
+                    <span className="font-medium">{formatPrice(finalPrice)}</span>
+                  </div>
+                  {bookingAmount > 0 && (
+                    <div className="flex justify-between text-red-600">
+                      <span>Less: Booking Amount</span>
+                      <span>-{formatPrice(bookingAmount)}</span>
+                    </div>
+                  )}
+                  {processingFees > 0 && (
+                    <div className="flex justify-between text-red-600">
+                      <span>Less: Processing Fees</span>
+                      <span>-{formatPrice(processingFees)}</span>
+                    </div>
+                  )}
+                  {otherLoanExpenses > 0 && (
+                    <div className="flex justify-between text-red-600">
+                      <span>Less: {otherLoanExpensesLabel || 'Other Expenses'}</span>
+                      <span>-{formatPrice(otherLoanExpenses)}</span>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex justify-between font-bold text-blue-700 dark:text-blue-400 text-base">
+                    <span>Final Loan Amount</span>
+                    <span>{formatPrice(loanOfferFinalAmount)}</span>
+                  </div>
+                  {loanOfferEMI > 0 && (
+                    <>
+                      <Separator />
+                      <div className="flex justify-between font-bold text-primary text-lg">
+                        <span>Monthly EMI</span>
+                        <span>{formatPrice(loanOfferEMI)}/mo</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>@ {interestRate}% p.a. for {tenure} months</span>
+                        <span>Total: {formatPrice(loanOfferTotalPayment)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            )}
+          </Card>
+
+
           <Card className="border-accent/30 bg-accent/5">
             <CardHeader>
               <div className="flex items-center justify-between">
