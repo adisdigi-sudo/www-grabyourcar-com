@@ -114,6 +114,58 @@ const DESIGNATION_GROUPS = [
 
 const ALL_DESIGNATIONS = DESIGNATION_GROUPS.flatMap(g => g.items);
 
+// Auto-map designation to role level
+const DESIGNATION_ROLE_MAP: Record<string, string> = {
+  office_assistant: "employee",
+  facility_coordinator: "employee",
+  dispatch_runner: "employee",
+  revenue_growth_associate: "employee",
+  revenue_enhancer: "employee",
+  client_success_advisor: "employee",
+  business_development_executive: "employee",
+  growth_catalyst: "employee",
+  relationship_manager: "employee",
+  senior_relationship_manager: "employee",
+  operations_executive: "employee",
+  data_entry_operator: "employee",
+  accounts_executive: "employee",
+  client_acquisition_lead: "team_lead",
+  performance_coach: "team_lead",
+  team_leader: "team_lead",
+  revenue_strategist: "manager",
+  operations_manager: "manager",
+  assistant_manager: "manager",
+  branch_manager: "senior_manager",
+  zonal_head: "head",
+};
+
+// Indian Govt norms for PF/ESI/PT (as of 2024-25)
+// PF: Mandatory only when 20+ employees. Basic ≤15,000 compulsory; >15,000 can opt out
+// ESI: Mandatory only when 10+ employees AND gross ≤21,000/month
+// Professional Tax: Max ₹200/month (state dependent), some states exempt <₹15,000
+// TDS: Only if annual income > ₹3,00,000 (old) or ₹7,00,000 (new regime)
+const calcGovtDeductions = (monthlyCTC: number, totalEmployees: number) => {
+  const basic = Math.round(monthlyCTC * 0.4);
+  const annualCTC = monthlyCTC * 12;
+
+  // PF: Not applicable if <20 employees (EPFO registration not required)
+  const pfApplicable = totalEmployees >= 20;
+  const pf = pfApplicable ? Math.round(Math.min(basic, 15000) * 0.12) : 0;
+
+  // ESI: Not applicable if <10 employees OR gross >21,000
+  const esiApplicable = totalEmployees >= 10 && monthlyCTC <= 21000;
+  const esi = esiApplicable ? Math.round(monthlyCTC * 0.0075) : 0;
+
+  // Professional Tax: Exempt if monthly income <15,000 (most states)
+  const pt = monthlyCTC >= 15000 ? 200 : 0;
+
+  // TDS: Only if annual CTC > ₹3,00,000 (old regime basic exemption)
+  // Rough estimate: 5% of amount exceeding 3L, divided by 12
+  const tds = annualCTC > 300000 ? Math.round(((annualCTC - 300000) * 0.05) / 12) : 0;
+
+  return { pf, esi, pt, tds, pfApplicable, esiApplicable };
+};
+
 const fmt = (v: number) => `₹${Math.round(v || 0).toLocaleString("en-IN")}`;
 
 export const HROnboarding = () => {
@@ -172,12 +224,14 @@ export const HROnboarding = () => {
       const manager = teamMembers.find((m: any) => m.user_id === form.manager_user_id);
       const empCode = "GYC-" + (form.designation?.slice(0, 3) || "EMP").toUpperCase() + "-" + Date.now().toString().slice(-6);
       const monthlyCTC = Number(form.monthly_ctc || 0);
+      const empCount = profiles.length;
       const basic = Math.round(monthlyCTC * 0.4);
       const hra = Math.round(monthlyCTC * 0.2);
       const da = Math.round(monthlyCTC * 0.1);
       const special = Math.round(monthlyCTC * 0.3);
-      const pf = Math.round(basic * 0.12);
-      const esi = monthlyCTC <= 21000 ? Math.round(monthlyCTC * 0.0075) : 0;
+      const ded = calcGovtDeductions(monthlyCTC, empCount);
+      const pf = ded.pf;
+      const esi = ded.esi;
 
       // 0. First create employee in hr_team_directory
       const { data: newEmp, error: dirError } = await supabase.from("hr_team_directory").insert({
@@ -217,8 +271,8 @@ export const HROnboarding = () => {
         special_allowance: special,
         pf_deduction: pf,
         esi_deduction: esi,
-        professional_tax: Number(form.professional_tax || 200),
-        tds: Number(form.tds || 0),
+        professional_tax: ded.pt,
+        tds: ded.tds,
         pan_number: form.pan_number || null,
         aadhaar_number: form.aadhaar_number || null,
         bank_account_number: form.bank_account_number || null,
@@ -266,8 +320,8 @@ export const HROnboarding = () => {
         special_allowance: special,
         pf_deduction: pf,
         esi_deduction: esi,
-        professional_tax: Number(form.professional_tax || 200),
-        tds: Number(form.tds || 0),
+        professional_tax: ded.pt,
+        tds: ded.tds,
         employment_type: form.employment_type || "full_time",
         shift_start: form.shift_start || "09:00",
         shift_end: form.shift_end || "18:00",
@@ -334,13 +388,17 @@ export const HROnboarding = () => {
 
   const updateField = (key: string, value: any) => setForm(prev => ({ ...prev, [key]: value }));
   const monthlyCTC = Number(form.monthly_ctc || 0);
+  const totalEmployees = profiles.length; // current headcount
   const calcBasic = Math.round(monthlyCTC * 0.4);
   const calcHRA = Math.round(monthlyCTC * 0.2);
   const calcDA = Math.round(monthlyCTC * 0.1);
   const calcSpecial = Math.round(monthlyCTC * 0.3);
-  const calcPF = Math.round(calcBasic * 0.12);
-  const calcESI = monthlyCTC <= 21000 ? Math.round(monthlyCTC * 0.0075) : 0;
-  const calcNet = monthlyCTC - calcPF - calcESI - Number(form.professional_tax || 200) - Number(form.tds || 0);
+  const govtDed = calcGovtDeductions(monthlyCTC, totalEmployees);
+  const calcPF = govtDed.pf;
+  const calcESI = govtDed.esi;
+  const calcPT = govtDed.pt;
+  const calcTDS = govtDed.tds;
+  const calcNet = monthlyCTC - calcPF - calcESI - calcPT - calcTDS;
 
   const renderWizardStep = () => {
     switch (step) {
@@ -381,6 +439,9 @@ export const HROnboarding = () => {
                     const found = ALL_DESIGNATIONS.find(d => d.value === v);
                     updateField("designation", found?.label || v);
                     updateField("custom_designation", "");
+                    // Auto-set role level
+                    const autoRole = DESIGNATION_ROLE_MAP[v];
+                    if (autoRole) updateField("role", autoRole);
                   } else {
                     updateField("designation", "");
                   }
@@ -543,28 +604,58 @@ export const HROnboarding = () => {
               </div>
             </div>
             {monthlyCTC > 0 && (
-              <Card className="bg-muted/50">
-                <CardContent className="p-4 space-y-2">
-                  <p className="text-sm font-semibold">Auto-Calculated Breakdown:</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Basic (40%)</span><span className="font-medium">{fmt(calcBasic)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">HRA (20%)</span><span className="font-medium">{fmt(calcHRA)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">DA (10%)</span><span className="font-medium">{fmt(calcDA)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Special (30%)</span><span className="font-medium">{fmt(calcSpecial)}</span></div>
-                    <div className="flex justify-between text-red-600"><span>PF (12% of Basic)</span><span>-{fmt(calcPF)}</span></div>
-                    {calcESI > 0 && <div className="flex justify-between text-red-600"><span>ESI</span><span>-{fmt(calcESI)}</span></div>}
-                    <div className="flex justify-between text-red-600"><span>Prof. Tax</span><span>-{fmt(Number(form.professional_tax || 200))}</span></div>
-                  </div>
-                  <div className="border-t pt-2 flex justify-between font-bold">
-                    <span>Net Take-Home</span><span className="text-green-600">{fmt(calcNet)}</span>
-                  </div>
-                </CardContent>
-              </Card>
+              <>
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold">Auto-Calculated Breakdown (Govt Norms):</p>
+                      <Badge variant="outline" className="text-xs">{totalEmployees} employees in company</Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex justify-between"><span className="text-muted-foreground">Basic (40%)</span><span className="font-medium">{fmt(calcBasic)}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">HRA (20%)</span><span className="font-medium">{fmt(calcHRA)}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">DA (10%)</span><span className="font-medium">{fmt(calcDA)}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Special (30%)</span><span className="font-medium">{fmt(calcSpecial)}</span></div>
+                      <div className="flex justify-between text-destructive">
+                        <span>PF {!govtDed.pfApplicable ? "(N/A <20 emp)" : "(12% of Basic, cap ₹15K)"}</span>
+                        <span>{calcPF > 0 ? `-${fmt(calcPF)}` : "₹0"}</span>
+                      </div>
+                      <div className="flex justify-between text-destructive">
+                        <span>ESI {!govtDed.esiApplicable ? `(N/A ${totalEmployees < 10 ? "<10 emp" : "gross >₹21K"})` : "(0.75%)"}</span>
+                        <span>{calcESI > 0 ? `-${fmt(calcESI)}` : "₹0"}</span>
+                      </div>
+                      <div className="flex justify-between text-destructive">
+                        <span>Prof. Tax {calcPT === 0 ? "(Exempt <₹15K)" : ""}</span>
+                        <span>{calcPT > 0 ? `-${fmt(calcPT)}` : "₹0"}</span>
+                      </div>
+                      <div className="flex justify-between text-destructive">
+                        <span>TDS {calcTDS === 0 ? "(Below ₹3L/yr)" : "(~5% above ₹3L)"}</span>
+                        <span>{calcTDS > 0 ? `-${fmt(calcTDS)}` : "₹0"}</span>
+                      </div>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between font-bold">
+                      <span>Net Take-Home</span><span className="text-green-600">{fmt(calcNet)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+                {totalEmployees < 20 && (
+                  <Card className="border-blue-200 bg-blue-50">
+                    <CardContent className="p-3 text-sm text-blue-800">
+                      <p className="font-medium">📋 Govt Compliance Status:</p>
+                      <ul className="list-disc list-inside mt-1 space-y-0.5 text-xs">
+                        {totalEmployees < 20 && <li><strong>PF (EPFO):</strong> Not required until 20 employees. Currently {totalEmployees} employees.</li>}
+                        {totalEmployees < 10 && <li><strong>ESI (ESIC):</strong> Not required until 10 employees. Currently {totalEmployees} employees.</li>}
+                        <li><strong>Professional Tax:</strong> {calcPT === 0 ? "Exempt — monthly income below ₹15,000" : "₹200/month applicable"}</li>
+                        <li><strong>TDS:</strong> {calcTDS === 0 ? "Not applicable — annual CTC below ₹3,00,000" : `~₹${calcTDS}/month estimated`}</li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
-            <div className="grid grid-cols-3 gap-3">
-              <div><Label>Professional Tax</Label><Input type="number" value={form.professional_tax || "200"} onChange={e => updateField("professional_tax", e.target.value)} /></div>
-              <div><Label>TDS</Label><Input type="number" value={form.tds || "0"} onChange={e => updateField("tds", e.target.value)} /></div>
+            <div className="grid grid-cols-2 gap-3">
               <div><Label>Annual CTC</Label><Input disabled value={fmt(monthlyCTC * 12)} /></div>
+              <div><Label>Total Deductions</Label><Input disabled value={fmt(calcPF + calcESI + calcPT + calcTDS)} /></div>
             </div>
           </div>
         );
