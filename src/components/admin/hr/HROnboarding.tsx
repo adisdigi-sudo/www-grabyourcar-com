@@ -974,8 +974,9 @@ export const HROnboarding = () => {
               <div><Label>Shift End</Label><Input type="time" value={form.shift_end || "18:00"} onChange={e => updateField("shift_end", e.target.value)} /></div>
               <div>
                 <Label>Probation End Date</Label>
-                <p className="text-xs text-muted-foreground mb-1">(Probation = Trial period jab tak employee confirm nahi hota. Usually 3-6 months. Iske andar terminate kar sakte ho bina notice period ke)</p>
+                <p className="text-xs text-muted-foreground mb-1">(Auto: Joining se 2 month baad set hota hai. Probation = Trial period — iske andar terminate kar sakte ho bina notice period ke. Zarurat ho to manually change karo)</p>
                 <Input type="date" value={form.probation_end_date || ""} onChange={e => updateField("probation_end_date", e.target.value)} />
+                {form.probation_end_date && <p className="text-xs text-green-600 mt-1">✓ Probation ends: {form.probation_end_date}</p>}
               </div>
             </div>
           </div>
