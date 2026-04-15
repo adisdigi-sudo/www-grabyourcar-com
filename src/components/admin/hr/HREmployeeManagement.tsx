@@ -199,7 +199,12 @@ export const HREmployeeManagement = () => {
                   </TableCell>
                   <TableCell><Badge variant="outline" className="text-xs">{emp.designation || "—"}</Badge></TableCell>
                   <TableCell className="text-sm">{emp.department || "—"}</TableCell>
-                  <TableCell className="text-sm">{emp.vertical_name || "—"}</TableCell>
+                  <TableCell className="text-sm">
+                    {(() => {
+                      const prof = empProfiles.find((p: any) => p.team_member_id === emp.id);
+                      return prof?.manager_name || "—";
+                    })()}
+                  </TableCell>
                   <TableCell>
                     {emp.is_active === false ? (
                       <div>
