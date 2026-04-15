@@ -8,6 +8,7 @@ import { isSensitivePreviewRouteWindow, shouldStabilizeStartupShellWindow } from
 import { BootstrapRuntime } from "@/components/bootstrap/BootstrapRuntime";
 import { performSafePreviewReload } from "@/lib/chunkLoadRecovery";
 import { DEV_SERVER_STATUS_EVENT, installSensitiveRouteReloadGuard } from "@/lib/devReloadGuard";
+import { ensureAppRootElement } from "@/lib/ensureAppRoot";
 
 const STARTUP_SHELL_ID = "lovable-startup-shell";
 const STARTUP_SHELL_RECOVERY_DELAY_MS = 4500;
@@ -222,7 +223,7 @@ try {
   console.warn("[Bootstrap] Failed during startup shell init", error);
 }
 
-const rootElement = document.getElementById("root");
+const rootElement = ensureAppRootElement();
 
 if (!rootElement) {
   throw new Error("Root element #root was not found");
