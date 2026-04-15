@@ -1080,7 +1080,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                     <Label className="text-[10px]">Priority</Label>
                     <Select value={editPriority} onValueChange={setEditPriority}>
                       <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Priority" /></SelectTrigger>
-                      <SelectContent>{PRIORITY_OPTIONS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                      <SelectContent>{PRIORITY_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 </div>
