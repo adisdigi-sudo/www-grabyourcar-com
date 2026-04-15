@@ -321,6 +321,7 @@ const normalizeAdminTab = (tab: string | null | undefined) =>
   tab && VALID_ADMIN_TABS.has(tab) ? tab : "dashboard";
 
 const DEFAULT_ADMIN_TAB = "dashboard";
+const ADMIN_BOOTSTRAP_TIMEOUT_MS = 12000;
 
 const UNIVERSAL_ADMIN_TABS = new Set([
   DEFAULT_ADMIN_TAB,
@@ -451,6 +452,7 @@ const AdminLayout = () => {
   const [activeTab, setActiveTab] = useState(() => normalizeAdminTab(getInitialAdminTab()));
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
+  const [bootstrapTimedOut, setBootstrapTimedOut] = useState(false);
 
   useSessionTimeout(initialized && !isLoading && !verticalAccessLoading && !!user);
 
@@ -523,11 +525,60 @@ const AdminLayout = () => {
 
   const isBootstrappingAdmin = !initialized || isLoading || verticalAccessLoading || isResolvingWorkspace;
 
+  useEffect(() => {
+    if (!isBootstrappingAdmin) {
+      setBootstrapTimedOut(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      console.error("[AdminLayout] CRM bootstrap timed out", {
+        initialized,
+        isLoading,
+        verticalAccessLoading,
+        hasUser: !!user,
+        activeVerticalId: activeVertical?.id ?? null,
+        availableVerticals: availableVerticals.length,
+        isResolvingWorkspace,
+      });
+      setBootstrapTimedOut(true);
+    }, ADMIN_BOOTSTRAP_TIMEOUT_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [initialized, isLoading, verticalAccessLoading, user, activeVertical?.id, availableVerticals.length, isResolvingWorkspace, isBootstrappingAdmin]);
+
   if (isAuthResolved && !user) {
     return <Navigate to={withPreviewParams("/crm-auth")} replace />;
   }
 
   if (isBootstrappingAdmin) {
+    if (bootstrapTimedOut) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background px-6">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Shield className="h-7 w-7" />
+            </div>
+            <h1 className="text-2xl font-semibold">CRM startup got stuck</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Auth ya workspace restore hang ho gaya tha, isliye blank state aati lag rahi thi. Ab safe recovery options dikh rahe hain.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <Button onClick={() => window.location.reload()}>Retry CRM</Button>
+              <Button variant="outline" onClick={() => navigate(withPreviewParams("/workspace"))}>
+                Open workspace chooser
+              </Button>
+              <Button variant="ghost" onClick={() => navigate(withPreviewParams("/crm-auth"))}>
+                Back to sign in
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />

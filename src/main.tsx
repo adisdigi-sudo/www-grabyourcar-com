@@ -14,6 +14,7 @@ let hasTriggeredChunkRecovery = false;
 const DEV_SERVER_STATUS_EVENT = "lovable:dev-server-status";
 const CHUNK_RECOVERY_STATUS_EVENT = "lovable:chunk-recovery-status";
 const DEV_SERVER_UPDATE_READY_EVENT = "lovable:dev-server-update-ready";
+const ROUTE_ACTIVITY_EVENT = "lovable:route-activity";
 const DEV_SERVER_PENDING_RELOAD_KEY = "lovable_dev_server_pending_reload";
 const DEV_SERVER_LAST_RELOAD_KEY = "lovable_dev_server_last_reload";
 const DEV_SERVER_RELOAD_COOLDOWN_MS = 5000;
@@ -61,6 +62,56 @@ const dispatchUpdateReady = (reason: UpdateReadyReason) => {
       detail: { reason },
     }),
   );
+};
+
+const dispatchRouteActivity = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent(ROUTE_ACTIVITY_EVENT, {
+      detail: {
+        pathname: window.location.pathname,
+        sensitive: isSensitivePreviewRoute(),
+      },
+    }),
+  );
+};
+
+const installRouteActivityListeners = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const patchedWindow = window as Window & { __lovableRouteActivityPatched?: boolean };
+  if (patchedWindow.__lovableRouteActivityPatched) {
+    return;
+  }
+
+  patchedWindow.__lovableRouteActivityPatched = true;
+
+  const notifyRouteChange = () => {
+    window.setTimeout(() => {
+      dispatchRouteActivity();
+    }, 0);
+  };
+
+  const originalPushState = window.history.pushState.bind(window.history);
+  const originalReplaceState = window.history.replaceState.bind(window.history);
+
+  window.history.pushState = ((...args) => {
+    originalPushState(...args);
+    notifyRouteChange();
+  }) as typeof window.history.pushState;
+
+  window.history.replaceState = ((...args) => {
+    originalReplaceState(...args);
+    notifyRouteChange();
+  }) as typeof window.history.replaceState;
+
+  window.addEventListener("popstate", notifyRouteChange);
+  window.addEventListener("hashchange", notifyRouteChange);
 };
 
 const performSafeReload = () => {
@@ -144,6 +195,9 @@ const reloadAfterDevServerRestart = () => {
 };
 
 if (typeof window !== "undefined") {
+  installRouteActivityListeners();
+  dispatchRouteActivity();
+
   window.addEventListener("vite:preloadError", (event) => {
     const preloadEvent = event as Event & {
       payload?: unknown;
@@ -205,6 +259,7 @@ if (import.meta.hot && typeof window !== "undefined") {
 }
 
 const DevServerStatusOverlay = () => {
+  const [isSensitiveRoute, setIsSensitiveRoute] = useState(() => isSensitivePreviewRoute());
   const [status, setStatus] = useState<"idle" | "disconnected" | "connected" | "reloading" | "update_ready">(() => {
     if (!import.meta.env.DEV || typeof window === "undefined") {
       return "idle";
@@ -249,19 +304,31 @@ const DevServerStatusOverlay = () => {
       setStatus("update_ready");
     };
 
+    const handleRouteActivity = (event: Event) => {
+      const sensitive = (event as CustomEvent<{ sensitive?: boolean }>).detail?.sensitive ?? isSensitivePreviewRoute();
+      setIsSensitiveRoute(sensitive);
+
+      if (!sensitive) {
+        clearPendingReloadFlag();
+        setStatus("idle");
+      }
+    };
+
     window.addEventListener(DEV_SERVER_STATUS_EVENT, handleStatus as EventListener);
     window.addEventListener(DEV_SERVER_UPDATE_READY_EVENT, handleUpdateReady as EventListener);
+    window.addEventListener(ROUTE_ACTIVITY_EVENT, handleRouteActivity as EventListener);
 
     return () => {
       window.removeEventListener(DEV_SERVER_STATUS_EVENT, handleStatus as EventListener);
       window.removeEventListener(DEV_SERVER_UPDATE_READY_EVENT, handleUpdateReady as EventListener);
+      window.removeEventListener(ROUTE_ACTIVITY_EVENT, handleRouteActivity as EventListener);
       if (connectedTimer) {
         window.clearTimeout(connectedTimer);
       }
     };
   }, []);
 
-  if (!import.meta.env.DEV || status === "idle") return null;
+  if (!import.meta.env.DEV || status === "idle" || !isSensitiveRoute) return null;
 
   const copy =
     status === "disconnected"
@@ -294,9 +361,9 @@ const DevServerStatusOverlay = () => {
   const Icon = copy.icon;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/95 px-6 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-center text-card-foreground shadow-sm">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+    <div className="pointer-events-none fixed right-4 top-4 z-[9999] flex w-[min(100%,28rem)] justify-end px-4 sm:px-0">
+      <div className="pointer-events-auto w-full rounded-2xl border border-border bg-card/95 p-5 text-card-foreground shadow-lg backdrop-blur-md">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
           <Icon className={`h-6 w-6 ${status === "connected" || status === "reloading" ? "animate-spin" : ""}`} />
         </div>
         <h2 className="text-lg font-semibold">{copy.title}</h2>
