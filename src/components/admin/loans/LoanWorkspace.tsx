@@ -827,6 +827,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
     setProcessingFees(defaults.processingFees ? defaults.processingFees.toString() : '');
     setOtherBankCharges(defaults.otherCharges ? defaults.otherCharges.toString() : '');
     setOtherBankChargesLabel(defaults.otherChargesLabel);
+    setAdvancePaid(defaults.advancePaid ? defaults.advancePaid.toString() : '');
   }, [application?.id]);
 
   // ── Auto-calculate EMI when loan_amount + interest_rate + tenure change ──
