@@ -876,6 +876,10 @@ export function SalesLeadDetailModal({
                   }}
                   advancePaid={advancePaid}
                   setAdvancePaid={setAdvancePaid}
+                  interestRate={interestRate}
+                  setInterestRate={setInterestRate}
+                  tenureMonths={tenureMonths}
+                  setTenureMonths={setTenureMonths}
                   breakdown={salesBreakdown}
                 />
 
@@ -956,7 +960,12 @@ export function SalesLeadDetailModal({
           bookingAmount: Number(bookingAmount) || undefined,
           processingFees: Number(processingFees) || undefined,
           otherExpenses: Number(otherExpenses) || undefined,
-          otherExpensesLabel: otherExpensesLabel !== "Other Expenses" ? otherExpensesLabel : undefined,
+          otherExpensesLabel: otherExpensesLabel !== "Other Bank Charges" ? otherExpensesLabel : undefined,
+          grossLoanAmount: Number(grossLoanAmount) || undefined,
+          loanProtectionAmount: Number(loanProtectionAmount) || undefined,
+          advancePaid: Number(advancePaid) || undefined,
+          interestRate: Number(interestRate) || undefined,
+          tenureMonths: Number(tenureMonths) || undefined,
         })}
       />
     </Dialog>
