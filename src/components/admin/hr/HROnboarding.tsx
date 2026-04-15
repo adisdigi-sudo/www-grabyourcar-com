@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -49,25 +49,52 @@ const WIZARD_STEPS = [
 const ROLES = ["employee", "team_lead", "manager", "senior_manager", "head"];
 const EMPLOYMENT_TYPES = ["full_time", "part_time", "contract", "intern", "freelancer"];
 
-const DESIGNATIONS = [
-  { value: "revenue_growth_associate", label: "Revenue Growth Associate" },
-  { value: "revenue_enhancer", label: "Revenue Enhancer" },
-  { value: "client_success_advisor", label: "Client Success Advisor" },
-  { value: "business_development_executive", label: "Business Development Executive" },
-  { value: "growth_catalyst", label: "Growth Catalyst" },
-  { value: "relationship_manager", label: "Relationship Manager" },
-  { value: "senior_relationship_manager", label: "Senior Relationship Manager" },
-  { value: "revenue_strategist", label: "Revenue Strategist" },
-  { value: "client_acquisition_lead", label: "Client Acquisition Lead" },
-  { value: "performance_coach", label: "Performance Coach" },
-  { value: "operations_executive", label: "Operations Executive" },
-  { value: "operations_manager", label: "Operations Manager" },
-  { value: "team_leader", label: "Team Leader" },
-  { value: "assistant_manager", label: "Assistant Manager" },
-  { value: "branch_manager", label: "Branch Manager" },
-  { value: "zonal_head", label: "Zonal Head" },
-  { value: "custom", label: "✏️ Custom Designation" },
+const DESIGNATION_GROUPS = [
+  {
+    category: "📞 Caller / Telecaller",
+    items: [
+      { value: "revenue_growth_associate", label: "Revenue Growth Associate", hint: "Telecaller" },
+      { value: "revenue_enhancer", label: "Revenue Enhancer", hint: "Sr. Telecaller" },
+      { value: "client_success_advisor", label: "Client Success Advisor", hint: "Telecaller" },
+    ],
+  },
+  {
+    category: "💼 Executive / Field",
+    items: [
+      { value: "business_development_executive", label: "Business Development Executive", hint: "Field Sales" },
+      { value: "growth_catalyst", label: "Growth Catalyst", hint: "Sales Exec" },
+      { value: "relationship_manager", label: "Relationship Manager", hint: "RM" },
+      { value: "senior_relationship_manager", label: "Senior Relationship Manager", hint: "Sr. RM" },
+      { value: "operations_executive", label: "Operations Executive", hint: "Ops" },
+    ],
+  },
+  {
+    category: "👑 Team Lead",
+    items: [
+      { value: "client_acquisition_lead", label: "Client Acquisition Lead", hint: "Team Lead" },
+      { value: "performance_coach", label: "Performance Coach", hint: "Team Lead" },
+      { value: "team_leader", label: "Team Leader", hint: "TL" },
+    ],
+  },
+  {
+    category: "🏢 Manager & Above",
+    items: [
+      { value: "revenue_strategist", label: "Revenue Strategist", hint: "Manager" },
+      { value: "operations_manager", label: "Operations Manager", hint: "Manager" },
+      { value: "assistant_manager", label: "Assistant Manager", hint: "Asst. Mgr" },
+      { value: "branch_manager", label: "Branch Manager", hint: "Branch Head" },
+      { value: "zonal_head", label: "Zonal Head", hint: "Zonal" },
+    ],
+  },
+  {
+    category: "✏️ Other",
+    items: [
+      { value: "custom", label: "Custom Designation", hint: "Type your own" },
+    ],
+  },
 ];
+
+const ALL_DESIGNATIONS = DESIGNATION_GROUPS.flatMap(g => g.items);
 
 const fmt = (v: number) => `₹${Math.round(v || 0).toLocaleString("en-IN")}`;
 
@@ -333,7 +360,7 @@ export const HROnboarding = () => {
                 <Select value={form.designation_key || ""} onValueChange={v => {
                   updateField("designation_key", v);
                   if (v !== "custom") {
-                    const found = DESIGNATIONS.find(d => d.value === v);
+                    const found = ALL_DESIGNATIONS.find(d => d.value === v);
                     updateField("designation", found?.label || v);
                     updateField("custom_designation", "");
                   } else {
@@ -342,7 +369,17 @@ export const HROnboarding = () => {
                 }}>
                   <SelectTrigger><SelectValue placeholder="Select designation" /></SelectTrigger>
                   <SelectContent>
-                    {DESIGNATIONS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
+                    {DESIGNATION_GROUPS.map(group => (
+                      <SelectGroup key={group.category}>
+                        <SelectLabel className="text-xs font-bold text-muted-foreground">{group.category}</SelectLabel>
+                        {group.items.map(d => (
+                          <SelectItem key={d.value} value={d.value}>
+                            <span>{d.label}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">({d.hint})</span>
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
                   </SelectContent>
                 </Select>
                 {form.designation_key === "custom" && (
