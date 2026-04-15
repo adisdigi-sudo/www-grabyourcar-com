@@ -386,13 +386,17 @@ export const HROnboarding = () => {
 
   const updateField = (key: string, value: any) => setForm(prev => ({ ...prev, [key]: value }));
   const monthlyCTC = Number(form.monthly_ctc || 0);
+  const totalEmployees = profiles.length; // current headcount
   const calcBasic = Math.round(monthlyCTC * 0.4);
   const calcHRA = Math.round(monthlyCTC * 0.2);
   const calcDA = Math.round(monthlyCTC * 0.1);
   const calcSpecial = Math.round(monthlyCTC * 0.3);
-  const calcPF = Math.round(calcBasic * 0.12);
-  const calcESI = monthlyCTC <= 21000 ? Math.round(monthlyCTC * 0.0075) : 0;
-  const calcNet = monthlyCTC - calcPF - calcESI - Number(form.professional_tax || 200) - Number(form.tds || 0);
+  const govtDed = calcGovtDeductions(monthlyCTC, totalEmployees);
+  const calcPF = govtDed.pf;
+  const calcESI = govtDed.esi;
+  const calcPT = govtDed.pt;
+  const calcTDS = govtDed.tds;
+  const calcNet = monthlyCTC - calcPF - calcESI - calcPT - calcTDS;
 
   const renderWizardStep = () => {
     switch (step) {
