@@ -74,9 +74,9 @@ export function SalesLeadDetailModal({
   const fmtINR = (v: number) => `Rs. ${Math.round(v).toLocaleString("en-IN")}`;
 
   // Unified calculator breakdown
-  const totalCarPrice = Number(lead.on_road_price) || Number(dealValue) || 0;
+  const totalCarPrice = Number(dealValue || lead.on_road_price || 0);
   const salesBreakdown = calculateLoanSalesBreakdown({
-    finalCarPrice: dealValue || lead.on_road_price || 0,
+    finalCarPrice: totalCarPrice,
     bookingAmount,
     advancePaid,
     grossLoanAmount,

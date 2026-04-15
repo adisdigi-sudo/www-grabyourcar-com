@@ -42,6 +42,7 @@ import { generateEMIPdf, EMIData, EMIPDFConfig, DiscountDetails } from "@/lib/ge
 import { useEMIPDFSettings } from "@/hooks/useEMIPDFSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { persistCarSalesQuote } from "@/lib/carSalesQuotePersistence";
+import { calculateLoanSalesBreakdown } from "@/components/admin/loans/loanSalesCalculator";
 
 const DISCOUNT_TYPES = [
   { value: 'cash', label: 'Cash Discount' },
@@ -96,9 +97,12 @@ export const ManualQuoteGenerator = () => {
   const [showLoanOffer, setShowLoanOffer] = useState(false);
   const [bankName, setBankName] = useState("");
   const [bookingAmount, setBookingAmount] = useState<number>(0);
+  const [grossLoanAmount, setGrossLoanAmount] = useState<number>(0);
+  const [loanProtectionAmount, setLoanProtectionAmount] = useState<number>(0);
   const [processingFees, setProcessingFees] = useState<number>(0);
   const [otherLoanExpenses, setOtherLoanExpenses] = useState<number>(0);
   const [otherLoanExpensesLabel, setOtherLoanExpensesLabel] = useState("");
+  const [advancePaid, setAdvancePaid] = useState<number>(0);
   
   // Discount
   const [enableDiscount, setEnableDiscount] = useState(false);
@@ -179,16 +183,23 @@ export const ManualQuoteGenerator = () => {
   const emi = calculateEMI();
 
   // Loan offer calculations
-  const loanOfferDeductions = bookingAmount + processingFees + otherLoanExpenses;
-  const loanOfferFinalAmount = showLoanOffer ? Math.max(finalPrice - loanOfferDeductions, 0) : loanAmount;
+  const loanOfferBreakdown = useMemo(() => calculateLoanSalesBreakdown({
+    finalCarPrice: finalPrice,
+    bookingAmount,
+    advancePaid,
+    grossLoanAmount,
+    loanProtectionAmount,
+    processingFees,
+    otherCharges: otherLoanExpenses,
+  }), [finalPrice, bookingAmount, advancePaid, grossLoanAmount, loanProtectionAmount, processingFees, otherLoanExpenses]);
   const loanOfferEMI = (() => {
-    if (!showLoanOffer || loanOfferFinalAmount <= 0) return 0;
+    if (!showLoanOffer || loanOfferBreakdown.grossLoanAmount <= 0) return 0;
     const r = interestRate / 12 / 100;
-    if (r === 0) return Math.round(loanOfferFinalAmount / tenure);
-    return Math.round((loanOfferFinalAmount * r * Math.pow(1 + r, tenure)) / (Math.pow(1 + r, tenure) - 1));
+    if (r === 0) return Math.round(loanOfferBreakdown.grossLoanAmount / tenure);
+    return Math.round((loanOfferBreakdown.grossLoanAmount * r * Math.pow(1 + r, tenure)) / (Math.pow(1 + r, tenure) - 1));
   })();
   const loanOfferTotalPayment = loanOfferEMI * tenure;
-  const loanOfferTotalInterest = loanOfferTotalPayment - loanOfferFinalAmount;
+  const loanOfferTotalInterest = loanOfferTotalPayment - loanOfferBreakdown.grossLoanAmount;
 
   const formatPrice = (price: number) => {
     return `₹${Math.round(price).toLocaleString('en-IN')}`;
@@ -259,7 +270,7 @@ export const ManualQuoteGenerator = () => {
     bookingAmount: showLoanOffer ? bookingAmount : null,
     processingFees: showLoanOffer ? processingFees : null,
     otherLoanExpenses: showLoanOffer ? otherLoanExpenses : null,
-    loanAmount: showLoanOffer ? loanOfferFinalAmount : (showEMI ? loanAmount : null),
+    loanAmount: showLoanOffer ? loanOfferBreakdown.grossLoanAmount : (showEMI ? loanAmount : null),
     interestRate: (showLoanOffer || showEMI) ? interestRate : null,
     tenureMonths: (showLoanOffer || showEMI) ? tenure : null,
     emiAmount: showLoanOffer ? loanOfferEMI : (showEMI ? emi : null),
@@ -338,13 +349,18 @@ export const ManualQuoteGenerator = () => {
       message += `• Rate: ${interestRate}% | Tenure: ${tenure} months\n`;
     }
 
-    if (showLoanOffer && loanOfferFinalAmount > 0) {
+    if (showLoanOffer && loanOfferBreakdown.grossLoanAmount > 0) {
       message += `\n🏦 *Loan Offer${bankName ? ` (${bankName})` : ''}:*\n`;
       message += `• Total Car Price: ${formatPrice(finalPrice)}\n`;
-      if (bookingAmount > 0) message += `• Less Booking Amount: -${formatPrice(bookingAmount)}\n`;
+      message += `• Gross Loan Amount: ${formatPrice(loanOfferBreakdown.grossLoanAmount)}\n`;
       if (processingFees > 0) message += `• Less Processing Fees: -${formatPrice(processingFees)}\n`;
-      if (otherLoanExpenses > 0) message += `• Less ${otherLoanExpensesLabel || 'Other Expenses'}: -${formatPrice(otherLoanExpenses)}\n`;
-      message += `\n📊 *Final Loan Amount:* ${formatPrice(loanOfferFinalAmount)}\n`;
+      if (loanProtectionAmount > 0) message += `• Less Loan Suraksha / Insurance: -${formatPrice(loanProtectionAmount)}\n`;
+      if (otherLoanExpenses > 0) message += `• Less ${otherLoanExpensesLabel || 'Other Bank Charges'}: -${formatPrice(otherLoanExpenses)}\n`;
+      message += `• Bank Net Disbursal: ${formatPrice(loanOfferBreakdown.bankNetDisbursal)}\n`;
+      message += `• Down Payment: ${formatPrice(loanOfferBreakdown.downPaymentNeeded)}\n`;
+      if (bookingAmount > 0) message += `• Less Booking Amount: -${formatPrice(bookingAmount)}\n`;
+      if (advancePaid > 0) message += `• Less Advance Paid: -${formatPrice(advancePaid)}\n`;
+      message += `\n✅ *Final Balance Payable:* ${formatPrice(loanOfferBreakdown.balancePayableByYou)}\n`;
       message += `• EMI: *${formatPrice(loanOfferEMI)}/month*\n`;
       message += `• Rate: ${interestRate}% p.a. | Tenure: ${tenure} months\n`;
       message += `• Total Payable: ${formatPrice(loanOfferTotalPayment)}\n`;
@@ -505,9 +521,12 @@ export const ManualQuoteGenerator = () => {
     setShowLoanOffer(false);
     setBankName("");
     setBookingAmount(0);
+    setGrossLoanAmount(0);
+    setLoanProtectionAmount(0);
     setProcessingFees(0);
     setOtherLoanExpenses(0);
     setOtherLoanExpensesLabel("");
+    setAdvancePaid(0);
     setEnableDiscount(false);
     setDiscountAmount(0);
     setDiscountRemarks("");
@@ -869,60 +888,93 @@ export const ManualQuoteGenerator = () => {
                   </div>
                 </div>
                 <Separator />
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Deductions from On-Road Price</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Receipt-Style Loan Breakdown</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>Booking Amount</Label>
-                    <Input type="number" placeholder="0" value={bookingAmount || ''} onChange={(e) => setBookingAmount(Number(e.target.value))} />
+                    <Label>Gross Loan Amount</Label>
+                    <Input type="number" placeholder="0" value={grossLoanAmount || ''} onChange={(e) => setGrossLoanAmount(Number(e.target.value))} />
                   </div>
                   <div className="space-y-2">
                     <Label>Processing Fees</Label>
                     <Input type="number" placeholder="0" value={processingFees || ''} onChange={(e) => setProcessingFees(Number(e.target.value))} />
                   </div>
                   <div className="space-y-2">
-                    <Label>{otherLoanExpensesLabel || 'Other Expenses'}</Label>
+                    <Label>Loan Suraksha / Insurance</Label>
+                    <Input type="number" placeholder="0" value={loanProtectionAmount || ''} onChange={(e) => setLoanProtectionAmount(Number(e.target.value))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{otherLoanExpensesLabel || 'Other Bank Charges'}</Label>
                     <Input type="number" placeholder="0" value={otherLoanExpenses || ''} onChange={(e) => setOtherLoanExpenses(Number(e.target.value))} />
                   </div>
-                </div>
-                {otherLoanExpenses > 0 && (
                   <div className="space-y-2">
-                    <Label>Other Expenses Label</Label>
-                    <Input placeholder="e.g., Insurance Advance, File Charges" value={otherLoanExpensesLabel} onChange={(e) => setOtherLoanExpensesLabel(e.target.value)} />
+                    <Label>Other Charges Label</Label>
+                    <Input placeholder="e.g., File Charges" value={otherLoanExpensesLabel} onChange={(e) => setOtherLoanExpensesLabel(e.target.value)} />
                   </div>
-                )}
+                  <div className="space-y-2">
+                    <Label>Booking Amount</Label>
+                    <Input type="number" placeholder="0" value={bookingAmount || ''} onChange={(e) => setBookingAmount(Number(e.target.value))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Advance Paid</Label>
+                    <Input type="number" placeholder="0" value={advancePaid || ''} onChange={(e) => setAdvancePaid(Number(e.target.value))} />
+                  </div>
+                </div>
                 {/* Loan Calculation Preview */}
-                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-4 space-y-2 text-sm border border-blue-200 dark:border-blue-800">
+                <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm border border-border">
+                  <p className="text-[10px] font-semibold text-primary uppercase tracking-wider">Section A: Car Price Summary</p>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total Car Price (On-Road)</span>
-                    <span className="font-medium">{formatPrice(finalPrice)}</span>
+                    <span className="font-medium">{formatPrice(loanOfferBreakdown.finalCarPrice)}</span>
                   </div>
-                  {bookingAmount > 0 && (
-                    <div className="flex justify-between text-red-600">
-                      <span>Less: Booking Amount</span>
-                      <span>-{formatPrice(bookingAmount)}</span>
-                    </div>
-                  )}
+                  <p className="text-[10px] font-semibold text-primary uppercase tracking-wider pt-3">Section B: Bank Loan Breakdown</p>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Gross Loan Amount</span>
+                    <span className="font-medium">{formatPrice(loanOfferBreakdown.grossLoanAmount)}</span>
+                  </div>
                   {processingFees > 0 && (
-                    <div className="flex justify-between text-red-600">
+                    <div className="flex justify-between text-destructive">
                       <span>Less: Processing Fees</span>
                       <span>-{formatPrice(processingFees)}</span>
                     </div>
                   )}
+                  {loanProtectionAmount > 0 && (
+                    <div className="flex justify-between text-destructive">
+                      <span>Less: Loan Suraksha / Insurance</span>
+                      <span>-{formatPrice(loanProtectionAmount)}</span>
+                    </div>
+                  )}
                   {otherLoanExpenses > 0 && (
-                    <div className="flex justify-between text-red-600">
-                      <span>Less: {otherLoanExpensesLabel || 'Other Expenses'}</span>
+                    <div className="flex justify-between text-destructive">
+                      <span>Less: {otherLoanExpensesLabel || 'Other Bank Charges'}</span>
                       <span>-{formatPrice(otherLoanExpenses)}</span>
                     </div>
                   )}
                   <Separator />
-                  <div className="flex justify-between font-bold text-blue-700 dark:text-blue-400 text-base">
-                    <span>Net Loan Amount</span>
-                    <span>{formatPrice(loanOfferFinalAmount)}</span>
+                  <div className="flex justify-between font-bold text-primary text-base">
+                    <span>Bank Net Disbursal</span>
+                    <span>{formatPrice(loanOfferBreakdown.bankNetDisbursal)}</span>
                   </div>
+                  <p className="text-[10px] font-semibold text-primary uppercase tracking-wider pt-3">Section C: Customer Payment Breakdown</p>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Down Payment (auto = Price − Disbursal)</span>
+                    <span className="font-medium">{formatPrice(loanOfferBreakdown.downPaymentNeeded)}</span>
+                  </div>
+                  {bookingAmount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Less: Booking Amount</span>
+                      <span>-{formatPrice(bookingAmount)}</span>
+                    </div>
+                  )}
+                  {advancePaid > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Less: Advance Paid</span>
+                      <span>-{formatPrice(advancePaid)}</span>
+                    </div>
+                  )}
                   <Separator />
                   <div className="flex justify-between font-bold text-primary text-base">
                     <span>Balance Payable by You</span>
-                    <span>{formatPrice(Math.max(0, finalPrice - loanOfferFinalAmount))}</span>
+                    <span>{formatPrice(loanOfferBreakdown.balancePayableByYou)}</span>
                   </div>
                   {loanOfferEMI > 0 && (
                     <>
@@ -1117,32 +1169,29 @@ export const ManualQuoteGenerator = () => {
               )}
 
               {/* Loan Offer Summary */}
-              {showLoanOffer && loanOfferFinalAmount > 0 && (
-                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 mt-4 space-y-2 border border-blue-200 dark:border-blue-800">
-                  <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 flex items-center gap-1">
+              {showLoanOffer && loanOfferBreakdown.grossLoanAmount > 0 && (
+                <div className="bg-muted/50 rounded-lg p-3 mt-4 space-y-2 border border-border">
+                  <p className="text-xs font-semibold text-primary flex items-center gap-1">
                     <Building2 className="h-3 w-3" />
                     Loan Offer{bankName ? ` — ${bankName}` : ''}
                   </p>
                   <div className="text-xs space-y-1">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">On-Road Price</span>
-                      <span>{formatPrice(finalPrice)}</span>
+                      <span className="text-muted-foreground">Total Car Price</span>
+                      <span>{formatPrice(loanOfferBreakdown.finalCarPrice)}</span>
                     </div>
-                    {loanOfferDeductions > 0 && (
-                      <div className="flex justify-between text-red-600">
-                        <span>Less Deductions</span>
-                        <span>-{formatPrice(loanOfferDeductions)}</span>
-                      </div>
-                    )}
-                    <Separator />
-                    <div className="flex justify-between font-bold text-blue-700 dark:text-blue-400">
-                      <span>Net Loan Amount</span>
-                      <span>{formatPrice(loanOfferFinalAmount)}</span>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Gross Loan Amount</span>
+                      <span>{formatPrice(loanOfferBreakdown.grossLoanAmount)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Bank Net Disbursal</span>
+                      <span>{formatPrice(loanOfferBreakdown.bankNetDisbursal)}</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between font-bold text-primary">
                       <span>Balance Payable by You</span>
-                      <span>{formatPrice(Math.max(0, finalPrice - loanOfferFinalAmount))}</span>
+                      <span>{formatPrice(loanOfferBreakdown.balancePayableByYou)}</span>
                     </div>
                   </div>
                   <div className="pt-1">
