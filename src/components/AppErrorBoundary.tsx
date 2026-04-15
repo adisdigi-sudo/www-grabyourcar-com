@@ -2,6 +2,7 @@ import { Component, ErrorInfo, ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isDynamicImportError, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
+import { shouldAvoidDevAutoReload } from "@/lib/adminPreviewStability";
 
 interface AppErrorBoundaryProps {
   children: ReactNode;
@@ -22,13 +23,15 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     if (isDynamicImportError(error)) {
-      const recovered = recoverFromChunkLoadError();
+      const skipAutoReload = shouldAvoidDevAutoReload();
+      const recovered = skipAutoReload ? false : recoverFromChunkLoadError();
 
       console.warn("[AppErrorBoundary] Dynamic import error detected", {
         error,
         href: window.location.href,
         hostname: window.location.hostname,
         recovered,
+        autoReloadSkipped: skipAutoReload,
       });
 
       if (recovered) {
