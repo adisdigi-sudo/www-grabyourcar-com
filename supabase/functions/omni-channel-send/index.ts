@@ -37,7 +37,27 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, channel, phone, email, message, subject, name, logEvent, vertical } = body;
+    const {
+      action,
+      channel,
+      phone,
+      email,
+      message,
+      subject,
+      name,
+      logEvent,
+      vertical,
+      messageContext,
+      templateName,
+      templateComponents,
+      templateVariables,
+      fallbackTemplateName,
+      fallbackTemplateComponents,
+      fallbackTemplateVariables,
+      messageType,
+      mediaUrl,
+      mediaFileName,
+    } = body;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -86,9 +106,19 @@ serve(async (req) => {
         body: JSON.stringify({
           to: phone,
           message,
-          messageType: "text",
+          messageType: messageType || (templateName ? "template" : mediaUrl ? "document" : "text"),
           name,
           logEvent: logEvent || "omni_send",
+          vertical,
+          message_context: messageContext || logEvent || "crm_followup",
+          template_name: templateName,
+          template_components: templateComponents,
+          template_variables: templateVariables,
+          fallback_template_name: fallbackTemplateName,
+          fallback_template_components: fallbackTemplateComponents,
+          fallback_template_variables: fallbackTemplateVariables,
+          mediaUrl,
+          mediaFileName,
         }),
       });
 
