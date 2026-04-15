@@ -975,12 +975,17 @@ export function SalesLeadDetailModal({
           const name = lead.name || lead.customer_name || "";
           const car = lead.car_model || lead.interested_model || "your dream car";
           let msg = `Hi ${name}! Here is your car deal offer for *${car}*.\n\n`;
-          if (totalCarPrice > 0) {
-            msg += `🚗 Total Car Price: ${fmtINR(totalCarPrice)}\n`;
-            if (Number(bookingAmount) > 0) msg += `💰 Less Booking: - ${fmtINR(Number(bookingAmount))}\n`;
-            if (Number(processingFees) > 0) msg += `📋 Less Processing: - ${fmtINR(Number(processingFees))}\n`;
-            if (Number(otherExpenses) > 0) msg += `📎 Less ${otherExpensesLabel}: - ${fmtINR(Number(otherExpenses))}\n`;
-            if (totalDeductions > 0) msg += `\n✅ *Balance Payable: ${fmtINR(balancePayable)}*\n`;
+          if (totalCarPrice > 0 || salesBreakdown.grossLoanAmount > 0) {
+            msg += `🚗 Total Car Price: ${fmtINR(salesBreakdown.finalCarPrice)}\n`;
+            if (salesBreakdown.grossLoanAmount > 0) msg += `🏦 Gross Loan: ${fmtINR(salesBreakdown.grossLoanAmount)}\n`;
+            if (salesBreakdown.processingFees > 0) msg += `📋 Less Processing: - ${fmtINR(salesBreakdown.processingFees)}\n`;
+            if (salesBreakdown.loanProtectionAmount > 0) msg += `🛡️ Less Loan Suraksha: - ${fmtINR(salesBreakdown.loanProtectionAmount)}\n`;
+            if (salesBreakdown.otherCharges > 0) msg += `📎 Less ${otherExpensesLabel}: - ${fmtINR(salesBreakdown.otherCharges)}\n`;
+            if (salesBreakdown.grossLoanAmount > 0) msg += `💵 Bank Net Disbursal: ${fmtINR(salesBreakdown.bankNetDisbursal)}\n`;
+            msg += `\n📊 Down Payment: ${fmtINR(salesBreakdown.downPaymentNeeded)}\n`;
+            if (salesBreakdown.bookingAmount > 0) msg += `💰 Less Booking: - ${fmtINR(salesBreakdown.bookingAmount)}\n`;
+            if (salesBreakdown.advancePaid > 0) msg += `💰 Less Advance: - ${fmtINR(salesBreakdown.advancePaid)}\n`;
+            msg += `\n✅ *Balance Payable: ${fmtINR(salesBreakdown.balancePayableByYou)}*\n`;
           } else if (lead.deal_value) {
             msg += `Deal Value: ${fmtINR(Number(lead.deal_value))}\n`;
           }
