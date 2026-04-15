@@ -21,6 +21,8 @@ import {
 import { SalesCustomerTimeline } from "./SalesCustomerTimeline";
 import { OmniShareDialog } from "@/components/admin/shared/OmniShareDialog";
 import { generateSalesOfferPDF } from "./SalesOfferPDF";
+import { calculateLoanSalesBreakdown } from "@/components/admin/loans/loanSalesCalculator";
+import { UnifiedSalesCalculator } from "@/components/admin/shared/UnifiedSalesCalculator";
 
 const CALL_STATUSES = ["Interested", "Not Interested", "Call Back", "No Answer", "Wrong Number", "Busy", "Follow Up"];
 const BUYING_INTENTS = ["Immediate (This Week)", "Within 15 Days", "Within 1 Month", "Exploring Options", "Not Sure"];
