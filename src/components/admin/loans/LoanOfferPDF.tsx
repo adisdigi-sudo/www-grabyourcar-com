@@ -169,7 +169,11 @@ function drawLabelRow(doc: jsPDF, x: number, y: number, w: number, label: string
   }
   doc.setFontSize(8.5);
   doc.setFont("helvetica", opts?.bold ? "bold" : "normal");
-  doc.setTextColor(opts?.deduct ? ...BRAND.red : 80, opts?.deduct ? 38 : 80, opts?.deduct ? 38 : 80);
+  if (opts?.deduct) {
+    doc.setTextColor(BRAND.red[0], BRAND.red[1], BRAND.red[2]);
+  } else {
+    doc.setTextColor(80, 80, 80);
+  }
   doc.text(label, x + 4, y + 1);
   doc.setFont("helvetica", "bold");
   doc.text(value, x + w - 4, y + 1, { align: "right" });
@@ -485,7 +489,11 @@ export function generateBankComparisonPDF(
     const isLowest = idx === 0;
     doc.setFontSize(8);
     doc.setFont("helvetica", isLowest ? "bold" : "normal");
-    doc.setTextColor(isLowest ? ...BRAND.emeraldDark : 60, isLowest ? 150 : 60, isLowest ? 105 : 60);
+    if (isLowest) {
+      doc.setTextColor(BRAND.emeraldDark[0], BRAND.emeraldDark[1], BRAND.emeraldDark[2]);
+    } else {
+      doc.setTextColor(60, 60, 60);
+    }
     doc.text(bank.bankName, colX[0] + 4, y + 5);
     doc.text(`${bank.interestRate}%`, colX[1] + 4, y + 5);
     doc.text(fmt(bank.processingFee), colX[2] + 4, y + 5);
