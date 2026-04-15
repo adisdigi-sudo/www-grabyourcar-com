@@ -602,28 +602,58 @@ export const HROnboarding = () => {
               </div>
             </div>
             {monthlyCTC > 0 && (
-              <Card className="bg-muted/50">
-                <CardContent className="p-4 space-y-2">
-                  <p className="text-sm font-semibold">Auto-Calculated Breakdown:</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Basic (40%)</span><span className="font-medium">{fmt(calcBasic)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">HRA (20%)</span><span className="font-medium">{fmt(calcHRA)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">DA (10%)</span><span className="font-medium">{fmt(calcDA)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Special (30%)</span><span className="font-medium">{fmt(calcSpecial)}</span></div>
-                    <div className="flex justify-between text-red-600"><span>PF (12% of Basic)</span><span>-{fmt(calcPF)}</span></div>
-                    {calcESI > 0 && <div className="flex justify-between text-red-600"><span>ESI</span><span>-{fmt(calcESI)}</span></div>}
-                    <div className="flex justify-between text-red-600"><span>Prof. Tax</span><span>-{fmt(Number(form.professional_tax || 200))}</span></div>
-                  </div>
-                  <div className="border-t pt-2 flex justify-between font-bold">
-                    <span>Net Take-Home</span><span className="text-green-600">{fmt(calcNet)}</span>
-                  </div>
-                </CardContent>
-              </Card>
+              <>
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold">Auto-Calculated Breakdown (Govt Norms):</p>
+                      <Badge variant="outline" className="text-xs">{totalEmployees} employees in company</Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex justify-between"><span className="text-muted-foreground">Basic (40%)</span><span className="font-medium">{fmt(calcBasic)}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">HRA (20%)</span><span className="font-medium">{fmt(calcHRA)}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">DA (10%)</span><span className="font-medium">{fmt(calcDA)}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Special (30%)</span><span className="font-medium">{fmt(calcSpecial)}</span></div>
+                      <div className="flex justify-between text-destructive">
+                        <span>PF {!govtDed.pfApplicable ? "(N/A <20 emp)" : "(12% of Basic, cap ₹15K)"}</span>
+                        <span>{calcPF > 0 ? `-${fmt(calcPF)}` : "₹0"}</span>
+                      </div>
+                      <div className="flex justify-between text-destructive">
+                        <span>ESI {!govtDed.esiApplicable ? `(N/A ${totalEmployees < 10 ? "<10 emp" : "gross >₹21K"})` : "(0.75%)"}</span>
+                        <span>{calcESI > 0 ? `-${fmt(calcESI)}` : "₹0"}</span>
+                      </div>
+                      <div className="flex justify-between text-destructive">
+                        <span>Prof. Tax {calcPT === 0 ? "(Exempt <₹15K)" : ""}</span>
+                        <span>{calcPT > 0 ? `-${fmt(calcPT)}` : "₹0"}</span>
+                      </div>
+                      <div className="flex justify-between text-destructive">
+                        <span>TDS {calcTDS === 0 ? "(Below ₹3L/yr)" : "(~5% above ₹3L)"}</span>
+                        <span>{calcTDS > 0 ? `-${fmt(calcTDS)}` : "₹0"}</span>
+                      </div>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between font-bold">
+                      <span>Net Take-Home</span><span className="text-green-600">{fmt(calcNet)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+                {totalEmployees < 20 && (
+                  <Card className="border-blue-200 bg-blue-50">
+                    <CardContent className="p-3 text-sm text-blue-800">
+                      <p className="font-medium">📋 Govt Compliance Status:</p>
+                      <ul className="list-disc list-inside mt-1 space-y-0.5 text-xs">
+                        {totalEmployees < 20 && <li><strong>PF (EPFO):</strong> Not required until 20 employees. Currently {totalEmployees} employees.</li>}
+                        {totalEmployees < 10 && <li><strong>ESI (ESIC):</strong> Not required until 10 employees. Currently {totalEmployees} employees.</li>}
+                        <li><strong>Professional Tax:</strong> {calcPT === 0 ? "Exempt — monthly income below ₹15,000" : "₹200/month applicable"}</li>
+                        <li><strong>TDS:</strong> {calcTDS === 0 ? "Not applicable — annual CTC below ₹3,00,000" : `~₹${calcTDS}/month estimated`}</li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
-            <div className="grid grid-cols-3 gap-3">
-              <div><Label>Professional Tax</Label><Input type="number" value={form.professional_tax || "200"} onChange={e => updateField("professional_tax", e.target.value)} /></div>
-              <div><Label>TDS</Label><Input type="number" value={form.tds || "0"} onChange={e => updateField("tds", e.target.value)} /></div>
+            <div className="grid grid-cols-2 gap-3">
               <div><Label>Annual CTC</Label><Input disabled value={fmt(monthlyCTC * 12)} /></div>
+              <div><Label>Total Deductions</Label><Input disabled value={fmt(calcPF + calcESI + calcPT + calcTDS)} /></div>
             </div>
           </div>
         );
