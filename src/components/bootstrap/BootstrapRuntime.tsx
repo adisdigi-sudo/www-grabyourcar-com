@@ -272,7 +272,7 @@ const installBootstrapRuntime = () => {
       markDevServerPendingReload();
       window.dispatchEvent(
         new CustomEvent(DEV_SERVER_STATUS_EVENT, {
-          detail: { status: "reloading" as const },
+          detail: { status: "update_ready" as const },
         }),
       );
     });
@@ -567,7 +567,11 @@ const SafeTelemetry = () => {
 
 installBootstrapRuntime();
 
-export const BootstrapRuntime = () => {
+export const BootstrapRuntime = ({ onReady }: { onReady?: () => void }) => {
+  useEffect(() => {
+    onReady?.();
+  }, [onReady]);
+
   return (
     <>
       <SafeTelemetry />

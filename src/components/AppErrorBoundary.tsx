@@ -57,7 +57,7 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
     }
 
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
+      <div className="fixed inset-0 z-[10002] min-h-screen bg-background text-foreground flex items-center justify-center px-6">
         <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-sm text-center space-y-5">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 text-destructive">
             <AlertTriangle className="h-7 w-7" />
