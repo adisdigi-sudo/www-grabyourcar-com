@@ -40,6 +40,8 @@ import { calculateLoanSalesBreakdown, getLoanSalesCalculatorDefaults } from "./l
 import { cn } from "@/lib/utils";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
+import { generateSalesOfferPDF } from "../sales/SalesOfferPDF";
+import { Download, Share2 } from "lucide-react";
 
 // ─── Source color map ───
 const SOURCE_COLORS: Record<string, string> = {
