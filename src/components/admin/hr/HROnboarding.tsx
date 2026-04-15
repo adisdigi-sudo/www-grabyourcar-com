@@ -58,15 +58,6 @@ export const HROnboarding = () => {
   const [step, setStep] = useState(1); // wizard step
   const [form, setForm] = useState<Record<string, any>>({});
 
-  const { data: employees = [] } = useQuery({
-    queryKey: ["hr-employees-onboarding"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("hr_team_directory").select("*").order("full_name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const { data: verticals = [] } = useQuery({
     queryKey: ["business-verticals"],
     queryFn: async () => {
@@ -111,7 +102,7 @@ export const HROnboarding = () => {
 
   const completeOnboarding = useMutation({
     mutationFn: async () => {
-      const emp = employees.find((e: any) => e.id === form.employee_id);
+      if (!form.employee_name?.trim()) throw new Error("Candidate name is required");
       const vertical = verticals.find((v: any) => v.id === form.vertical_id);
       const manager = teamMembers.find((m: any) => m.user_id === form.manager_user_id);
       const empCode = "GYC-" + (form.designation?.slice(0, 3) || "EMP").toUpperCase() + "-" + Date.now().toString().slice(-6);
@@ -123,15 +114,31 @@ export const HROnboarding = () => {
       const pf = Math.round(basic * 0.12);
       const esi = monthlyCTC <= 21000 ? Math.round(monthlyCTC * 0.0075) : 0;
 
+      // 0. First create employee in hr_team_directory
+      const { data: newEmp, error: dirError } = await supabase.from("hr_team_directory").insert({
+        full_name: form.employee_name.trim(),
+        phone: form.candidate_phone || null,
+        email: form.candidate_email || null,
+        designation: form.designation || "New Hire",
+        department: form.department || vertical?.name || "",
+        vertical_name: vertical?.name || "",
+        date_of_joining: form.joining_date || new Date().toISOString().split("T")[0],
+        salary_ctc: monthlyCTC * 12,
+        employment_type: form.employment_type || "full_time",
+        is_active: true,
+      }).select("id").single();
+      if (dirError) throw dirError;
+      const newEmpId = newEmp.id;
+
       // 1. Create employee profile
       const { error: profileError } = await (supabase.from("employee_profiles") as any).insert({
-        user_id: emp?.user_id || null,
-        team_member_id: form.employee_id,
-        full_name: emp?.full_name || form.employee_name,
-        email: emp?.email,
-        phone: emp?.phone,
-        designation: form.designation || emp?.designation,
-        department: form.department || emp?.department,
+        user_id: null,
+        team_member_id: newEmpId,
+        full_name: form.employee_name.trim(),
+        email: form.candidate_email || null,
+        phone: form.candidate_phone || null,
+        designation: form.designation || "",
+        department: form.department || "",
         role: form.role || "employee",
         employee_code: empCode,
         manager_user_id: form.manager_user_id || null,
@@ -170,8 +177,8 @@ export const HROnboarding = () => {
 
       // 2. Create onboarding checklist
       const steps = DEFAULT_STEPS.map((s, i) => ({
-        employee_id: form.employee_id,
-        employee_name: emp?.full_name || form.employee_name,
+        employee_id: newEmpId,
+        employee_name: form.employee_name.trim(),
         step_name: s,
         step_order: i + 1,
         is_completed: i < 2, // First 2 steps auto-completed
@@ -181,7 +188,7 @@ export const HROnboarding = () => {
 
       // 3. Generate starter HR documents
       const baseGeneratedData = {
-        name: emp?.full_name || form.employee_name,
+        name: form.employee_name.trim(),
         designation: form.designation,
         department: form.department,
         vertical: vertical?.name,
@@ -203,35 +210,35 @@ export const HROnboarding = () => {
       };
       const { error: docError } = await (supabase.from("employee_documents") as any).insert([
         {
-          employee_user_id: emp?.user_id || user?.id,
-          employee_name: emp?.full_name || form.employee_name,
-          employee_id: form.employee_id,
+          employee_user_id: user?.id,
+          employee_name: form.employee_name.trim(),
+          employee_id: newEmpId,
           document_type: "welcome_letter",
-          document_name: `Welcome Letter - ${emp?.full_name || form.employee_name}`,
+          document_name: `Welcome Letter - ${form.employee_name.trim()}`,
           generated_data: baseGeneratedData,
         },
         {
-          employee_user_id: emp?.user_id || user?.id,
-          employee_name: emp?.full_name || form.employee_name,
-          employee_id: form.employee_id,
+          employee_user_id: user?.id,
+          employee_name: form.employee_name.trim(),
+          employee_id: newEmpId,
           document_type: "offer_letter",
-          document_name: `Offer Letter - ${emp?.full_name || form.employee_name}`,
+          document_name: `Offer Letter - ${form.employee_name.trim()}`,
           generated_data: baseGeneratedData,
         },
         {
-          employee_user_id: emp?.user_id || user?.id,
-          employee_name: emp?.full_name || form.employee_name,
-          employee_id: form.employee_id,
+          employee_user_id: user?.id,
+          employee_name: form.employee_name.trim(),
+          employee_id: newEmpId,
           document_type: "joining_letter",
-          document_name: `Joining Letter - ${emp?.full_name || form.employee_name}`,
+          document_name: `Joining Letter - ${form.employee_name.trim()}`,
           generated_data: baseGeneratedData,
         },
         {
-          employee_user_id: emp?.user_id || user?.id,
-          employee_name: emp?.full_name || form.employee_name,
-          employee_id: form.employee_id,
+          employee_user_id: user?.id,
+          employee_name: form.employee_name.trim(),
+          employee_id: newEmpId,
           document_type: "salary_structure",
-          document_name: `Salary Structure - ${emp?.full_name || form.employee_name}`,
+          document_name: `Salary Structure - ${form.employee_name.trim()}`,
           generated_data: { ...baseGeneratedData, net_salary: calcNet },
         },
       ]);
@@ -276,24 +283,19 @@ export const HROnboarding = () => {
         return (
           <div className="space-y-4">
             <h3 className="font-semibold flex items-center gap-2"><Users className="h-4 w-4" /> Step 1: Lead & Interview Details</h3>
-            <p className="text-sm text-muted-foreground">Candidate ki basic info aur interview details fill karo</p>
+            <p className="text-sm text-muted-foreground">Naye candidate ki basic info aur interview details fill karo — yeh fresh hire hai</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Select Employee</Label>
-                <Select value={form.employee_id || ""} onValueChange={v => {
-                  const emp = employees.find((e: any) => e.id === v);
-                  updateField("employee_id", v);
-                  updateField("employee_name", emp?.full_name || "");
-                  updateField("designation", emp?.designation || "");
-                  updateField("department", emp?.department || "");
-                }}>
-                  <SelectTrigger><SelectValue placeholder="Choose employee" /></SelectTrigger>
-                  <SelectContent>
-                    {employees.filter((e: any) => !grouped[e.id]).map((e: any) => (
-                      <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Candidate Full Name *</Label>
+                <Input value={form.employee_name || ""} onChange={e => updateField("employee_name", e.target.value)} placeholder="e.g. Rahul Sharma" />
+              </div>
+              <div>
+                <Label>Phone Number</Label>
+                <Input value={form.candidate_phone || ""} onChange={e => updateField("candidate_phone", e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="10 digit mobile" maxLength={10} />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input type="email" value={form.candidate_email || ""} onChange={e => updateField("candidate_email", e.target.value)} placeholder="candidate@email.com" />
               </div>
               <div>
                 <Label>Recruitment Source</Label>
