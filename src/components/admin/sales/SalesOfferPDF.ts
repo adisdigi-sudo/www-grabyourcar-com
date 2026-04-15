@@ -18,7 +18,15 @@ interface SalesOfferParams {
   onRoadPrice?: number;
   specialTerms?: string;
   dealership?: string;
+  // New deduction fields
+  bookingAmount?: number;
+  processingFees?: number;
+  otherExpenses?: number;
+  otherExpensesLabel?: string;
 }
+
+/** Always show full INR — never abbreviate to L/Cr */
+const formatINR = (v: number) => `Rs. ${Math.round(v).toLocaleString("en-IN")}`;
 
 export function generateSalesOfferPDF(params: SalesOfferParams): { doc: jsPDF; fileName: string } {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -68,8 +76,6 @@ export function generateSalesOfferPDF(params: SalesOfferParams): { doc: jsPDF; f
   doc.text("Price Breakup", 15, y);
   y += 8;
 
-  const formatINR = (v: number) => `Rs. ${Math.round(v).toLocaleString("en-IN")}`;
-
   const lineItems: { label: string; value: number }[] = [];
 
   if (params.exShowroomPrice) lineItems.push({ label: "Ex-Showroom Price", value: params.exShowroomPrice });
@@ -100,7 +106,7 @@ export function generateSalesOfferPDF(params: SalesOfferParams): { doc: jsPDF; f
   doc.setFont("helvetica", "normal");
   let runningTotal = 0;
   for (const item of lineItems) {
-    if (y > 260) { doc.addPage(); y = 20; }
+    if (y > 240) { doc.addPage(); y = 20; }
     doc.text(item.label, colLabel, y);
     doc.text(formatINR(item.value), colValue, y, { align: "right" });
     runningTotal += item.value;
@@ -124,6 +130,82 @@ export function generateSalesOfferPDF(params: SalesOfferParams): { doc: jsPDF; f
   y += 10;
   doc.setTextColor(30, 41, 59);
 
+  // ── Deductions Section ──
+  const hasDeductions = (params.bookingAmount && params.bookingAmount > 0) ||
+    (params.processingFees && params.processingFees > 0) ||
+    (params.otherExpenses && params.otherExpenses > 0);
+
+  if (hasDeductions) {
+    if (y > 230) { doc.addPage(); y = 20; }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("Payment Summary", colLabel, y);
+    y += 8;
+
+    // Sub-table header
+    doc.setFillColor(255, 247, 237);
+    doc.rect(colLabel - 2, y - 4, w - 26, rowH, "F");
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Particulars", colLabel, y);
+    doc.text("Amount", colValue, y, { align: "right" });
+    y += rowH;
+
+    doc.setFont("helvetica", "normal");
+
+    // Total car price row
+    doc.text("Total Car Price (On-Road)", colLabel, y);
+    doc.text(formatINR(totalPrice), colValue, y, { align: "right" });
+    y += rowH;
+
+    let totalDeductions = 0;
+
+    if (params.bookingAmount && params.bookingAmount > 0) {
+      doc.setTextColor(220, 38, 38);
+      doc.text("Less: Booking Amount Received", colLabel, y);
+      doc.text(`- ${formatINR(params.bookingAmount)}`, colValue, y, { align: "right" });
+      totalDeductions += params.bookingAmount;
+      y += rowH;
+    }
+
+    if (params.processingFees && params.processingFees > 0) {
+      doc.setTextColor(220, 38, 38);
+      doc.text("Less: Processing Fees", colLabel, y);
+      doc.text(`- ${formatINR(params.processingFees)}`, colValue, y, { align: "right" });
+      totalDeductions += params.processingFees;
+      y += rowH;
+    }
+
+    if (params.otherExpenses && params.otherExpenses > 0) {
+      doc.setTextColor(220, 38, 38);
+      doc.text(`Less: ${params.otherExpensesLabel || "Other Expenses"}`, colLabel, y);
+      doc.text(`- ${formatINR(params.otherExpenses)}`, colValue, y, { align: "right" });
+      totalDeductions += params.otherExpenses;
+      y += rowH;
+    }
+
+    doc.setTextColor(30, 41, 59);
+
+    // Separator
+    y += 2;
+    doc.setDrawColor(30, 41, 59);
+    doc.setLineWidth(0.8);
+    doc.line(colLabel - 2, y, w - 13, y);
+    y += 7;
+
+    // Net Payable
+    const netPayable = totalPrice - totalDeductions;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(16, 124, 65);
+    doc.text("Balance Payable", colLabel, y);
+    doc.text(formatINR(netPayable), colValue, y, { align: "right" });
+    y += 10;
+    doc.setTextColor(30, 41, 59);
+  }
+
+  // Deal Value (if different from total)
   if (params.dealValue && params.dealValue !== totalPrice) {
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
@@ -154,6 +236,7 @@ export function generateSalesOfferPDF(params: SalesOfferParams): { doc: jsPDF; f
 
   // Disclaimer
   y += 4;
+  if (y > 260) { doc.addPage(); y = 20; }
   doc.setFontSize(8);
   doc.setTextColor(120, 120, 120);
   const disclaimer = [
