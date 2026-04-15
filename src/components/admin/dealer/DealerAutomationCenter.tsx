@@ -369,7 +369,7 @@ export default function DealerAutomationCenter() {
                 {REGIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={brandFilter} onValueChange={setBrandFilter}>
+            <Select value={brandFilter || "__all__"} onValueChange={(v) => setBrandFilter(v === "__all__" ? "" : v)}>
               <SelectTrigger className="w-40 h-9"><SelectValue placeholder="Brand filter" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">All Brands</SelectItem>

@@ -436,7 +436,7 @@ export default function StateCityPricingManager() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Select Car</Label>
-                <Select value={selectedCar} onValueChange={setSelectedCar}>
+                <Select value={selectedCar || "__all__"} onValueChange={(v) => setSelectedCar(v === "__all__" ? "" : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="All Cars" />
                   </SelectTrigger>
@@ -452,7 +452,7 @@ export default function StateCityPricingManager() {
               </div>
               <div className="space-y-2">
                 <Label>Select State</Label>
-                <Select value={selectedState} onValueChange={(v) => { setSelectedState(v); setSelectedCity(""); }}>
+                <Select value={selectedState || "__all__"} onValueChange={(v) => { setSelectedState(v === "__all__" ? "" : v); setSelectedCity(""); }}>
                   <SelectTrigger>
                     <SelectValue placeholder="All States" />
                   </SelectTrigger>
@@ -468,7 +468,7 @@ export default function StateCityPricingManager() {
               </div>
               <div className="space-y-2">
                 <Label>Select City</Label>
-                <Select value={selectedCity} onValueChange={setSelectedCity} disabled={!selectedState}>
+                <Select value={selectedCity || "__all__"} onValueChange={(v) => setSelectedCity(v === "__all__" ? "" : v)} disabled={!selectedState}>
                   <SelectTrigger>
                     <SelectValue placeholder={selectedState ? "Select City" : "Select State First"} />
                   </SelectTrigger>
