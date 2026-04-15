@@ -807,6 +807,33 @@ export const HROnboarding = () => {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* ⚠️ THRESHOLD CROSSING WARNING — PF/ESI will apply to ALL existing employees */}
+                {(govtDed.crossingPFThreshold || govtDed.crossingESIThreshold) && (
+                  <Card className="border-orange-300 bg-orange-50">
+                    <CardContent className="p-4 space-y-2">
+                      <p className="font-semibold text-orange-800 flex items-center gap-2">
+                        <Shield className="h-4 w-4" /> ⚠️ Important: This Hire Crosses Govt Threshold!
+                      </p>
+                      <p className="text-sm text-orange-700">
+                        Yeh employee add karne se company ka headcount <strong>{totalEmployees + 1}</strong> ho jayega. 
+                        Iska matlab ab <strong>SABHI existing employees</strong> ko bhi PF/ESI lagega — sirf naye ko nahi!
+                      </p>
+                      <ul className="list-disc list-inside text-xs text-orange-700 space-y-1">
+                        {govtDed.crossingPFThreshold && (
+                          <li><strong>PF (EPFO):</strong> 20 employees cross — ab sabhi {totalEmployees} existing employees ka PF deduction shuru hoga (12% of Basic, max ₹15K basic). Company ka bhi equal 12% employer contribution lagega.</li>
+                        )}
+                        {govtDed.crossingESIThreshold && (
+                          <li><strong>ESI (ESIC):</strong> 10 employees cross — ab sabhi employees jo ₹21,000/month se kam earn karte hain unka ESI deduction shuru hoga (Employee: 0.75%, Employer: 3.25%).</li>
+                        )}
+                      </ul>
+                      <p className="text-xs text-orange-600 font-medium mt-1">
+                        💡 Accounts team ko immediately notify karo — sabhi employees ki salary structure update karni hogi.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Compliance status for small companies */}
                 {!complianceBlocked && totalEmployees < 20 && (
                   <Card className="border-blue-200 bg-blue-50">
