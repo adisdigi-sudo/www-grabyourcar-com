@@ -456,11 +456,47 @@ export const HROnboarding = () => {
   const calcNet = monthlyCTC - calcPF - calcESI - calcPT - calcTDS;
 
   // Compliance blockers — check if this hire will cross the threshold
-  const needsPF = totalEmployees >= 19; // will become 20 after this hire
-  const needsESI = totalEmployees >= 9; // will become 10 after this hire
+  const needsPF = totalEmployees >= 19;
+  const needsESI = totalEmployees >= 9;
   const hasPFId = !!complianceData?.pf_registration_number;
   const hasESIId = !!complianceData?.esi_registration_number;
   const complianceBlocked = (needsPF && !hasPFId) || (needsESI && !hasESIId);
+
+  // Calculate manager capacity based on hierarchy rules
+  const getManagerCapacity = () => {
+    const selectedRole = form.role || "employee";
+    // Find which role tier should manage this role
+    const eligibleTiers = Object.entries(HIERARCHY_CAPACITY)
+      .filter(([_, config]) => config.manages === selectedRole);
+    
+    return teamMembers.map((m: any) => {
+      const tier = m.role_tier || "employee";
+      const capacityRule = HIERARCHY_CAPACITY[tier];
+      const maxReports = m.max_reports || capacityRule?.maxReports || 10;
+      
+      // Count current direct reports
+      const currentReports = teamMembers.filter((t: any) => t.reporting_to === m.id && t.is_active).length;
+      const spotsLeft = Math.max(0, maxReports - currentReports);
+      const isEligible = eligibleTiers.some(([tierKey]) => tierKey === tier);
+      const isRecommended = isEligible && spotsLeft > 0;
+
+      return {
+        ...m,
+        currentReports,
+        maxReports,
+        spotsLeft,
+        isEligible,
+        isRecommended,
+        tier,
+      };
+    }).sort((a: any, b: any) => {
+      // Recommended first, then by spots available
+      if (a.isRecommended && !b.isRecommended) return -1;
+      if (!a.isRecommended && b.isRecommended) return 1;
+      return b.spotsLeft - a.spotsLeft;
+    });
+  };
+  const managersWithCapacity = getManagerCapacity();
 
   const renderWizardStep = () => {
     switch (step) {
