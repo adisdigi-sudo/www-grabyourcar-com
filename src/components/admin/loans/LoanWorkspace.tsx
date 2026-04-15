@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef, memo } from "react";
 import EMICalculator from "@/components/EMICalculator";
 import { LoanQuoteHistory } from "./LoanQuoteHistory";
-import { Upload } from "lucide-react";
+import { Upload, Pencil, Lock, Save } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoanPerformanceDashboard } from "./LoanPerformanceDashboard";
 import { startOfDay, startOfWeek, startOfMonth, subDays, isAfter, isWithinInterval } from "date-fns";
@@ -36,6 +36,7 @@ import {
 import { LoanDisbursementBook } from "./LoanDisbursementBook";
 import { LoanAfterSales } from "./LoanAfterSales";
 import { cn } from "@/lib/utils";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 // ─── Source color map ───
 const SOURCE_COLORS: Record<string, string> = {
@@ -746,9 +747,10 @@ const LoanCard = ({ app, stage, onDragStart, onDragEnd, onClick, onWhatsApp, isD
   );
 };
 
-// ─── Stage Detail Modal ───
+// ─── Stage Detail Modal (Enhanced with editable fields, role-based locking, auto-WhatsApp) ───
 const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }: any) => {
   const { user } = useAuth();
+  const { isSuperAdmin } = useAdminAuth();
   const queryClient = useQueryClient();
   const [targetStage, setTargetStage] = useState<string>(application?._targetStage || '');
   const [remarks, setRemarks] = useState('');
@@ -771,9 +773,28 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   const [disbursementFile, setDisbursementFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
 
+  // ── Editable client details ──
+  const [editMode, setEditMode] = useState(false);
+  const [editName, setEditName] = useState(application?.customer_name || '');
+  const [editPhone, setEditPhone] = useState(application?.phone || '');
+  const [editEmail, setEditEmail] = useState(application?.email || '');
+  const [editLoanAmount, setEditLoanAmount] = useState(application?.loan_amount?.toString() || '');
+  const [editCarModel, setEditCarModel] = useState(application?.car_model || '');
+  const [editCarVariant, setEditCarVariant] = useState(application?.car_variant || '');
+  const [editSource, setEditSource] = useState(application?.source || '');
+  const [editLoanType, setEditLoanType] = useState(application?.loan_type || '');
+  const [editDownPayment, setEditDownPayment] = useState(application?.down_payment?.toString() || '');
+  const [editPriority, setEditPriority] = useState(application?.priority || '');
+
+  // ── Role-based locking ──
+  const currentStage = application?.stage || 'new_lead';
+  const isDisbursed = currentStage === 'disbursed';
+  const isLocked = isDisbursed && !isSuperAdmin();
+  const canEdit = !isLocked;
+
   // ── Auto-calculate EMI when loan_amount + interest_rate + tenure change ──
   useEffect(() => {
-    const P = Number(application?.loan_amount || 0);
+    const P = Number(editLoanAmount || application?.loan_amount || 0);
     const annualRate = Number(interestRate);
     const months = Number(tenureMonths);
     if (P > 0 && annualRate > 0 && months > 0) {
@@ -781,7 +802,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
       const emi = (P * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
       setEmiAmount(Math.round(emi).toString());
     }
-  }, [interestRate, tenureMonths, application?.loan_amount]);
+  }, [interestRate, tenureMonths, editLoanAmount, application?.loan_amount]);
 
   // ── File upload helper ──
   const uploadDocument = async (file: File, folder: string): Promise<string> => {
@@ -795,7 +816,6 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
     return urlData.publicUrl;
   };
 
-  const currentStage = application?.stage || 'new_lead';
   const loanTypeInfo = LOAN_TYPES.find(t => t.value === application?.loan_type);
 
   const formatAmount = (amt: number | null) => {
@@ -825,6 +845,50 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
     onError: (err: any) => toast.error(err.message),
   });
 
+  // ── Save editable client details ──
+  const handleSaveDetails = () => {
+    if (!editName.trim()) { toast.error("Customer name is required"); return; }
+    if (!editPhone.trim() || editPhone.replace(/\D/g, '').length < 10) { toast.error("Valid phone number is required"); return; }
+    if (!editLoanAmount || Number(editLoanAmount) <= 0) { toast.error("Loan amount must be greater than 0"); return; }
+    updateMutation.mutate({
+      customer_name: editName.trim(),
+      phone: editPhone.trim(),
+      email: editEmail.trim() || null,
+      loan_amount: Number(editLoanAmount),
+      car_model: editCarModel.trim() || null,
+      car_variant: editCarVariant.trim() || null,
+      source: editSource || null,
+      loan_type: editLoanType || null,
+      down_payment: editDownPayment ? Number(editDownPayment) : null,
+      priority: editPriority || null,
+    });
+    setEditMode(false);
+  };
+
+  // ── Auto-send WhatsApp on offer share ──
+  const autoShareOfferWhatsApp = async (bankName: string, rate: string, tenure: string, emi: string) => {
+    try {
+      const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+      const loanAmt = application?.loan_amount ? `₹${(application.loan_amount / 100000).toFixed(1)}L` : '';
+      const msg = `🏦 *Loan Offer — GrabYourCar*\n\nHi ${application.customer_name},\n\nGreat news! Here's your loan offer:\n\n🏦 Bank: *${bankName}*\n💰 Loan Amount: *${loanAmt}*\n📊 Interest Rate: *${rate}%*\n📅 Tenure: *${tenure} months*\n💵 EMI: *₹${Number(emi).toLocaleString('en-IN')}/mo*\n\nPlease review and let us know if you'd like to proceed.\n\nRegards,\n*GrabYourCar Finance Team*`;
+      await sendWhatsApp({ phone: application.phone, message: msg, name: application.customer_name, logEvent: "loan_offer_shared", silent: false });
+    } catch (err) {
+      console.error("Auto WhatsApp offer share failed:", err);
+      toast.error("WhatsApp offer share failed — offer saved but message not sent");
+    }
+  };
+
+  // ── Auto-send WhatsApp on loan approval ──
+  const autoShareApprovalWhatsApp = async (sanctionAmt: string) => {
+    try {
+      const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+      const msg = `✅ *Loan Approved — GrabYourCar*\n\nHi ${application.customer_name},\n\nYour loan has been approved! 🎉\n\n💰 Sanction Amount: *₹${Number(sanctionAmt).toLocaleString('en-IN')}*\n🚗 Car: *${application.car_model || 'N/A'}*\n\nOur team will guide you through the next steps for disbursement.\n\nRegards,\n*GrabYourCar Finance Team*`;
+      await sendWhatsApp({ phone: application.phone, message: msg, name: application.customer_name, logEvent: "loan_approved", silent: false });
+    } catch (err) {
+      console.error("Auto WhatsApp approval share failed:", err);
+    }
+  };
+
   const handleSmartCallingSave = () => {
     if (!callStatus) { toast.error("Select a call status"); return; }
     if (!callRemarks.trim()) { toast.error("Remarks are mandatory"); return; }
@@ -841,6 +905,9 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
 
     if (!selectedBank) { toast.error("Select a bank partner"); return; }
     if (isCustom && !((selectedPartner?.name || customBankName).trim())) { toast.error("Enter custom bank/NBFC name"); return; }
+    if (!interestRate || Number(interestRate) <= 0) { toast.error("Interest rate is required"); return; }
+    if (!tenureMonths || Number(tenureMonths) <= 0) { toast.error("Tenure is required"); return; }
+    if (!emiAmount || Number(emiAmount) <= 0) { toast.error("EMI amount is required"); return; }
 
     const bankName = isCustom
       ? (selectedPartner?.name || customBankName).trim()
@@ -855,6 +922,9 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
       stage: 'offer_shared',
       remarks: remarks || `Offer shared: ${bankName}`,
     });
+
+    // Auto-share offer via WhatsApp
+    autoShareOfferWhatsApp(bankName, interestRate, tenureMonths, emiAmount);
   };
 
   const handleLoanAppSave = async () => {
@@ -862,6 +932,8 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
     if (loanStatus === 'rejected' && !rejectionReason.trim()) { toast.error("Rejection reason required"); return; }
     if (loanStatus === 'approved' && !sanctionAmount) { toast.error("Sanction amount required"); return; }
     if (loanStatus === 'approved' && !sanctionFile && !application.sanction_letter_url) { toast.error("Upload sanction/approval letter"); return; }
+    if (loanStatus === 'approved' && (!interestRate || Number(interestRate) <= 0)) { toast.error("Interest rate is required for approval"); return; }
+    if (loanStatus === 'approved' && (!tenureMonths || Number(tenureMonths) <= 0)) { toast.error("Tenure is required for approval"); return; }
 
     const updates: any = {
       stage: loanStatus === 'approved' ? 'loan_application' : 'lost',
@@ -885,6 +957,11 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
       updates.lost_remarks = rejectionReason;
     }
     updateMutation.mutate(updates);
+
+    // Auto-share approval WhatsApp
+    if (loanStatus === 'approved') {
+      autoShareApprovalWhatsApp(sanctionAmount);
+    }
   };
 
   const handleDisbursedSave = async () => {
@@ -949,6 +1026,8 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
               {STAGE_LABELS[currentStage as LoanStage] || currentStage}
             </Badge>
             {loanTypeInfo && <Badge className={`text-[9px] ${loanTypeInfo.color}`}>{loanTypeInfo.label}</Badge>}
+            {isLocked && <Badge variant="outline" className="text-[9px] bg-red-50 text-red-600 border-red-200 ml-auto"><Lock className="h-3 w-3 mr-1" /> Locked</Badge>}
+            {isDisbursed && isSuperAdmin() && <Badge variant="outline" className="text-[9px] bg-green-50 text-green-600 border-green-200 ml-auto">🔓 Super Admin</Badge>}
           </DialogTitle>
         </DialogHeader>
 
@@ -956,43 +1035,115 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           {/* Client Info Card */}
           <Card className="border-border/50 bg-muted/30">
             <CardContent className="p-3">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Client ID</p>
-                  <p className="font-mono text-xs font-semibold">{application.id.slice(0, 8)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Phone</p>
-                  <div className="flex items-center gap-1.5">
-                    <p className="font-medium text-xs">{application.phone}</p>
-                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => window.open(`tel:+91${application.phone.replace(/\D/g, '').slice(-10)}`)}>
-                      <PhoneCall className="h-3 w-3 text-emerald-600" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={async () => {
-                      const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
-                      const msg = await getCrmMessage("loan_followup", { customer_name: application.customer_name });
-                      const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-                      await sendWhatsApp({ phone: application.phone, message: msg, name: application.customer_name, logEvent: "loan_followup" });
-                    }}>
-                      <MessageCircle className="h-3 w-3 text-green-600" />
+              {/* View / Edit toggle */}
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Client Details</p>
+                {canEdit && !editMode && (
+                  <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1" onClick={() => setEditMode(true)}>
+                    <Pencil className="h-3 w-3" /> Edit
+                  </Button>
+                )}
+                {editMode && (
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setEditMode(false)}>Cancel</Button>
+                    <Button size="sm" className="h-6 text-[10px] gap-1 bg-primary" onClick={handleSaveDetails} disabled={updateMutation.isPending}>
+                      <Save className="h-3 w-3" /> {updateMutation.isPending ? "Saving..." : "Save"}
                     </Button>
                   </div>
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Loan Amount</p>
-                  <p className="font-semibold text-xs">{formatAmount(application.loan_amount)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Car</p>
-                  <p className="text-xs">{application.car_model || '—'}</p>
-                </div>
+                )}
               </div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {application.source && <Badge variant="outline" className="text-[9px]">Source: {application.source}</Badge>}
-                {loanTypeInfo && <Badge variant="outline" className={`text-[9px] ${loanTypeInfo.color}`}>{loanTypeInfo.label}</Badge>}
-              </div>
+
+              {editMode ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                  <div><Label className="text-[10px]">Name *</Label><Input value={editName} onChange={e => setEditName(e.target.value)} className="h-7 text-xs" /></div>
+                  <div><Label className="text-[10px]">Phone *</Label><Input value={editPhone} onChange={e => setEditPhone(e.target.value)} className="h-7 text-xs" /></div>
+                  <div><Label className="text-[10px]">Email</Label><Input value={editEmail} onChange={e => setEditEmail(e.target.value)} className="h-7 text-xs" /></div>
+                  <div><Label className="text-[10px]">Loan Amount *</Label><Input type="number" value={editLoanAmount} onChange={e => setEditLoanAmount(e.target.value)} className="h-7 text-xs" /></div>
+                  <div><Label className="text-[10px]">Car Model</Label><Input value={editCarModel} onChange={e => setEditCarModel(e.target.value)} className="h-7 text-xs" /></div>
+                  <div><Label className="text-[10px]">Car Variant</Label><Input value={editCarVariant} onChange={e => setEditCarVariant(e.target.value)} className="h-7 text-xs" /></div>
+                  <div><Label className="text-[10px]">Down Payment</Label><Input type="number" value={editDownPayment} onChange={e => setEditDownPayment(e.target.value)} className="h-7 text-xs" /></div>
+                  <div>
+                    <Label className="text-[10px]">Source</Label>
+                    <Select value={editSource} onValueChange={setEditSource}>
+                      <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Source" /></SelectTrigger>
+                      <SelectContent>{LEAD_SOURCES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Loan Type</Label>
+                    <Select value={editLoanType} onValueChange={setEditLoanType}>
+                      <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Type" /></SelectTrigger>
+                      <SelectContent>{LOAN_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Priority</Label>
+                    <Select value={editPriority} onValueChange={setEditPriority}>
+                      <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Priority" /></SelectTrigger>
+                      <SelectContent>{PRIORITY_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Client ID</p>
+                      <p className="font-mono text-xs font-semibold">{application.id.slice(0, 8)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Phone</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-medium text-xs">{application.phone}</p>
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => window.open(`tel:+91${application.phone.replace(/\D/g, '').slice(-10)}`)}>
+                          <PhoneCall className="h-3 w-3 text-emerald-600" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={async () => {
+                          try {
+                            const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+                            const msg = `Hi ${application.customer_name},\n\nThis is a follow-up regarding your car loan inquiry with GrabYourCar.\n\nPlease let us know if you need any assistance.\n\nRegards,\n*GrabYourCar Finance Team*`;
+                            await sendWhatsApp({ phone: application.phone, message: msg, name: application.customer_name, logEvent: "loan_followup" });
+                          } catch (err) {
+                            console.error("WhatsApp send failed:", err);
+                            toast.error("WhatsApp message failed to send");
+                          }
+                        }}>
+                          <MessageCircle className="h-3 w-3 text-green-600" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Loan Amount</p>
+                      <p className="font-semibold text-xs">{formatAmount(application.loan_amount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Car</p>
+                      <p className="text-xs">{application.car_model || '—'}</p>
+                    </div>
+                  </div>
+                  {/* Extra detail row */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mt-2">
+                    {application.email && <div><p className="text-[10px] text-muted-foreground">Email</p><p className="text-xs">{application.email}</p></div>}
+                    {application.car_variant && <div><p className="text-[10px] text-muted-foreground">Variant</p><p className="text-xs">{application.car_variant}</p></div>}
+                    {application.down_payment && <div><p className="text-[10px] text-muted-foreground">Down Payment</p><p className="text-xs">{formatAmount(application.down_payment)}</p></div>}
+                    {application.priority && <div><p className="text-[10px] text-muted-foreground">Priority</p><Badge variant="outline" className="text-[9px]">{application.priority}</Badge></div>}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {application.source && <Badge variant="outline" className="text-[9px]">Source: {application.source}</Badge>}
+                    {loanTypeInfo && <Badge variant="outline" className={`text-[9px] ${loanTypeInfo.color}`}>{loanTypeInfo.label}</Badge>}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
+
+          {/* Locked banner for employees after disbursement */}
+          {isLocked && (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 flex items-center gap-2">
+              <Lock className="h-4 w-4 text-red-500" />
+              <p className="text-xs text-red-600 font-medium">This lead is locked after disbursement. Only Super Admin can edit.</p>
+            </div>
+          )}
 
           {/* Remarks */}
           {application.remarks && (
@@ -1011,7 +1162,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           </div>
 
           {/* SMART CALLING — only for new_lead & smart_calling */}
-          {(currentStage === 'new_lead' || currentStage === 'smart_calling') && (
+          {canEdit && (currentStage === 'new_lead' || currentStage === 'smart_calling') && (
             <div className="space-y-3 p-4 rounded-lg border border-amber-500/20 bg-amber-500/5">
               <div className="flex items-center gap-2 text-amber-700 text-sm font-medium"><PhoneCall className="h-4 w-4" /> Smart Calling</div>
               <div>
@@ -1029,7 +1180,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           )}
 
           {/* OFFER SHARED — only for interested & offer_shared */}
-          {(currentStage === 'interested' || currentStage === 'offer_shared') && (
+          {canEdit && (currentStage === 'interested' || currentStage === 'offer_shared' || currentStage === 'new_lead' || currentStage === 'smart_calling') && (
             <div className="space-y-3 p-4 rounded-lg border border-violet-500/20 bg-violet-500/5">
               <div className="flex items-center gap-2 text-violet-700 text-sm font-medium"><Building2 className="h-4 w-4" /> Share Offer — Bank Partners</div>
               <div>
@@ -1066,7 +1217,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           )}
 
           {/* LOAN APPLICATION — only for loan_application stage */}
-          {(currentStage === 'loan_application' || application._targetStage === 'loan_application') && (
+          {canEdit && (currentStage === 'loan_application' || application._targetStage === 'loan_application') && (
             <div className="space-y-3 p-4 rounded-lg border border-indigo-500/20 bg-indigo-500/5">
               <div className="flex items-center gap-2 text-indigo-700 text-sm font-medium"><FileText className="h-4 w-4" /> Loan Application Status</div>
               <div>
@@ -1107,11 +1258,11 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           )}
 
           {/* DISBURSED — Read-only summary when already disbursed */}
-          {currentStage === 'disbursed' && !application._targetStage && (
+          {currentStage === 'disbursed' && !application._targetStage && !editMode && (
             <div className="space-y-3 p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium"><CheckCircle2 className="h-4 w-4" /> Disbursement Complete</div>
-                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]">🔒 Locked</Badge>
+                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]">{isLocked ? '🔒 Locked' : '🔓 Editable (Super Admin)'}</Badge>
               </div>
               {application.incentive_eligible && (
                 <Badge className="bg-green-500/10 text-green-600 border-green-500/20">✅ Incentive Eligible</Badge>
@@ -1186,7 +1337,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           )}
 
           {/* DISBURSED — Entry form when moving TO disbursed */}
-          {currentStage !== 'disbursed' && application._targetStage === 'disbursed' && (
+          {canEdit && currentStage !== 'disbursed' && application._targetStage === 'disbursed' && (
             <div className="space-y-3 p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
               <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium"><CheckCircle2 className="h-4 w-4" /> Disbursement Details</div>
               <div className="grid grid-cols-2 gap-3">
@@ -1221,7 +1372,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           )}
 
           {/* LOST */}
-          {(application._targetStage === 'lost' || currentStage === 'lost') && currentStage !== 'lost' && (
+          {canEdit && (application._targetStage === 'lost' || currentStage === 'lost') && currentStage !== 'lost' && (
             <div className="space-y-3 p-4 rounded-lg border border-red-500/20 bg-red-500/5">
               <div className="flex items-center gap-2 text-red-600 text-sm font-medium"><AlertTriangle className="h-4 w-4" /> Mark as Lost</div>
               <div>
@@ -1239,7 +1390,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           )}
 
           {/* Quick Move Buttons */}
-          {!application._targetStage && currentStage !== 'disbursed' && currentStage !== 'lost' && (
+          {canEdit && !application._targetStage && currentStage !== 'disbursed' && currentStage !== 'lost' && (
             <div className="border-t pt-3">
               <p className="text-[10px] text-muted-foreground mb-2">Quick Move to Stage</p>
               <div className="flex flex-wrap gap-1.5">
