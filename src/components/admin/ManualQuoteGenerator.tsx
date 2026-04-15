@@ -292,7 +292,7 @@ export const ManualQuoteGenerator = () => {
     }
   };
 
-  const handleShareWhatsApp = () => {
+  const handleShareWhatsApp = async () => {
     if (!brand || !model) {
       toast.error("Please enter car brand and model");
       return;
@@ -365,6 +365,16 @@ export const ManualQuoteGenerator = () => {
       : `https://wa.me/?text=${encodeURIComponent(message)}`;
     
     window.open(whatsappUrl, '_blank');
+
+    // Persist quote in background
+    try {
+      const doc = await generateEMIPdf(getEMIData(), pdfConfig || undefined, true) as jsPDF | undefined;
+      if (doc) {
+        await persistCarSalesQuote(getQuotePersistData(doc, "whatsapp"));
+      }
+    } catch (err) {
+      console.warn("Quote persistence failed (non-blocking):", err);
+    }
   };
 
   const handleSendEmail = async () => {
