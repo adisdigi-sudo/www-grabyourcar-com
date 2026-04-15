@@ -140,19 +140,18 @@ const DESIGNATION_ROLE_MAP: Record<string, string> = {
 };
 
 // Indian Govt norms for PF/ESI/PT (as of 2024-25)
-// PF: Mandatory only when 20+ employees. Basic ≤15,000 compulsory; >15,000 can opt out
-// ESI: Mandatory only when 10+ employees AND gross ≤21,000/month
-// Professional Tax: Max ₹200/month (state dependent), some states exempt <₹15,000
-// TDS: Only if annual income > ₹3,00,000 (old) or ₹7,00,000 (new regime)
+// PF: Mandatory for ALL employees once company crosses 20 employees
+// ESI: Mandatory for ALL employees earning ≤21,000 once company crosses 10 employees
+// Note: Once threshold crossed, PF/ESI applies to EVERY employee — not just new ones
 const calcGovtDeductions = (monthlyCTC: number, totalEmployees: number) => {
   const basic = Math.round(monthlyCTC * 0.4);
   const annualCTC = monthlyCTC * 12;
 
-  // PF: Not applicable if <20 employees (EPFO registration not required)
+  // PF: Mandatory for ALL once 20+ employees. Employee contribution 12% of basic (capped at ₹15K basic)
   const pfApplicable = totalEmployees >= 20;
   const pf = pfApplicable ? Math.round(Math.min(basic, 15000) * 0.12) : 0;
 
-  // ESI: Not applicable if <10 employees OR gross >21,000
+  // ESI: Mandatory for ALL earning ≤₹21K once 10+ employees
   const esiApplicable = totalEmployees >= 10 && monthlyCTC <= 21000;
   const esi = esiApplicable ? Math.round(monthlyCTC * 0.0075) : 0;
 
@@ -160,10 +159,29 @@ const calcGovtDeductions = (monthlyCTC: number, totalEmployees: number) => {
   const pt = monthlyCTC >= 15000 ? 200 : 0;
 
   // TDS: Only if annual CTC > ₹3,00,000 (old regime basic exemption)
-  // Rough estimate: 5% of amount exceeding 3L, divided by 12
   const tds = annualCTC > 300000 ? Math.round(((annualCTC - 300000) * 0.05) / 12) : 0;
 
-  return { pf, esi, pt, tds, pfApplicable, esiApplicable };
+  // Flag: crossing threshold means ALL existing employees need PF/ESI recalculation
+  const crossingPFThreshold = totalEmployees === 19; // this hire makes it 20
+  const crossingESIThreshold = totalEmployees === 9; // this hire makes it 10
+
+  return { pf, esi, pt, tds, pfApplicable, esiApplicable, crossingPFThreshold, crossingESIThreshold };
+};
+
+// Hierarchy capacity rules
+const HIERARCHY_CAPACITY: Record<string, { manages: string; maxReports: number }> = {
+  team_lead: { manages: "employee", maxReports: 10 },
+  manager: { manages: "team_lead", maxReports: 10 },
+  senior_manager: { manages: "manager", maxReports: 10 },
+  head: { manages: "senior_manager", maxReports: 10 },
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  employee: "Employee / Telecaller",
+  team_lead: "Team Leader",
+  manager: "Manager",
+  senior_manager: "Senior Manager",
+  head: "Zonal Head",
 };
 
 const fmt = (v: number) => `₹${Math.round(v || 0).toLocaleString("en-IN")}`;
