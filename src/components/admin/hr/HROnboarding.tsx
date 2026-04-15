@@ -601,8 +601,12 @@ export const HROnboarding = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Assign Manager</Label>
+              <div className="col-span-2">
+                <Label>Assign Manager / Reporting To</Label>
+                <p className="text-xs text-muted-foreground mb-1">
+                  📋 Rule: Max 10 {ROLE_LABELS[form.role || "employee"] || "employees"} per {ROLE_LABELS[Object.entries(HIERARCHY_CAPACITY).find(([_, c]) => c.manages === (form.role || "employee"))?.[0] || ""] || "supervisor"}. 
+                  Green = space available, Red = full.
+                </p>
                 <Select value={form.manager_user_id || ""} onValueChange={v => {
                   const mgr = teamMembers.find((m: any) => m.user_id === v);
                   updateField("manager_user_id", v);
@@ -610,7 +614,22 @@ export const HROnboarding = () => {
                 }}>
                   <SelectTrigger><SelectValue placeholder="Select manager" /></SelectTrigger>
                   <SelectContent>
-                    {teamMembers.map((m: any) => <SelectItem key={m.user_id} value={m.user_id}>{m.display_name}</SelectItem>)}
+                    {managersWithCapacity.map((m: any) => (
+                      <SelectItem key={m.user_id} value={m.user_id} disabled={m.spotsLeft === 0 && m.isEligible}>
+                        <div className="flex items-center gap-2 w-full">
+                          <span>{m.display_name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({m.designation || m.role_tier || "—"})
+                          </span>
+                          {m.isEligible && (
+                            <span className={`text-xs font-medium ${m.spotsLeft > 0 ? "text-green-600" : "text-red-600"}`}>
+                              [{m.currentReports}/{m.maxReports} — {m.spotsLeft > 0 ? `${m.spotsLeft} slots open` : "FULL"}]
+                            </span>
+                          )}
+                          {m.isRecommended && <span className="text-xs">⭐</span>}
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
