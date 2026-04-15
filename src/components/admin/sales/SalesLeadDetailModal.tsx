@@ -67,6 +67,8 @@ export function SalesLeadDetailModal({
   const [grossLoanAmount, setGrossLoanAmount] = useState(lead.gross_loan_amount || "");
   const [loanProtectionAmount, setLoanProtectionAmount] = useState(lead.loan_protection_amount || "");
   const [advancePaid, setAdvancePaid] = useState(lead.advance_paid || "");
+  const [interestRate, setInterestRate] = useState(lead.interest_rate || "");
+  const [tenureMonths, setTenureMonths] = useState(lead.tenure_months || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showShareOffer, setShowShareOffer] = useState(false);
 
