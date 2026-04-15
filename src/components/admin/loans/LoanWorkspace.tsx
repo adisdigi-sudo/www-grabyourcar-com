@@ -40,6 +40,8 @@ import { calculateLoanSalesBreakdown, getLoanSalesCalculatorDefaults } from "./l
 import { cn } from "@/lib/utils";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
+import { generateSalesOfferPDF } from "../sales/SalesOfferPDF";
+import { Download, Share2 } from "lucide-react";
 
 // ─── Source color map ───
 const SOURCE_COLORS: Record<string, string> = {
@@ -1322,6 +1324,92 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
               <Button onClick={handleOfferSave} disabled={updateMutation.isPending} className="w-full bg-violet-600 hover:bg-violet-700 text-white">
                 {updateMutation.isPending ? "Saving..." : "Save Offer Details"}
               </Button>
+
+              {/* PDF Download / WhatsApp Share / Save to Cloud */}
+              {(salesBreakdown.finalCarPrice > 0 || salesBreakdown.grossLoanAmount > 0) && (() => {
+                const selectedPartner = bankPartners.find((b: any) => b.id === selectedBank);
+                const bankNameForPdf = selectedBank === '__custom__' ? customBankName : (selectedPartner?.name || application?.lender_name || '');
+                const buildPdfParams = () => ({
+                  customerName: application.customer_name,
+                  phone: application.phone,
+                  carModel: application.car_model || '',
+                  variant: application.car_variant || '',
+                  city: '',
+                  bankName: bankNameForPdf,
+                  onRoadPrice: salesBreakdown.finalCarPrice,
+                  grossLoanAmount: salesBreakdown.grossLoanAmount,
+                  processingFees: salesBreakdown.processingFees,
+                  loanProtectionAmount: salesBreakdown.loanProtectionAmount,
+                  otherExpenses: salesBreakdown.otherCharges,
+                  otherExpensesLabel: otherBankChargesLabel || 'Other Bank Charges',
+                  bookingAmount: salesBreakdown.bookingAmount,
+                  advancePaid: salesBreakdown.advancePaid,
+                  interestRate: Number(interestRate) || 0,
+                  tenureMonths: Number(tenureMonths) || 0,
+                });
+                return (
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-1.5 text-xs"
+                      onClick={() => {
+                        const { doc, fileName } = generateSalesOfferPDF(buildPdfParams());
+                        doc.save(fileName);
+                        toast.success("PDF downloaded");
+                      }}
+                    >
+                      <Download className="h-3.5 w-3.5" /> Download PDF
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-1.5 text-xs text-green-600 border-green-200 hover:bg-green-50"
+                      onClick={() => {
+                        const { doc, fileName } = generateSalesOfferPDF(buildPdfParams());
+                        const pdfBlob = doc.output('blob');
+                        const pdfUrl = URL.createObjectURL(pdfBlob);
+                        window.open(pdfUrl, '_blank');
+                        // Also share on WhatsApp
+                        autoShareOfferWhatsApp(bankNameForPdf, interestRate, tenureMonths, emiAmount);
+                      }}
+                    >
+                      <Share2 className="h-3.5 w-3.5" /> Share via WhatsApp
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-1.5 text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
+                      onClick={async () => {
+                        try {
+                          const { doc, fileName } = generateSalesOfferPDF(buildPdfParams());
+                          const pdfBlob = doc.output('blob');
+                          const filePath = `loan-offers/${application.id}_${Date.now()}.pdf`;
+                          const { error } = await supabase.storage.from('loan-documents').upload(filePath, pdfBlob, { contentType: 'application/pdf' });
+                          if (error) throw error;
+                          const { data: urlData } = supabase.storage.from('loan-documents').getPublicUrl(filePath);
+                          // Save to quote_share_history
+                          await supabase.from('quote_share_history').insert({
+                            lead_id: application.id,
+                            phone: application.phone,
+                            customer_name: application.customer_name,
+                            car_model: application.car_model || '',
+                            quote_type: 'loan_offer',
+                            pdf_url: urlData.publicUrl,
+                            pdf_storage_path: filePath,
+                            shared_via: 'saved',
+                          });
+                          toast.success("PDF saved to cloud");
+                        } catch (err: any) {
+                          toast.error(`Save failed: ${err.message}`);
+                        }
+                      }}
+                    >
+                      <FileText className="h-3.5 w-3.5" /> Save to Cloud
+                    </Button>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
