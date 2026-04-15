@@ -843,91 +843,39 @@ export function SalesLeadDetailModal({
                 {/* ── Deal Calculator ── */}
                 <Separator />
                 <h3 className="font-semibold text-sm flex items-center gap-2 mt-2">
-                  <BarChart3 className="h-4 w-4" /> Deal Calculator — Share with Client
+                  <BarChart3 className="h-4 w-4" /> Automotive Car Sales Calculator
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-[10px]">On-Road / Total Car Price (Rs.)</Label>
-                    <Input
-                      type="number"
-                      value={dealValue}
-                      onChange={(e) => {
-                        setDealValue(e.target.value);
-                        onUpdate({ deal_value: Number(e.target.value) }, "deal_value_set", `Deal: Rs. ${Number(e.target.value).toLocaleString("en-IN")}`);
-                      }}
-                      placeholder="e.g. 850000"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[10px]">Booking Amount Received (Rs.)</Label>
-                    <Input
-                      type="number"
-                      value={bookingAmount}
-                      onChange={(e) => {
-                        setBookingAmount(e.target.value);
-                        onUpdate({ booking_amount: Number(e.target.value) });
-                      }}
-                      placeholder="e.g. 50000"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[10px]">Processing Fees (Rs.)</Label>
-                    <Input
-                      type="number"
-                      value={processingFees}
-                      onChange={(e) => {
-                        setProcessingFees(e.target.value);
-                        onUpdate({ processing_fees: Number(e.target.value) });
-                      }}
-                      placeholder="e.g. 10000"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[10px]">Other Expenses (Rs.)</Label>
-                    <Input
-                      type="number"
-                      value={otherExpenses}
-                      onChange={(e) => {
-                        setOtherExpenses(e.target.value);
-                        onUpdate({ other_expenses: Number(e.target.value) });
-                      }}
-                      placeholder="e.g. 5000"
-                    />
-                  </div>
-                </div>
-
-                {/* Summary Card */}
-                {totalCarPrice > 0 && (
-                  <div className="rounded-lg border bg-muted/20 p-3 space-y-1.5 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Car Price</span>
-                      <span className="font-semibold">{fmtINR(totalCarPrice)}</span>
-                    </div>
-                    {Number(bookingAmount) > 0 && (
-                      <div className="flex justify-between text-destructive">
-                        <span>Less: Booking Amount</span>
-                        <span>- {fmtINR(Number(bookingAmount))}</span>
-                      </div>
-                    )}
-                    {Number(processingFees) > 0 && (
-                      <div className="flex justify-between text-destructive">
-                        <span>Less: Processing Fees</span>
-                        <span>- {fmtINR(Number(processingFees))}</span>
-                      </div>
-                    )}
-                    {Number(otherExpenses) > 0 && (
-                      <div className="flex justify-between text-destructive">
-                        <span>Less: {otherExpensesLabel}</span>
-                        <span>- {fmtINR(Number(otherExpenses))}</span>
-                      </div>
-                    )}
-                    <Separator />
-                    <div className="flex justify-between font-bold text-base">
-                      <span>Balance Payable</span>
-                      <span className="text-emerald-600">{fmtINR(balancePayable)}</span>
-                    </div>
-                  </div>
-                )}
+                <UnifiedSalesCalculator
+                  finalCarPrice={dealValue}
+                  setFinalCarPrice={(v) => {
+                    setDealValue(v);
+                    onUpdate({ deal_value: Number(v) }, "deal_value_set", `Deal: Rs. ${Number(v).toLocaleString("en-IN")}`);
+                  }}
+                  grossLoanAmount={grossLoanAmount}
+                  setGrossLoanAmount={setGrossLoanAmount}
+                  loanProtectionAmount={loanProtectionAmount}
+                  setLoanProtectionAmount={setLoanProtectionAmount}
+                  processingFees={processingFees}
+                  setProcessingFees={(v) => {
+                    setProcessingFees(v);
+                    onUpdate({ processing_fees: Number(v) });
+                  }}
+                  otherCharges={otherExpenses}
+                  setOtherCharges={(v) => {
+                    setOtherExpenses(v);
+                    onUpdate({ other_expenses: Number(v) });
+                  }}
+                  otherChargesLabel={otherExpensesLabel}
+                  setOtherChargesLabel={setOtherExpensesLabel}
+                  bookingAmount={bookingAmount}
+                  setBookingAmount={(v) => {
+                    setBookingAmount(v);
+                    onUpdate({ booking_amount: Number(v) });
+                  }}
+                  advancePaid={advancePaid}
+                  setAdvancePaid={setAdvancePaid}
+                  breakdown={salesBreakdown}
+                />
 
                 {/* One-Click Share */}
                 <Button onClick={() => setShowShareOffer(true)} className="w-full gap-2">
