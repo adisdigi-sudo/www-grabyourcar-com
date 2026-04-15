@@ -5,7 +5,7 @@ import { useAuth } from "./useAuth";
 
 const ADMIN_ROLE_QUERY_TIMEOUT_MS = 8000;
 
-const withQueryTimeout = async <T,>(promise: Promise<T>, label: string): Promise<T> => {
+const withQueryTimeout = async <T,>(promise: PromiseLike<T>, label: string): Promise<T> => {
   let timeoutId: number | null = null;
 
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -15,7 +15,7 @@ const withQueryTimeout = async <T,>(promise: Promise<T>, label: string): Promise
   });
 
   try {
-    return await Promise.race([promise, timeoutPromise]);
+    return await Promise.race([Promise.resolve(promise), timeoutPromise]) as T;
   } finally {
     if (timeoutId) {
       window.clearTimeout(timeoutId);

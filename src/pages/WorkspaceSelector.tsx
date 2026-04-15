@@ -183,7 +183,7 @@ const WorkspaceSelector = () => {
             </h1>
             <p className="text-muted-foreground mt-2">Select your workspace to continue</p>
             {isSuperAdmin() && (
-              <Badge className="mt-2 bg-amber-500/10 text-amber-600 border-amber-500/20">
+              <Badge className="mt-2 border-border bg-secondary text-secondary-foreground">
                 <Crown className="h-3 w-3 mr-1" />
                 Super Admin
               </Badge>
