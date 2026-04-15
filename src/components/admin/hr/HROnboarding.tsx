@@ -433,6 +433,9 @@ export const HROnboarding = () => {
                     const found = ALL_DESIGNATIONS.find(d => d.value === v);
                     updateField("designation", found?.label || v);
                     updateField("custom_designation", "");
+                    // Auto-set role level
+                    const autoRole = DESIGNATION_ROLE_MAP[v];
+                    if (autoRole) updateField("role", autoRole);
                   } else {
                     updateField("designation", "");
                   }
