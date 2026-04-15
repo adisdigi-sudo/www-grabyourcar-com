@@ -230,6 +230,14 @@ export const HREmployeeManagement = () => {
                           setShowExitDialog(true);
                         }}><LogOut className="h-4 w-4" /></Button>
                       )}
+                      {emp.is_active !== false && (
+                        <Button size="icon" variant="ghost" title="Change Manager" onClick={() => {
+                          setManagerTarget(emp);
+                          const prof = empProfiles.find((p: any) => p.team_member_id === emp.id);
+                          setNewManagerId(prof?.manager_user_id || "");
+                          setShowManagerDialog(true);
+                        }}><UserCog className="h-4 w-4" /></Button>
+                      )}
                       {emp.is_active === false && emp.exit_reason && (
                         <Button size="icon" variant="ghost" title="View exit reason">
                           <Eye className="h-4 w-4" />
