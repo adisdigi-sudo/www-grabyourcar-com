@@ -560,7 +560,13 @@ installBootstrapRuntime();
 
 export const BootstrapRuntime = ({ onReady }: { onReady?: () => void }) => {
   useEffect(() => {
-    onReady?.();
+    const frame = window.requestAnimationFrame(() => {
+      onReady?.();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
   }, [onReady]);
 
   return (
