@@ -650,7 +650,16 @@ export const HROnboarding = () => {
               </div>
               <div>
                 <Label>Joining Date</Label>
-                <Input type="date" value={form.joining_date || ""} onChange={e => updateField("joining_date", e.target.value)} />
+                <Input type="date" value={form.joining_date || ""} onChange={e => {
+                  const jd = e.target.value;
+                  updateField("joining_date", jd);
+                  // Auto-set probation end date to 2 months from joining
+                  if (jd) {
+                    const d = new Date(jd);
+                    d.setMonth(d.getMonth() + 2);
+                    updateField("probation_end_date", d.toISOString().split("T")[0]);
+                  }
+                }} />
               </div>
             </div>
             <div>
