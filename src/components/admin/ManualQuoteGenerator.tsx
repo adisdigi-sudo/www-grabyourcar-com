@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { generateEMIPdf, EMIData, EMIPDFConfig, DiscountDetails } from "@/lib/generateEMIPdf";
 import { useEMIPDFSettings } from "@/hooks/useEMIPDFSettings";
 import { supabase } from "@/integrations/supabase/client";
+import { persistCarSalesQuote } from "@/lib/carSalesQuotePersistence";
 
 const DISCOUNT_TYPES = [
   { value: 'cash', label: 'Cash Discount' },
