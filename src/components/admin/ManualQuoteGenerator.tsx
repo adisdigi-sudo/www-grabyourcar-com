@@ -90,6 +90,14 @@ export const ManualQuoteGenerator = () => {
   const [interestRate, setInterestRate] = useState<number>(8.5);
   const [tenure, setTenure] = useState<number>(60);
   
+  // Loan Offer Details
+  const [showLoanOffer, setShowLoanOffer] = useState(false);
+  const [bankName, setBankName] = useState("");
+  const [bookingAmount, setBookingAmount] = useState<number>(0);
+  const [processingFees, setProcessingFees] = useState<number>(0);
+  const [otherLoanExpenses, setOtherLoanExpenses] = useState<number>(0);
+  const [otherLoanExpensesLabel, setOtherLoanExpensesLabel] = useState("");
+  
   // Discount
   const [enableDiscount, setEnableDiscount] = useState(false);
   const [discountType, setDiscountType] = useState<DiscountDetails['type']>('cash');
@@ -98,7 +106,6 @@ export const ManualQuoteGenerator = () => {
   
   // Notes
   const [additionalNotes, setAdditionalNotes] = useState("");
-
   // DB-powered selectors
   const [dbCars, setDbCars] = useState<any[]>([]);
   const [dbColors, setDbColors] = useState<any[]>([]);
@@ -169,10 +176,20 @@ export const ManualQuoteGenerator = () => {
   
   const emi = calculateEMI();
 
+  // Loan offer calculations
+  const loanOfferDeductions = bookingAmount + processingFees + otherLoanExpenses;
+  const loanOfferFinalAmount = showLoanOffer ? Math.max(finalPrice - loanOfferDeductions, 0) : loanAmount;
+  const loanOfferEMI = (() => {
+    if (!showLoanOffer || loanOfferFinalAmount <= 0) return 0;
+    const r = interestRate / 12 / 100;
+    if (r === 0) return Math.round(loanOfferFinalAmount / tenure);
+    return Math.round((loanOfferFinalAmount * r * Math.pow(1 + r, tenure)) / (Math.pow(1 + r, tenure) - 1));
+  })();
+  const loanOfferTotalPayment = loanOfferEMI * tenure;
+  const loanOfferTotalInterest = loanOfferTotalPayment - loanOfferFinalAmount;
+
   const formatPrice = (price: number) => {
-    if (price >= 10000000) return `₹${(price / 10000000).toFixed(2)} Cr`;
-    if (price >= 100000) return `₹${(price / 100000).toFixed(2)} L`;
-    return `₹${price.toLocaleString('en-IN')}`;
+    return `₹${Math.round(price).toLocaleString('en-IN')}`;
   };
 
   const getEMIData = (): EMIData => {
@@ -269,12 +286,25 @@ export const ManualQuoteGenerator = () => {
       message += `\n✨ *Final Price:* ${formatPrice(finalPrice)}\n`;
     }
     
-    if (showEMI && emi > 0) {
+    if (showEMI && emi > 0 && !showLoanOffer) {
       message += `\n💳 *EMI Option:*\n`;
       message += `• Down Payment: ${formatPrice(downPayment)}\n`;
       message += `• Loan Amount: ${formatPrice(loanAmount)}\n`;
       message += `• EMI: ${formatPrice(emi)}/month\n`;
       message += `• Rate: ${interestRate}% | Tenure: ${tenure} months\n`;
+    }
+
+    if (showLoanOffer && loanOfferFinalAmount > 0) {
+      message += `\n🏦 *Loan Offer${bankName ? ` (${bankName})` : ''}:*\n`;
+      message += `• Total Car Price: ${formatPrice(finalPrice)}\n`;
+      if (bookingAmount > 0) message += `• Less Booking Amount: -${formatPrice(bookingAmount)}\n`;
+      if (processingFees > 0) message += `• Less Processing Fees: -${formatPrice(processingFees)}\n`;
+      if (otherLoanExpenses > 0) message += `• Less ${otherLoanExpensesLabel || 'Other Expenses'}: -${formatPrice(otherLoanExpenses)}\n`;
+      message += `\n📊 *Final Loan Amount:* ${formatPrice(loanOfferFinalAmount)}\n`;
+      message += `• EMI: *${formatPrice(loanOfferEMI)}/month*\n`;
+      message += `• Rate: ${interestRate}% p.a. | Tenure: ${tenure} months\n`;
+      message += `• Total Payable: ${formatPrice(loanOfferTotalPayment)}\n`;
+      message += `• Total Interest: ${formatPrice(loanOfferTotalInterest)}\n`;
     }
 
     if (brochureUrl) {
@@ -418,6 +448,12 @@ export const ManualQuoteGenerator = () => {
     setLoanAmount(0);
     setInterestRate(8.5);
     setTenure(60);
+    setShowLoanOffer(false);
+    setBankName("");
+    setBookingAmount(0);
+    setProcessingFees(0);
+    setOtherLoanExpenses(0);
+    setOtherLoanExpensesLabel("");
     setEnableDiscount(false);
     setDiscountAmount(0);
     setDiscountRemarks("");
@@ -745,7 +781,109 @@ export const ManualQuoteGenerator = () => {
             )}
           </Card>
 
-          {/* Discount Section */}
+          {/* Loan Offer Section */}
+          <Card className="border-blue-500/30 bg-blue-500/5">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-blue-600" />
+                  Loan Offer Details
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="show-loan-offer">Include Loan Offer</Label>
+                  <Switch id="show-loan-offer" checked={showLoanOffer} onCheckedChange={setShowLoanOffer} />
+                </div>
+              </div>
+              <CardDescription>
+                Calculate final loan amount after deductions and share complete loan offer
+              </CardDescription>
+            </CardHeader>
+            {showLoanOffer && (
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Bank / NBFC Name</Label>
+                    <Input placeholder="e.g., HDFC Bank" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Interest Rate (%)</Label>
+                    <Input type="number" step="0.1" placeholder="8.5" value={interestRate || ''} onChange={(e) => setInterestRate(Number(e.target.value))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tenure (Months)</Label>
+                    <Input type="number" placeholder="60" value={tenure || ''} onChange={(e) => setTenure(Number(e.target.value))} />
+                  </div>
+                </div>
+                <Separator />
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Deductions from On-Road Price</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Booking Amount</Label>
+                    <Input type="number" placeholder="0" value={bookingAmount || ''} onChange={(e) => setBookingAmount(Number(e.target.value))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Processing Fees</Label>
+                    <Input type="number" placeholder="0" value={processingFees || ''} onChange={(e) => setProcessingFees(Number(e.target.value))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{otherLoanExpensesLabel || 'Other Expenses'}</Label>
+                    <Input type="number" placeholder="0" value={otherLoanExpenses || ''} onChange={(e) => setOtherLoanExpenses(Number(e.target.value))} />
+                  </div>
+                </div>
+                {otherLoanExpenses > 0 && (
+                  <div className="space-y-2">
+                    <Label>Other Expenses Label</Label>
+                    <Input placeholder="e.g., Insurance Advance, File Charges" value={otherLoanExpensesLabel} onChange={(e) => setOtherLoanExpensesLabel(e.target.value)} />
+                  </div>
+                )}
+                {/* Loan Calculation Preview */}
+                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-4 space-y-2 text-sm border border-blue-200 dark:border-blue-800">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Car Price (On-Road)</span>
+                    <span className="font-medium">{formatPrice(finalPrice)}</span>
+                  </div>
+                  {bookingAmount > 0 && (
+                    <div className="flex justify-between text-red-600">
+                      <span>Less: Booking Amount</span>
+                      <span>-{formatPrice(bookingAmount)}</span>
+                    </div>
+                  )}
+                  {processingFees > 0 && (
+                    <div className="flex justify-between text-red-600">
+                      <span>Less: Processing Fees</span>
+                      <span>-{formatPrice(processingFees)}</span>
+                    </div>
+                  )}
+                  {otherLoanExpenses > 0 && (
+                    <div className="flex justify-between text-red-600">
+                      <span>Less: {otherLoanExpensesLabel || 'Other Expenses'}</span>
+                      <span>-{formatPrice(otherLoanExpenses)}</span>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex justify-between font-bold text-blue-700 dark:text-blue-400 text-base">
+                    <span>Final Loan Amount</span>
+                    <span>{formatPrice(loanOfferFinalAmount)}</span>
+                  </div>
+                  {loanOfferEMI > 0 && (
+                    <>
+                      <Separator />
+                      <div className="flex justify-between font-bold text-primary text-lg">
+                        <span>Monthly EMI</span>
+                        <span>{formatPrice(loanOfferEMI)}/mo</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>@ {interestRate}% p.a. for {tenure} months</span>
+                        <span>Total: {formatPrice(loanOfferTotalPayment)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            )}
+          </Card>
+
+
           <Card className="border-accent/30 bg-accent/5">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -906,7 +1044,7 @@ export const ManualQuoteGenerator = () => {
               </div>
               
               {/* EMI Summary */}
-              {showEMI && emi > 0 && (
+              {showEMI && emi > 0 && !showLoanOffer && (
                 <div className="bg-primary/10 rounded-lg p-3 mt-4">
                   <p className="text-xs text-muted-foreground mb-1">Monthly EMI</p>
                   <p className="text-xl font-bold text-primary">
@@ -916,6 +1054,41 @@ export const ManualQuoteGenerator = () => {
                   <p className="text-xs text-muted-foreground mt-1">
                     @ {interestRate}% • {tenure} months
                   </p>
+                </div>
+              )}
+
+              {/* Loan Offer Summary */}
+              {showLoanOffer && loanOfferFinalAmount > 0 && (
+                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 mt-4 space-y-2 border border-blue-200 dark:border-blue-800">
+                  <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 flex items-center gap-1">
+                    <Building2 className="h-3 w-3" />
+                    Loan Offer{bankName ? ` — ${bankName}` : ''}
+                  </p>
+                  <div className="text-xs space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">On-Road Price</span>
+                      <span>{formatPrice(finalPrice)}</span>
+                    </div>
+                    <div className="flex justify-between text-red-600">
+                      <span>Less Deductions</span>
+                      <span>-{formatPrice(loanOfferDeductions)}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between font-bold">
+                      <span>Loan Amount</span>
+                      <span>{formatPrice(loanOfferFinalAmount)}</span>
+                    </div>
+                  </div>
+                  <div className="pt-1">
+                    <p className="text-xs text-muted-foreground mb-0.5">Monthly EMI</p>
+                    <p className="text-xl font-bold text-primary">
+                      {formatPrice(loanOfferEMI)}
+                      <span className="text-xs font-normal text-muted-foreground">/month</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      @ {interestRate}% • {tenure} months • Total: {formatPrice(loanOfferTotalPayment)}
+                    </p>
+                  </div>
                 </div>
               )}
               
