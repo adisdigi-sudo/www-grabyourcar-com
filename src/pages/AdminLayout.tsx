@@ -376,6 +376,7 @@ const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
         "services-loans-bulk",
         "services-emi-calculator",
         "services-emi-pdf",
+        "services-quote-generator",
         "services-messaging-channels",
         "d2c-inbox",
       ].includes(tab);
