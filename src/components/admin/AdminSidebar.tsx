@@ -98,7 +98,7 @@ const navItems: NavItem[] = [
       { id: "services-emi-pdf", label: "EMI PDF Settings", icon: FileText, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
       { id: "services-emi-calculator", label: "🧮 EMI Calculator", icon: CreditCard, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
       { id: "services-discounts", label: "Discount Presets", icon: Tags, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
-      { id: "services-quote-generator", label: "Manual Quote", icon: FileSignature, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
+      { id: "services-quote-generator", label: "Manual Quote", icon: FileSignature, verticals: ["sales", "loans"], allowedRoles: ["super_admin", "admin", "sales", "finance"] },
       { id: "services-pricing", label: "Service Pricing", icon: CreditCard, verticals: ["hsrp", "rental"], allowedRoles: ["super_admin", "admin", "operations"] },
       { id: "services-partners", label: "Partners", icon: Users, verticals: ["insurance", "rental"], allowedRoles: ["super_admin", "admin"] },
     ]
