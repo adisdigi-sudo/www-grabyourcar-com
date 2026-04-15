@@ -7,6 +7,7 @@ import App from "./App";
 import { Button } from "@/components/ui/button";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { isChunkLoadRecoveryExhausted, isDynamicImportError, recoverFromChunkLoadError, resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
+import { isSensitivePreviewRouteWindow, shouldAvoidDevAutoReload } from "@/lib/adminPreviewStability";
 import { Loader2, WifiOff } from "lucide-react";
 
 let hasTriggeredChunkRecovery = false;
@@ -18,7 +19,6 @@ const ROUTE_ACTIVITY_EVENT = "lovable:route-activity";
 const DEV_SERVER_PENDING_RELOAD_KEY = "lovable_dev_server_pending_reload";
 const DEV_SERVER_LAST_RELOAD_KEY = "lovable_dev_server_last_reload";
 const DEV_SERVER_RELOAD_COOLDOWN_MS = 5000;
-const SENSITIVE_PREVIEW_ROUTE_PREFIXES = ["/crm", "/admin", "/workspace", "/document-viewer"];
 
 type ChunkRecoveryAttemptResult = "recovered" | "exhausted" | "ignored";
 type UpdateReadyReason = "dev-server-restart" | "stale-bundle";
@@ -33,15 +33,6 @@ const dispatchChunkRecoveryStatus = (status: "recovering" | "exhausted", source:
       detail: { status, source },
     }),
   );
-};
-
-const isSensitivePreviewRoute = () => {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  const { hostname, pathname } = window.location;
-  return hostname.startsWith("admin.") || SENSITIVE_PREVIEW_ROUTE_PREFIXES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 };
 
 const clearPendingReloadFlag = () => {
@@ -73,7 +64,7 @@ const dispatchRouteActivity = () => {
     new CustomEvent(ROUTE_ACTIVITY_EVENT, {
       detail: {
         pathname: window.location.pathname,
-        sensitive: isSensitivePreviewRoute(),
+          sensitive: isSensitivePreviewRouteWindow(),
       },
     }),
   );
@@ -132,6 +123,16 @@ const attemptChunkRecovery = (error: unknown, source: string): ChunkRecoveryAtte
     return "ignored";
   }
 
+  if (shouldAvoidDevAutoReload()) {
+    dispatchChunkRecoveryStatus("exhausted", source);
+    console.warn("[Bootstrap] Skipping automatic chunk recovery on sensitive preview route", {
+      source,
+      error,
+      href: window.location.href,
+    });
+    return "exhausted";
+  }
+
   const recovered = recoverFromChunkLoadError();
 
   if (recovered) {
@@ -170,6 +171,14 @@ const reloadAfterDevServerRestart = () => {
     const hasPendingReload = sessionStorage.getItem(DEV_SERVER_PENDING_RELOAD_KEY) === "1";
     if (!hasPendingReload) return;
 
+    if (shouldAvoidDevAutoReload()) {
+      console.info("[Bootstrap] Skipping automatic reload after dev-server reconnect on sensitive preview route", {
+        href: window.location.href,
+      });
+      clearPendingReloadFlag();
+      return;
+    }
+
     const lastReloadAt = Number.parseInt(sessionStorage.getItem(DEV_SERVER_LAST_RELOAD_KEY) ?? "0", 10);
     if (!Number.isNaN(lastReloadAt) && Date.now() - lastReloadAt < DEV_SERVER_RELOAD_COOLDOWN_MS) {
       clearPendingReloadFlag();
@@ -201,6 +210,15 @@ if (typeof window !== "undefined") {
     const recoveryResult = attemptChunkRecovery(preloadEvent.payload, "window.vite:preloadError");
 
     if (recoveryResult === "ignored") {
+      if (shouldAvoidDevAutoReload()) {
+        dispatchChunkRecoveryStatus("exhausted", "window.vite:preloadError");
+        console.warn("[Bootstrap] Skipping forced preload reload on sensitive preview route", {
+          payload: preloadEvent.payload,
+          href: window.location.href,
+        });
+        return;
+      }
+
       if (requestManualReloadIfNeeded("stale-bundle")) {
         return;
       }
@@ -251,14 +269,14 @@ if (import.meta.hot && typeof window !== "undefined") {
 }
 
 const DevServerStatusOverlay = () => {
-  const [isSensitiveRoute, setIsSensitiveRoute] = useState(() => isSensitivePreviewRoute());
+  const [isSensitiveRoute, setIsSensitiveRoute] = useState(() => isSensitivePreviewRouteWindow());
   const [status, setStatus] = useState<"idle" | "disconnected" | "connected" | "reloading" | "update_ready">(() => {
     if (!import.meta.env.DEV || typeof window === "undefined") {
       return "idle";
     }
 
     try {
-      return sessionStorage.getItem(DEV_SERVER_PENDING_RELOAD_KEY) === "1" && isSensitivePreviewRoute() ? "update_ready" : "idle";
+      return sessionStorage.getItem(DEV_SERVER_PENDING_RELOAD_KEY) === "1" && isSensitivePreviewRouteWindow() ? "update_ready" : "idle";
     } catch {
       return "idle";
     }
@@ -297,7 +315,7 @@ const DevServerStatusOverlay = () => {
     };
 
     const handleRouteActivity = (event: Event) => {
-      const sensitive = (event as CustomEvent<{ sensitive?: boolean }>).detail?.sensitive ?? isSensitivePreviewRoute();
+      const sensitive = (event as CustomEvent<{ sensitive?: boolean }>).detail?.sensitive ?? isSensitivePreviewRouteWindow();
       setIsSensitiveRoute(sensitive);
 
       if (!sensitive) {
