@@ -42,6 +42,10 @@ import { generateEMIPdf, EMIData, EMIPDFConfig, DiscountDetails } from "@/lib/ge
 import { useEMIPDFSettings } from "@/hooks/useEMIPDFSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { persistCarSalesQuote } from "@/lib/carSalesQuotePersistence";
+import { persistLoanQuoteHistory } from "@/lib/loanQuotePersistence";
+import { sendWhatsApp } from "@/lib/sendWhatsApp";
+import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
+import { useVerticalAccess } from "@/hooks/useVerticalAccess";
 import { calculateLoanSalesBreakdown } from "@/components/admin/loans/loanSalesCalculator";
 import { generateSalesOfferPDF } from "@/components/admin/sales/SalesOfferPDF";
 
@@ -72,6 +76,8 @@ const DEFAULT_BANK_PARTNERS = [
 
 export const ManualQuoteGenerator = () => {
   const { config: pdfConfig } = useEMIPDFSettings();
+  const { activeVertical } = useVerticalAccess();
+  const isLoanVertical = activeVertical?.slug === "loans";
   
   // Car Details
   const [brand, setBrand] = useState("");
@@ -422,9 +428,27 @@ export const ManualQuoteGenerator = () => {
     };
   };
 
-  const getQuotePersistData = (doc: jsPDF, shareMethod: string) => ({
+  const getQuoteFileName = (prefix: string) =>
+    `${prefix}_${(customerName || `${brand}_${model}` || "quote").replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+  const getActiveQuotePdf = async (): Promise<{ doc: jsPDF; fileName: string } | null> => {
+    if (showLoanOffer && loanOfferBreakdown.grossLoanAmount > 0) {
+      const { doc, fileName } = generateSalesOfferPDF(getLoanOfferPdfData());
+      return { doc, fileName };
+    }
+
+    const doc = await generateEMIPdf(getEMIData(), pdfConfig || undefined, true) as jsPDF | undefined;
+    if (!doc) return null;
+
+    return {
+      doc,
+      fileName: getQuoteFileName(isLoanVertical ? "LoanQuote" : "CarQuote"),
+    };
+  };
+
+  const getQuotePersistData = (doc: jsPDF, fileName: string, shareMethod: string) => ({
     doc,
-    fileName: `CarQuote_${(customerName || brand + "_" + model).replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
+    fileName,
     shareMethod,
     customerName: customerName || "Customer",
     customerPhone,
@@ -455,27 +479,87 @@ export const ManualQuoteGenerator = () => {
     source: "manual_quote",
   });
 
+  const getLoanQuotePersistData = (doc: jsPDF, fileName: string, shareMethod: string) => ({
+    doc,
+    fileName,
+    shareMethod,
+    customerName: customerName || "Customer",
+    customerPhone: customerPhone || null,
+    customerEmail: customerEmail || null,
+    carModel: `${brand} ${model}`.trim() || null,
+    carVariant: variant || null,
+    loanAmount: showLoanOffer ? loanOfferBreakdown.grossLoanAmount || null : (showEMI ? loanAmount || null : null),
+    downPayment: showLoanOffer ? loanOfferBreakdown.downPaymentNeeded || null : (showEMI ? downPayment || null : null),
+    interestRate: (showLoanOffer || showEMI) ? interestRate || null : null,
+    tenureMonths: (showLoanOffer || showEMI) ? tenure || null : null,
+    emiAmount: showLoanOffer ? loanOfferEMI || null : (showEMI ? emi || null : null),
+    totalPayment: showLoanOffer ? loanOfferTotalPayment || null : (showEMI ? emi * tenure || null : null),
+    totalInterest: showLoanOffer ? loanOfferTotalInterest || null : (showEMI ? (emi * tenure) - loanAmount || null : null),
+    bankName: showLoanOffer ? bankName || null : null,
+    bankComparison: showLoanOffer ? {
+      manual_offer: {
+        final_car_price: finalPrice,
+        on_road_price: subtotal,
+        booking_amount: bookingAmount,
+        advance_paid: advancePaid,
+        gross_loan_amount: loanOfferBreakdown.grossLoanAmount,
+        processing_fees: processingFees,
+        loan_protection_amount: loanProtectionAmount,
+        other_charges_label: otherLoanExpensesLabel || "Other Bank Charges",
+        other_charges_amount: otherLoanExpenses,
+        bank_net_disbursal: loanOfferBreakdown.bankNetDisbursal,
+        balance_payable_by_you: loanOfferBreakdown.balancePayableByYou,
+      },
+    } : null,
+    notes: additionalNotes || null,
+    source: "backend",
+  });
+
+  const buildLoanWhatsAppMessage = (pdfUrl?: string | null) => {
+    const companyName = pdfConfig?.companyName || "Grabyourcar";
+    const carName = `${brand} ${model}`.trim() || "Loan Quote";
+    const lines = [
+      `🏦 *${carName}*`,
+      customerName ? `Hi ${customerName},` : null,
+      variant ? `📋 Variant: ${variant}` : null,
+      color ? `🎨 Color: ${color}` : null,
+      city ? `📍 City: ${city}` : null,
+      showLoanOffer && loanOfferBreakdown.grossLoanAmount > 0 ? `💰 Gross Loan Amount: ${formatPrice(loanOfferBreakdown.grossLoanAmount)}` : null,
+      showLoanOffer && loanOfferBreakdown.bankNetDisbursal > 0 ? `🏁 Bank Net Disbursal: ${formatPrice(loanOfferBreakdown.bankNetDisbursal)}` : null,
+      showLoanOffer && loanOfferBreakdown.balancePayableByYou > 0 ? `👤 Final Balance Payable: ${formatPrice(loanOfferBreakdown.balancePayableByYou)}` : null,
+      !showLoanOffer && showEMI && loanAmount > 0 ? `💳 Loan Amount: ${formatPrice(loanAmount)}` : null,
+      (showLoanOffer || showEMI) && (loanOfferEMI > 0 || emi > 0) ? `📆 EMI: ${formatPrice(showLoanOffer ? loanOfferEMI : emi)}/month` : null,
+      (showLoanOffer || showEMI) && interestRate > 0 ? `📊 Interest Rate: ${interestRate}%` : null,
+      (showLoanOffer || showEMI) && tenure > 0 ? `🗓 Tenure: ${tenure} months` : null,
+      bankName ? `🏦 Bank/NBFC: ${bankName}` : null,
+      additionalNotes ? `📝 Notes: ${additionalNotes}` : null,
+      pdfUrl ? `📄 PDF: ${pdfUrl}` : null,
+      `Regards,\n*${companyName}*`,
+    ].filter(Boolean);
+
+    return lines.join("\n\n");
+  };
+
   const handleGeneratePDF = async () => {
     if (!brand || !model) {
       toast.error("Please enter car brand and model");
       return;
     }
     try {
-      if (showLoanOffer && loanOfferBreakdown.grossLoanAmount > 0) {
-        const { doc, fileName } = generateSalesOfferPDF(getLoanOfferPdfData());
-        doc.save(fileName);
-        const result = await persistCarSalesQuote(getQuotePersistData(doc, "pdf_download"));
-        toast.success(`Quote PDF saved! Ref: ${result.quoteRef}`);
+      const pdfBundle = await getActiveQuotePdf();
+      if (!pdfBundle) {
+        toast.error("Failed to generate PDF");
+        return;
+      }
+
+      pdfBundle.doc.save(pdfBundle.fileName);
+
+      if (isLoanVertical) {
+        const result = await persistLoanQuoteHistory(getLoanQuotePersistData(pdfBundle.doc, pdfBundle.fileName, "crm_download"));
+        toast.success(`Loan quote saved! Ref: ${result.quoteRef}`);
       } else {
-        const doc = await generateEMIPdf(getEMIData(), pdfConfig || undefined, true) as jsPDF | undefined;
-        if (doc) {
-          doc.save(`CarQuote_${(customerName || brand + "_" + model).replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`);
-          const result = await persistCarSalesQuote(getQuotePersistData(doc, "pdf_download"));
-          toast.success(`Quote PDF saved! Ref: ${result.quoteRef}`);
-        } else {
-          await generateEMIPdf(getEMIData(), pdfConfig || undefined);
-          toast.success("Quote PDF generated!");
-        }
+        const result = await persistCarSalesQuote(getQuotePersistData(pdfBundle.doc, pdfBundle.fileName, "pdf_download"));
+        toast.success(`Quote PDF saved! Ref: ${result.quoteRef}`);
       }
     } catch (error) {
       console.error("PDF generation error:", error);
@@ -491,6 +575,51 @@ export const ManualQuoteGenerator = () => {
 
     const carName = `${brand} ${model}`;
     const companyName = pdfConfig?.companyName || "Grabyourcar";
+
+    if (isLoanVertical) {
+      try {
+        const pdfBundle = await getActiveQuotePdf();
+        if (!pdfBundle) {
+          toast.error("Failed to generate loan quote PDF");
+          return;
+        }
+
+        const result = await persistLoanQuoteHistory(getLoanQuotePersistData(pdfBundle.doc, pdfBundle.fileName, "crm_whatsapp"));
+        const pdfUrl = result.pdfStoragePath
+          ? supabase.storage.from("loan-documents").getPublicUrl(result.pdfStoragePath).data.publicUrl
+          : null;
+        const message = buildLoanWhatsAppMessage(pdfUrl);
+
+        let apiSent = false;
+        if (customerPhone) {
+          const sendResult = await sendWhatsApp({
+            phone: customerPhone,
+            message,
+            name: customerName || undefined,
+            logEvent: "loan_manual_quote_share",
+            silent: true,
+            vertical: "loans",
+          });
+          apiSent = sendResult.success;
+        }
+
+        if (apiSent) {
+          toast.success(`Loan quote shared! Ref: ${result.quoteRef}`);
+        } else if (customerPhone) {
+          openWhatsAppChat(customerPhone, message);
+          toast.success(`Loan quote saved and WhatsApp opened! Ref: ${result.quoteRef}`);
+        } else {
+          window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+          toast.success(`Loan quote saved! Ref: ${result.quoteRef}`);
+        }
+
+        return;
+      } catch (error) {
+        console.error("Loan WhatsApp share error:", error);
+        toast.error("Failed to share loan quote");
+        return;
+      }
+    }
     
     let message = `🚗 *${carName} Price Quote*\n`;
     message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
@@ -571,12 +700,12 @@ export const ManualQuoteGenerator = () => {
     // Persist quote in background
     try {
       if (showLoanOffer && loanOfferBreakdown.grossLoanAmount > 0) {
-        const { doc } = generateSalesOfferPDF(getLoanOfferPdfData());
-        await persistCarSalesQuote(getQuotePersistData(doc, "whatsapp"));
+        const { doc, fileName } = generateSalesOfferPDF(getLoanOfferPdfData());
+        await persistCarSalesQuote(getQuotePersistData(doc, fileName, "whatsapp"));
       } else {
         const doc = await generateEMIPdf(getEMIData(), pdfConfig || undefined, true) as jsPDF | undefined;
         if (doc) {
-          await persistCarSalesQuote(getQuotePersistData(doc, "whatsapp"));
+          await persistCarSalesQuote(getQuotePersistData(doc, getQuoteFileName("CarQuote"), "whatsapp"));
         }
       }
     } catch (err) {
