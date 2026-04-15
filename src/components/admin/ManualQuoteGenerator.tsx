@@ -90,6 +90,14 @@ export const ManualQuoteGenerator = () => {
   const [interestRate, setInterestRate] = useState<number>(8.5);
   const [tenure, setTenure] = useState<number>(60);
   
+  // Loan Offer Details
+  const [showLoanOffer, setShowLoanOffer] = useState(false);
+  const [bankName, setBankName] = useState("");
+  const [bookingAmount, setBookingAmount] = useState<number>(0);
+  const [processingFees, setProcessingFees] = useState<number>(0);
+  const [otherLoanExpenses, setOtherLoanExpenses] = useState<number>(0);
+  const [otherLoanExpensesLabel, setOtherLoanExpensesLabel] = useState("");
+  
   // Discount
   const [enableDiscount, setEnableDiscount] = useState(false);
   const [discountType, setDiscountType] = useState<DiscountDetails['type']>('cash');
@@ -98,7 +106,6 @@ export const ManualQuoteGenerator = () => {
   
   // Notes
   const [additionalNotes, setAdditionalNotes] = useState("");
-
   // DB-powered selectors
   const [dbCars, setDbCars] = useState<any[]>([]);
   const [dbColors, setDbColors] = useState<any[]>([]);
@@ -169,10 +176,20 @@ export const ManualQuoteGenerator = () => {
   
   const emi = calculateEMI();
 
+  // Loan offer calculations
+  const loanOfferDeductions = bookingAmount + processingFees + otherLoanExpenses;
+  const loanOfferFinalAmount = showLoanOffer ? Math.max(finalPrice - loanOfferDeductions, 0) : loanAmount;
+  const loanOfferEMI = (() => {
+    if (!showLoanOffer || loanOfferFinalAmount <= 0) return 0;
+    const r = interestRate / 12 / 100;
+    if (r === 0) return Math.round(loanOfferFinalAmount / tenure);
+    return Math.round((loanOfferFinalAmount * r * Math.pow(1 + r, tenure)) / (Math.pow(1 + r, tenure) - 1));
+  })();
+  const loanOfferTotalPayment = loanOfferEMI * tenure;
+  const loanOfferTotalInterest = loanOfferTotalPayment - loanOfferFinalAmount;
+
   const formatPrice = (price: number) => {
-    if (price >= 10000000) return `₹${(price / 10000000).toFixed(2)} Cr`;
-    if (price >= 100000) return `₹${(price / 100000).toFixed(2)} L`;
-    return `₹${price.toLocaleString('en-IN')}`;
+    return `₹${Math.round(price).toLocaleString('en-IN')}`;
   };
 
   const getEMIData = (): EMIData => {
