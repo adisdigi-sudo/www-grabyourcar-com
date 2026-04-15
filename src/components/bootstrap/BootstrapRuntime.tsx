@@ -567,7 +567,11 @@ const SafeTelemetry = () => {
 
 installBootstrapRuntime();
 
-export const BootstrapRuntime = () => {
+export const BootstrapRuntime = ({ onReady }: { onReady?: () => void }) => {
+  useEffect(() => {
+    onReady?.();
+  }, [onReady]);
+
   return (
     <>
       <SafeTelemetry />
