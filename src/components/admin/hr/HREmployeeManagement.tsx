@@ -33,6 +33,9 @@ export const HREmployeeManagement = () => {
   const [form, setForm] = useState<Record<string, any>>({});
   const [exitForm, setExitForm] = useState<Record<string, any>>({});
   const [statusFilter, setStatusFilter] = useState("active");
+  const [showManagerDialog, setShowManagerDialog] = useState(false);
+  const [managerTarget, setManagerTarget] = useState<any>(null);
+  const [newManagerId, setNewManagerId] = useState("");
 
   const { data: employees = [] } = useQuery({
     queryKey: ["hr-employees"],
