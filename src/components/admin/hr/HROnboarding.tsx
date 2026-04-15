@@ -437,6 +437,13 @@ export const HROnboarding = () => {
   const calcTDS = govtDed.tds;
   const calcNet = monthlyCTC - calcPF - calcESI - calcPT - calcTDS;
 
+  // Compliance blockers — check if this hire will cross the threshold
+  const needsPF = totalEmployees >= 19; // will become 20 after this hire
+  const needsESI = totalEmployees >= 9; // will become 10 after this hire
+  const hasPFId = !!complianceData?.pf_registration_number;
+  const hasESIId = !!complianceData?.esi_registration_number;
+  const complianceBlocked = (needsPF && !hasPFId) || (needsESI && !hasESIId);
+
   const renderWizardStep = () => {
     switch (step) {
       case 1:
