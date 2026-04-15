@@ -974,7 +974,9 @@ export const HROnboarding = () => {
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
               {step < 5 ? (
-                <Button disabled={step === 1 && !form.employee_name?.trim()} onClick={() => setStep(s => s + 1)}>Next</Button>
+                <Button disabled={(step === 1 && !form.employee_name?.trim()) || (step === 3 && complianceBlocked)} onClick={() => setStep(s => s + 1)}>
+                  {step === 3 && complianceBlocked ? "🔒 Enter Compliance IDs First" : "Next"}
+                </Button>
               ) : (
                 <Button onClick={() => completeOnboarding.mutate()} disabled={completeOnboarding.isPending}>
                   {completeOnboarding.isPending ? "Creating..." : "🚀 Complete Onboarding & Generate Docs"}
