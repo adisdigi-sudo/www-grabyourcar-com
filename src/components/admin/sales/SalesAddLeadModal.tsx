@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,12 +29,23 @@ export function SalesAddLeadModal({ open, onOpenChange, onSubmit, isPending }: S
     budget: "",
   });
 
-  const handleSubmit = () => {
-    if (!form.customer_name.trim() || !form.phone.trim()) {
-      toast.error("Name and phone are required");
-      return;
-    }
-    onSubmit(form);
+  useEffect(() => {
+    if (!open) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onOpenChange(false);
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "";
+    };
+  }, [open, onOpenChange]);
+
+  const resetForm = () => {
     setForm({
       customer_name: "",
       phone: "",
@@ -50,12 +60,36 @@ export function SalesAddLeadModal({ open, onOpenChange, onSubmit, isPending }: S
     });
   };
 
+  const handleSubmit = () => {
+    if (!form.customer_name.trim() || !form.phone.trim()) {
+      toast.error("Name and phone are required");
+      return;
+    }
+    onSubmit(form);
+    resetForm();
+  };
+
+  const handleClose = () => {
+    onOpenChange(false);
+  };
+
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add New Sales Lead</DialogTitle>
-        </DialogHeader>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Close add lead modal"
+        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+        onClick={handleClose}
+      />
+
+      <div className="relative z-10 w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg border border-border bg-background p-6 shadow-lg">
+        <div className="mb-4 space-y-1">
+          <h2 className="text-lg font-semibold leading-none tracking-tight">Add New Sales Lead</h2>
+          <p className="text-sm text-muted-foreground">Create a fresh sales inquiry manually.</p>
+        </div>
+
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -150,11 +184,17 @@ export function SalesAddLeadModal({ open, onOpenChange, onSubmit, isPending }: S
               rows={3}
             />
           </div>
-          <Button onClick={handleSubmit} disabled={isPending} className="w-full">
-            {isPending ? "Adding..." : "Add Lead"}
-          </Button>
+
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="outline" className="flex-1" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSubmit} disabled={isPending} className="flex-1">
+              {isPending ? "Adding..." : "Add Lead"}
+            </Button>
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
