@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import type { default as jsPDF } from "jspdf";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
