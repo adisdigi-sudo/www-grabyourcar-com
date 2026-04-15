@@ -12,14 +12,30 @@ import { Button } from "@/components/ui/button";
 import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBoundary";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { Shield } from "lucide-react";
-import { AdminDashboard } from "@/components/admin/AdminDashboard";
-import { NotificationCenter } from "@/components/admin/NotificationCenter";
-import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
-import { CRMAssistant } from "@/components/admin/CRMAssistant";
-import { AICofounderBanner } from "@/components/admin/AICofounderBanner";
-import { PersonalizedWelcomeBanner } from "@/components/admin/PersonalizedWelcomeBanner";
-import { InsuranceDashboard } from "@/components/admin/verticals/InsuranceDashboard";
-import { UnifiedMarketingHub } from "@/components/admin/marketing/UnifiedMarketingHub";
+const AdminDashboard = lazy(() =>
+  import("@/components/admin/AdminDashboard").then((module) => ({ default: module.AdminDashboard })),
+);
+const NotificationCenter = lazy(() =>
+  import("@/components/admin/NotificationCenter").then((module) => ({ default: module.NotificationCenter })),
+);
+const InsuranceManagement = lazy(() =>
+  import("@/components/admin/InsuranceManagement").then((module) => ({ default: module.InsuranceManagement })),
+);
+const CRMAssistant = lazy(() =>
+  import("@/components/admin/CRMAssistant").then((module) => ({ default: module.CRMAssistant })),
+);
+const AICofounderBanner = lazy(() =>
+  import("@/components/admin/AICofounderBanner").then((module) => ({ default: module.AICofounderBanner })),
+);
+const PersonalizedWelcomeBanner = lazy(() =>
+  import("@/components/admin/PersonalizedWelcomeBanner").then((module) => ({ default: module.PersonalizedWelcomeBanner })),
+);
+const InsuranceDashboard = lazy(() =>
+  import("@/components/admin/verticals/InsuranceDashboard").then((module) => ({ default: module.InsuranceDashboard })),
+);
+const UnifiedMarketingHub = lazy(() =>
+  import("@/components/admin/marketing/UnifiedMarketingHub").then((module) => ({ default: module.UnifiedMarketingHub })),
+);
 
 const ChannelProvidersSettings = lazy(() =>
   import("@/components/admin/settings/ChannelProvidersSettings").then((module) => ({ default: module.ChannelProvidersSettings })),
