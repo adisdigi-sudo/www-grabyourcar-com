@@ -286,12 +286,25 @@ export const ManualQuoteGenerator = () => {
       message += `\n✨ *Final Price:* ${formatPrice(finalPrice)}\n`;
     }
     
-    if (showEMI && emi > 0) {
+    if (showEMI && emi > 0 && !showLoanOffer) {
       message += `\n💳 *EMI Option:*\n`;
       message += `• Down Payment: ${formatPrice(downPayment)}\n`;
       message += `• Loan Amount: ${formatPrice(loanAmount)}\n`;
       message += `• EMI: ${formatPrice(emi)}/month\n`;
       message += `• Rate: ${interestRate}% | Tenure: ${tenure} months\n`;
+    }
+
+    if (showLoanOffer && loanOfferFinalAmount > 0) {
+      message += `\n🏦 *Loan Offer${bankName ? ` (${bankName})` : ''}:*\n`;
+      message += `• Total Car Price: ${formatPrice(finalPrice)}\n`;
+      if (bookingAmount > 0) message += `• Less Booking Amount: -${formatPrice(bookingAmount)}\n`;
+      if (processingFees > 0) message += `• Less Processing Fees: -${formatPrice(processingFees)}\n`;
+      if (otherLoanExpenses > 0) message += `• Less ${otherLoanExpensesLabel || 'Other Expenses'}: -${formatPrice(otherLoanExpenses)}\n`;
+      message += `\n📊 *Final Loan Amount:* ${formatPrice(loanOfferFinalAmount)}\n`;
+      message += `• EMI: *${formatPrice(loanOfferEMI)}/month*\n`;
+      message += `• Rate: ${interestRate}% p.a. | Tenure: ${tenure} months\n`;
+      message += `• Total Payable: ${formatPrice(loanOfferTotalPayment)}\n`;
+      message += `• Total Interest: ${formatPrice(loanOfferTotalInterest)}\n`;
     }
 
     if (brochureUrl) {
@@ -435,6 +448,12 @@ export const ManualQuoteGenerator = () => {
     setLoanAmount(0);
     setInterestRate(8.5);
     setTenure(60);
+    setShowLoanOffer(false);
+    setBankName("");
+    setBookingAmount(0);
+    setProcessingFees(0);
+    setOtherLoanExpenses(0);
+    setOtherLoanExpensesLabel("");
     setEnableDiscount(false);
     setDiscountAmount(0);
     setDiscountRemarks("");
