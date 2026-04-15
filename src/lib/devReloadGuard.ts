@@ -60,28 +60,51 @@ export const installSensitiveRouteReloadGuard = () => {
 
   window.__lovableDevReloadGuardInstalled = true;
 
-  const originalReload = window.location.reload.bind(window.location);
-  const guardedReload = () => {
-    if (!isSensitivePreviewRouteWindow()) {
-      originalReload();
-      return;
+  try {
+    const originalReload = window.location.reload.bind(window.location);
+    const guardedReload = () => {
+      try {
+        if (!isSensitivePreviewRouteWindow()) {
+          originalReload();
+          return;
+        }
+
+        markDevServerPendingReload();
+        dispatchUpdateReady();
+
+        console.info("[DevReloadGuard] Prevented forced reload on sensitive preview route", {
+          href: window.location.href,
+          pathname: window.location.pathname,
+        });
+      } catch (err) {
+        console.warn("[DevReloadGuard] Error in guarded reload, falling back", err);
+        try { originalReload(); } catch { /* last resort */ }
+      }
+    };
+
+    const locationPrototype = Object.getPrototypeOf(window.location);
+    const patched =
+      tryPatchReload(window.location, guardedReload) ||
+      (locationPrototype ? tryPatchReload(locationPrototype, guardedReload) : false);
+
+    if (!patched) {
+      console.warn("[DevReloadGuard] Failed to patch window.location.reload; forced Vite reloads may still occur.");
     }
 
-    markDevServerPendingReload();
-    dispatchUpdateReady();
-
-    console.info("[DevReloadGuard] Prevented forced reload on sensitive preview route", {
-      href: window.location.href,
-      pathname: window.location.pathname,
+    // Fallback: intercept beforeunload to catch Vite-triggered navigations
+    window.addEventListener("beforeunload", (e) => {
+      try {
+        if (isSensitivePreviewRouteWindow()) {
+          markDevServerPendingReload();
+          dispatchUpdateReady();
+          e.preventDefault();
+          e.returnValue = "";
+        }
+      } catch {
+        // silently ignore
+      }
     });
-  };
-
-  const locationPrototype = Object.getPrototypeOf(window.location);
-  const patched =
-    tryPatchReload(window.location, guardedReload) ||
-    (locationPrototype ? tryPatchReload(locationPrototype, guardedReload) : false);
-
-  if (!patched) {
-    console.warn("[DevReloadGuard] Failed to patch window.location.reload; forced Vite reloads may still occur.");
+  } catch (err) {
+    console.warn("[DevReloadGuard] Failed to install reload guard", err);
   }
 };
