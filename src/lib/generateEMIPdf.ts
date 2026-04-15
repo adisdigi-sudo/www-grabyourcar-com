@@ -730,11 +730,12 @@ function generateCarQuotePdf(
     doc.roundedRect(margin, y, contentWidth, gridH, 2, 2, "F");
 
     const colW = contentWidth / 4;
+    const balancePayable = Math.max(0, carFinalPrice - data.loanPrincipal);
     const loanItems = [
       { label: "Car Price (Final)", value: formatCurrency(carFinalPrice) },
       { label: "Down Payment", value: formatCurrency(data.downPayment) },
-      { label: "Loan Amount", value: formatCurrency(data.loanPrincipal) },
-      { label: "Total Payable", value: formatCurrency(data.totalPayment) },
+      { label: "Net Loan Amount", value: formatCurrency(data.loanPrincipal) },
+      { label: "Balance Payable by You", value: formatCurrency(balancePayable) },
     ];
 
     loanItems.forEach((item, i) => {

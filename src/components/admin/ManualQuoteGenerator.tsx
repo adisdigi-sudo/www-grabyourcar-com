@@ -1123,14 +1123,21 @@ export const ManualQuoteGenerator = () => {
                       <span className="text-muted-foreground">On-Road Price</span>
                       <span>{formatPrice(finalPrice)}</span>
                     </div>
-                    <div className="flex justify-between text-red-600">
-                      <span>Less Deductions</span>
-                      <span>-{formatPrice(loanOfferDeductions)}</span>
+                    {loanOfferDeductions > 0 && (
+                      <div className="flex justify-between text-red-600">
+                        <span>Less Deductions</span>
+                        <span>-{formatPrice(loanOfferDeductions)}</span>
+                      </div>
+                    )}
+                    <Separator />
+                    <div className="flex justify-between font-bold text-blue-700 dark:text-blue-400">
+                      <span>Net Loan Amount</span>
+                      <span>{formatPrice(loanOfferFinalAmount)}</span>
                     </div>
                     <Separator />
-                    <div className="flex justify-between font-bold">
-                      <span>Loan Amount</span>
-                      <span>{formatPrice(loanOfferFinalAmount)}</span>
+                    <div className="flex justify-between font-bold text-primary">
+                      <span>Balance Payable by You</span>
+                      <span>{formatPrice(Math.max(0, finalPrice - loanOfferFinalAmount))}</span>
                     </div>
                   </div>
                   <div className="pt-1">
