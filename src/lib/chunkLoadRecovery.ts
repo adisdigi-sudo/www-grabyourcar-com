@@ -1,3 +1,5 @@
+import { shouldAvoidDevAutoReload } from "@/lib/adminPreviewStability";
+
 const DYNAMIC_IMPORT_ERROR_PATTERNS = [
   "Failed to fetch dynamically imported module",
   "Importing a module script failed",
@@ -63,6 +65,11 @@ export const recoverFromChunkLoadError = (
   maxAttempts = DEFAULT_MAX_ATTEMPTS
 ): boolean => {
   try {
+    if (shouldAvoidDevAutoReload()) {
+      sessionStorage.setItem(getExhaustedKey(storageKey), "1");
+      return false;
+    }
+
     const currentAttempts = Number.parseInt(sessionStorage.getItem(storageKey) ?? "0", 10);
     if (!Number.isNaN(currentAttempts) && currentAttempts >= maxAttempts) {
       sessionStorage.setItem(getExhaustedKey(storageKey), "1");
