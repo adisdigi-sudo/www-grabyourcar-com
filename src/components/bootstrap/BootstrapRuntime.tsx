@@ -272,7 +272,7 @@ const installBootstrapRuntime = () => {
       markDevServerPendingReload();
       window.dispatchEvent(
         new CustomEvent(DEV_SERVER_STATUS_EVENT, {
-          detail: { status: "reloading" as const },
+          detail: { status: "update_ready" as const },
         }),
       );
     });
