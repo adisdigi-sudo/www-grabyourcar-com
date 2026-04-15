@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { HelmetProvider } from "react-helmet-async";
 import "./index.css";
 import App from "./App";
+import { Button } from "@/components/ui/button";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { isChunkLoadRecoveryExhausted, isDynamicImportError, recoverFromChunkLoadError, resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { Loader2, WifiOff } from "lucide-react";
