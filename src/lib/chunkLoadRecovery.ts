@@ -99,7 +99,7 @@ export const recoverFromChunkLoadError = (
     performSafePreviewReload();
     return true;
   } catch {
-    window.location.reload();
+    performSafePreviewReload();
     return true;
   }
 };

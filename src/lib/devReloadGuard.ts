@@ -45,7 +45,12 @@ const tryPatchReload = (target: object, reload: () => void) => {
     });
     return true;
   } catch {
-    return false;
+    try {
+      (target as { reload?: () => void }).reload = reload;
+      return (target as { reload?: () => void }).reload === reload;
+    } catch {
+      return false;
+    }
   }
 };
 

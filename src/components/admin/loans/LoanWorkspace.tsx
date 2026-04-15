@@ -35,6 +35,7 @@ import {
 } from "./LoanStageConfig";
 import { LoanDisbursementBook } from "./LoanDisbursementBook";
 import { LoanAfterSales } from "./LoanAfterSales";
+import { calculateLoanSalesBreakdown, getLoanSalesCalculatorDefaults } from "./loanSalesCalculator";
 import { cn } from "@/lib/utils";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 
@@ -752,6 +753,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   const { user } = useAuth();
   const { isSuperAdmin } = useAdminAuth();
   const queryClient = useQueryClient();
+  const salesCalculatorDefaults = useMemo(() => getLoanSalesCalculatorDefaults(application), [application]);
   const [targetStage, setTargetStage] = useState<string>(application?._targetStage || '');
   const [remarks, setRemarks] = useState('');
   const [callStatus, setCallStatus] = useState(application?.call_status || '');
@@ -772,6 +774,13 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   const [sanctionFile, setSanctionFile] = useState<File | null>(null);
   const [disbursementFile, setDisbursementFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [finalCarPrice, setFinalCarPrice] = useState(salesCalculatorDefaults.finalCarPrice ? salesCalculatorDefaults.finalCarPrice.toString() : '');
+  const [bookingAmountPaid, setBookingAmountPaid] = useState(salesCalculatorDefaults.bookingAmount ? salesCalculatorDefaults.bookingAmount.toString() : '');
+  const [grossLoanAmount, setGrossLoanAmount] = useState(salesCalculatorDefaults.grossLoanAmount ? salesCalculatorDefaults.grossLoanAmount.toString() : '');
+  const [loanProtectionAmount, setLoanProtectionAmount] = useState(salesCalculatorDefaults.loanProtectionAmount ? salesCalculatorDefaults.loanProtectionAmount.toString() : '');
+  const [processingFees, setProcessingFees] = useState(salesCalculatorDefaults.processingFees ? salesCalculatorDefaults.processingFees.toString() : '');
+  const [otherBankCharges, setOtherBankCharges] = useState(salesCalculatorDefaults.otherCharges ? salesCalculatorDefaults.otherCharges.toString() : '');
+  const [otherBankChargesLabel, setOtherBankChargesLabel] = useState(salesCalculatorDefaults.otherChargesLabel);
 
   // ── Editable client details ──
   const [editMode, setEditMode] = useState(false);
@@ -791,18 +800,46 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   const isDisbursed = currentStage === 'disbursed';
   const isLocked = isDisbursed && !isSuperAdmin();
   const canEdit = !isLocked;
+  const salesBreakdown = useMemo(() => calculateLoanSalesBreakdown({
+    finalCarPrice,
+    bookingAmount: bookingAmountPaid,
+    grossLoanAmount,
+    loanProtectionAmount,
+    processingFees,
+    otherCharges: otherBankCharges,
+  }), [finalCarPrice, bookingAmountPaid, grossLoanAmount, loanProtectionAmount, processingFees, otherBankCharges]);
+  const formatDetailedAmount = (amount: number) => `₹${Math.round(amount).toLocaleString('en-IN')}`;
+
+  useEffect(() => {
+    const defaults = getLoanSalesCalculatorDefaults(application);
+
+    setSelectedBank(application?.bank_partner_id || '');
+    setCustomBankName('');
+    setInterestRate(application?.interest_rate?.toString() || '');
+    setTenureMonths(application?.tenure_months?.toString() || '');
+    setEmiAmount(application?.emi_amount?.toString() || '');
+    setFinalCarPrice(defaults.finalCarPrice ? defaults.finalCarPrice.toString() : '');
+    setBookingAmountPaid(defaults.bookingAmount ? defaults.bookingAmount.toString() : '');
+    setGrossLoanAmount(defaults.grossLoanAmount ? defaults.grossLoanAmount.toString() : '');
+    setLoanProtectionAmount(defaults.loanProtectionAmount ? defaults.loanProtectionAmount.toString() : '');
+    setProcessingFees(defaults.processingFees ? defaults.processingFees.toString() : '');
+    setOtherBankCharges(defaults.otherCharges ? defaults.otherCharges.toString() : '');
+    setOtherBankChargesLabel(defaults.otherChargesLabel);
+  }, [application?.id]);
 
   // ── Auto-calculate EMI when loan_amount + interest_rate + tenure change ──
   useEffect(() => {
-    const P = Number(editLoanAmount || application?.loan_amount || 0);
+    const P = salesBreakdown.grossLoanAmount || Number(editLoanAmount || application?.loan_amount || 0);
     const annualRate = Number(interestRate);
     const months = Number(tenureMonths);
     if (P > 0 && annualRate > 0 && months > 0) {
       const r = annualRate / 12 / 100;
       const emi = (P * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
       setEmiAmount(Math.round(emi).toString());
+      return;
     }
-  }, [interestRate, tenureMonths, editLoanAmount, application?.loan_amount]);
+    setEmiAmount('');
+  }, [interestRate, tenureMonths, salesBreakdown.grossLoanAmount, editLoanAmount, application?.loan_amount]);
 
   // ── File upload helper ──
   const uploadDocument = async (file: File, folder: string): Promise<string> => {
@@ -869,8 +906,22 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   const autoShareOfferWhatsApp = async (bankName: string, rate: string, tenure: string, emi: string) => {
     try {
       const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-      const loanAmt = application?.loan_amount ? `₹${(application.loan_amount / 100000).toFixed(1)}L` : '';
-      const msg = `🏦 *Loan Offer — GrabYourCar*\n\nHi ${application.customer_name},\n\nGreat news! Here's your loan offer:\n\n🏦 Bank: *${bankName}*\n💰 Loan Amount: *${loanAmt}*\n📊 Interest Rate: *${rate}%*\n📅 Tenure: *${tenure} months*\n💵 EMI: *₹${Number(emi).toLocaleString('en-IN')}/mo*\n\nPlease review and let us know if you'd like to proceed.\n\nRegards,\n*GrabYourCar Finance Team*`;
+      const summaryLines = [
+        `🏦 Bank: *${bankName}*`,
+        salesBreakdown.grossLoanAmount > 0 ? `💰 Gross Loan Amount: *${formatDetailedAmount(salesBreakdown.grossLoanAmount)}*` : null,
+        `📊 Interest Rate: *${rate}%*`,
+        `📅 Tenure: *${tenure} months*`,
+        `💵 EMI: *₹${Number(emi).toLocaleString('en-IN')}/mo*`,
+        salesBreakdown.finalCarPrice > 0 ? `🚗 Final Car Price: *${formatDetailedAmount(salesBreakdown.finalCarPrice)}*` : null,
+        salesBreakdown.bookingAmount > 0 ? `🤝 Booking / Token Paid: *${formatDetailedAmount(salesBreakdown.bookingAmount)}*` : null,
+        salesBreakdown.loanProtectionAmount > 0 ? `🛡 Loan Suraksha / Insurance: *-${formatDetailedAmount(salesBreakdown.loanProtectionAmount)}*` : null,
+        salesBreakdown.processingFees > 0 ? `📋 Processing Fees: *-${formatDetailedAmount(salesBreakdown.processingFees)}*` : null,
+        salesBreakdown.otherCharges > 0 ? `🧾 ${otherBankChargesLabel || 'Other Bank Charges'}: *-${formatDetailedAmount(salesBreakdown.otherCharges)}*` : null,
+        salesBreakdown.bankNetDisbursal > 0 ? `🏁 Bank Net Disbursal: *${formatDetailedAmount(salesBreakdown.bankNetDisbursal)}*` : null,
+        salesBreakdown.balancePayableByYou > 0 ? `👤 Total Balance Payable by You: *${formatDetailedAmount(salesBreakdown.balancePayableByYou)}*` : null,
+      ].filter(Boolean).join('\n');
+
+      const msg = `🏦 *Loan Offer — GrabYourCar*\n\nHi ${application.customer_name},\n\nGreat news! Here's your loan offer:\n\n${summaryLines}\n\nPlease review and let us know if you'd like to proceed.\n\nRegards,\n*GrabYourCar Finance Team*`;
       await sendWhatsApp({ phone: application.phone, message: msg, name: application.customer_name, logEvent: "loan_offer_shared", silent: false });
     } catch (err) {
       console.error("Auto WhatsApp offer share failed:", err);
@@ -902,9 +953,14 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
     const selectedPartner = bankPartners.find((b: any) => b.id === selectedBank);
     const hasRealPartnerId = Boolean(selectedBank && isUuid(selectedBank));
     const isCustom = selectedBank === '__custom__' || Boolean(selectedPartner && !hasRealPartnerId);
+    const existingOfferDetails = application?.offer_details && typeof application.offer_details === 'object' && !Array.isArray(application.offer_details)
+      ? application.offer_details
+      : {};
 
     if (!selectedBank) { toast.error("Select a bank partner"); return; }
     if (isCustom && !((selectedPartner?.name || customBankName).trim())) { toast.error("Enter custom bank/NBFC name"); return; }
+    if (salesBreakdown.finalCarPrice <= 0) { toast.error("Final car price is required"); return; }
+    if (salesBreakdown.grossLoanAmount <= 0) { toast.error("Gross loan amount is required"); return; }
     if (!interestRate || Number(interestRate) <= 0) { toast.error("Interest rate is required"); return; }
     if (!tenureMonths || Number(tenureMonths) <= 0) { toast.error("Tenure is required"); return; }
     if (!emiAmount || Number(emiAmount) <= 0) { toast.error("EMI amount is required"); return; }
@@ -916,11 +972,28 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
     updateMutation.mutate({
       bank_partner_id: hasRealPartnerId ? selectedBank : null,
       lender_name: bankName,
+      loan_amount: salesBreakdown.grossLoanAmount,
+      processing_fee: salesBreakdown.processingFees || null,
       interest_rate: interestRate ? Number(interestRate) : null,
       tenure_months: tenureMonths ? Number(tenureMonths) : null,
       emi_amount: emiAmount ? Number(emiAmount) : null,
+      offer_details: {
+        ...existingOfferDetails,
+        sales_calculator: {
+          final_car_price: salesBreakdown.finalCarPrice,
+          booking_amount: salesBreakdown.bookingAmount,
+          gross_loan_amount: salesBreakdown.grossLoanAmount,
+          loan_protection_amount: salesBreakdown.loanProtectionAmount,
+          processing_fees: salesBreakdown.processingFees,
+          other_charges_label: otherBankChargesLabel?.trim() || 'Other Bank Charges',
+          other_charges_amount: salesBreakdown.otherCharges,
+          bank_net_disbursal: salesBreakdown.bankNetDisbursal,
+          balance_payable_by_you: salesBreakdown.balancePayableByYou,
+          total_customer_contribution: salesBreakdown.totalCustomerContribution,
+        },
+      },
       stage: 'offer_shared',
-      remarks: remarks || `Offer shared: ${bankName}`,
+      remarks: remarks || `Offer shared: ${bankName}${salesBreakdown.bankNetDisbursal > 0 ? ` | Net disbursal ₹${salesBreakdown.bankNetDisbursal.toLocaleString('en-IN')}` : ''}`,
     });
 
     // Auto-share offer via WhatsApp
@@ -1207,6 +1280,69 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                 <div>
                   <Label>EMI Amount <span className="text-[9px] text-muted-foreground">(auto-calculated)</span></Label>
                   <Input type="number" value={emiAmount} readOnly className="bg-muted/50 font-semibold" />
+                </div>
+              </div>
+              <div className="rounded-lg border border-violet-500/15 bg-background/80 p-3 space-y-3">
+                <div className="flex items-center gap-2 text-violet-700 text-xs font-medium uppercase tracking-wider">
+                  <Car className="h-3.5 w-3.5" /> Automotive Car Sales Calculator
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Final Car Price *</Label><Input type="number" value={finalCarPrice} onChange={e => setFinalCarPrice(e.target.value)} placeholder="e.g. 1650000" /></div>
+                  <div><Label>Booking / Token Paid</Label><Input type="number" value={bookingAmountPaid} onChange={e => setBookingAmountPaid(e.target.value)} placeholder="e.g. 51000" /></div>
+                  <div><Label>Gross Loan Amount *</Label><Input type="number" value={grossLoanAmount} onChange={e => setGrossLoanAmount(e.target.value)} placeholder="e.g. 1435000" /></div>
+                  <div><Label>Loan Suraksha / Insurance</Label><Input type="number" value={loanProtectionAmount} onChange={e => setLoanProtectionAmount(e.target.value)} placeholder="e.g. 10112" /></div>
+                  <div><Label>Processing Fees</Label><Input type="number" value={processingFees} onChange={e => setProcessingFees(e.target.value)} placeholder="e.g. 3000" /></div>
+                  <div><Label>{otherBankChargesLabel || 'Other Bank Charges'}</Label><Input type="number" value={otherBankCharges} onChange={e => setOtherBankCharges(e.target.value)} placeholder="e.g. 0" /></div>
+                </div>
+                <div>
+                  <Label>Other Charge Label</Label>
+                  <Input value={otherBankChargesLabel} onChange={e => setOtherBankChargesLabel(e.target.value)} placeholder="e.g. File Charges" />
+                </div>
+                <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Final Car Price</span>
+                    <span className="font-medium">{formatDetailedAmount(salesBreakdown.finalCarPrice)}</span>
+                  </div>
+                  {salesBreakdown.bookingAmount > 0 && (
+                    <div className="flex items-center justify-between gap-3 text-emerald-600">
+                      <span>Booking / Token Paid</span>
+                      <span>-{formatDetailedAmount(salesBreakdown.bookingAmount)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Gross Loan Amount</span>
+                    <span className="font-medium">{formatDetailedAmount(salesBreakdown.grossLoanAmount)}</span>
+                  </div>
+                  {salesBreakdown.loanProtectionAmount > 0 && (
+                    <div className="flex items-center justify-between gap-3 text-red-600">
+                      <span>Less Loan Suraksha / Insurance</span>
+                      <span>-{formatDetailedAmount(salesBreakdown.loanProtectionAmount)}</span>
+                    </div>
+                  )}
+                  {salesBreakdown.processingFees > 0 && (
+                    <div className="flex items-center justify-between gap-3 text-red-600">
+                      <span>Less Processing Fees</span>
+                      <span>-{formatDetailedAmount(salesBreakdown.processingFees)}</span>
+                    </div>
+                  )}
+                  {salesBreakdown.otherCharges > 0 && (
+                    <div className="flex items-center justify-between gap-3 text-red-600">
+                      <span>Less {otherBankChargesLabel || 'Other Bank Charges'}</span>
+                      <span>-{formatDetailedAmount(salesBreakdown.otherCharges)}</span>
+                    </div>
+                  )}
+                  <div className="border-t border-border/60 pt-2 flex items-center justify-between gap-3 font-semibold text-violet-700">
+                    <span>Bank Net Disbursal Amount</span>
+                    <span>{formatDetailedAmount(salesBreakdown.bankNetDisbursal)}</span>
+                  </div>
+                  <div className="border-t border-border/60 pt-2 flex items-center justify-between gap-3 font-bold text-primary">
+                    <span>Total Balance Payable by You</span>
+                    <span>{formatDetailedAmount(salesBreakdown.balancePayableByYou)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                    <span>Total Customer Contribution</span>
+                    <span>{formatDetailedAmount(salesBreakdown.totalCustomerContribution)}</span>
+                  </div>
                 </div>
               </div>
               <div><Label>Remarks</Label><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Offer details..." rows={2} /></div>
