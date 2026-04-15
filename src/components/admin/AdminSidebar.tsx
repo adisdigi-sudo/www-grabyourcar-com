@@ -48,6 +48,8 @@ import { useAdminAuth, AppRole } from "@/hooks/useAdminAuth";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { performSafePreviewReload } from "@/lib/chunkLoadRecovery";
+import { withPreviewParams } from "@/lib/previewRouting";
 
 interface AdminSidebarProps {
   activeTab: string;
@@ -646,7 +648,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
                 className="w-full justify-start text-xs"
                 onClick={() => {
                   setActiveVertical(null);
-                  navigate('/workspace');
+                  navigate(withPreviewParams('/workspace'));
                 }}
               >
                 <PanelLeft className="h-3 w-3 mr-2" />
@@ -686,10 +688,10 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
                   const val = e.target.value;
                   if (val) {
                     localStorage.setItem("gyc_role_override", val);
-                    window.location.reload();
+                    performSafePreviewReload();
                   } else {
                     localStorage.removeItem("gyc_role_override");
-                    window.location.reload();
+                    performSafePreviewReload();
                   }
                 }}
               >
@@ -713,7 +715,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
             onClick={async () => {
               localStorage.removeItem("gyc_role_override");
               await signOut();
-              navigate('/crm-auth');
+              navigate(withPreviewParams('/crm-auth'));
             }}
             title={collapsed ? "Sign Out" : undefined}
           >

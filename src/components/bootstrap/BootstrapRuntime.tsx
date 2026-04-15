@@ -1,15 +1,16 @@
 import { useEffect, useState, type ComponentType } from "react";
-import { isChunkLoadRecoveryExhausted, isDynamicImportError, recoverFromChunkLoadError, resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
+import { isChunkLoadRecoveryExhausted, isDynamicImportError, performSafePreviewReload, recoverFromChunkLoadError, resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { isSensitivePreviewRouteWindow, shouldAvoidDevAutoReload } from "@/lib/adminPreviewStability";
-import { RefreshCw, WifiOff } from "lucide-react";
+import { withPreviewParams } from "@/lib/previewRouting";
+import { AlertTriangle, RefreshCw, WifiOff } from "lucide-react";
 
 const DEV_SERVER_STATUS_EVENT = "lovable:dev-server-status";
 const CHUNK_RECOVERY_STATUS_EVENT = "lovable:chunk-recovery-status";
 const ROUTE_ACTIVITY_EVENT = "lovable:route-activity";
+const RUNTIME_FATAL_EVENT = "lovable:runtime-fatal";
 const DEV_SERVER_PENDING_RELOAD_KEY = "lovable_dev_server_pending_reload";
 const DEV_SERVER_LAST_RELOAD_KEY = "lovable_dev_server_last_reload";
 const DEV_SERVER_RELOAD_COOLDOWN_MS = 5000;
-const CACHE_BUST_PARAM = "__v";
 
 let hasTriggeredChunkRecovery = false;
 let bootstrapListenersInstalled = false;
@@ -17,6 +18,16 @@ let bootstrapListenersInstalled = false;
 type ChunkRecoveryAttemptResult = "recovered" | "exhausted" | "ignored";
 
 type DevServerStatus = "idle" | "disconnected" | "connected" | "reloading" | "update_ready";
+
+type RuntimeFatalDetail = {
+  message: string;
+  source: string;
+};
+
+const NON_FATAL_RUNTIME_PATTERNS = [
+  "ResizeObserver loop limit exceeded",
+  "ResizeObserver loop completed with undelivered notifications",
+];
 
 const dispatchChunkRecoveryStatus = (status: "recovering" | "exhausted", source: string) => {
   if (typeof window === "undefined") return;
@@ -34,6 +45,32 @@ const clearPendingReloadFlag = () => {
   } catch {
     // ignore storage failures
   }
+};
+
+const getRuntimeErrorMessage = (error: unknown) => {
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    return typeof message === "string" ? message : "Unknown runtime error";
+  }
+  return "Unknown runtime error";
+};
+
+const shouldSurfaceRuntimeFailure = (error: unknown) => {
+  if (isDynamicImportError(error)) return false;
+
+  const message = getRuntimeErrorMessage(error);
+  return !NON_FATAL_RUNTIME_PATTERNS.some((pattern) => message.includes(pattern));
+};
+
+const dispatchRuntimeFatal = (detail: RuntimeFatalDetail) => {
+  if (typeof window === "undefined" || !isSensitivePreviewRouteWindow()) return;
+
+  window.dispatchEvent(
+    new CustomEvent(RUNTIME_FATAL_EVENT, {
+      detail,
+    }),
+  );
 };
 
 const dispatchRouteActivity = () => {
@@ -84,10 +121,7 @@ const performSafeReload = () => {
   try {
     clearPendingReloadFlag();
     sessionStorage.setItem(DEV_SERVER_LAST_RELOAD_KEY, String(Date.now()));
-
-    const nextUrl = new URL(window.location.href);
-    nextUrl.searchParams.set(CACHE_BUST_PARAM, Date.now().toString());
-    window.location.replace(nextUrl.toString());
+    performSafePreviewReload();
   } catch {
     window.location.reload();
   }
@@ -195,11 +229,26 @@ const installBootstrapRuntime = () => {
   });
 
   window.addEventListener("error", (event) => {
-    attemptChunkRecovery(event.error ?? event.message, "window.error");
+    const error = event.error ?? event.message;
+    const recoveryResult = attemptChunkRecovery(error, "window.error");
+
+    if (recoveryResult === "ignored" && shouldSurfaceRuntimeFailure(error)) {
+      dispatchRuntimeFatal({
+        message: getRuntimeErrorMessage(error),
+        source: "window.error",
+      });
+    }
   });
 
   window.addEventListener("unhandledrejection", (event) => {
-    attemptChunkRecovery(event.reason, "window.unhandledrejection");
+    const recoveryResult = attemptChunkRecovery(event.reason, "window.unhandledrejection");
+
+    if (recoveryResult === "ignored" && shouldSurfaceRuntimeFailure(event.reason)) {
+      dispatchRuntimeFatal({
+        message: getRuntimeErrorMessage(event.reason),
+        source: "window.unhandledrejection",
+      });
+    }
   });
 
   if (import.meta.hot) {
@@ -233,6 +282,68 @@ const installBootstrapRuntime = () => {
       );
     });
   }
+};
+
+const FatalRuntimeOverlay = () => {
+  const [fatalDetail, setFatalDetail] = useState<RuntimeFatalDetail | null>(null);
+
+  useEffect(() => {
+    const handleFatal = (event: Event) => {
+      const detail = (event as CustomEvent<RuntimeFatalDetail>).detail;
+      if (!detail?.message) return;
+      setFatalDetail(detail);
+    };
+
+    window.addEventListener(RUNTIME_FATAL_EVENT, handleFatal as EventListener);
+
+    return () => {
+      window.removeEventListener(RUNTIME_FATAL_EVENT, handleFatal as EventListener);
+    };
+  }, []);
+
+  if (!fatalDetail || !isSensitivePreviewRouteWindow()) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-background/95 px-6 backdrop-blur-sm">
+      <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-8 text-center text-card-foreground shadow-sm">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+          <AlertTriangle className="h-6 w-6" />
+        </div>
+        <h2 className="text-lg font-semibold">CRM runtime recovery mode</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Blank screen avoid karne ke liye runtime failure ko intercept kar diya gaya hai. Safe reload se latest stable bundle khul jayega.
+        </p>
+        <p className="mt-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-left text-xs text-muted-foreground">
+          {fatalDetail.message}
+        </p>
+        <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => {
+              setFatalDetail(null);
+              resetChunkLoadRecovery();
+              performSafeReload();
+            }}
+            className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            Reload safely
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFatalDetail(null);
+              window.location.replace(withPreviewParams("/crm-auth"));
+            }}
+            className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            Open sign in
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const DevServerStatusOverlay = () => {
@@ -467,6 +578,7 @@ export const BootstrapRuntime = () => {
       <SafeTelemetry />
       <DevServerStatusOverlay />
       <ChunkRecoveryOverlay />
+      <FatalRuntimeOverlay />
     </>
   );
 };

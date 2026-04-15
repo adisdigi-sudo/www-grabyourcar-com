@@ -13,6 +13,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { VerticalPasswordDialog, getVerifiedVerticals } from "@/components/admin/VerticalPasswordDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { performSafePreviewReload } from "@/lib/chunkLoadRecovery";
 import { withPreviewParams } from "@/lib/previewRouting";
 
 const iconMap: Record<string, React.ElementType> = {
@@ -136,7 +137,7 @@ const WorkspaceSelector = () => {
               Login ya workspace sync hang ho gaya tha. Blank screen ke bajaye recovery options dikh rahe hain.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <Button onClick={() => window.location.reload()}>Retry</Button>
+              <Button onClick={performSafePreviewReload}>Retry</Button>
               <Button variant="outline" onClick={() => navigate(withPreviewParams("/crm-auth"))}>
                 Back to sign in
               </Button>
@@ -182,7 +183,7 @@ const WorkspaceSelector = () => {
             </h1>
             <p className="text-muted-foreground mt-2">Select your workspace to continue</p>
             {isSuperAdmin() && (
-              <Badge className="mt-2 bg-amber-500/10 text-amber-600 border-amber-500/20">
+              <Badge className="mt-2 border-border bg-secondary text-secondary-foreground">
                 <Crown className="h-3 w-3 mr-1" />
                 Super Admin
               </Badge>

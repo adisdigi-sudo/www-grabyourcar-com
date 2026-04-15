@@ -1,4 +1,5 @@
 import { shouldAvoidDevAutoReload } from "@/lib/adminPreviewStability";
+import { appendPreviewQueryParams } from "@/lib/previewRouting";
 
 const DYNAMIC_IMPORT_ERROR_PATTERNS = [
   "Failed to fetch dynamically imported module",
@@ -46,6 +47,21 @@ const isViteOptimizedDepError = (message: string): boolean => {
   );
 };
 
+export const buildSafePreviewReloadUrl = (sourceHref = window.location.href): URL => {
+  const nextUrl = new URL(sourceHref, window.location.origin);
+  appendPreviewQueryParams(nextUrl, sourceHref);
+  nextUrl.searchParams.set(CACHE_BUST_PARAM, Date.now().toString());
+  return nextUrl;
+};
+
+export const performSafePreviewReload = (): void => {
+  try {
+    window.location.replace(buildSafePreviewReloadUrl().toString());
+  } catch {
+    window.location.reload();
+  }
+};
+
 export const isDynamicImportError = (error: unknown): boolean => {
   const message = getErrorMessage(error).toLowerCase();
   // Must match a dynamic import pattern
@@ -79,9 +95,7 @@ export const recoverFromChunkLoadError = (
     sessionStorage.setItem(storageKey, String(Number.isNaN(currentAttempts) ? 1 : currentAttempts + 1));
     sessionStorage.removeItem(getExhaustedKey(storageKey));
 
-    const nextUrl = new URL(window.location.href);
-    nextUrl.searchParams.set(CACHE_BUST_PARAM, Date.now().toString());
-    window.location.replace(nextUrl.toString());
+    performSafePreviewReload();
     return true;
   } catch {
     window.location.reload();

@@ -6,7 +6,7 @@ import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { useEmployeeTracker } from "@/hooks/useEmployeeTracker";
 import { cn } from "@/lib/utils";
 import { logAdminActivity } from "@/lib/adminActivityLogger";
-import { resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
+import { performSafePreviewReload, resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { withPreviewParams } from "@/lib/previewRouting";
 import { Button } from "@/components/ui/button";
 import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBoundary";
@@ -584,7 +584,7 @@ const AdminLayout = () => {
               Auth ya workspace restore hang ho gaya tha, isliye blank state aati lag rahi thi. Ab safe recovery options dikh rahe hain.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <Button onClick={() => window.location.reload()}>Retry CRM</Button>
+              <Button onClick={performSafePreviewReload}>Retry CRM</Button>
               <Button variant="outline" onClick={() => navigate(withPreviewParams("/workspace"))}>
                 Open workspace chooser
               </Button>
@@ -637,7 +637,7 @@ const AdminLayout = () => {
               Workspace restore ya backend sync hang ho gaya tha, isliye ab full white page ke bajaye safe recovery panel dikh raha hai.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <Button onClick={() => window.location.reload()}>Retry CRM</Button>
+              <Button onClick={performSafePreviewReload}>Retry CRM</Button>
               <Button variant="outline" onClick={() => navigate(withPreviewParams("/workspace"))}>
                 Open workspace chooser
               </Button>

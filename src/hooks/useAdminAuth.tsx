@@ -3,6 +3,26 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
+const ADMIN_ROLE_QUERY_TIMEOUT_MS = 8000;
+
+const withQueryTimeout = async <T,>(promise: PromiseLike<T>, label: string): Promise<T> => {
+  let timeoutId: number | null = null;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => {
+      reject(new Error(`${label} timed out`));
+    }, ADMIN_ROLE_QUERY_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([Promise.resolve(promise), timeoutPromise]) as T;
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
+  }
+};
+
 export type AppRole = 'super_admin' | 'admin' | 'sales' | 'dealer' | 'finance' | 'insurance' | 'marketing' | 'calling' | 'operations' | 'executive' | 'vertical_manager' | 'team_leader' | 'manager';
 
 interface UserRole {
@@ -22,22 +42,33 @@ export const useAdminAuth = () => {
       if (!user?.id) return [];
 
       try {
-        const { data: directRoles, error: directError } = await supabase
-          .from('user_roles')
-          .select('*')
-          .eq('user_id', user.id);
+        try {
+          const { data: directRoles, error: directError } = await withQueryTimeout(
+            supabase
+              .from('user_roles')
+              .select('*')
+              .eq('user_id', user.id),
+            'user_roles lookup',
+          );
 
-        if (directError) throw directError;
-        if ((directRoles?.length ?? 0) > 0) {
-          return directRoles as UserRole[];
+          if (directError) throw directError;
+          if ((directRoles?.length ?? 0) > 0) {
+            return directRoles as UserRole[];
+          }
+        } catch (directLookupError) {
+          console.warn("[useAdminAuth] Direct role lookup failed, trying CRM fallback", directLookupError);
         }
 
-        // Fallback: CRM role mapping for legacy/admin accounts
-        const { data: crmUser } = await supabase
-          .from('crm_users')
-          .select('role')
-          .eq('auth_user_id', user.id)
-          .maybeSingle();
+        const { data: crmUser, error: crmError } = await withQueryTimeout(
+          supabase
+            .from('crm_users')
+            .select('role')
+            .eq('auth_user_id', user.id)
+            .maybeSingle(),
+          'crm_users lookup',
+        );
+
+        if (crmError) throw crmError;
 
         if (!crmUser?.role) return [];
 
@@ -63,7 +94,7 @@ export const useAdminAuth = () => {
       }
     },
     enabled: shouldLoadRoles,
-    retry: 2,
+    retry: 1,
     staleTime: 1000 * 60,
   });
 
