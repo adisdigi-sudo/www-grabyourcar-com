@@ -44,6 +44,9 @@ const CarLoan = () => {
         {/* EMI Calculator */}
         <CarLoanEMICalculator />
 
+        {/* Loan Breakdown Calculator */}
+        <CarLoanBreakdownCalculator />
+
         {/* Cross-sell (after eligibility) */}
         {eligibilityResult?.eligible && (
           <CarLoanCrossSell maxBudget={eligibilityResult.maxLoan} />
