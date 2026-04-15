@@ -9,6 +9,7 @@ type LoanSalesCalculatorSource = {
 type LoanSalesCalculatorInput = {
   finalCarPrice?: number | string | null;
   bookingAmount?: number | string | null;
+  advancePaid?: number | string | null;
   grossLoanAmount?: number | string | null;
   loanProtectionAmount?: number | string | null;
   processingFees?: number | string | null;
@@ -69,9 +70,12 @@ export const getLoanSalesCalculatorDefaults = (source: LoanSalesCalculatorSource
       ? salesCalculator.other_charges_label
       : "Other Bank Charges";
 
+  const advancePaid = toMoney(salesCalculator.advance_paid as number | string | null | undefined);
+
   return {
     finalCarPrice,
     bookingAmount,
+    advancePaid,
     grossLoanAmount,
     loanProtectionAmount,
     processingFees,
@@ -83,25 +87,37 @@ export const getLoanSalesCalculatorDefaults = (source: LoanSalesCalculatorSource
 export const calculateLoanSalesBreakdown = (input: LoanSalesCalculatorInput) => {
   const finalCarPrice = toMoney(input.finalCarPrice);
   const bookingAmount = toMoney(input.bookingAmount);
+  const advancePaid = toMoney(input.advancePaid);
   const grossLoanAmount = toMoney(input.grossLoanAmount);
   const loanProtectionAmount = toMoney(input.loanProtectionAmount);
   const processingFees = toMoney(input.processingFees);
   const otherCharges = toMoney(input.otherCharges);
 
+  // Step 1: Bank deductions from loan
   const bankDeductionsTotal = loanProtectionAmount + processingFees + otherCharges;
+  // Step 2: Net disbursal = Loan - deductions
   const bankNetDisbursal = Math.max(grossLoanAmount - bankDeductionsTotal, 0);
-  const balancePayableByYou = Math.max(finalCarPrice - bookingAmount - bankNetDisbursal, 0);
-  const totalCustomerContribution = bookingAmount + balancePayableByYou;
+  // Step 3: Down payment needed = Car Price - Net Disbursal
+  const downPaymentNeeded = Math.max(finalCarPrice - bankNetDisbursal, 0);
+  // Step 4: Total already paid = booking + advance
+  const totalAlreadyPaid = bookingAmount + advancePaid;
+  // Step 5: Final balance = Down payment needed - already paid
+  const balancePayableByYou = Math.max(downPaymentNeeded - totalAlreadyPaid, 0);
+  // Total customer pocket = booking + advance + balance
+  const totalCustomerContribution = totalAlreadyPaid + balancePayableByYou;
 
   return {
     finalCarPrice,
     bookingAmount,
+    advancePaid,
     grossLoanAmount,
     loanProtectionAmount,
     processingFees,
     otherCharges,
     bankDeductionsTotal,
     bankNetDisbursal,
+    downPaymentNeeded,
+    totalAlreadyPaid,
     balancePayableByYou,
     totalCustomerContribution,
   };
