@@ -140,19 +140,18 @@ const DESIGNATION_ROLE_MAP: Record<string, string> = {
 };
 
 // Indian Govt norms for PF/ESI/PT (as of 2024-25)
-// PF: Mandatory only when 20+ employees. Basic ≤15,000 compulsory; >15,000 can opt out
-// ESI: Mandatory only when 10+ employees AND gross ≤21,000/month
-// Professional Tax: Max ₹200/month (state dependent), some states exempt <₹15,000
-// TDS: Only if annual income > ₹3,00,000 (old) or ₹7,00,000 (new regime)
+// PF: Mandatory for ALL employees once company crosses 20 employees
+// ESI: Mandatory for ALL employees earning ≤21,000 once company crosses 10 employees
+// Note: Once threshold crossed, PF/ESI applies to EVERY employee — not just new ones
 const calcGovtDeductions = (monthlyCTC: number, totalEmployees: number) => {
   const basic = Math.round(monthlyCTC * 0.4);
   const annualCTC = monthlyCTC * 12;
 
-  // PF: Not applicable if <20 employees (EPFO registration not required)
+  // PF: Mandatory for ALL once 20+ employees. Employee contribution 12% of basic (capped at ₹15K basic)
   const pfApplicable = totalEmployees >= 20;
   const pf = pfApplicable ? Math.round(Math.min(basic, 15000) * 0.12) : 0;
 
-  // ESI: Not applicable if <10 employees OR gross >21,000
+  // ESI: Mandatory for ALL earning ≤₹21K once 10+ employees
   const esiApplicable = totalEmployees >= 10 && monthlyCTC <= 21000;
   const esi = esiApplicable ? Math.round(monthlyCTC * 0.0075) : 0;
 
@@ -160,10 +159,29 @@ const calcGovtDeductions = (monthlyCTC: number, totalEmployees: number) => {
   const pt = monthlyCTC >= 15000 ? 200 : 0;
 
   // TDS: Only if annual CTC > ₹3,00,000 (old regime basic exemption)
-  // Rough estimate: 5% of amount exceeding 3L, divided by 12
   const tds = annualCTC > 300000 ? Math.round(((annualCTC - 300000) * 0.05) / 12) : 0;
 
-  return { pf, esi, pt, tds, pfApplicable, esiApplicable };
+  // Flag: crossing threshold means ALL existing employees need PF/ESI recalculation
+  const crossingPFThreshold = totalEmployees === 19; // this hire makes it 20
+  const crossingESIThreshold = totalEmployees === 9; // this hire makes it 10
+
+  return { pf, esi, pt, tds, pfApplicable, esiApplicable, crossingPFThreshold, crossingESIThreshold };
+};
+
+// Hierarchy capacity rules
+const HIERARCHY_CAPACITY: Record<string, { manages: string; maxReports: number }> = {
+  team_lead: { manages: "employee", maxReports: 10 },
+  manager: { manages: "team_lead", maxReports: 10 },
+  senior_manager: { manages: "manager", maxReports: 10 },
+  head: { manages: "senior_manager", maxReports: 10 },
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  employee: "Employee / Telecaller",
+  team_lead: "Team Leader",
+  manager: "Manager",
+  senior_manager: "Senior Manager",
+  head: "Zonal Head",
 };
 
 const fmt = (v: number) => `₹${Math.round(v || 0).toLocaleString("en-IN")}`;
@@ -438,11 +456,47 @@ export const HROnboarding = () => {
   const calcNet = monthlyCTC - calcPF - calcESI - calcPT - calcTDS;
 
   // Compliance blockers — check if this hire will cross the threshold
-  const needsPF = totalEmployees >= 19; // will become 20 after this hire
-  const needsESI = totalEmployees >= 9; // will become 10 after this hire
+  const needsPF = totalEmployees >= 19;
+  const needsESI = totalEmployees >= 9;
   const hasPFId = !!complianceData?.pf_registration_number;
   const hasESIId = !!complianceData?.esi_registration_number;
   const complianceBlocked = (needsPF && !hasPFId) || (needsESI && !hasESIId);
+
+  // Calculate manager capacity based on hierarchy rules
+  const getManagerCapacity = () => {
+    const selectedRole = form.role || "employee";
+    // Find which role tier should manage this role
+    const eligibleTiers = Object.entries(HIERARCHY_CAPACITY)
+      .filter(([_, config]) => config.manages === selectedRole);
+    
+    return teamMembers.map((m: any) => {
+      const tier = m.role_tier || "employee";
+      const capacityRule = HIERARCHY_CAPACITY[tier];
+      const maxReports = m.max_reports || capacityRule?.maxReports || 10;
+      
+      // Count current direct reports
+      const currentReports = teamMembers.filter((t: any) => t.reporting_to === m.id && t.is_active).length;
+      const spotsLeft = Math.max(0, maxReports - currentReports);
+      const isEligible = eligibleTiers.some(([tierKey]) => tierKey === tier);
+      const isRecommended = isEligible && spotsLeft > 0;
+
+      return {
+        ...m,
+        currentReports,
+        maxReports,
+        spotsLeft,
+        isEligible,
+        isRecommended,
+        tier,
+      };
+    }).sort((a: any, b: any) => {
+      // Recommended first, then by spots available
+      if (a.isRecommended && !b.isRecommended) return -1;
+      if (!a.isRecommended && b.isRecommended) return 1;
+      return b.spotsLeft - a.spotsLeft;
+    });
+  };
+  const managersWithCapacity = getManagerCapacity();
 
   const renderWizardStep = () => {
     switch (step) {
@@ -547,8 +601,12 @@ export const HROnboarding = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Assign Manager</Label>
+              <div className="col-span-2">
+                <Label>Assign Manager / Reporting To</Label>
+                <p className="text-xs text-muted-foreground mb-1">
+                  📋 Rule: Max 10 {ROLE_LABELS[form.role || "employee"] || "employees"} per {ROLE_LABELS[Object.entries(HIERARCHY_CAPACITY).find(([_, c]) => c.manages === (form.role || "employee"))?.[0] || ""] || "supervisor"}. 
+                  Green = space available, Red = full.
+                </p>
                 <Select value={form.manager_user_id || ""} onValueChange={v => {
                   const mgr = teamMembers.find((m: any) => m.user_id === v);
                   updateField("manager_user_id", v);
@@ -556,7 +614,22 @@ export const HROnboarding = () => {
                 }}>
                   <SelectTrigger><SelectValue placeholder="Select manager" /></SelectTrigger>
                   <SelectContent>
-                    {teamMembers.map((m: any) => <SelectItem key={m.user_id} value={m.user_id}>{m.display_name}</SelectItem>)}
+                    {managersWithCapacity.map((m: any) => (
+                      <SelectItem key={m.user_id} value={m.user_id} disabled={m.spotsLeft === 0 && m.isEligible}>
+                        <div className="flex items-center gap-2 w-full">
+                          <span>{m.display_name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({m.designation || m.role_tier || "—"})
+                          </span>
+                          {m.isEligible && (
+                            <span className={`text-xs font-medium ${m.spotsLeft > 0 ? "text-green-600" : "text-red-600"}`}>
+                              [{m.currentReports}/{m.maxReports} — {m.spotsLeft > 0 ? `${m.spotsLeft} slots open` : "FULL"}]
+                            </span>
+                          )}
+                          {m.isRecommended && <span className="text-xs">⭐</span>}
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -734,6 +807,33 @@ export const HROnboarding = () => {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* ⚠️ THRESHOLD CROSSING WARNING — PF/ESI will apply to ALL existing employees */}
+                {(govtDed.crossingPFThreshold || govtDed.crossingESIThreshold) && (
+                  <Card className="border-orange-300 bg-orange-50">
+                    <CardContent className="p-4 space-y-2">
+                      <p className="font-semibold text-orange-800 flex items-center gap-2">
+                        <Shield className="h-4 w-4" /> ⚠️ Important: This Hire Crosses Govt Threshold!
+                      </p>
+                      <p className="text-sm text-orange-700">
+                        Yeh employee add karne se company ka headcount <strong>{totalEmployees + 1}</strong> ho jayega. 
+                        Iska matlab ab <strong>SABHI existing employees</strong> ko bhi PF/ESI lagega — sirf naye ko nahi!
+                      </p>
+                      <ul className="list-disc list-inside text-xs text-orange-700 space-y-1">
+                        {govtDed.crossingPFThreshold && (
+                          <li><strong>PF (EPFO):</strong> 20 employees cross — ab sabhi {totalEmployees} existing employees ka PF deduction shuru hoga (12% of Basic, max ₹15K basic). Company ka bhi equal 12% employer contribution lagega.</li>
+                        )}
+                        {govtDed.crossingESIThreshold && (
+                          <li><strong>ESI (ESIC):</strong> 10 employees cross — ab sabhi employees jo ₹21,000/month se kam earn karte hain unka ESI deduction shuru hoga (Employee: 0.75%, Employer: 3.25%).</li>
+                        )}
+                      </ul>
+                      <p className="text-xs text-orange-600 font-medium mt-1">
+                        💡 Accounts team ko immediately notify karo — sabhi employees ki salary structure update karni hogi.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Compliance status for small companies */}
                 {!complianceBlocked && totalEmployees < 20 && (
                   <Card className="border-blue-200 bg-blue-50">
