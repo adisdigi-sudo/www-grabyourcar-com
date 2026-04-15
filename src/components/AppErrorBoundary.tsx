@@ -1,7 +1,7 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { isDynamicImportError, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
+import { isDynamicImportError, performSafePreviewReload, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
 import { shouldAvoidDevAutoReload } from "@/lib/adminPreviewStability";
 
 interface AppErrorBoundaryProps {
@@ -48,7 +48,7 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
   }
 
   handleReload = () => {
-    window.location.reload();
+    performSafePreviewReload();
   };
 
   render() {

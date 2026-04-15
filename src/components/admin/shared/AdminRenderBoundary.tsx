@@ -1,7 +1,7 @@
 import { Component, ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { isDynamicImportError, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
+import { isDynamicImportError, performSafePreviewReload, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
 import { shouldAvoidDevAutoReload } from "@/lib/adminPreviewStability";
 
 interface AdminRenderBoundaryProps {
@@ -50,7 +50,7 @@ export class AdminRenderBoundary extends Component<AdminRenderBoundaryProps, Adm
   }
 
   handleReload = () => {
-    window.location.reload();
+    performSafePreviewReload();
   };
 
   render() {

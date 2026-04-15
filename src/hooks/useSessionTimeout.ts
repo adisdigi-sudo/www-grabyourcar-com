@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { withPreviewParams } from "@/lib/previewRouting";
 
 const TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -15,7 +16,7 @@ export const useSessionTimeout = (enabled: boolean = true) => {
   const logout = useCallback(async () => {
     toast.error("Session expired due to inactivity. Please log in again.");
     await supabase.auth.signOut();
-    window.location.href = "/crm-auth";
+    window.location.replace(withPreviewParams("/crm-auth"));
   }, []);
 
   const resetTimer = useCallback(() => {
