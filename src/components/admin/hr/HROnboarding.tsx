@@ -224,12 +224,14 @@ export const HROnboarding = () => {
       const manager = teamMembers.find((m: any) => m.user_id === form.manager_user_id);
       const empCode = "GYC-" + (form.designation?.slice(0, 3) || "EMP").toUpperCase() + "-" + Date.now().toString().slice(-6);
       const monthlyCTC = Number(form.monthly_ctc || 0);
+      const empCount = profiles.length;
       const basic = Math.round(monthlyCTC * 0.4);
       const hra = Math.round(monthlyCTC * 0.2);
       const da = Math.round(monthlyCTC * 0.1);
       const special = Math.round(monthlyCTC * 0.3);
-      const pf = Math.round(basic * 0.12);
-      const esi = monthlyCTC <= 21000 ? Math.round(monthlyCTC * 0.0075) : 0;
+      const ded = calcGovtDeductions(monthlyCTC, empCount);
+      const pf = ded.pf;
+      const esi = ded.esi;
 
       // 0. First create employee in hr_team_directory
       const { data: newEmp, error: dirError } = await supabase.from("hr_team_directory").insert({
