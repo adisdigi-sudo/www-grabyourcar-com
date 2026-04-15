@@ -1044,7 +1044,7 @@ export const ManualQuoteGenerator = () => {
               </div>
               
               {/* EMI Summary */}
-              {showEMI && emi > 0 && (
+              {showEMI && emi > 0 && !showLoanOffer && (
                 <div className="bg-primary/10 rounded-lg p-3 mt-4">
                   <p className="text-xs text-muted-foreground mb-1">Monthly EMI</p>
                   <p className="text-xl font-bold text-primary">
@@ -1054,6 +1054,41 @@ export const ManualQuoteGenerator = () => {
                   <p className="text-xs text-muted-foreground mt-1">
                     @ {interestRate}% • {tenure} months
                   </p>
+                </div>
+              )}
+
+              {/* Loan Offer Summary */}
+              {showLoanOffer && loanOfferFinalAmount > 0 && (
+                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 mt-4 space-y-2 border border-blue-200 dark:border-blue-800">
+                  <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 flex items-center gap-1">
+                    <Building2 className="h-3 w-3" />
+                    Loan Offer{bankName ? ` — ${bankName}` : ''}
+                  </p>
+                  <div className="text-xs space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">On-Road Price</span>
+                      <span>{formatPrice(finalPrice)}</span>
+                    </div>
+                    <div className="flex justify-between text-red-600">
+                      <span>Less Deductions</span>
+                      <span>-{formatPrice(loanOfferDeductions)}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between font-bold">
+                      <span>Loan Amount</span>
+                      <span>{formatPrice(loanOfferFinalAmount)}</span>
+                    </div>
+                  </div>
+                  <div className="pt-1">
+                    <p className="text-xs text-muted-foreground mb-0.5">Monthly EMI</p>
+                    <p className="text-xl font-bold text-primary">
+                      {formatPrice(loanOfferEMI)}
+                      <span className="text-xs font-normal text-muted-foreground">/month</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      @ {interestRate}% • {tenure} months • Total: {formatPrice(loanOfferTotalPayment)}
+                    </p>
+                  </div>
                 </div>
               )}
               
