@@ -1,0 +1,82 @@
+import { isSensitivePreviewRouteWindow } from "@/lib/adminPreviewStability";
+
+export const DEV_SERVER_STATUS_EVENT = "lovable:dev-server-status";
+export const DEV_SERVER_PENDING_RELOAD_KEY = "lovable_dev_server_pending_reload";
+export const DEV_SERVER_LAST_RELOAD_KEY = "lovable_dev_server_last_reload";
+
+declare global {
+  interface Window {
+    __lovableDevReloadGuardInstalled?: boolean;
+  }
+}
+
+const dispatchUpdateReady = () => {
+  if (typeof window === "undefined") return;
+
+  window.dispatchEvent(
+    new CustomEvent(DEV_SERVER_STATUS_EVENT, {
+      detail: { status: "update_ready" as const },
+    }),
+  );
+};
+
+export const clearPendingReloadFlag = () => {
+  try {
+    sessionStorage.removeItem(DEV_SERVER_PENDING_RELOAD_KEY);
+  } catch {
+    // ignore storage failures
+  }
+};
+
+export const markDevServerPendingReload = () => {
+  try {
+    sessionStorage.setItem(DEV_SERVER_PENDING_RELOAD_KEY, "1");
+  } catch {
+    // ignore storage failures
+  }
+};
+
+const tryPatchReload = (target: object, reload: () => void) => {
+  try {
+    Object.defineProperty(target, "reload", {
+      configurable: true,
+      writable: true,
+      value: reload,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const installSensitiveRouteReloadGuard = () => {
+  if (!import.meta.env.DEV || typeof window === "undefined") return;
+  if (window.__lovableDevReloadGuardInstalled) return;
+
+  window.__lovableDevReloadGuardInstalled = true;
+
+  const originalReload = window.location.reload.bind(window.location);
+  const guardedReload = () => {
+    if (!isSensitivePreviewRouteWindow()) {
+      originalReload();
+      return;
+    }
+
+    markDevServerPendingReload();
+    dispatchUpdateReady();
+
+    console.info("[DevReloadGuard] Prevented forced reload on sensitive preview route", {
+      href: window.location.href,
+      pathname: window.location.pathname,
+    });
+  };
+
+  const locationPrototype = Object.getPrototypeOf(window.location);
+  const patched =
+    tryPatchReload(window.location, guardedReload) ||
+    (locationPrototype ? tryPatchReload(locationPrototype, guardedReload) : false);
+
+  if (!patched) {
+    console.warn("[DevReloadGuard] Failed to patch window.location.reload; forced Vite reloads may still occur.");
+  }
+};
