@@ -1297,84 +1297,25 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                 <div className="flex items-center gap-2 text-violet-700 text-xs font-medium uppercase tracking-wider">
                   <Car className="h-3.5 w-3.5" /> Automotive Car Sales Calculator
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Final Car Price *</Label><Input type="number" value={finalCarPrice} onChange={e => setFinalCarPrice(e.target.value)} placeholder="e.g. 1650000" /></div>
-                  <div><Label>Booking / Token Paid</Label><Input type="number" value={bookingAmountPaid} onChange={e => setBookingAmountPaid(e.target.value)} placeholder="e.g. 51000" /></div>
-                  <div><Label>Advance / Any Amount Paid</Label><Input type="number" value={advancePaid} onChange={e => setAdvancePaid(e.target.value)} placeholder="e.g. 25000" /></div>
-                  <div><Label>Gross Loan Amount *</Label><Input type="number" value={grossLoanAmount} onChange={e => setGrossLoanAmount(e.target.value)} placeholder="e.g. 1435000" /></div>
-                  <div><Label>Loan Suraksha / Insurance</Label><Input type="number" value={loanProtectionAmount} onChange={e => setLoanProtectionAmount(e.target.value)} placeholder="e.g. 10112" /></div>
-                  <div><Label>Processing Fees</Label><Input type="number" value={processingFees} onChange={e => setProcessingFees(e.target.value)} placeholder="e.g. 3000" /></div>
-                  <div><Label>{otherBankChargesLabel || 'Other Bank Charges'}</Label><Input type="number" value={otherBankCharges} onChange={e => setOtherBankCharges(e.target.value)} placeholder="e.g. 0" /></div>
-                </div>
-                <div>
-                  <Label>Other Charge Label</Label>
-                  <Input value={otherBankChargesLabel} onChange={e => setOtherBankChargesLabel(e.target.value)} placeholder="e.g. File Charges" />
-                </div>
-                <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-1.5 text-sm">
-                  {/* STEP 1: Loan Amount & Deductions */}
-                  <p className="text-[10px] text-violet-600 font-semibold uppercase tracking-wider mb-1">Step 1: Bank Net Disbursal</p>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">Gross Loan Amount</span>
-                    <span className="font-medium">{formatDetailedAmount(salesBreakdown.grossLoanAmount)}</span>
-                  </div>
-                  {salesBreakdown.loanProtectionAmount > 0 && (
-                    <div className="flex items-center justify-between gap-3 text-red-600">
-                      <span>Less Loan Suraksha / Insurance</span>
-                      <span>-{formatDetailedAmount(salesBreakdown.loanProtectionAmount)}</span>
-                    </div>
-                  )}
-                  {salesBreakdown.processingFees > 0 && (
-                    <div className="flex items-center justify-between gap-3 text-red-600">
-                      <span>Less Processing Fees</span>
-                      <span>-{formatDetailedAmount(salesBreakdown.processingFees)}</span>
-                    </div>
-                  )}
-                  {salesBreakdown.otherCharges > 0 && (
-                    <div className="flex items-center justify-between gap-3 text-red-600">
-                      <span>Less {otherBankChargesLabel || 'Other Bank Charges'}</span>
-                      <span>-{formatDetailedAmount(salesBreakdown.otherCharges)}</span>
-                    </div>
-                  )}
-                  <div className="border-t border-border/60 pt-1.5 flex items-center justify-between gap-3 font-semibold text-violet-700">
-                    <span>Bank Net Disbursal Amount</span>
-                    <span>{formatDetailedAmount(salesBreakdown.bankNetDisbursal)}</span>
-                  </div>
-
-                  {/* STEP 2: Down Payment Calculation */}
-                  <p className="text-[10px] text-violet-600 font-semibold uppercase tracking-wider mt-3 mb-1">Step 2: Down Payment & Balance</p>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">Final Car Price (On-Road)</span>
-                    <span className="font-medium">{formatDetailedAmount(salesBreakdown.finalCarPrice)}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 text-emerald-600">
-                    <span>Less Bank Net Disbursal</span>
-                    <span>-{formatDetailedAmount(salesBreakdown.bankNetDisbursal)}</span>
-                  </div>
-                  <div className="border-t border-border/60 pt-1.5 flex items-center justify-between gap-3 font-semibold">
-                    <span>Down Payment Needed</span>
-                    <span>{formatDetailedAmount(salesBreakdown.downPaymentNeeded)}</span>
-                  </div>
-                  {salesBreakdown.bookingAmount > 0 && (
-                    <div className="flex items-center justify-between gap-3 text-emerald-600">
-                      <span>Less Booking / Token Paid</span>
-                      <span>-{formatDetailedAmount(salesBreakdown.bookingAmount)}</span>
-                    </div>
-                  )}
-                  {salesBreakdown.advancePaid > 0 && (
-                    <div className="flex items-center justify-between gap-3 text-emerald-600">
-                      <span>Less Advance Paid</span>
-                      <span>-{formatDetailedAmount(salesBreakdown.advancePaid)}</span>
-                    </div>
-                  )}
-                  <div className="border-t-2 border-violet-500/30 pt-2 flex items-center justify-between gap-3 font-bold text-primary text-base">
-                    <span>💰 Final Balance Payable</span>
-                    <span>{formatDetailedAmount(salesBreakdown.balancePayableByYou)}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                    <span>Total Customer Pocket (Booking + Advance + Balance)</span>
-                    <span>{formatDetailedAmount(salesBreakdown.totalCustomerContribution)}</span>
-                  </div>
-                </div>
+                <UnifiedSalesCalculator
+                  finalCarPrice={finalCarPrice}
+                  setFinalCarPrice={setFinalCarPrice}
+                  grossLoanAmount={grossLoanAmount}
+                  setGrossLoanAmount={setGrossLoanAmount}
+                  loanProtectionAmount={loanProtectionAmount}
+                  setLoanProtectionAmount={setLoanProtectionAmount}
+                  processingFees={processingFees}
+                  setProcessingFees={setProcessingFees}
+                  otherCharges={otherBankCharges}
+                  setOtherCharges={setOtherBankCharges}
+                  otherChargesLabel={otherBankChargesLabel}
+                  setOtherChargesLabel={setOtherBankChargesLabel}
+                  bookingAmount={bookingAmountPaid}
+                  setBookingAmount={setBookingAmountPaid}
+                  advancePaid={advancePaid}
+                  setAdvancePaid={setAdvancePaid}
+                  breakdown={salesBreakdown}
+                />
               </div>
               <div><Label>Remarks</Label><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Offer details..." rows={2} /></div>
               <Button onClick={handleOfferSave} disabled={updateMutation.isPending} className="w-full bg-violet-600 hover:bg-violet-700 text-white">
