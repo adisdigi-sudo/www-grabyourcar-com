@@ -1,0 +1,283 @@
+import { isSensitivePreviewRouteWindow, shouldStabilizeStartupShellWindow } from "@/lib/adminPreviewStability";
+import { performSafePreviewReload } from "@/lib/chunkLoadRecovery";
+import { DEV_SERVER_STATUS_EVENT } from "@/lib/devReloadGuard";
+
+const STARTUP_SHELL_ID = "lovable-startup-shell";
+const STARTUP_SHELL_RECOVERY_DELAY_MS = 4500;
+const STARTUP_SHELL_HIDE_WAIT_MS = 2200;
+const ROOT_BLANK_RECOVERY_DELAY_MS = 900;
+const APP_ROOT_ID = "root";
+
+let startupShellRecoveryTimer: number | null = null;
+let startupShellBlankTimer: number | null = null;
+let detachStartupShellListeners: (() => void) | null = null;
+let rootObserver: MutationObserver | null = null;
+let bodyObserver: MutationObserver | null = null;
+let healthMonitorInstalled = false;
+
+const clearStartupShellRecoveryTimer = () => {
+  if (startupShellRecoveryTimer) {
+    window.clearTimeout(startupShellRecoveryTimer);
+    startupShellRecoveryTimer = null;
+  }
+};
+
+const clearBlankRecoveryTimer = () => {
+  if (startupShellBlankTimer) {
+    window.clearTimeout(startupShellBlankTimer);
+    startupShellBlankTimer = null;
+  }
+};
+
+export const isSensitiveRouteAppReady = () => {
+  if (typeof document === "undefined") return false;
+
+  const root = document.getElementById(APP_ROOT_ID);
+  if (!root || root.childElementCount === 0) return false;
+
+  return Boolean(
+    root.querySelector(
+      "header, nav, main, footer, section, aside, button, h1, h2, img, [aria-live='polite'], [data-sonner-toaster], [class*='animate-spin']",
+    ),
+  );
+};
+
+export const promoteStartupShellToRecovery = (
+  reason = "Startup expected time se zyada le raha hai. Blank screen ke bajaye yahan se safe recovery use karo.",
+) => {
+  if (typeof document === "undefined") return;
+
+  const shell = document.getElementById(STARTUP_SHELL_ID);
+  if (!shell || shell.getAttribute("data-state") === "recovery") return;
+
+  shell.setAttribute("data-state", "recovery");
+  shell.style.background = "linear-gradient(180deg, hsl(60 20% 99%), hsl(90 18% 96%))";
+
+  const status = shell.querySelector<HTMLElement>("[data-shell-status]");
+  const title = shell.querySelector<HTMLElement>("[data-shell-title]");
+  const body = shell.querySelector<HTMLElement>("[data-shell-body]");
+  const actions = shell.querySelector<HTMLElement>("[data-shell-actions]");
+
+  if (status) {
+    status.style.animation = "none";
+    status.style.borderColor = "hsl(38 92% 50% / 0.28)";
+    status.style.background = "hsl(38 92% 50% / 0.12)";
+    status.style.display = "grid";
+    status.style.placeItems = "center";
+    status.style.font = "700 22px system-ui, sans-serif";
+    status.style.color = "hsl(24 9.8% 10%)";
+    status.textContent = "!";
+  }
+
+  if (title) {
+    title.textContent = "Page startup recovery mode";
+  }
+
+  if (body) {
+    body.textContent = reason;
+  }
+
+  if (actions) {
+    actions.style.display = "flex";
+  }
+};
+
+export const ensureStartupShell = () => {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(STARTUP_SHELL_ID)) return;
+
+  const fallbackActionLabel = isSensitivePreviewRouteWindow() ? "Open sign in" : "Open home";
+
+  const shell = document.createElement("div");
+  shell.id = STARTUP_SHELL_ID;
+  shell.setAttribute("aria-live", "polite");
+  shell.style.position = "fixed";
+  shell.style.inset = "0";
+  shell.style.zIndex = "9999";
+  shell.style.display = "flex";
+  shell.style.flexDirection = "column";
+  shell.style.alignItems = "center";
+  shell.style.justifyContent = "center";
+  shell.style.gap = "12px";
+  shell.style.background = "linear-gradient(180deg, hsl(0 0% 100%), hsl(210 20% 97%))";
+  shell.style.color = "hsl(222.2 84% 4.9%)";
+  shell.setAttribute("data-state", "loading");
+  shell.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px 20px;max-width:460px;text-align:center;">
+      <div data-shell-status style="height:44px;width:44px;border-radius:9999px;border:3px solid hsl(220 14% 96%);border-top-color:hsl(221.2 83.2% 53.3%);animation:lovable-spin 1s linear infinite;"></div>
+      <div data-shell-title style="font:600 16px system-ui, sans-serif;">Page reconnect ho raha hai</div>
+      <div data-shell-body style="max-width:420px;text-align:center;font:400 13px system-ui, sans-serif;color:hsl(215.4 16.3% 46.9%);padding:0 20px;">Agar preview update aayi hai to page thodi der stable shell par rahega. White page ke bajaye yeh recovery state dikhni chahiye.</div>
+      <div data-shell-actions style="display:none;gap:10px;flex-wrap:wrap;justify-content:center;">
+        <button type="button" data-shell-reload style="border:0;border-radius:9999px;background:hsl(221.2 83.2% 53.3%);color:white;padding:10px 16px;font:600 13px system-ui,sans-serif;cursor:pointer;">Reload safely</button>
+        <button type="button" data-shell-auth style="border:1px solid hsl(214.3 31.8% 91.4%);border-radius:9999px;background:white;color:hsl(222.2 84% 4.9%);padding:10px 16px;font:600 13px system-ui,sans-serif;cursor:pointer;">${fallbackActionLabel}</button>
+      </div>
+    </div>
+  `;
+
+  const style = document.createElement("style");
+  style.textContent = "@keyframes lovable-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }";
+  shell.appendChild(style);
+  document.body.appendChild(shell);
+
+  const reloadButton = shell.querySelector<HTMLButtonElement>("[data-shell-reload]");
+  const signInButton = shell.querySelector<HTMLButtonElement>("[data-shell-auth]");
+
+  const handleReload = () => {
+    clearStartupShellRecoveryTimer();
+    clearBlankRecoveryTimer();
+    performSafePreviewReload();
+  };
+
+  const handleOpenSignIn = () => {
+    clearStartupShellRecoveryTimer();
+    clearBlankRecoveryTimer();
+    window.location.replace(
+      new URL(isSensitivePreviewRouteWindow() ? "/crm-auth" : "/", window.location.origin).toString(),
+    );
+  };
+
+  const handleRuntimeFatal = () => {
+    promoteStartupShellToRecovery("Runtime issue detect hui hai. Niche diye options se page ko safely recover karo.");
+  };
+
+  const handleDevServerStatus = (event: Event) => {
+    const status = (event as CustomEvent<{ status?: string }>).detail?.status;
+    if (status === "update_ready" || status === "disconnected") {
+      promoteStartupShellToRecovery("Dev connection/update ne startup ko interrupt kiya. Ab yahan se safe reload kar sakte ho.");
+    }
+  };
+
+  reloadButton?.addEventListener("click", handleReload);
+  signInButton?.addEventListener("click", handleOpenSignIn);
+  window.addEventListener("lovable:runtime-fatal", handleRuntimeFatal as EventListener);
+  window.addEventListener(DEV_SERVER_STATUS_EVENT, handleDevServerStatus as EventListener);
+
+  detachStartupShellListeners = () => {
+    reloadButton?.removeEventListener("click", handleReload);
+    signInButton?.removeEventListener("click", handleOpenSignIn);
+    window.removeEventListener("lovable:runtime-fatal", handleRuntimeFatal as EventListener);
+    window.removeEventListener(DEV_SERVER_STATUS_EVENT, handleDevServerStatus as EventListener);
+  };
+
+  clearStartupShellRecoveryTimer();
+  startupShellRecoveryTimer = window.setTimeout(() => {
+    promoteStartupShellToRecovery();
+  }, STARTUP_SHELL_RECOVERY_DELAY_MS);
+};
+
+export const removeStartupShell = () => {
+  const cleanupShell = () => {
+    clearStartupShellRecoveryTimer();
+    detachStartupShellListeners?.();
+    detachStartupShellListeners = null;
+    const shell = typeof document !== "undefined" ? document.getElementById(STARTUP_SHELL_ID) : null;
+    shell?.remove();
+  };
+
+  if (typeof document === "undefined") return;
+
+  if (!shouldStabilizeStartupShellWindow()) {
+    cleanupShell();
+    return;
+  }
+
+  if (isSensitiveRouteAppReady()) {
+    cleanupShell();
+    return;
+  }
+
+  const root = document.getElementById(APP_ROOT_ID);
+  if (!root) {
+    ensureStartupShell();
+    promoteStartupShellToRecovery("App root mount nahi ho paaya. Safe reload try karo.");
+    return;
+  }
+
+  const observer = new MutationObserver(() => {
+    if (!isSensitiveRouteAppReady()) return;
+    observer.disconnect();
+    window.clearTimeout(timeoutId);
+    cleanupShell();
+  });
+
+  observer.observe(root, { childList: true, subtree: true });
+
+  const timeoutId = window.setTimeout(() => {
+    observer.disconnect();
+    if (isSensitiveRouteAppReady()) {
+      cleanupShell();
+      return;
+    }
+
+    ensureStartupShell();
+    promoteStartupShellToRecovery("Page UI mount confirm nahi hui, isliye white screen avoid karne ke liye recovery panel hold par rakha gaya hai.");
+  }, STARTUP_SHELL_HIDE_WAIT_MS);
+};
+
+const bindRootObserver = (onChange: () => void) => {
+  rootObserver?.disconnect();
+  rootObserver = null;
+
+  const root = document.getElementById(APP_ROOT_ID);
+  if (!root) return;
+
+  rootObserver = new MutationObserver(onChange);
+  rootObserver.observe(root, { childList: true, subtree: true });
+};
+
+const queueBlankStateRecovery = (reason: string) => {
+  if (!shouldStabilizeStartupShellWindow()) {
+    clearBlankRecoveryTimer();
+    return;
+  }
+
+  clearBlankRecoveryTimer();
+  startupShellBlankTimer = window.setTimeout(() => {
+    if (!shouldStabilizeStartupShellWindow() || isSensitiveRouteAppReady()) {
+      return;
+    }
+
+    ensureStartupShell();
+    promoteStartupShellToRecovery(reason);
+  }, ROOT_BLANK_RECOVERY_DELAY_MS);
+};
+
+export const installStartupShellHealthMonitor = () => {
+  if (typeof window === "undefined" || typeof document === "undefined" || healthMonitorInstalled) return;
+
+  healthMonitorInstalled = true;
+
+  const evaluateRootHealth = () => {
+    if (!shouldStabilizeStartupShellWindow()) {
+      clearBlankRecoveryTimer();
+      return;
+    }
+
+    if (isSensitiveRouteAppReady()) {
+      clearBlankRecoveryTimer();
+      if (document.getElementById(STARTUP_SHELL_ID)) {
+        removeStartupShell();
+      }
+      return;
+    }
+
+    queueBlankStateRecovery(
+      "CRM UI blank ho gayi thi. White page avoid karne ke liye recovery panel automatically wapas dikhaya gaya hai.",
+    );
+  };
+
+  bindRootObserver(evaluateRootHealth);
+
+  bodyObserver = new MutationObserver(() => {
+    bindRootObserver(evaluateRootHealth);
+    evaluateRootHealth();
+  });
+
+  bodyObserver.observe(document.body, { childList: true });
+
+  window.addEventListener(DEV_SERVER_STATUS_EVENT, evaluateRootHealth as EventListener);
+  window.addEventListener("pageshow", evaluateRootHealth);
+  document.addEventListener("visibilitychange", evaluateRootHealth);
+
+  window.setTimeout(evaluateRootHealth, 0);
+};
