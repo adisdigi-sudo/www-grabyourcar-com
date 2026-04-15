@@ -173,27 +173,22 @@ const reloadAfterDevServerRestart = () => {
     const hasPendingReload = sessionStorage.getItem(DEV_SERVER_PENDING_RELOAD_KEY) === "1";
     if (!hasPendingReload) return;
 
-    if (shouldAvoidDevAutoReload()) {
-      console.info("[BootstrapRuntime] Skipping automatic reload after dev-server reconnect on sensitive preview route", {
-        href: window.location.href,
-      });
-      window.dispatchEvent(
-        new CustomEvent(DEV_SERVER_STATUS_EVENT, {
-          detail: { status: "update_ready" as const },
-        }),
-      );
-      return;
-    }
+    console.info("[BootstrapRuntime] Dev server reconnected; keeping current CRM shell stable and waiting for manual reload", {
+      href: window.location.href,
+      sensitive: isSensitivePreviewRouteWindow(),
+    });
 
-    const lastReloadAt = Number.parseInt(sessionStorage.getItem(DEV_SERVER_LAST_RELOAD_KEY) ?? "0", 10);
-    if (!Number.isNaN(lastReloadAt) && Date.now() - lastReloadAt < DEV_SERVER_RELOAD_COOLDOWN_MS) {
-      clearPendingReloadFlag();
-      return;
-    }
-
-    performSafeReload();
+    window.dispatchEvent(
+      new CustomEvent(DEV_SERVER_STATUS_EVENT, {
+        detail: { status: "update_ready" as const },
+      }),
+    );
   } catch {
-    window.location.reload();
+    window.dispatchEvent(
+      new CustomEvent(DEV_SERVER_STATUS_EVENT, {
+        detail: { status: "update_ready" as const },
+      }),
+    );
   }
 };
 
@@ -436,12 +431,12 @@ const DevServerStatusOverlay = () => {
       : status === "reloading"
         ? {
             title: "Update detected",
-            body: "Sensitive CRM route par auto reload roka gaya hai. Bundle ready hote hi aap manual refresh kar sakte ho.",
+            body: "Background me update aayi hai. Aapka current CRM work disturb nahi hoga; jab ready ho tab manual safe reload karna.",
             actionLabel: null,
           }
         : {
             title: "Update ready",
-            body: "Naya dev bundle ready hai. Safe reload karo taaki stale white-screen state clear ho jaye.",
+            body: "Naya dev bundle ready hai, lekin current screen ko force reload nahi kiya jayega. Kaam complete karke safe reload karo.",
             actionLabel: "Reload safely",
           };
 
