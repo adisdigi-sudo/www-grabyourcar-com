@@ -389,6 +389,57 @@ export const HREmployeeManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Change Manager Dialog */}
+      <Dialog open={showManagerDialog} onOpenChange={setShowManagerDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><UserCog className="h-5 w-5" /> Change Manager</DialogTitle>
+          </DialogHeader>
+          {managerTarget && (
+            <div className="space-y-4">
+              <div className="p-3 rounded bg-muted/50">
+                <p className="font-semibold">{managerTarget.full_name}</p>
+                <p className="text-sm text-muted-foreground">{managerTarget.designation} · {managerTarget.department}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Current Manager: {empProfiles.find((p: any) => p.team_member_id === managerTarget.id)?.manager_name || "None assigned"}
+                </p>
+              </div>
+              <div>
+                <Label>New Manager *</Label>
+                <Select value={newManagerId} onValueChange={setNewManagerId}>
+                  <SelectTrigger><SelectValue placeholder="Select new manager" /></SelectTrigger>
+                  <SelectContent>
+                    {teamMembers
+                      .filter((m: any) => m.id !== managerTarget.id)
+                      .map((m: any) => (
+                        <SelectItem key={m.user_id} value={m.user_id}>
+                          {m.display_name} — {m.designation} ({m.department})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowManagerDialog(false)}>Cancel</Button>
+            <Button
+              disabled={!newManagerId || changeManagerMutation.isPending}
+              onClick={() => {
+                const mgr = teamMembers.find((m: any) => m.user_id === newManagerId);
+                changeManagerMutation.mutate({
+                  teamMemberId: managerTarget.id,
+                  newMgrUserId: newManagerId,
+                  newMgrName: mgr?.display_name || "",
+                });
+              }}
+            >
+              {changeManagerMutation.isPending ? "Updating..." : "Change Manager"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
