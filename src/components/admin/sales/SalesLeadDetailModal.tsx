@@ -58,8 +58,20 @@ export function SalesLeadDetailModal({
   const [deliveryImages, setDeliveryImages] = useState<string[]>((lead.delivery_images as string[]) || []);
   const [videoUrl, setVideoUrl] = useState(lead.video_url || "");
   const [dealValue, setDealValue] = useState(lead.deal_value || "");
+  const [bookingAmount, setBookingAmount] = useState(lead.booking_amount || "");
+  const [processingFees, setProcessingFees] = useState(lead.processing_fees || "");
+  const [otherExpenses, setOtherExpenses] = useState(lead.other_expenses || "");
+  const [otherExpensesLabel, setOtherExpensesLabel] = useState(lead.other_expenses_label || "Other Expenses");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showShareOffer, setShowShareOffer] = useState(false);
+
+  // Full INR formatter — never abbreviate
+  const fmtINR = (v: number) => `Rs. ${Math.round(v).toLocaleString("en-IN")}`;
+
+  // Computed deal summary
+  const totalCarPrice = Number(lead.on_road_price) || Number(dealValue) || 0;
+  const totalDeductions = (Number(bookingAmount) || 0) + (Number(processingFees) || 0) + (Number(otherExpenses) || 0);
+  const balancePayable = totalCarPrice - totalDeductions;
 
   const pendingStage = lead._targetStage;
   const currentStage = pendingStage || lead.pipeline_stage;
