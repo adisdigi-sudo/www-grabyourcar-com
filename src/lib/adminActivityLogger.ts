@@ -34,7 +34,10 @@ export const logAdminActivity = async ({
   details,
 }: LogActivityParams): Promise<void> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const user = session?.user ?? null;
     
     if (!user) {
       console.warn('Attempted to log admin activity without authenticated user');
