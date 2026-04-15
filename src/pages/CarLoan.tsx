@@ -6,6 +6,7 @@ import { CarLoanHero } from "@/components/car-loan/CarLoanHero";
 import { CarLoanEligibilityForm } from "@/components/car-loan/CarLoanEligibilityForm";
 import { CarLoanBankComparison } from "@/components/car-loan/CarLoanBankComparison";
 import { CarLoanEMICalculator } from "@/components/car-loan/CarLoanEMICalculator";
+import { CarLoanBreakdownCalculator } from "@/components/car-loan/CarLoanBreakdownCalculator";
 import { CarLoanTrustSection } from "@/components/car-loan/CarLoanTrustSection";
 import { CarLoanFAQ } from "@/components/car-loan/CarLoanFAQ";
 import { CarLoanCrossSell } from "@/components/car-loan/CarLoanCrossSell";
@@ -42,6 +43,9 @@ const CarLoan = () => {
 
         {/* EMI Calculator */}
         <CarLoanEMICalculator />
+
+        {/* Loan Breakdown Calculator */}
+        <CarLoanBreakdownCalculator />
 
         {/* Cross-sell (after eligibility) */}
         {eligibilityResult?.eligible && (
