@@ -235,14 +235,56 @@ export const ManualQuoteGenerator = () => {
     };
   };
 
+  const getQuotePersistData = (doc: jsPDF, shareMethod: string) => ({
+    doc,
+    fileName: `CarQuote_${(customerName || brand + "_" + model).replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
+    shareMethod,
+    customerName: customerName || "Customer",
+    customerPhone,
+    customerEmail,
+    carBrand: brand,
+    carModel: model,
+    carVariant: variant || null,
+    carColor: color || null,
+    city: city || null,
+    exShowroomPrice: exShowroom,
+    onRoadPrice: subtotal,
+    finalPrice,
+    discountAmount: enableDiscount ? discountAmount : 0,
+    discountType: enableDiscount ? discountType : null,
+    priceBreakup: { exShowroom, rto, insurance, tcs, fastag, registration, handling, accessories, extendedWarranty, otherCharges, otherChargesLabel },
+    includeLoanOffer: showLoanOffer,
+    bankName: showLoanOffer ? bankName : null,
+    bookingAmount: showLoanOffer ? bookingAmount : null,
+    processingFees: showLoanOffer ? processingFees : null,
+    otherLoanExpenses: showLoanOffer ? otherLoanExpenses : null,
+    loanAmount: showLoanOffer ? loanOfferFinalAmount : (showEMI ? loanAmount : null),
+    interestRate: (showLoanOffer || showEMI) ? interestRate : null,
+    tenureMonths: (showLoanOffer || showEMI) ? tenure : null,
+    emiAmount: showLoanOffer ? loanOfferEMI : (showEMI ? emi : null),
+    totalPayment: showLoanOffer ? loanOfferTotalPayment : (showEMI ? emi * tenure : null),
+    totalInterest: showLoanOffer ? loanOfferTotalInterest : (showEMI ? (emi * tenure) - loanAmount : null),
+    notes: additionalNotes || null,
+    source: "manual_quote",
+  });
+
   const handleGeneratePDF = async () => {
     if (!brand || !model) {
       toast.error("Please enter car brand and model");
       return;
     }
     try {
-      await generateEMIPdf(getEMIData(), pdfConfig || undefined);
-      toast.success("Quote PDF generated successfully!");
+      const doc = await generateEMIPdf(getEMIData(), pdfConfig || undefined, true) as jsPDF | undefined;
+      if (doc) {
+        // Save PDF file
+        doc.save(`CarQuote_${(customerName || brand + "_" + model).replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`);
+        // Persist to quote history
+        const result = await persistCarSalesQuote(getQuotePersistData(doc, "pdf_download"));
+        toast.success(`Quote PDF saved! Ref: ${result.quoteRef}`);
+      } else {
+        await generateEMIPdf(getEMIData(), pdfConfig || undefined);
+        toast.success("Quote PDF generated!");
+      }
     } catch (error) {
       console.error("PDF generation error:", error);
       toast.error("Failed to generate PDF");
