@@ -25,6 +25,8 @@ const iconMap: Record<string, React.ElementType> = {
   Megaphone,
 };
 
+const WORKSPACE_BOOTSTRAP_TIMEOUT_MS = 12000;
+
 const WorkspaceSelector = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, initialized: authInitialized, signOut } = useAuth();
@@ -32,6 +34,29 @@ const WorkspaceSelector = () => {
   const { isSuperAdmin, isAdmin } = useAdminAuth();
 
   const [passwordTarget, setPasswordTarget] = useState<BusinessVertical | null>(null);
+  const [bootstrapTimedOut, setBootstrapTimedOut] = useState(false);
+  const isBootstrapping = !authInitialized || authLoading || verticalLoading;
+
+  useEffect(() => {
+    if (!isBootstrapping) {
+      setBootstrapTimedOut(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      console.error("[WorkspaceSelector] Workspace bootstrap timed out", {
+        authInitialized,
+        authLoading,
+        verticalLoading,
+        hasUser: !!user,
+      });
+      setBootstrapTimedOut(true);
+    }, WORKSPACE_BOOTSTRAP_TIMEOUT_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [authInitialized, authLoading, verticalLoading, user, isBootstrapping]);
 
   // Fetch which verticals have passwords set (for lock icon display)
   const { data: verticalPasswords = {} } = useQuery({
@@ -100,7 +125,27 @@ const WorkspaceSelector = () => {
     navigate(withPreviewParams("/crm-auth"));
   };
 
-  if (!authInitialized || authLoading || verticalLoading) {
+  if (isBootstrapping) {
+    if (bootstrapTimedOut) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background px-4">
+          <Card className="w-full max-w-lg p-8 text-center border-border/60 shadow-xl shadow-primary/5">
+            <Shield className="h-12 w-12 mx-auto mb-4 text-primary" />
+            <h1 className="text-2xl font-semibold text-foreground">Workspace load ruk gaya</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Login ya workspace sync hang ho gaya tha. Blank screen ke bajaye recovery options dikh rahe hain.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+              <Button variant="outline" onClick={() => navigate(withPreviewParams("/crm-auth"))}>
+                Back to sign in
+              </Button>
+            </div>
+          </Card>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background">
         <Loader2 className="h-8 w-8 animate-spin text-foreground" />

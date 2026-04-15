@@ -7,6 +7,22 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
+
+const respond = (payload: Record<string, unknown>) =>
+  new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: jsonHeaders,
+  });
+
+const readJsonSafely = async (response: Response) => {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+};
+
 /**
  * Omni-Channel Send — Routes messages to the right channel handler.
  * WhatsApp → delegates to whatsapp-send (provider-agnostic)
@@ -35,8 +51,8 @@ serve(async (req) => {
         channels[p.channel] = { active: p.is_active, provider: p.provider_name };
       }
       return new Response(
-        JSON.stringify({ success: true, channels }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ ok: true, success: true, channels }),
+        { status: 200, headers: jsonHeaders }
       );
     }
 
@@ -48,14 +64,13 @@ serve(async (req) => {
       .single();
 
     if (!provider?.is_active) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          status: "not_configured",
-          error: `${channel} channel is not configured or inactive`,
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return respond({
+        ok: false,
+        success: false,
+        fallback: false,
+        status: "not_configured",
+        error: `${channel} channel is not configured or inactive`,
+      });
     }
 
     let result: any = { success: false };
@@ -77,7 +92,19 @@ serve(async (req) => {
         }),
       });
 
-      result = await waResponse.json();
+      result = (await readJsonSafely(waResponse)) || {
+        ok: false,
+        success: false,
+        error: `Invalid WhatsApp response (${waResponse.status})`,
+      };
+
+      if (!waResponse.ok && result.success !== false) {
+        result = {
+          ok: false,
+          success: false,
+          error: `WhatsApp send failed (${waResponse.status})`,
+        };
+      }
     }
 
     // ── Email adapter (Resend) ──
@@ -85,10 +112,7 @@ serve(async (req) => {
       const resendApiKey = Deno.env.get("RESEND_API_KEY");
 
       if (!resendApiKey) {
-        return new Response(
-          JSON.stringify({ success: false, error: "Email (Resend) API key not configured" }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+          return respond({ ok: false, success: false, fallback: false, error: "Email (Resend) API key not configured" });
       }
 
       const emailResponse = await fetch("https://api.resend.com/emails", {
@@ -115,18 +139,22 @@ serve(async (req) => {
       if (emailResponse.ok && emailData.id) {
         result = { success: true, messageId: emailData.id };
 
-        await supabase.from("wa_message_logs").insert({
-          phone: email || "email",
-          customer_name: name || null,
-          message_type: "email",
-          message_content: message,
-          trigger_event: logEvent || "omni_email",
-          status: "sent",
-          provider: "resend",
-          channel: "email",
-          provider_message_id: emailData.id,
-          sent_at: new Date().toISOString(),
-        });
+          try {
+            await supabase.from("wa_message_logs").insert({
+              phone: email || "email",
+              customer_name: name || null,
+              message_type: "email",
+              message_content: message,
+              trigger_event: logEvent || "omni_email",
+              status: "sent",
+              provider: "resend",
+              channel: "email",
+              provider_message_id: emailData.id,
+              sent_at: new Date().toISOString(),
+            });
+          } catch (logError) {
+            console.error("Failed to log omni email send (non-fatal):", logError);
+          }
       } else {
         result = { success: false, error: emailData.message || "Email send failed" };
       }
@@ -141,15 +169,15 @@ serve(async (req) => {
       };
     }
 
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return respond({ ok: Boolean(result?.success), fallback: false, ...result });
   } catch (err) {
     console.error("omni-channel-send error:", err);
-    return new Response(
-      JSON.stringify({ success: false, error: err.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return respond({
+      ok: false,
+      success: false,
+      fallback: false,
+      status: "runtime_error",
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
   }
 });

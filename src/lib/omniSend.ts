@@ -113,17 +113,33 @@ export async function omniSend(params: OmniSendParams): Promise<OmniSendResult> 
       return { success: false, fallback: false, error: data?.error || "whatsapp_not_configured", channel };
     }
 
-    throw new Error(data?.error || "Send failed");
+    const providerError = data?.error || "Send failed";
+    if (!silent) toast.error(providerError);
+    return {
+      success: false,
+      fallback: Boolean(data?.fallback),
+      error: providerError,
+      channel,
+    };
   } catch (err) {
     console.warn(`Omni send failed for ${channel}:`, err);
 
     if (channel === "whatsapp") {
       if (!silent) toast.error("WhatsApp API failed — popup fallback disabled");
-      return { success: false, fallback: false, error: String(err), channel };
+      return {
+        success: false,
+        fallback: false,
+        error: err instanceof Error ? err.message : String(err),
+        channel,
+      };
     }
 
     if (!silent) toast.error(`Failed to send ${channel} message`);
-    return { success: false, error: String(err), channel };
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : String(err),
+      channel,
+    };
   }
 }
 

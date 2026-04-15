@@ -1,7 +1,7 @@
 import { useEffect, useState, type ComponentType } from "react";
 import { isChunkLoadRecoveryExhausted, isDynamicImportError, recoverFromChunkLoadError, resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { isSensitivePreviewRouteWindow, shouldAvoidDevAutoReload } from "@/lib/adminPreviewStability";
-import { WifiOff } from "lucide-react";
+import { RefreshCw, WifiOff } from "lucide-react";
 
 const DEV_SERVER_STATUS_EVENT = "lovable:dev-server-status";
 const CHUNK_RECOVERY_STATUS_EVENT = "lovable:chunk-recovery-status";
@@ -143,7 +143,11 @@ const reloadAfterDevServerRestart = () => {
       console.info("[BootstrapRuntime] Skipping automatic reload after dev-server reconnect on sensitive preview route", {
         href: window.location.href,
       });
-      clearPendingReloadFlag();
+      window.dispatchEvent(
+        new CustomEvent(DEV_SERVER_STATUS_EVENT, {
+          detail: { status: "update_ready" as const },
+        }),
+      );
       return;
     }
 
@@ -253,7 +257,7 @@ const DevServerStatusOverlay = () => {
     let connectedTimer: number | null = null;
 
     const handleStatus = (event: Event) => {
-      const nextStatus = (event as CustomEvent<{ status?: "disconnected" | "connected" | "reloading" }>).detail?.status;
+      const nextStatus = (event as CustomEvent<{ status?: DevServerStatus }>).detail?.status;
       if (!nextStatus) return;
 
       setStatus(nextStatus);
@@ -277,6 +281,15 @@ const DevServerStatusOverlay = () => {
       if (!sensitive) {
         clearPendingReloadFlag();
         setStatus("idle");
+        return;
+      }
+
+      try {
+        if (sessionStorage.getItem(DEV_SERVER_PENDING_RELOAD_KEY) === "1") {
+          setStatus("update_ready");
+        }
+      } catch {
+        // ignore storage failures
       }
     };
 
@@ -292,9 +305,58 @@ const DevServerStatusOverlay = () => {
     };
   }, []);
 
-  void isSensitiveRoute;
-  void status;
-  return null;
+  const handleManualReload = () => {
+    clearPendingReloadFlag();
+    setStatus("idle");
+    performSafeReload();
+  };
+
+  if (!import.meta.env.DEV || !isSensitiveRoute || status === "idle" || status === "connected") {
+    return null;
+  }
+
+  const copy =
+    status === "disconnected"
+      ? {
+          title: "Dev connection lost",
+          body: "Editor reconnect ho raha hai. CRM shell active rakha gaya hai taaki white page na aaye.",
+          actionLabel: null,
+        }
+      : status === "reloading"
+        ? {
+            title: "Update detected",
+            body: "Sensitive CRM route par auto reload roka gaya hai. Bundle ready hote hi aap manual refresh kar sakte ho.",
+            actionLabel: null,
+          }
+        : {
+            title: "Update ready",
+            body: "Naya dev bundle ready hai. Safe reload karo taaki stale white-screen state clear ho jaye.",
+            actionLabel: "Reload safely",
+          };
+
+  return (
+    <div className="fixed bottom-4 right-4 z-[10000] w-[min(92vw,28rem)] rounded-2xl border border-border bg-card/95 p-4 text-card-foreground shadow-lg backdrop-blur-sm">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <WifiOff className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">{copy.title}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{copy.body}</p>
+          {copy.actionLabel ? (
+            <button
+              type="button"
+              onClick={handleManualReload}
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              <RefreshCw className="h-4 w-4" />
+              {copy.actionLabel}
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const ChunkRecoveryOverlay = () => {

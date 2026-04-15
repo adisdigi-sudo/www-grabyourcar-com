@@ -131,13 +131,23 @@ export async function sendWhatsApp({
       return { success: true, messageId: data.messageId };
     }
 
-    throw new Error(data?.error || data?.details || "API send failed");
+    const providerError = data?.error || data?.details || "API send failed";
+    if (!silent) toast.error(providerError);
+    return {
+      success: false,
+      fallback: Boolean(data?.fallback),
+      error: providerError,
+    };
   } catch (err) {
     console.warn("WhatsApp API send failed:", err);
 
     if (!silent) toast.error("WhatsApp API failed — message not accepted by provider");
 
-    return { success: false, fallback: false, error: String(err) };
+    return {
+      success: false,
+      fallback: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 

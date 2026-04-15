@@ -7,6 +7,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
+
+const respond = (payload: Record<string, unknown>) =>
+  new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: jsonHeaders,
+  });
+
 /**
  * WhatsApp Send — Provider-Agnostic Gateway
  *
@@ -436,21 +444,19 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({
+          ok: true,
           status: "ok",
           configured: !!provider?.is_active,
           provider: provider?.provider_name || "none",
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: jsonHeaders }
       );
     }
 
     // Resolve target phone
     const to = body.to || body.phone;
     if (!to) {
-      return new Response(
-        JSON.stringify({ error: "Phone number required (to or phone)" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return respond({ ok: false, success: false, status: "validation_error", error: "Phone number required (to or phone)" });
     }
 
     const template_name = body.template_name || body.templateName;
@@ -488,10 +494,13 @@ serve(async (req) => {
     const isActive = provider?.is_active ?? false;
 
     if (!isActive) {
-      return new Response(
-        JSON.stringify({ success: false, status: "not_configured", error: "WhatsApp channel is not active. Enable it in Channel Providers settings." }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return respond({
+        ok: false,
+        success: false,
+        fallback: false,
+        status: "not_configured",
+        error: "WhatsApp channel is not active. Enable it in Channel Providers settings.",
+      });
     }
 
     // Send via the active provider
@@ -514,21 +523,25 @@ serve(async (req) => {
 
     // Log to wa_message_logs
     const phoneNorm = normalizePhone(to);
-    await supabase.from("wa_message_logs").insert({
-      phone: phoneNorm.full,
-      customer_name: name || null,
-      message_type: messageType,
-      message_content: message || null,
-      template_name: template_name || null,
-      trigger_event: logEvent || "api_send",
-      lead_id: lead_id || null,
-      status: deliveryStatus,
-      provider: result.provider || providerName,
-      provider_message_id: result.messageId || null,
-      error_message: result.error || null,
-      sent_at: result.success ? new Date().toISOString() : null,
-      failed_at: result.success ? null : new Date().toISOString(),
-    });
+    try {
+      await supabase.from("wa_message_logs").insert({
+        phone: phoneNorm.full,
+        customer_name: name || null,
+        message_type: messageType,
+        message_content: message || null,
+        template_name: template_name || null,
+        trigger_event: logEvent || "api_send",
+        lead_id: lead_id || null,
+        status: deliveryStatus,
+        provider: result.provider || providerName,
+        provider_message_id: result.messageId || null,
+        error_message: result.error || null,
+        sent_at: result.success ? new Date().toISOString() : null,
+        failed_at: result.success ? null : new Date().toISOString(),
+      });
+    } catch (logError) {
+      console.error("Failed to log wa_message_logs (non-fatal):", logError);
+    }
 
     // ── Also log to wa_inbox_messages + wa_conversations for Hub visibility ──
     if (result.success) {
@@ -587,21 +600,31 @@ serve(async (req) => {
     }
 
     if (result.success) {
-      return new Response(
-        JSON.stringify({ success: true, messageId: result.messageId, provider: result.provider, status: deliveryStatus }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return respond({
+        ok: true,
+        success: true,
+        messageId: result.messageId,
+        provider: result.provider,
+        status: deliveryStatus,
+      });
     }
 
-    return new Response(
-      JSON.stringify({ success: false, error: result.error, provider: result.provider }),
-      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return respond({
+      ok: false,
+      success: false,
+      fallback: false,
+      status: "provider_error",
+      error: result.error,
+      provider: result.provider,
+    });
   } catch (error) {
     console.error("whatsapp-send error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return respond({
+      ok: false,
+      success: false,
+      fallback: false,
+      status: "runtime_error",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
   }
 });

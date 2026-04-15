@@ -80,8 +80,13 @@ const ADMIN_ROUTE_PREFIXES = [
   "/admin-reset-password",
 ];
 
+const ADMIN_AUTH_ROUTE_PREFIXES = ["/crm-auth", "/crm-reset-password", "/admin-auth", "/admin-reset-password"];
+
 const isAdminRoutePath = (pathname: string) =>
   ADMIN_ROUTE_PREFIXES.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+
+const isAdminAuthRoutePath = (pathname: string) =>
+  ADMIN_AUTH_ROUTE_PREFIXES.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 
 const DOCUMENT_VIEWER_ROUTE_PREFIX = "/document-viewer";
 
@@ -146,10 +151,14 @@ const AppRouterShell = () => {
   const location = useLocation();
   const isAdminExperience =
     !isDocumentViewerPath(location.pathname) && (isAdminSubdomain() || isAdminRoutePath(location.pathname));
+  const isAdminAuthShell = isAdminAuthRoutePath(location.pathname);
   const isChromelessExperience = isAdminExperience || isDocumentViewerPath(location.pathname);
 
   return (
-    <RouteProviderGate isAdminExperience={isAdminExperience}>
+    <RouteProviderGate
+      isAdminExperience={isAdminExperience}
+      requiresWorkspaceProviders={isAdminExperience && !isAdminAuthShell}
+    >
       <Suspense
         fallback={
           <div className="min-h-screen flex items-center justify-center bg-background">

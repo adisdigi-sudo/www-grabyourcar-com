@@ -24,11 +24,16 @@ const PublicRealtimeSyncProvider = ({ children }: { children: ReactNode }) => {
 interface RouteProviderGateProps {
   children: ReactNode;
   isAdminExperience: boolean;
+  requiresWorkspaceProviders?: boolean;
 }
 
-export const RouteProviderGate = ({ children, isAdminExperience }: RouteProviderGateProps) => {
+export const RouteProviderGate = ({
+  children,
+  isAdminExperience,
+  requiresWorkspaceProviders = true,
+}: RouteProviderGateProps) => {
   if (isAdminExperience) {
-    return <VerticalProvider>{children}</VerticalProvider>;
+    return requiresWorkspaceProviders ? <VerticalProvider>{children}</VerticalProvider> : <>{children}</>;
   }
 
   return (

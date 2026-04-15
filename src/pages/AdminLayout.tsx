@@ -470,13 +470,14 @@ const AdminLayout = () => {
   const [isTablet, setIsTablet] = useState(false);
   const [bootstrapTimedOut, setBootstrapTimedOut] = useState(false);
 
-  useSessionTimeout(initialized && !isLoading && !verticalAccessLoading && !!user);
+  useSessionTimeout(initialized && !isLoading && !!user);
 
   const isSuperAdmin = roles.some((r: any) => r.role === "super_admin" || r.role === "admin");
   const hasAdminAccess = roles.length > 0;
   const isAuthResolved = initialized && !isLoading;
   const hasWorkspaceOptions = availableVerticals.length > 0;
   const shouldResolveWorkspace = !!user && isAuthResolved && !verticalAccessLoading;
+  const isBootstrappingAuth = !initialized || isLoading;
 
   const effectiveActiveTab = useMemo(() => normalizeAdminTab(activeTab), [activeTab]);
   const resolvedActiveTab = useMemo(() => {
@@ -539,7 +540,8 @@ const AdminLayout = () => {
   const isResolvingWorkspace =
     !!user && !isLoading && !verticalAccessLoading && !activeVertical && availableVerticals.length === 1;
 
-  const isBootstrappingAdmin = !initialized || isLoading || verticalAccessLoading || isResolvingWorkspace;
+  const isBootstrappingWorkspace = !!user && (verticalAccessLoading || isResolvingWorkspace);
+  const isBootstrappingAdmin = isBootstrappingAuth || isBootstrappingWorkspace;
 
   useEffect(() => {
     if (!isBootstrappingAdmin) {
@@ -569,7 +571,7 @@ const AdminLayout = () => {
     return <Navigate to={withPreviewParams("/crm-auth")} replace />;
   }
 
-  if (isBootstrappingAdmin) {
+  if (isBootstrappingAuth) {
     if (bootstrapTimedOut) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-background px-6">
@@ -603,11 +605,11 @@ const AdminLayout = () => {
     );
   }
 
-  if (shouldResolveWorkspace && !activeVertical && availableVerticals.length > 1) {
+  if (!isBootstrappingWorkspace && shouldResolveWorkspace && !activeVertical && availableVerticals.length > 1) {
     return <Navigate to={withPreviewParams("/workspace")} replace />;
   }
 
-  if (shouldResolveWorkspace && !activeVertical && !hasWorkspaceOptions) {
+  if (!isBootstrappingWorkspace && shouldResolveWorkspace && !activeVertical && !hasWorkspaceOptions) {
     return <Navigate to={withPreviewParams("/workspace")} replace />;
   }
 
@@ -621,6 +623,43 @@ const AdminLayout = () => {
       </div>
     );
   }
+
+  const renderStartupPanel = () => {
+    if (bootstrapTimedOut) {
+      return (
+        <div className="mx-auto flex min-h-[320px] w-full max-w-2xl items-center justify-center px-4 py-8">
+          <div className="w-full rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Shield className="h-7 w-7" />
+            </div>
+            <h2 className="text-2xl font-semibold text-card-foreground">CRM startup got stuck</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Workspace restore ya backend sync hang ho gaya tha, isliye ab full white page ke bajaye safe recovery panel dikh raha hai.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <Button onClick={() => window.location.reload()}>Retry CRM</Button>
+              <Button variant="outline" onClick={() => navigate(withPreviewParams("/workspace"))}>
+                Open workspace chooser
+              </Button>
+              <Button variant="ghost" onClick={() => navigate(withPreviewParams("/crm-auth"))}>
+                Back to sign in
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mx-auto flex min-h-[320px] w-full max-w-2xl flex-col items-center justify-center gap-4 px-4 py-8 text-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
+        <div>
+          <p className="text-base font-medium text-foreground">Restoring CRM workspace…</p>
+          <p className="mt-1 text-sm text-muted-foreground">Shell loaded hai; data safely reconnect ho raha hai.</p>
+        </div>
+      </div>
+    );
+  };
 
   const renderContent = () => {
     switch (resolvedActiveTab) {
@@ -951,30 +990,38 @@ const AdminLayout = () => {
               </AdminRenderBoundary>
             </Suspense>
           )}
-          <Suspense fallback={null}>
-            <AdminRenderBoundary contextLabel="AI Co-Founder banner">
-              <AICofounderBanner activeTab={resolvedActiveTab} userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
-            </AdminRenderBoundary>
-          </Suspense>
-          <AdminRenderBoundary
-            key={`${activeVertical?.id ?? "no-vertical"}:${resolvedActiveTab}`}
-            contextLabel="CRM workspace"
-          >
-            <Suspense fallback={<AdminPanelLoader />}>
-              {renderContent()}
+          {!isBootstrappingWorkspace && (
+            <Suspense fallback={null}>
+              <AdminRenderBoundary contextLabel="AI Co-Founder banner">
+                <AICofounderBanner activeTab={resolvedActiveTab} userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
+              </AdminRenderBoundary>
             </Suspense>
-          </AdminRenderBoundary>
+          )}
+          {isBootstrappingWorkspace ? (
+            renderStartupPanel()
+          ) : (
+            <AdminRenderBoundary
+              key={`${activeVertical?.id ?? "no-vertical"}:${resolvedActiveTab}`}
+              contextLabel="CRM workspace"
+            >
+              <Suspense fallback={<AdminPanelLoader />}>
+                {renderContent()}
+              </Suspense>
+            </AdminRenderBoundary>
+          )}
         </div>
       </main>
 
-      <Suspense fallback={null}>
-        <AdminRenderBoundary fallback={null} contextLabel="CRM assistant">
-          <CRMAssistant userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
-        </AdminRenderBoundary>
-        <AdminRenderBoundary fallback={null} contextLabel="Encouragement popup">
-          <EncouragementPopup userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
-        </AdminRenderBoundary>
-      </Suspense>
+      {!isBootstrappingWorkspace && (
+        <Suspense fallback={null}>
+          <AdminRenderBoundary fallback={null} contextLabel="CRM assistant">
+            <CRMAssistant userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
+          </AdminRenderBoundary>
+          <AdminRenderBoundary fallback={null} contextLabel="Encouragement popup">
+            <EncouragementPopup userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
+          </AdminRenderBoundary>
+        </Suspense>
+      )}
     </div>
   );
 };

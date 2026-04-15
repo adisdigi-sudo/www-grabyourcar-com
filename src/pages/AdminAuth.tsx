@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useVerticalAccess, BusinessVertical } from "@/hooks/useVerticalAccess";
+import { BusinessVertical } from "@/hooks/useVerticalAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,10 +25,19 @@ type LoginStep =
   | "super-admin-otp"
   | "forgot-password";
 
+const ACTIVE_VERTICAL_STORAGE_KEY = "gyc_active_vertical_id";
+
+const persistSelectedVertical = (vertical: BusinessVertical) => {
+  try {
+    window.localStorage.setItem(ACTIVE_VERTICAL_STORAGE_KEY, vertical.id);
+  } catch {
+    // ignore blocked storage
+  }
+};
+
 const AdminAuth = () => {
   const navigate = useNavigate();
   const { user, signIn, signInWithPhone, loading } = useAuth();
-  const { setActiveVertical } = useVerticalAccess();
 
   const [step, setStep] = useState<LoginStep>("choose-type");
   const [username, setUsername] = useState("");
@@ -159,7 +168,7 @@ const AdminAuth = () => {
 
     // If only 1 vertical → auto-select and go directly
     if (userVerticals.length === 1) {
-      setActiveVertical(userVerticals[0]);
+      persistSelectedVertical(userVerticals[0]);
       toast.success(`Welcome to ${userVerticals[0].name}!`);
       navigate(withPreviewParams("/crm"));
       setIsSubmitting(false);
@@ -196,14 +205,14 @@ const AdminAuth = () => {
       }
     }
 
-    setActiveVertical(vertical);
+    persistSelectedVertical(vertical);
     toast.success(`Welcome to ${vertical.name}!`);
     navigate(withPreviewParams("/crm"));
   };
 
   const handlePasswordSuccess = (vertical: BusinessVertical) => {
     setPasswordTarget(null);
-    setActiveVertical(vertical);
+    persistSelectedVertical(vertical);
     toast.success(`Welcome to ${vertical.name}!`);
     navigate(withPreviewParams("/crm"));
   };
