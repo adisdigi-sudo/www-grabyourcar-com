@@ -70,11 +70,6 @@ export const getLoanSalesCalculatorDefaults = (source: LoanSalesCalculatorSource
       ? salesCalculator.other_charges_label
       : "Other Bank Charges";
 
-  const otherChargesLabel =
-    typeof salesCalculator.other_charges_label === "string" && salesCalculator.other_charges_label.trim()
-      ? salesCalculator.other_charges_label
-      : "Other Bank Charges";
-
   const advancePaid = toMoney(salesCalculator.advance_paid as number | string | null | undefined);
 
   return {
