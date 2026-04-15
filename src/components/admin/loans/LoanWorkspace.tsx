@@ -40,6 +40,8 @@ import { calculateLoanSalesBreakdown, getLoanSalesCalculatorDefaults } from "./l
 import { cn } from "@/lib/utils";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
+import { sendWhatsApp } from "@/lib/sendWhatsApp";
+import { persistLoanQuoteHistory } from "@/lib/loanQuotePersistence";
 import { generateSalesOfferPDF } from "../sales/SalesOfferPDF";
 import { Download, Share2 } from "lucide-react";
 
@@ -927,7 +929,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   };
 
   // ── Auto-send WhatsApp on offer share ──
-  const autoShareOfferWhatsApp = (bankName: string, rate: string, tenure: string, emi: string) => {
+  const buildOfferShareMessage = (bankName: string, rate: string, tenure: string, emi: string, pdfUrl?: string | null) => {
     const summaryLines = [
       `🏦 Bank: *${bankName}*`,
       salesBreakdown.grossLoanAmount > 0 ? `💰 Gross Loan Amount: *${formatDetailedAmount(salesBreakdown.grossLoanAmount)}*` : null,
@@ -941,11 +943,98 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
       salesBreakdown.otherCharges > 0 ? `🧾 ${otherBankChargesLabel || 'Other Bank Charges'}: *-${formatDetailedAmount(salesBreakdown.otherCharges)}*` : null,
       salesBreakdown.bankNetDisbursal > 0 ? `🏁 Bank Net Disbursal: *${formatDetailedAmount(salesBreakdown.bankNetDisbursal)}*` : null,
       salesBreakdown.balancePayableByYou > 0 ? `👤 Total Balance Payable by You: *${formatDetailedAmount(salesBreakdown.balancePayableByYou)}*` : null,
+      pdfUrl ? `📄 PDF: ${pdfUrl}` : null,
     ].filter(Boolean).join('\n');
 
-    const msg = `🏦 *Loan Offer — GrabYourCar*\n\nHi ${application.customer_name},\n\nGreat news! Here's your loan offer:\n\n${summaryLines}\n\nPlease review and let us know if you'd like to proceed.\n\nRegards,\n*GrabYourCar Finance Team*`;
+    return `🏦 *Loan Offer — GrabYourCar*\n\nHi ${application.customer_name},\n\nGreat news! Here's your loan offer:\n\n${summaryLines}\n\nPlease review and let us know if you'd like to proceed.\n\nRegards,\n*GrabYourCar Finance Team*`;
+  };
+
+  const autoShareOfferWhatsApp = (bankName: string, rate: string, tenure: string, emi: string, pdfUrl?: string | null) => {
+    const msg = buildOfferShareMessage(bankName, rate, tenure, emi, pdfUrl);
     openWhatsAppChat(application.phone, msg);
     toast.success("WhatsApp share opened");
+  };
+
+  const getOfferBankName = () => {
+    const selectedPartner = bankPartners.find((b: any) => b.id === selectedBank);
+    return selectedBank === '__custom__' ? customBankName.trim() : (selectedPartner?.name || application?.lender_name || '');
+  };
+
+  const buildOfferPdfParams = () => ({
+    customerName: application.customer_name,
+    phone: application.phone,
+    carModel: application.car_model || '',
+    variant: application.car_variant || '',
+    city: '',
+    bankName: getOfferBankName(),
+    onRoadPrice: salesBreakdown.finalCarPrice,
+    grossLoanAmount: salesBreakdown.grossLoanAmount,
+    processingFees: salesBreakdown.processingFees,
+    loanProtectionAmount: salesBreakdown.loanProtectionAmount,
+    otherExpenses: salesBreakdown.otherCharges,
+    otherExpensesLabel: otherBankChargesLabel || 'Other Bank Charges',
+    bookingAmount: salesBreakdown.bookingAmount,
+    advancePaid: salesBreakdown.advancePaid,
+    interestRate: Number(interestRate) || 0,
+    tenureMonths: Number(tenureMonths) || 0,
+  });
+
+  const persistOfferQuote = async (shareMethod: string) => {
+    const bankNameForPdf = getOfferBankName();
+    if (!bankNameForPdf) throw new Error('Select a bank/NBFC first');
+
+    const { doc, fileName } = generateSalesOfferPDF(buildOfferPdfParams());
+    const totalPayment = (Number(emiAmount) || 0) * (Number(tenureMonths) || 0);
+    const totalInterest = totalPayment > 0 ? totalPayment - salesBreakdown.grossLoanAmount : 0;
+
+    const result = await persistLoanQuoteHistory({
+      doc,
+      fileName,
+      shareMethod,
+      customerName: application.customer_name || 'Customer',
+      customerPhone: application.phone || null,
+      customerEmail: application.email || null,
+      carModel: application.car_model || null,
+      carVariant: application.car_variant || null,
+      loanAmount: salesBreakdown.grossLoanAmount || null,
+      downPayment: salesBreakdown.downPaymentNeeded || null,
+      interestRate: Number(interestRate) || null,
+      tenureMonths: Number(tenureMonths) || null,
+      emiAmount: Number(emiAmount) || null,
+      totalPayment: totalPayment || null,
+      totalInterest: totalInterest || null,
+      bankName: bankNameForPdf || null,
+      bankComparison: {
+        sales_calculator: {
+          final_car_price: salesBreakdown.finalCarPrice,
+          booking_amount: salesBreakdown.bookingAmount,
+          advance_paid: salesBreakdown.advancePaid,
+          gross_loan_amount: salesBreakdown.grossLoanAmount,
+          loan_protection_amount: salesBreakdown.loanProtectionAmount,
+          processing_fees: salesBreakdown.processingFees,
+          other_charges_label: otherBankChargesLabel || 'Other Bank Charges',
+          other_charges_amount: salesBreakdown.otherCharges,
+          bank_net_disbursal: salesBreakdown.bankNetDisbursal,
+          balance_payable_by_you: salesBreakdown.balancePayableByYou,
+          down_payment_needed: salesBreakdown.downPaymentNeeded,
+        },
+      },
+      notes: remarks || null,
+      loanApplicationId: application.id,
+      source: 'backend',
+    });
+
+    queryClient.invalidateQueries({ queryKey: ['loan-quote-history'] });
+
+    return {
+      doc,
+      fileName,
+      quoteRef: result.quoteRef,
+      bankNameForPdf,
+      pdfUrl: result.pdfStoragePath
+        ? supabase.storage.from('loan-documents').getPublicUrl(result.pdfStoragePath).data.publicUrl
+        : null,
+    };
   };
 
   // ── Auto-send WhatsApp on loan approval ──
@@ -1014,8 +1103,6 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
       remarks: remarks || `Offer shared: ${bankName}${salesBreakdown.bankNetDisbursal > 0 ? ` | Net disbursal ₹${salesBreakdown.bankNetDisbursal.toLocaleString('en-IN')}` : ''}`,
     });
 
-    // Auto-share offer via WhatsApp
-    autoShareOfferWhatsApp(bankName, interestRate, tenureMonths, emiAmount);
   };
 
   const handleLoanAppSave = async () => {
@@ -1327,36 +1414,20 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
 
               {/* PDF Download / WhatsApp Share / Save to Cloud */}
               {(salesBreakdown.finalCarPrice > 0 || salesBreakdown.grossLoanAmount > 0) && (() => {
-                const selectedPartner = bankPartners.find((b: any) => b.id === selectedBank);
-                const bankNameForPdf = selectedBank === '__custom__' ? customBankName : (selectedPartner?.name || application?.lender_name || '');
-                const buildPdfParams = () => ({
-                  customerName: application.customer_name,
-                  phone: application.phone,
-                  carModel: application.car_model || '',
-                  variant: application.car_variant || '',
-                  city: '',
-                  bankName: bankNameForPdf,
-                  onRoadPrice: salesBreakdown.finalCarPrice,
-                  grossLoanAmount: salesBreakdown.grossLoanAmount,
-                  processingFees: salesBreakdown.processingFees,
-                  loanProtectionAmount: salesBreakdown.loanProtectionAmount,
-                  otherExpenses: salesBreakdown.otherCharges,
-                  otherExpensesLabel: otherBankChargesLabel || 'Other Bank Charges',
-                  bookingAmount: salesBreakdown.bookingAmount,
-                  advancePaid: salesBreakdown.advancePaid,
-                  interestRate: Number(interestRate) || 0,
-                  tenureMonths: Number(tenureMonths) || 0,
-                });
                 return (
                   <div className="flex gap-2 mt-2">
                     <Button
                       variant="outline"
                       size="sm"
                       className="flex-1 gap-1.5 text-xs"
-                      onClick={() => {
-                        const { doc, fileName } = generateSalesOfferPDF(buildPdfParams());
-                        doc.save(fileName);
-                        toast.success("PDF downloaded");
+                      onClick={async () => {
+                        try {
+                          const { doc, fileName, quoteRef } = await persistOfferQuote('crm_download');
+                          doc.save(fileName);
+                          toast.success(`Offer saved & downloaded! Ref: ${quoteRef}`);
+                        } catch (err: any) {
+                          toast.error(`Download failed: ${err.message}`);
+                        }
                       }}
                     >
                       <Download className="h-3.5 w-3.5" /> Download PDF
@@ -1365,13 +1436,35 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                       variant="outline"
                       size="sm"
                       className="flex-1 gap-1.5 text-xs text-green-600 border-green-200 hover:bg-green-50"
-                      onClick={() => {
-                        const { doc, fileName } = generateSalesOfferPDF(buildPdfParams());
-                        const pdfBlob = doc.output('blob');
-                        const pdfUrl = URL.createObjectURL(pdfBlob);
-                        window.open(pdfUrl, '_blank');
-                        // Also share on WhatsApp
-                        autoShareOfferWhatsApp(bankNameForPdf, interestRate, tenureMonths, emiAmount);
+                      onClick={async () => {
+                        try {
+                          const { quoteRef, bankNameForPdf, pdfUrl } = await persistOfferQuote('crm_whatsapp');
+                          const message = buildOfferShareMessage(bankNameForPdf, interestRate, tenureMonths, emiAmount, pdfUrl);
+                          let apiSent = false;
+
+                          if (application.phone) {
+                            const result = await sendWhatsApp({
+                              phone: application.phone,
+                              message,
+                              name: application.customer_name || undefined,
+                              logEvent: 'loan_offer_shared',
+                              silent: true,
+                              vertical: 'loans',
+                            });
+                            apiSent = result.success;
+                          }
+
+                          if (apiSent) {
+                            toast.success(`Offer shared on WhatsApp! Ref: ${quoteRef}`);
+                          } else if (application.phone) {
+                            autoShareOfferWhatsApp(bankNameForPdf, interestRate, tenureMonths, emiAmount, pdfUrl);
+                          } else {
+                            window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                            toast.success(`Offer saved! Ref: ${quoteRef}`);
+                          }
+                        } catch (err: any) {
+                          toast.error(`Share failed: ${err.message}`);
+                        }
                       }}
                     >
                       <Share2 className="h-3.5 w-3.5" /> Share via WhatsApp
@@ -1382,24 +1475,8 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                       className="flex-1 gap-1.5 text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
                       onClick={async () => {
                         try {
-                          const { doc, fileName } = generateSalesOfferPDF(buildPdfParams());
-                          const pdfBlob = doc.output('blob');
-                          const filePath = `loan-offers/${application.id}_${Date.now()}.pdf`;
-                          const { error } = await supabase.storage.from('loan-documents').upload(filePath, pdfBlob, { contentType: 'application/pdf' });
-                          if (error) throw error;
-                          const { data: urlData } = supabase.storage.from('loan-documents').getPublicUrl(filePath);
-                          // Save to quote_share_history
-                          await supabase.from('quote_share_history').insert({
-                            lead_id: application.id,
-                            phone: application.phone,
-                            customer_name: application.customer_name,
-                            car_model: application.car_model || '',
-                            quote_type: 'loan_offer',
-                            pdf_url: urlData.publicUrl,
-                            pdf_storage_path: filePath,
-                            shared_via: 'saved',
-                          });
-                          toast.success("PDF saved to cloud");
+                          const { quoteRef } = await persistOfferQuote('crm_save');
+                          toast.success(`Offer saved! Ref: ${quoteRef}`);
                         } catch (err: any) {
                           toast.error(`Save failed: ${err.message}`);
                         }

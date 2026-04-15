@@ -56,6 +56,11 @@ const tryPatchReload = (target: object, reload: () => void) => {
 
 export const installSensitiveRouteReloadGuard = () => {
   if (!import.meta.env.DEV || typeof window === "undefined") return;
+  try {
+    if (window.top !== window) return;
+  } catch {
+    return;
+  }
   if (window.__lovableDevReloadGuardInstalled) return;
 
   window.__lovableDevReloadGuardInstalled = true;
