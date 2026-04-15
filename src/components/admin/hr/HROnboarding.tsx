@@ -49,6 +49,14 @@ const WIZARD_STEPS = [
 const ROLES = ["employee", "team_lead", "manager", "senior_manager", "head"];
 const EMPLOYMENT_TYPES = ["full_time", "part_time", "contract", "intern", "freelancer"];
 
+const DEPARTMENTS = [
+  "Sales", "Insurance", "Loans", "HSRP", "Self Drive Rentals",
+  "Marketing", "Operations", "Finance & Accounts", "HR & Admin",
+  "IT & Technology", "Customer Support", "Dealer Network",
+  "Accessories", "Service & Workshop", "Legal & Compliance",
+  "Custom",
+];
+
 const DESIGNATION_GROUPS = [
   {
     category: "📞 Caller / Telecaller",
@@ -387,8 +395,24 @@ export const HROnboarding = () => {
                 )}
               </div>
               <div>
-                <Label>Department</Label>
-                <Input value={form.department || ""} onChange={e => updateField("department", e.target.value)} placeholder="e.g. Insurance" />
+                <Label>Department *</Label>
+                <Select value={form.department_key || ""} onValueChange={v => {
+                  updateField("department_key", v);
+                  if (v !== "Custom") {
+                    updateField("department", v);
+                    updateField("custom_department", "");
+                  } else {
+                    updateField("department", "");
+                  }
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                  <SelectContent>
+                    {DEPARTMENTS.map(d => <SelectItem key={d} value={d}>{d === "Custom" ? "✏️ Custom Department" : d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {form.department_key === "Custom" && (
+                  <Input className="mt-2" value={form.custom_department || ""} onChange={e => { updateField("custom_department", e.target.value); updateField("department", e.target.value); }} placeholder="Type department name..." />
+                )}
               </div>
               <div>
                 <Label>Role Level</Label>
