@@ -114,6 +114,58 @@ const DESIGNATION_GROUPS = [
 
 const ALL_DESIGNATIONS = DESIGNATION_GROUPS.flatMap(g => g.items);
 
+// Auto-map designation to role level
+const DESIGNATION_ROLE_MAP: Record<string, string> = {
+  office_assistant: "employee",
+  facility_coordinator: "employee",
+  dispatch_runner: "employee",
+  revenue_growth_associate: "employee",
+  revenue_enhancer: "employee",
+  client_success_advisor: "employee",
+  business_development_executive: "employee",
+  growth_catalyst: "employee",
+  relationship_manager: "employee",
+  senior_relationship_manager: "employee",
+  operations_executive: "employee",
+  data_entry_operator: "employee",
+  accounts_executive: "employee",
+  client_acquisition_lead: "team_lead",
+  performance_coach: "team_lead",
+  team_leader: "team_lead",
+  revenue_strategist: "manager",
+  operations_manager: "manager",
+  assistant_manager: "manager",
+  branch_manager: "senior_manager",
+  zonal_head: "head",
+};
+
+// Indian Govt norms for PF/ESI/PT (as of 2024-25)
+// PF: Mandatory only when 20+ employees. Basic ≤15,000 compulsory; >15,000 can opt out
+// ESI: Mandatory only when 10+ employees AND gross ≤21,000/month
+// Professional Tax: Max ₹200/month (state dependent), some states exempt <₹15,000
+// TDS: Only if annual income > ₹3,00,000 (old) or ₹7,00,000 (new regime)
+const calcGovtDeductions = (monthlyCTC: number, totalEmployees: number) => {
+  const basic = Math.round(monthlyCTC * 0.4);
+  const annualCTC = monthlyCTC * 12;
+
+  // PF: Not applicable if <20 employees (EPFO registration not required)
+  const pfApplicable = totalEmployees >= 20;
+  const pf = pfApplicable ? Math.round(Math.min(basic, 15000) * 0.12) : 0;
+
+  // ESI: Not applicable if <10 employees OR gross >21,000
+  const esiApplicable = totalEmployees >= 10 && monthlyCTC <= 21000;
+  const esi = esiApplicable ? Math.round(monthlyCTC * 0.0075) : 0;
+
+  // Professional Tax: Exempt if monthly income <15,000 (most states)
+  const pt = monthlyCTC >= 15000 ? 200 : 0;
+
+  // TDS: Only if annual CTC > ₹3,00,000 (old regime basic exemption)
+  // Rough estimate: 5% of amount exceeding 3L, divided by 12
+  const tds = annualCTC > 300000 ? Math.round(((annualCTC - 300000) * 0.05) / 12) : 0;
+
+  return { pf, esi, pt, tds, pfApplicable, esiApplicable };
+};
+
 const fmt = (v: number) => `₹${Math.round(v || 0).toLocaleString("en-IN")}`;
 
 export const HROnboarding = () => {
