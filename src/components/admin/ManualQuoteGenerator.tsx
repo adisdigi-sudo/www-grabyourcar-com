@@ -43,6 +43,7 @@ import { useEMIPDFSettings } from "@/hooks/useEMIPDFSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { persistCarSalesQuote } from "@/lib/carSalesQuotePersistence";
 import { calculateLoanSalesBreakdown } from "@/components/admin/loans/loanSalesCalculator";
+import { generateSalesOfferPDF } from "@/components/admin/sales/SalesOfferPDF";
 
 const DISCOUNT_TYPES = [
   { value: 'cash', label: 'Cash Discount' },
@@ -205,6 +206,34 @@ export const ManualQuoteGenerator = () => {
     return `₹${Math.round(price).toLocaleString('en-IN')}`;
   };
 
+  const getLoanOfferPdfData = () => ({
+    customerName: customerName || "Customer",
+    phone: customerPhone || "",
+    carModel: `${brand} ${model}`.trim() || "Car",
+    variant: variant || undefined,
+    color: color || undefined,
+    exShowroomPrice: exShowroom || undefined,
+    rto: rto || undefined,
+    insurance: insurance || undefined,
+    others: (tcs + fastag + registration + handling + otherCharges) || undefined,
+    accessories: accessories || undefined,
+    warranty: extendedWarranty || undefined,
+    onRoadPrice: subtotal || undefined,
+    specialTerms: additionalNotes || undefined,
+    bookingAmount: bookingAmount || undefined,
+    processingFees: processingFees || undefined,
+    otherExpenses: otherLoanExpenses || undefined,
+    otherExpensesLabel: otherLoanExpensesLabel || undefined,
+    grossLoanAmount: grossLoanAmount || undefined,
+    loanProtectionAmount: loanProtectionAmount || undefined,
+    advancePaid: advancePaid || undefined,
+    interestRate: interestRate || undefined,
+    tenureMonths: tenure || undefined,
+    discountAmount: enableDiscount && discountAmount > 0 ? discountAmount : undefined,
+    discountLabel: enableDiscount ? DISCOUNT_TYPES.find(d => d.value === discountType)?.label : undefined,
+    discountRemarks: enableDiscount ? discountRemarks || undefined : undefined,
+  });
+
   const getEMIData = (): EMIData => {
     const carName = `${brand} ${model}`;
     const calculatedEMI = showEMI ? emi : 0;
@@ -286,16 +315,21 @@ export const ManualQuoteGenerator = () => {
       return;
     }
     try {
-      const doc = await generateEMIPdf(getEMIData(), pdfConfig || undefined, true) as jsPDF | undefined;
-      if (doc) {
-        // Save PDF file
-        doc.save(`CarQuote_${(customerName || brand + "_" + model).replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`);
-        // Persist to quote history
+      if (showLoanOffer && loanOfferBreakdown.grossLoanAmount > 0) {
+        const { doc, fileName } = generateSalesOfferPDF(getLoanOfferPdfData());
+        doc.save(fileName);
         const result = await persistCarSalesQuote(getQuotePersistData(doc, "pdf_download"));
         toast.success(`Quote PDF saved! Ref: ${result.quoteRef}`);
       } else {
-        await generateEMIPdf(getEMIData(), pdfConfig || undefined);
-        toast.success("Quote PDF generated!");
+        const doc = await generateEMIPdf(getEMIData(), pdfConfig || undefined, true) as jsPDF | undefined;
+        if (doc) {
+          doc.save(`CarQuote_${(customerName || brand + "_" + model).replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`);
+          const result = await persistCarSalesQuote(getQuotePersistData(doc, "pdf_download"));
+          toast.success(`Quote PDF saved! Ref: ${result.quoteRef}`);
+        } else {
+          await generateEMIPdf(getEMIData(), pdfConfig || undefined);
+          toast.success("Quote PDF generated!");
+        }
       }
     } catch (error) {
       console.error("PDF generation error:", error);
@@ -351,20 +385,26 @@ export const ManualQuoteGenerator = () => {
 
     if (showLoanOffer && loanOfferBreakdown.grossLoanAmount > 0) {
       message += `\n🏦 *Loan Offer${bankName ? ` (${bankName})` : ''}:*\n`;
-      message += `• Total Car Price: ${formatPrice(finalPrice)}\n`;
+      message += `\n*Section A: Car Price Summary*\n`;
+      message += `• Total Car Price: ${formatPrice(loanOfferBreakdown.finalCarPrice)}\n`;
+      message += `\n*Section B: Bank Loan Breakdown*\n`;
       message += `• Gross Loan Amount: ${formatPrice(loanOfferBreakdown.grossLoanAmount)}\n`;
       if (processingFees > 0) message += `• Less Processing Fees: -${formatPrice(processingFees)}\n`;
       if (loanProtectionAmount > 0) message += `• Less Loan Suraksha / Insurance: -${formatPrice(loanProtectionAmount)}\n`;
       if (otherLoanExpenses > 0) message += `• Less ${otherLoanExpensesLabel || 'Other Bank Charges'}: -${formatPrice(otherLoanExpenses)}\n`;
       message += `• Bank Net Disbursal: ${formatPrice(loanOfferBreakdown.bankNetDisbursal)}\n`;
-      message += `• Down Payment: ${formatPrice(loanOfferBreakdown.downPaymentNeeded)}\n`;
+      message += `\n*Section C: Customer Payment*\n`;
+      message += `• Down Payment Needed: ${formatPrice(loanOfferBreakdown.downPaymentNeeded)}\n`;
       if (bookingAmount > 0) message += `• Less Booking Amount: -${formatPrice(bookingAmount)}\n`;
       if (advancePaid > 0) message += `• Less Advance Paid: -${formatPrice(advancePaid)}\n`;
-      message += `\n✅ *Final Balance Payable:* ${formatPrice(loanOfferBreakdown.balancePayableByYou)}\n`;
-      message += `• EMI: *${formatPrice(loanOfferEMI)}/month*\n`;
-      message += `• Rate: ${interestRate}% p.a. | Tenure: ${tenure} months\n`;
-      message += `• Total Payable: ${formatPrice(loanOfferTotalPayment)}\n`;
-      message += `• Total Interest: ${formatPrice(loanOfferTotalInterest)}\n`;
+      message += `• *Final Balance Payable: ${formatPrice(loanOfferBreakdown.balancePayableByYou)}*\n`;
+      if (loanOfferEMI > 0) {
+        message += `\n*Section D: EMI Details*\n`;
+        message += `• EMI: *${formatPrice(loanOfferEMI)}/month*\n`;
+        message += `• Rate: ${interestRate}% p.a. | Tenure: ${tenure} months\n`;
+        message += `• Total Payable: ${formatPrice(loanOfferTotalPayment)}\n`;
+        message += `• Total Interest: ${formatPrice(loanOfferTotalInterest)}\n`;
+      }
     }
 
     if (brochureUrl) {
@@ -384,9 +424,14 @@ export const ManualQuoteGenerator = () => {
 
     // Persist quote in background
     try {
-      const doc = await generateEMIPdf(getEMIData(), pdfConfig || undefined, true) as jsPDF | undefined;
-      if (doc) {
+      if (showLoanOffer && loanOfferBreakdown.grossLoanAmount > 0) {
+        const { doc } = generateSalesOfferPDF(getLoanOfferPdfData());
         await persistCarSalesQuote(getQuotePersistData(doc, "whatsapp"));
+      } else {
+        const doc = await generateEMIPdf(getEMIData(), pdfConfig || undefined, true) as jsPDF | undefined;
+        if (doc) {
+          await persistCarSalesQuote(getQuotePersistData(doc, "whatsapp"));
+        }
       }
     } catch (err) {
       console.warn("Quote persistence failed (non-blocking):", err);
@@ -973,7 +1018,7 @@ export const ManualQuoteGenerator = () => {
                   )}
                   <Separator />
                   <div className="flex justify-between font-bold text-primary text-base">
-                    <span>Balance Payable by You</span>
+                    <span>Final Balance Payable</span>
                     <span>{formatPrice(loanOfferBreakdown.balancePayableByYou)}</span>
                   </div>
                   {loanOfferEMI > 0 && (
@@ -1190,7 +1235,7 @@ export const ManualQuoteGenerator = () => {
                     </div>
                     <Separator />
                     <div className="flex justify-between font-bold text-primary">
-                      <span>Balance Payable by You</span>
+                      <span>Final Balance Payable</span>
                       <span>{formatPrice(loanOfferBreakdown.balancePayableByYou)}</span>
                     </div>
                   </div>
