@@ -47,7 +47,13 @@ const WIZARD_STEPS = [
 ];
 
 const ROLES = ["employee", "team_lead", "manager", "senior_manager", "head"];
-const EMPLOYMENT_TYPES = ["full_time", "part_time", "contract", "intern", "freelancer"];
+const EMPLOYMENT_TYPES = [
+  { value: "full_time", label: "Full Time" },
+  { value: "part_time", label: "Part Time" },
+  { value: "contract", label: "Contract" },
+  { value: "intern", label: "Intern (Trainee / Stipend Based)" },
+  { value: "freelancer", label: "Freelancer" },
+];
 
 const DEPARTMENTS = [
   "Sales", "Insurance", "Loans", "HSRP", "Self Drive Rentals",
@@ -638,13 +644,22 @@ export const HROnboarding = () => {
                 <Select value={form.employment_type || "full_time"} onValueChange={v => updateField("employment_type", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {EMPLOYMENT_TYPES.map(t => <SelectItem key={t} value={t}>{t.replace("_", " ").replace(/\b\w/g, c => c.toUpperCase())}</SelectItem>)}
+                    {EMPLOYMENT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label>Joining Date</Label>
-                <Input type="date" value={form.joining_date || ""} onChange={e => updateField("joining_date", e.target.value)} />
+                <Input type="date" value={form.joining_date || ""} onChange={e => {
+                  const jd = e.target.value;
+                  updateField("joining_date", jd);
+                  // Auto-set probation end date to 2 months from joining
+                  if (jd) {
+                    const d = new Date(jd);
+                    d.setMonth(d.getMonth() + 2);
+                    updateField("probation_end_date", d.toISOString().split("T")[0]);
+                  }
+                }} />
               </div>
             </div>
             <div>
@@ -959,8 +974,9 @@ export const HROnboarding = () => {
               <div><Label>Shift End</Label><Input type="time" value={form.shift_end || "18:00"} onChange={e => updateField("shift_end", e.target.value)} /></div>
               <div>
                 <Label>Probation End Date</Label>
-                <p className="text-xs text-muted-foreground mb-1">(Probation = Trial period jab tak employee confirm nahi hota. Usually 3-6 months. Iske andar terminate kar sakte ho bina notice period ke)</p>
+                <p className="text-xs text-muted-foreground mb-1">(Auto: Joining se 2 month baad set hota hai. Probation = Trial period — iske andar terminate kar sakte ho bina notice period ke. Zarurat ho to manually change karo)</p>
                 <Input type="date" value={form.probation_end_date || ""} onChange={e => updateField("probation_end_date", e.target.value)} />
+                {form.probation_end_date && <p className="text-xs text-green-600 mt-1">✓ Probation ends: {form.probation_end_date}</p>}
               </div>
             </div>
           </div>
