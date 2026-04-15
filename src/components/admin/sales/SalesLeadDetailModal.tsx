@@ -58,8 +58,20 @@ export function SalesLeadDetailModal({
   const [deliveryImages, setDeliveryImages] = useState<string[]>((lead.delivery_images as string[]) || []);
   const [videoUrl, setVideoUrl] = useState(lead.video_url || "");
   const [dealValue, setDealValue] = useState(lead.deal_value || "");
+  const [bookingAmount, setBookingAmount] = useState(lead.booking_amount || "");
+  const [processingFees, setProcessingFees] = useState(lead.processing_fees || "");
+  const [otherExpenses, setOtherExpenses] = useState(lead.other_expenses || "");
+  const [otherExpensesLabel, setOtherExpensesLabel] = useState(lead.other_expenses_label || "Other Expenses");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showShareOffer, setShowShareOffer] = useState(false);
+
+  // Full INR formatter — never abbreviate
+  const fmtINR = (v: number) => `Rs. ${Math.round(v).toLocaleString("en-IN")}`;
+
+  // Computed deal summary
+  const totalCarPrice = Number(lead.on_road_price) || Number(dealValue) || 0;
+  const totalDeductions = (Number(bookingAmount) || 0) + (Number(processingFees) || 0) + (Number(otherExpenses) || 0);
+  const balancePayable = totalCarPrice - totalDeductions;
 
   const pendingStage = lead._targetStage;
   const currentStage = pendingStage || lead.pipeline_stage;
@@ -793,7 +805,7 @@ export function SalesLeadDetailModal({
                     <p className="text-[10px] text-muted-foreground">Deal Value</p>
                     <p className="font-medium text-sm">
                       {lead.deal_value
-                        ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(lead.deal_value)
+                        ? fmtINR(Number(lead.deal_value))
                         : "—"}
                     </p>
                   </div>
@@ -814,6 +826,100 @@ export function SalesLeadDetailModal({
                     </p>
                   </div>
                 </div>
+
+                {/* ── Deal Calculator ── */}
+                <Separator />
+                <h3 className="font-semibold text-sm flex items-center gap-2 mt-2">
+                  <BarChart3 className="h-4 w-4" /> Deal Calculator — Share with Client
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[10px]">On-Road / Total Car Price (Rs.)</Label>
+                    <Input
+                      type="number"
+                      value={dealValue}
+                      onChange={(e) => {
+                        setDealValue(e.target.value);
+                        onUpdate({ deal_value: Number(e.target.value) }, "deal_value_set", `Deal: Rs. ${Number(e.target.value).toLocaleString("en-IN")}`);
+                      }}
+                      placeholder="e.g. 850000"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Booking Amount Received (Rs.)</Label>
+                    <Input
+                      type="number"
+                      value={bookingAmount}
+                      onChange={(e) => {
+                        setBookingAmount(e.target.value);
+                        onUpdate({ booking_amount: Number(e.target.value) });
+                      }}
+                      placeholder="e.g. 50000"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Processing Fees (Rs.)</Label>
+                    <Input
+                      type="number"
+                      value={processingFees}
+                      onChange={(e) => {
+                        setProcessingFees(e.target.value);
+                        onUpdate({ processing_fees: Number(e.target.value) });
+                      }}
+                      placeholder="e.g. 10000"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Other Expenses (Rs.)</Label>
+                    <Input
+                      type="number"
+                      value={otherExpenses}
+                      onChange={(e) => {
+                        setOtherExpenses(e.target.value);
+                        onUpdate({ other_expenses: Number(e.target.value) });
+                      }}
+                      placeholder="e.g. 5000"
+                    />
+                  </div>
+                </div>
+
+                {/* Summary Card */}
+                {totalCarPrice > 0 && (
+                  <div className="rounded-lg border bg-muted/20 p-3 space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total Car Price</span>
+                      <span className="font-semibold">{fmtINR(totalCarPrice)}</span>
+                    </div>
+                    {Number(bookingAmount) > 0 && (
+                      <div className="flex justify-between text-destructive">
+                        <span>Less: Booking Amount</span>
+                        <span>- {fmtINR(Number(bookingAmount))}</span>
+                      </div>
+                    )}
+                    {Number(processingFees) > 0 && (
+                      <div className="flex justify-between text-destructive">
+                        <span>Less: Processing Fees</span>
+                        <span>- {fmtINR(Number(processingFees))}</span>
+                      </div>
+                    )}
+                    {Number(otherExpenses) > 0 && (
+                      <div className="flex justify-between text-destructive">
+                        <span>Less: {otherExpensesLabel}</span>
+                        <span>- {fmtINR(Number(otherExpenses))}</span>
+                      </div>
+                    )}
+                    <Separator />
+                    <div className="flex justify-between font-bold text-base">
+                      <span>Balance Payable</span>
+                      <span className="text-emerald-600">{fmtINR(balancePayable)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* One-Click Share */}
+                <Button onClick={() => setShowShareOffer(true)} className="w-full gap-2">
+                  <Share2 className="h-4 w-4" /> Share Deal Offer to Client (1-Click)
+                </Button>
 
                 {/* Remarks history */}
                 {Array.isArray(lead.remarks_history) && lead.remarks_history.length > 0 && (
@@ -852,18 +958,37 @@ export function SalesLeadDetailModal({
         defaultEmail={lead.email || ""}
         customerName={lead.name || lead.customer_name || "Customer"}
         vertical="car_sales"
-        shareMessage={`Hi ${lead.name || lead.customer_name || ""}! Here is your car offer for ${lead.car_model || lead.interested_model || "your dream car"}.\n\n${lead.deal_value ? `Deal Value: Rs. ${Number(lead.deal_value).toLocaleString("en-IN")}` : ""}\n\nFor queries, call +91 98559 24442\nwww.grabyourcar.com\n- Grabyourcar`}
+        shareMessage={(() => {
+          const name = lead.name || lead.customer_name || "";
+          const car = lead.car_model || lead.interested_model || "your dream car";
+          let msg = `Hi ${name}! Here is your car deal offer for *${car}*.\n\n`;
+          if (totalCarPrice > 0) {
+            msg += `🚗 Total Car Price: ${fmtINR(totalCarPrice)}\n`;
+            if (Number(bookingAmount) > 0) msg += `💰 Less Booking: - ${fmtINR(Number(bookingAmount))}\n`;
+            if (Number(processingFees) > 0) msg += `📋 Less Processing: - ${fmtINR(Number(processingFees))}\n`;
+            if (Number(otherExpenses) > 0) msg += `📎 Less ${otherExpensesLabel}: - ${fmtINR(Number(otherExpenses))}\n`;
+            if (totalDeductions > 0) msg += `\n✅ *Balance Payable: ${fmtINR(balancePayable)}*\n`;
+          } else if (lead.deal_value) {
+            msg += `Deal Value: ${fmtINR(Number(lead.deal_value))}\n`;
+          }
+          msg += `\nFor queries, call +91 98559 24442\nwww.grabyourcar.com\n- Grabyourcar`;
+          return msg;
+        })()}
         generatePdf={() => generateSalesOfferPDF({
           customerName: lead.name || lead.customer_name || "Customer",
           phone: lead.phone || "",
           carModel: lead.car_model || lead.interested_model || "N/A",
           variant: lead.variant || undefined,
           color: lead.color || undefined,
-          dealValue: lead.deal_value ? Number(lead.deal_value) : undefined,
+          dealValue: totalCarPrice > 0 ? totalCarPrice : (lead.deal_value ? Number(lead.deal_value) : undefined),
           exShowroomPrice: lead.ex_showroom_price ? Number(lead.ex_showroom_price) : undefined,
           onRoadPrice: lead.on_road_price ? Number(lead.on_road_price) : undefined,
           specialTerms: lead.special_terms || undefined,
           dealership: lead.dealership || undefined,
+          bookingAmount: Number(bookingAmount) || undefined,
+          processingFees: Number(processingFees) || undefined,
+          otherExpenses: Number(otherExpenses) || undefined,
+          otherExpensesLabel: otherExpensesLabel !== "Other Expenses" ? otherExpensesLabel : undefined,
         })}
       />
     </Dialog>
