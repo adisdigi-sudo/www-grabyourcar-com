@@ -173,6 +173,7 @@ export const HROnboarding = () => {
   const qc = useQueryClient();
   const [showNew, setShowNew] = useState(false);
   const [step, setStep] = useState(1); // wizard step
+  const [form, setForm] = useState<Record<string, any>>({});
   const [showComplianceForm, setShowComplianceForm] = useState(false);
   const [complianceForm, setComplianceForm] = useState<Record<string, string>>({});
 
