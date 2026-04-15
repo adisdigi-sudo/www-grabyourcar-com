@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { HelmetProvider } from "react-helmet-async";
 import "./index.css";
 import App from "./App";
+import { Button } from "@/components/ui/button";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { isChunkLoadRecoveryExhausted, isDynamicImportError, recoverFromChunkLoadError, resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { Loader2, WifiOff } from "lucide-react";
@@ -12,11 +13,14 @@ let hasTriggeredChunkRecovery = false;
 
 const DEV_SERVER_STATUS_EVENT = "lovable:dev-server-status";
 const CHUNK_RECOVERY_STATUS_EVENT = "lovable:chunk-recovery-status";
+const DEV_SERVER_UPDATE_READY_EVENT = "lovable:dev-server-update-ready";
 const DEV_SERVER_PENDING_RELOAD_KEY = "lovable_dev_server_pending_reload";
 const DEV_SERVER_LAST_RELOAD_KEY = "lovable_dev_server_last_reload";
 const DEV_SERVER_RELOAD_COOLDOWN_MS = 5000;
+const SENSITIVE_PREVIEW_ROUTE_PREFIXES = ["/crm", "/admin", "/workspace", "/document-viewer"];
 
 type ChunkRecoveryAttemptResult = "recovered" | "exhausted" | "ignored";
+type UpdateReadyReason = "dev-server-restart" | "stale-bundle";
 
 const dispatchChunkRecoveryStatus = (status: "recovering" | "exhausted", source: string) => {
   if (typeof window === "undefined") {
@@ -28,6 +32,48 @@ const dispatchChunkRecoveryStatus = (status: "recovering" | "exhausted", source:
       detail: { status, source },
     }),
   );
+};
+
+const isSensitivePreviewRoute = () => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const { hostname, pathname } = window.location;
+  return hostname.startsWith("admin.") || SENSITIVE_PREVIEW_ROUTE_PREFIXES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+};
+
+const clearPendingReloadFlag = () => {
+  try {
+    sessionStorage.removeItem(DEV_SERVER_PENDING_RELOAD_KEY);
+  } catch {
+    // ignore storage failures
+  }
+};
+
+const dispatchUpdateReady = (reason: UpdateReadyReason) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent(DEV_SERVER_UPDATE_READY_EVENT, {
+      detail: { reason },
+    }),
+  );
+};
+
+const performSafeReload = () => {
+  try {
+    clearPendingReloadFlag();
+    sessionStorage.setItem(DEV_SERVER_LAST_RELOAD_KEY, String(Date.now()));
+
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set("__v", Date.now().toString());
+    window.location.replace(nextUrl.toString());
+  } catch {
+    window.location.reload();
+  }
 };
 
 const attemptChunkRecovery = (error: unknown, source: string): ChunkRecoveryAttemptResult => {
@@ -62,6 +108,20 @@ const markDevServerPendingReload = () => {
   }
 };
 
+const requestManualReloadIfNeeded = (reason: UpdateReadyReason) => {
+  if (!import.meta.env.DEV || !isSensitivePreviewRoute() || typeof document === "undefined") {
+    return false;
+  }
+
+  if (document.visibilityState !== "visible") {
+    return false;
+  }
+
+  markDevServerPendingReload();
+  dispatchUpdateReady(reason);
+  return true;
+};
+
 const reloadAfterDevServerRestart = () => {
   try {
     const hasPendingReload = sessionStorage.getItem(DEV_SERVER_PENDING_RELOAD_KEY) === "1";
@@ -69,16 +129,15 @@ const reloadAfterDevServerRestart = () => {
 
     const lastReloadAt = Number.parseInt(sessionStorage.getItem(DEV_SERVER_LAST_RELOAD_KEY) ?? "0", 10);
     if (!Number.isNaN(lastReloadAt) && Date.now() - lastReloadAt < DEV_SERVER_RELOAD_COOLDOWN_MS) {
-      sessionStorage.removeItem(DEV_SERVER_PENDING_RELOAD_KEY);
+      clearPendingReloadFlag();
       return;
     }
 
-    sessionStorage.removeItem(DEV_SERVER_PENDING_RELOAD_KEY);
-    sessionStorage.setItem(DEV_SERVER_LAST_RELOAD_KEY, String(Date.now()));
+    if (requestManualReloadIfNeeded("dev-server-restart")) {
+      return;
+    }
 
-    const nextUrl = new URL(window.location.href);
-    nextUrl.searchParams.set("__v", Date.now().toString());
-    window.location.replace(nextUrl.toString());
+    performSafeReload();
   } catch {
     window.location.reload();
   }
@@ -96,7 +155,11 @@ if (typeof window !== "undefined") {
     const recoveryResult = attemptChunkRecovery(preloadEvent.payload, "window.vite:preloadError");
 
     if (recoveryResult === "ignored") {
-      window.location.reload();
+      if (requestManualReloadIfNeeded("stale-bundle")) {
+        return;
+      }
+
+      performSafeReload();
     }
   });
 
@@ -142,7 +205,18 @@ if (import.meta.hot && typeof window !== "undefined") {
 }
 
 const DevServerStatusOverlay = () => {
-  const [status, setStatus] = useState<"idle" | "disconnected" | "connected" | "reloading">("idle");
+  const [status, setStatus] = useState<"idle" | "disconnected" | "connected" | "reloading" | "update_ready">(() => {
+    if (!import.meta.env.DEV || typeof window === "undefined") {
+      return "idle";
+    }
+
+    try {
+      return sessionStorage.getItem(DEV_SERVER_PENDING_RELOAD_KEY) === "1" && isSensitivePreviewRoute() ? "update_ready" : "idle";
+    } catch {
+      return "idle";
+    }
+  });
+  const [updateReason, setUpdateReason] = useState<UpdateReadyReason>("dev-server-restart");
 
   useEffect(() => {
     if (!import.meta.env.DEV || typeof window === "undefined") {
@@ -163,14 +237,24 @@ const DevServerStatusOverlay = () => {
       }
 
       if (nextStatus === "connected") {
-        connectedTimer = window.setTimeout(() => setStatus("idle"), 1200);
+        connectedTimer = window.setTimeout(() => {
+          setStatus((current) => (current === "connected" ? "idle" : current));
+        }, 1200);
       }
     };
 
+    const handleUpdateReady = (event: Event) => {
+      const reason = (event as CustomEvent<{ reason?: UpdateReadyReason }>).detail?.reason;
+      setUpdateReason(reason ?? "dev-server-restart");
+      setStatus("update_ready");
+    };
+
     window.addEventListener(DEV_SERVER_STATUS_EVENT, handleStatus as EventListener);
+    window.addEventListener(DEV_SERVER_UPDATE_READY_EVENT, handleUpdateReady as EventListener);
 
     return () => {
       window.removeEventListener(DEV_SERVER_STATUS_EVENT, handleStatus as EventListener);
+      window.removeEventListener(DEV_SERVER_UPDATE_READY_EVENT, handleUpdateReady as EventListener);
       if (connectedTimer) {
         window.clearTimeout(connectedTimer);
       }
@@ -183,20 +267,29 @@ const DevServerStatusOverlay = () => {
     status === "disconnected"
       ? {
           title: "Reconnecting preview",
-          description: "The dev server restarted while applying changes. Your CRM will resume automatically.",
+          description: "The dev server restarted while applying changes. We are stabilizing your session.",
           icon: WifiOff,
         }
       : status === "reloading"
         ? {
             title: "Refreshing latest changes",
-            description: "Reloading the newest CRM bundle now.",
+            description: "Preparing the newest CRM bundle now.",
             icon: Loader2,
           }
-        : {
-            title: "Preview restored",
-            description: "Connection recovered successfully.",
-            icon: Loader2,
-          };
+        : status === "update_ready"
+          ? {
+              title: "Reload blocked to protect your CRM work",
+              description:
+                updateReason === "stale-bundle"
+                  ? "A stale admin bundle was detected. We stopped the automatic reload so the preview does not turn white again."
+                  : "The dev server restarted while you were working in CRM. We stopped the forced reload so your screen does not blank out again.",
+              icon: WifiOff,
+            }
+          : {
+              title: "Preview restored",
+              description: "Connection recovered successfully.",
+              icon: Loader2,
+            };
 
   const Icon = copy.icon;
 
@@ -204,10 +297,15 @@ const DevServerStatusOverlay = () => {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/95 px-6 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-center text-card-foreground shadow-sm">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Icon className={`h-6 w-6 ${status !== "disconnected" ? "animate-spin" : ""}`} />
+          <Icon className={`h-6 w-6 ${status === "connected" || status === "reloading" ? "animate-spin" : ""}`} />
         </div>
         <h2 className="text-lg font-semibold">{copy.title}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{copy.description}</p>
+        {status === "update_ready" ? (
+          <Button className="mt-5" onClick={performSafeReload}>
+            Reload safely
+          </Button>
+        ) : null}
       </div>
     </div>
   );
@@ -245,10 +343,7 @@ const ChunkRecoveryOverlay = () => {
 
   const handleManualRefresh = () => {
     resetChunkLoadRecovery();
-
-    const nextUrl = new URL(window.location.href);
-    nextUrl.searchParams.set("__v", Date.now().toString());
-    window.location.replace(nextUrl.toString());
+    performSafeReload();
   };
 
   return (
