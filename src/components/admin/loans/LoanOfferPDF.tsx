@@ -27,6 +27,20 @@ interface BankComparison {
 const fmt = (v: number) => `Rs. ${Math.round(v).toLocaleString("en-IN")}`;
 const fmtL = (v: number) => v >= 100000 ? `Rs. ${(v / 100000).toFixed(2)}L` : fmt(v);
 
+// Brand colors
+const BRAND = {
+  navy: [15, 23, 42] as [number, number, number],       // #0F172A
+  emerald: [16, 185, 129] as [number, number, number],   // #10B981
+  emeraldDark: [5, 150, 105] as [number, number, number], // #059669
+  gold: [245, 158, 11] as [number, number, number],      // #F59E0B
+  slate: [100, 116, 139] as [number, number, number],    // #64748B
+  slateLight: [241, 245, 249] as [number, number, number],// #F1F5F9
+  white: [255, 255, 255] as [number, number, number],
+  dark: [30, 41, 59] as [number, number, number],
+  red: [220, 38, 38] as [number, number, number],
+  greenLight: [236, 253, 245] as [number, number, number],
+};
+
 function calcEMI(principal: number, ratePA: number, months: number) {
   const r = ratePA / 12 / 100;
   if (r === 0) return principal / months;
@@ -47,50 +61,118 @@ function generateAmortization(principal: number, ratePA: number, months: number)
   return rows;
 }
 
-// ─── Helper: draw header ───
-function drawHeader(doc: jsPDF, w: number) {
-  doc.setFillColor(16, 185, 129);
-  doc.rect(0, 0, w, 48, "F");
-  doc.setFillColor(5, 150, 105);
-  doc.rect(0, 44, w, 4, "F");
-  // Left: brand
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
+// ─── Premium Header with brand identity ───
+function drawPremiumHeader(doc: jsPDF, w: number) {
+  // Full-width navy header
+  doc.setFillColor(...BRAND.navy);
+  doc.rect(0, 0, w, 42, "F");
+
+  // Emerald accent bar at bottom of header
+  doc.setFillColor(...BRAND.emerald);
+  doc.rect(0, 42, w, 2.5, "F");
+
+  // Gold thin line
+  doc.setFillColor(...BRAND.gold);
+  doc.rect(0, 44.5, w, 0.5, "F");
+
+  // Brand name (left)
+  doc.setTextColor(...BRAND.white);
+  doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
-  doc.text("GrabYourCar", 15, 20);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text("Your Trusted Auto Finance Partner", 15, 28);
-  doc.text("www.grabyourcar.com | +91-98559-24442", 15, 36);
-  // Right: doc type
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text("CAR LOAN OFFER", w - 15, 20, { align: "right" });
+  doc.text("GrabYourCar", 15, 17);
+
+  // Tagline
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text(`Generated: ${format(new Date(), "dd MMM yyyy, hh:mm a")}`, w - 15, 28, { align: "right" });
+  doc.setTextColor(180, 200, 220);
+  doc.text("Your Trusted Auto Finance Partner", 15, 24);
+
+  // Contact details with separator dots
+  doc.setFontSize(7.5);
+  doc.setTextColor(150, 170, 190);
+  doc.text("www.grabyourcar.com  \u2022  +91 98559 24442  \u2022  info@grabyourcar.com", 15, 32);
+
+  // Right side - Document type badge
+  doc.setFillColor(...BRAND.emerald);
+  doc.roundedRect(w - 68, 8, 53, 18, 3, 3, "F");
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.white);
+  doc.text("CAR LOAN", w - 41.5, 16, { align: "center" });
+  doc.setFontSize(7);
+  doc.text("OFFER", w - 41.5, 22, { align: "center" });
+
+  // Date below badge
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(150, 170, 190);
+  doc.text(format(new Date(), "dd MMM yyyy, hh:mm a"), w - 15, 35, { align: "right" });
 }
 
-// ─── Helper: draw footer ───
-function drawFooter(doc: jsPDF, w: number, h: number) {
-  const y = h - 20;
-  doc.setDrawColor(200); doc.line(15, y, w - 15, y);
-  doc.setFontSize(7); doc.setFont("helvetica", "normal"); doc.setTextColor(140, 140, 140);
-  doc.text("* This is an indicative loan offer. Final terms subject to bank/NBFC approval. EMI calculated on reducing balance method.", 15, y + 6);
-  doc.text("* Processing fees, GST, and other charges may apply as per the lending institution's policy.", 15, y + 10);
-  doc.text(`GrabYourCar | ${format(new Date(), "dd MMM yyyy")} | Confidential`, w / 2, y + 16, { align: "center" });
+// ─── Premium Footer ───
+function drawPremiumFooter(doc: jsPDF, w: number, h: number) {
+  const fy = h - 28;
+
+  // Separator
+  doc.setDrawColor(...BRAND.emerald);
+  doc.setLineWidth(0.4);
+  doc.line(15, fy, w - 15, fy);
+
+  // Disclaimer text
+  doc.setFontSize(6.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(160, 160, 160);
+  doc.text("* This is an indicative loan offer. Final terms subject to bank/NBFC approval. EMI calculated on reducing balance method.", 15, fy + 5);
+  doc.text("* Processing fees, GST, and other charges may apply as per the lending institution's policy.", 15, fy + 9);
+  doc.text("* Offer validity: 7 days from date of generation. Prices and rates subject to change without notice.", 15, fy + 13);
+
+  // Bottom bar
+  doc.setFillColor(...BRAND.navy);
+  doc.rect(0, h - 10, w, 10, "F");
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.emerald);
+  doc.text("GrabYourCar", 15, h - 4);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(180, 200, 220);
+  doc.text(`\u2022  ${format(new Date(), "dd MMM yyyy")}  \u2022  Confidential & Personalized Offer`, 48, h - 4);
+  doc.text("Page 1", w - 15, h - 4, { align: "right" });
 }
 
-// ─── Helper: row with label/value ───
-function drawRow(doc: jsPDF, x: number, y: number, w: number, label: string, value: string, highlight = false) {
-  if (highlight) {
-    doc.setFillColor(240, 253, 244);
-    doc.rect(x, y - 4.5, w, 11, "F");
+// ─── Section heading with emerald underline ───
+function drawSectionHeading(doc: jsPDF, x: number, y: number, title: string, subtitle?: string): number {
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.navy);
+  doc.text(title, x, y);
+  
+  const titleWidth = doc.getTextWidth(title);
+  doc.setDrawColor(...BRAND.emerald);
+  doc.setLineWidth(0.8);
+  doc.line(x, y + 1.5, x + titleWidth + 4, y + 1.5);
+  doc.setLineWidth(0.2);
+
+  if (subtitle) {
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...BRAND.slate);
+    doc.text(subtitle, x + titleWidth + 8, y);
   }
-  doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.setTextColor(80, 80, 80);
-  doc.text(label, x + 6, y + 2);
-  doc.setFont("helvetica", "bold"); doc.setTextColor(30, 30, 30);
-  doc.text(value, x + w - 6, y + 2, { align: "right" });
+  return y + 7;
+}
+
+// ─── Row with label/value + alternating bg ───
+function drawLabelRow(doc: jsPDF, x: number, y: number, w: number, label: string, value: string, opts?: { highlight?: boolean; deduct?: boolean; bold?: boolean }) {
+  if (opts?.highlight) {
+    doc.setFillColor(...BRAND.greenLight);
+    doc.rect(x, y - 4, w, 9, "F");
+  }
+  doc.setFontSize(8.5);
+  doc.setFont("helvetica", opts?.bold ? "bold" : "normal");
+  doc.setTextColor(opts?.deduct ? ...BRAND.red : 80, opts?.deduct ? 38 : 80, opts?.deduct ? 38 : 80);
+  doc.text(label, x + 4, y + 1);
+  doc.setFont("helvetica", "bold");
+  doc.text(value, x + w - 4, y + 1, { align: "right" });
 }
 
 // ─── Single Offer PDF ───
@@ -101,53 +183,87 @@ export function generateLoanOfferPDF(data: LoanOfferData): jsPDF {
   const mx = 15;
   const bw = w - 2 * mx;
 
-  drawHeader(doc, w);
+  drawPremiumHeader(doc, w);
 
-  let y = 58;
+  let y = 54;
 
-  // ── Customer Info Box ──
+  // ── Customer Info Card ──
   doc.setFillColor(248, 250, 252);
-  doc.roundedRect(mx, y, bw, 22, 3, 3, "F");
-  doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(mx, y, bw, 22, 3, 3, "S");
-  doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.setTextColor(71, 85, 105);
-  doc.text("CUSTOMER DETAILS", mx + 6, y + 6);
-  doc.setFont("helvetica", "normal"); doc.setTextColor(51, 65, 85);
-  doc.text(`Name: ${data.customerName}`, mx + 6, y + 13);
-  doc.text(`Phone: ${data.phone}`, mx + 80, y + 13);
-  if (data.carModel) doc.text(`Vehicle: ${data.carModel}`, mx + 140, y + 13);
-  y += 30;
+  doc.roundedRect(mx, y, bw, 20, 3, 3, "F");
+  doc.setDrawColor(200, 210, 225);
+  doc.roundedRect(mx, y, bw, 20, 3, 3, "S");
 
-  // ── EMI Highlight Box ──
+  // Green left accent
+  doc.setFillColor(...BRAND.emerald);
+  doc.rect(mx, y, 3, 20, "F");
+
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.slate);
+  doc.text("CUSTOMER DETAILS", mx + 8, y + 5.5);
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.navy);
+  doc.text(data.customerName, mx + 8, y + 12);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...BRAND.slate);
+  doc.text(data.phone, mx + 80, y + 12);
+  if (data.carModel) {
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND.emeraldDark);
+    doc.text(data.carModel, mx + 130, y + 12);
+  }
+  y += 28;
+
+  // ── EMI Highlight Card ──
   const emi = calcEMI(data.loanAmount, data.interestRate, data.tenureMonths);
   const totalPayable = emi * data.tenureMonths;
   const totalInterest = totalPayable - data.loanAmount;
 
-  doc.setFillColor(236, 253, 245);
-  doc.roundedRect(mx, y, bw, 36, 4, 4, "F");
-  doc.setDrawColor(16, 185, 129);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(mx, y, bw, 36, 4, 4, "S");
-  doc.setLineWidth(0.2);
+  // Navy EMI card
+  doc.setFillColor(...BRAND.navy);
+  doc.roundedRect(mx, y, bw, 38, 4, 4, "F");
 
-  doc.setTextColor(16, 185, 129);
-  doc.setFontSize(26); doc.setFont("helvetica", "bold");
+  // Emerald glow accent
+  doc.setFillColor(...BRAND.emerald);
+  doc.roundedRect(mx + 2, y + 2, 4, 34, 2, 2, "F");
+
+  // EMI amount
+  doc.setTextColor(...BRAND.emerald);
+  doc.setFontSize(28);
+  doc.setFont("helvetica", "bold");
   doc.text(fmt(emi), w / 2, y + 16, { align: "center" });
-  doc.setFontSize(9); doc.setTextColor(100, 100, 100); doc.setFont("helvetica", "normal");
-  doc.text(`Monthly EMI for ${data.tenureMonths} months (${(data.tenureMonths / 12).toFixed(1)} years)`, w / 2, y + 24, { align: "center" });
+
+  // "/month" label
+  doc.setFontSize(10);
+  doc.setTextColor(200, 230, 220);
+  doc.text("/month", w / 2 + doc.getTextWidth(fmt(emi)) / 2 + 3, y + 16);
+
+  // Details line
+  doc.setFontSize(8);
+  doc.setTextColor(180, 200, 220);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${data.tenureMonths} months (${(data.tenureMonths / 12).toFixed(1)} years) @ ${data.interestRate}% p.a.`, w / 2, y + 25, { align: "center" });
+
+  // Bank name badge
   if (data.bankName) {
-    doc.setFontSize(8); doc.setTextColor(16, 185, 129); doc.setFont("helvetica", "bold");
-    doc.text(`via ${data.bankName}`, w / 2, y + 31, { align: "center" });
+    doc.setFillColor(...BRAND.emerald);
+    const bankText = `via ${data.bankName}`;
+    const bankW = doc.getTextWidth(bankText) + 12;
+    doc.roundedRect(w / 2 - bankW / 2, y + 28, bankW, 6, 2, 2, "F");
+    doc.setFontSize(7);
+    doc.setTextColor(...BRAND.white);
+    doc.setFont("helvetica", "bold");
+    doc.text(bankText, w / 2, y + 32.5, { align: "center" });
   }
-  y += 44;
+  y += 46;
 
   // ── Loan Details Table ──
-  doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(30, 30, 30);
-  doc.text("LOAN DETAILS", mx + 2, y);
-  doc.setDrawColor(16, 185, 129); doc.setLineWidth(0.6); doc.line(mx, y + 2, mx + 40, y + 2);
-  doc.setLineWidth(0.2); y += 8;
+  y = drawSectionHeading(doc, mx, y, "LOAN DETAILS");
 
-  const rows = [
+  const rows: [string, string][] = [
     ["Loan Amount", fmt(data.loanAmount)],
     ["Interest Rate (p.a.)", `${data.interestRate}%`],
     ["Tenure", `${data.tenureMonths} months (${(data.tenureMonths / 12).toFixed(1)} years)`],
@@ -158,28 +274,65 @@ export function generateLoanOfferPDF(data: LoanOfferData): jsPDF {
   if (data.downPayment) rows.splice(1, 0, ["Down Payment", fmt(data.downPayment)]);
   if (data.processingFee) rows.push(["Processing Fee (approx)", fmt(data.processingFee)]);
 
+  // Table header
+  doc.setFillColor(...BRAND.navy);
+  doc.rect(mx, y, bw, 7, "F");
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.white);
+  doc.text("Particulars", mx + 4, y + 5);
+  doc.text("Amount", mx + bw - 4, y + 5, { align: "right" });
+  y += 9;
+
   rows.forEach(([label, value], i) => {
-    drawRow(doc, mx, y + i * 11, bw, label, value, i % 2 === 0);
+    if (i % 2 === 0) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(mx, y - 4, bw, 9, "F");
+    }
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 80);
+    doc.text(label, mx + 4, y + 1);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND.navy);
+    doc.text(value, mx + bw - 4, y + 1, { align: "right" });
+    y += 9;
   });
-  y += rows.length * 11 + 8;
+
+  // Total separator
+  doc.setDrawColor(...BRAND.emerald);
+  doc.setLineWidth(0.6);
+  doc.line(mx, y - 2, mx + bw, y - 2);
+  doc.setLineWidth(0.2);
+  y += 3;
 
   // ── Special Offer Box ──
   if (data.specialOffer) {
-    doc.setFillColor(254, 252, 232);
+    doc.setFillColor(255, 251, 235);
     doc.roundedRect(mx, y, bw, 14, 3, 3, "F");
-    doc.setDrawColor(234, 179, 8);
+    doc.setDrawColor(...BRAND.gold);
+    doc.setLineWidth(0.4);
     doc.roundedRect(mx, y, bw, 14, 3, 3, "S");
-    doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.setTextColor(161, 98, 7);
-    doc.text(`SPECIAL OFFER: ${data.specialOffer}`, mx + 6, y + 9);
+    doc.setLineWidth(0.2);
+
+    // Gold left accent
+    doc.setFillColor(...BRAND.gold);
+    doc.rect(mx, y, 3, 14, "F");
+
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND.gold);
+    doc.text("\u2B50 SPECIAL OFFER", mx + 8, y + 5);
+    doc.setFontSize(8);
+    doc.setTextColor(120, 80, 10);
+    doc.setFont("helvetica", "normal");
+    doc.text(data.specialOffer, mx + 8, y + 10);
     y += 20;
   }
 
-  // ── Amortization Schedule (first 6 + last 3) ──
-  if (y < h - 80) {
-    doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(30, 30, 30);
-    doc.text("AMORTIZATION SCHEDULE", mx + 2, y);
-    doc.setDrawColor(16, 185, 129); doc.setLineWidth(0.6); doc.line(mx, y + 2, mx + 52, y + 2);
-    doc.setLineWidth(0.2); y += 6;
+  // ── Amortization Schedule ──
+  if (y < h - 90) {
+    y = drawSectionHeading(doc, mx, y, "AMORTIZATION SCHEDULE", "(First 6 + Last 3 months)");
 
     const amort = generateAmortization(data.loanAmount, data.interestRate, data.tenureMonths);
     const showRows = [
@@ -188,38 +341,70 @@ export function generateLoanOfferPDF(data: LoanOfferData): jsPDF {
     ];
 
     // Table header
-    const cols = [mx + 2, mx + 22, mx + 60, mx + 98, mx + 136];
-    doc.setFillColor(16, 185, 129);
-    doc.rect(mx, y, bw, 8, "F");
-    doc.setFontSize(7.5); doc.setFont("helvetica", "bold"); doc.setTextColor(255, 255, 255);
+    const cols = [mx, mx + 18, mx + 52, mx + 88, mx + 124];
+    doc.setFillColor(...BRAND.navy);
+    doc.rect(mx, y, bw, 7.5, "F");
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BRAND.white);
     ["Month", "EMI (Rs.)", "Principal (Rs.)", "Interest (Rs.)", "Balance (Rs.)"].forEach((h, i) => {
-      doc.text(h, cols[i], y + 5.5);
+      doc.text(h, cols[i] + 4, y + 5.5);
     });
-    y += 10;
+    y += 9;
 
     showRows.forEach((row, idx) => {
       if (idx === 6 && data.tenureMonths > 12) {
-        doc.setFontSize(7); doc.setTextColor(150); doc.setFont("helvetica", "italic");
-        doc.text(`... months 7 to ${data.tenureMonths - 3} ...`, w / 2, y + 3.5, { align: "center" });
+        doc.setFontSize(7);
+        doc.setTextColor(...BRAND.slate);
+        doc.setFont("helvetica", "italic");
+        doc.text(`... months 7 to ${data.tenureMonths - 3} ...`, w / 2, y + 3, { align: "center" });
         y += 7;
       }
       if (idx % 2 === 0) {
-        doc.setFillColor(248, 250, 252); doc.rect(mx, y - 1, bw, 7, "F");
+        doc.setFillColor(248, 250, 252);
+        doc.rect(mx, y - 1, bw, 7, "F");
       }
-      doc.setFontSize(7.5); doc.setFont("helvetica", "normal"); doc.setTextColor(60, 60, 60);
-      doc.text(`${row.month}`, cols[0], y + 4);
-      doc.text(Math.round(row.emi).toLocaleString("en-IN"), cols[1], y + 4);
-      doc.setTextColor(16, 185, 129);
-      doc.text(Math.round(row.principal).toLocaleString("en-IN"), cols[2], y + 4);
-      doc.setTextColor(234, 88, 12);
-      doc.text(Math.round(row.interest).toLocaleString("en-IN"), cols[3], y + 4);
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "normal");
       doc.setTextColor(60, 60, 60);
-      doc.text(Math.round(row.balance).toLocaleString("en-IN"), cols[4], y + 4);
+      doc.text(`${row.month}`, cols[0] + 4, y + 4);
+      doc.text(Math.round(row.emi).toLocaleString("en-IN"), cols[1] + 4, y + 4);
+      doc.setTextColor(...BRAND.emeraldDark);
+      doc.text(Math.round(row.principal).toLocaleString("en-IN"), cols[2] + 4, y + 4);
+      doc.setTextColor(234, 88, 12);
+      doc.text(Math.round(row.interest).toLocaleString("en-IN"), cols[3] + 4, y + 4);
+      doc.setTextColor(60, 60, 60);
+      doc.text(Math.round(row.balance).toLocaleString("en-IN"), cols[4] + 4, y + 4);
       y += 7;
     });
   }
 
-  drawFooter(doc, w, h);
+  // ── Quick Summary Cards (3-column) ──
+  y += 4;
+  if (y < h - 60) {
+    const cardW = (bw - 8) / 3;
+    const cards = [
+      { label: "Loan Amount", value: fmtL(data.loanAmount), color: BRAND.emerald },
+      { label: "Total Interest", value: fmt(totalInterest), color: BRAND.gold },
+      { label: "Total Payable", value: fmt(totalPayable), color: BRAND.navy },
+    ];
+
+    cards.forEach((card, i) => {
+      const cx = mx + i * (cardW + 4);
+      doc.setFillColor(card.color[0], card.color[1], card.color[2]);
+      doc.roundedRect(cx, y, cardW, 18, 3, 3, "F");
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(255, 255, 255, 180);
+      doc.text(card.label, cx + cardW / 2, y + 6, { align: "center" });
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(card.value, cx + cardW / 2, y + 14, { align: "center" });
+    });
+  }
+
+  drawPremiumFooter(doc, w, h);
   return doc;
 }
 
@@ -234,58 +419,112 @@ export function generateBankComparisonPDF(
   const w = doc.internal.pageSize.getWidth();
   const h = doc.internal.pageSize.getHeight();
 
-  drawHeader(doc, w);
+  // Navy header for landscape
+  doc.setFillColor(...BRAND.navy);
+  doc.rect(0, 0, w, 36, "F");
+  doc.setFillColor(...BRAND.emerald);
+  doc.rect(0, 36, w, 2, "F");
+  doc.setFillColor(...BRAND.gold);
+  doc.rect(0, 38, w, 0.5, "F");
 
-  let y = 56;
-  // Customer info
+  doc.setTextColor(...BRAND.white);
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text("GrabYourCar", 15, 16);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(180, 200, 220);
+  doc.text("Your Trusted Auto Finance Partner | www.grabyourcar.com | +91 98559 24442", 15, 24);
+
+  doc.setFillColor(...BRAND.emerald);
+  doc.roundedRect(w - 70, 8, 55, 16, 3, 3, "F");
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.white);
+  doc.text("BANK COMPARISON", w - 42.5, 18, { align: "center" });
+
+  doc.setFontSize(7);
+  doc.setTextColor(150, 170, 190);
+  doc.text(format(new Date(), "dd MMM yyyy, hh:mm a"), w - 15, 30, { align: "right" });
+
+  let y = 46;
+
+  // Customer info card
   doc.setFillColor(248, 250, 252);
-  doc.roundedRect(15, y, w - 30, 16, 3, 3, "F");
-  doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(51, 65, 85);
-  doc.text(`Customer: ${customer.name} | Phone: ${customer.phone} | Vehicle: ${customer.carModel || "N/A"} | Loan: ${fmtL(loanAmount)} | Tenure: ${tenureMonths}m`, 21, y + 10);
-  y += 24;
+  doc.roundedRect(15, y, w - 30, 14, 3, 3, "F");
+  doc.setFillColor(...BRAND.emerald);
+  doc.rect(15, y, 3, 14, "F");
+  doc.setFontSize(8.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.navy);
+  doc.text(`Customer: ${customer.name}  \u2022  Phone: ${customer.phone}  \u2022  Vehicle: ${customer.carModel || "N/A"}  \u2022  Loan: ${fmtL(loanAmount)}  \u2022  Tenure: ${tenureMonths}m`, 24, y + 9);
+  y += 22;
 
-  doc.setFontSize(12); doc.setFont("helvetica", "bold"); doc.setTextColor(30, 30, 30);
-  doc.text("BANK-WISE RATE COMPARISON", 15, y);
-  doc.setDrawColor(16, 185, 129); doc.setLineWidth(0.6); doc.line(15, y + 2, 80, y + 2);
-  doc.setLineWidth(0.2); y += 8;
+  y = drawSectionHeading(doc, 15, y, "BANK-WISE RATE COMPARISON");
 
   // Table header
-  const colW = [60, 30, 35, 40, 40, 60];
+  const colW = [60, 30, 38, 42, 44, 50];
   const colX = [15];
   for (let i = 1; i < colW.length; i++) colX.push(colX[i - 1] + colW[i - 1]);
   const headers = ["Bank / NBFC", "Rate (%)", "Proc. Fee", "Monthly EMI", "Total Payable", "Special Offer"];
 
-  doc.setFillColor(16, 185, 129);
-  doc.rect(15, y, w - 30, 9, "F");
-  doc.setFontSize(8); doc.setFont("helvetica", "bold"); doc.setTextColor(255, 255, 255);
-  headers.forEach((h, i) => doc.text(h, colX[i] + 3, y + 6.5));
-  y += 11;
+  doc.setFillColor(...BRAND.navy);
+  doc.rect(15, y, w - 30, 8, "F");
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.white);
+  headers.forEach((h, i) => doc.text(h, colX[i] + 4, y + 5.5));
+  y += 10;
 
-  // Sort by rate
   const sorted = [...comparisons].sort((a, b) => a.interestRate - b.interestRate);
   sorted.forEach((bank, idx) => {
-    if (idx % 2 === 0) { doc.setFillColor(248, 250, 252); doc.rect(15, y - 1, w - 30, 9, "F"); }
+    if (idx % 2 === 0) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(15, y - 1, w - 30, 9, "F");
+    }
     const isLowest = idx === 0;
-    doc.setFontSize(8); doc.setFont("helvetica", isLowest ? "bold" : "normal");
-    doc.setTextColor(isLowest ? 16 : 60, isLowest ? 185 : 60, isLowest ? 129 : 60);
-    doc.text(bank.bankName, colX[0] + 3, y + 5);
-    doc.text(`${bank.interestRate}%`, colX[1] + 3, y + 5);
-    doc.text(fmt(bank.processingFee), colX[2] + 3, y + 5);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", isLowest ? "bold" : "normal");
+    doc.setTextColor(isLowest ? ...BRAND.emeraldDark : 60, isLowest ? 150 : 60, isLowest ? 105 : 60);
+    doc.text(bank.bankName, colX[0] + 4, y + 5);
+    doc.text(`${bank.interestRate}%`, colX[1] + 4, y + 5);
+    doc.text(fmt(bank.processingFee), colX[2] + 4, y + 5);
     doc.setFont("helvetica", "bold");
-    doc.text(fmt(bank.emi), colX[3] + 3, y + 5);
-    doc.text(fmt(bank.totalPayable), colX[4] + 3, y + 5);
-    doc.setFont("helvetica", "normal"); doc.setTextColor(100);
-    doc.text(bank.specialOffer || "-", colX[5] + 3, y + 5);
+    doc.text(fmt(bank.emi), colX[3] + 4, y + 5);
+    doc.text(fmt(bank.totalPayable), colX[4] + 4, y + 5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    doc.text(bank.specialOffer || "-", colX[5] + 4, y + 5);
     if (isLowest) {
-      doc.setFillColor(16, 185, 129);
+      doc.setFillColor(...BRAND.emerald);
       doc.roundedRect(colX[0] + colW[0] - 22, y - 0.5, 20, 6, 1, 1, "F");
-      doc.setFontSize(5.5); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold");
+      doc.setFontSize(5.5);
+      doc.setTextColor(...BRAND.white);
+      doc.setFont("helvetica", "bold");
       doc.text("BEST RATE", colX[0] + colW[0] - 12, y + 3.5, { align: "center" });
     }
     y += 10;
   });
 
-  drawFooter(doc, w, h);
+  // Footer
+  const fy = h - 18;
+  doc.setDrawColor(...BRAND.emerald);
+  doc.setLineWidth(0.4);
+  doc.line(15, fy, w - 15, fy);
+  doc.setFontSize(6.5);
+  doc.setTextColor(160, 160, 160);
+  doc.text("* Indicative offer. Final terms subject to bank/NBFC approval. EMI on reducing balance.", 15, fy + 5);
+
+  doc.setFillColor(...BRAND.navy);
+  doc.rect(0, h - 8, w, 8, "F");
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...BRAND.emerald);
+  doc.text("GrabYourCar", 15, h - 3);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(180, 200, 220);
+  doc.text(`\u2022  ${format(new Date(), "dd MMM yyyy")}  \u2022  Confidential`, 48, h - 3);
+
   return doc;
 }
 
