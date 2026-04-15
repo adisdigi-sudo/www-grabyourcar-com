@@ -59,6 +59,14 @@ const DEPARTMENTS = [
 
 const DESIGNATION_GROUPS = [
   {
+    category: "🧹 Support Staff",
+    items: [
+      { value: "office_assistant", label: "Office Assistant", hint: "Peon / Helper" },
+      { value: "facility_coordinator", label: "Facility Coordinator", hint: "Office Boy" },
+      { value: "dispatch_runner", label: "Dispatch Runner", hint: "Runner / Errand" },
+    ],
+  },
+  {
     category: "📞 Caller / Telecaller",
     items: [
       { value: "revenue_growth_associate", label: "Revenue Growth Associate", hint: "Telecaller" },
@@ -74,6 +82,8 @@ const DESIGNATION_GROUPS = [
       { value: "relationship_manager", label: "Relationship Manager", hint: "RM" },
       { value: "senior_relationship_manager", label: "Senior Relationship Manager", hint: "Sr. RM" },
       { value: "operations_executive", label: "Operations Executive", hint: "Ops" },
+      { value: "data_entry_operator", label: "Data Entry Operator", hint: "DEO" },
+      { value: "accounts_executive", label: "Accounts Executive", hint: "Accounts" },
     ],
   },
   {
