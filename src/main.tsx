@@ -4,7 +4,7 @@ import { HelmetProvider } from "react-helmet-async";
 import "./index.css";
 import App from "./App";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
-import { isSensitivePreviewRouteWindow } from "@/lib/adminPreviewStability";
+import { isSensitivePreviewRouteWindow, shouldStabilizeStartupShellWindow } from "@/lib/adminPreviewStability";
 import { BootstrapRuntime } from "@/components/bootstrap/BootstrapRuntime";
 import { performSafePreviewReload } from "@/lib/chunkLoadRecovery";
 import { DEV_SERVER_STATUS_EVENT, installSensitiveRouteReloadGuard } from "@/lib/devReloadGuard";
@@ -51,7 +51,7 @@ const promoteStartupShellToRecovery = (
   }
 
   if (title) {
-    title.textContent = "CRM startup recovery mode";
+    title.textContent = "Page startup recovery mode";
   }
 
   if (body) {
@@ -66,6 +66,8 @@ const promoteStartupShellToRecovery = (
 const ensureStartupShell = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(STARTUP_SHELL_ID)) return;
+
+  const fallbackActionLabel = isSensitivePreviewRouteWindow() ? "Open sign in" : "Open home";
 
   const shell = document.createElement("div");
   shell.id = STARTUP_SHELL_ID;
@@ -84,11 +86,11 @@ const ensureStartupShell = () => {
   shell.innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px 20px;max-width:460px;text-align:center;">
       <div data-shell-status style="height:44px;width:44px;border-radius:9999px;border:3px solid hsl(220 14% 96%);border-top-color:hsl(221.2 83.2% 53.3%);animation:lovable-spin 1s linear infinite;"></div>
-      <div data-shell-title style="font:600 16px system-ui, sans-serif;">CRM reconnect ho raha hai</div>
-      <div data-shell-body style="max-width:420px;text-align:center;font:400 13px system-ui, sans-serif;color:hsl(215.4 16.3% 46.9%);padding:0 20px;">Agar dev update aayi hai to page thodi der stable shell par rahega. White page ke bajaye yeh recovery state dikhni chahiye.</div>
+      <div data-shell-title style="font:600 16px system-ui, sans-serif;">Page reconnect ho raha hai</div>
+      <div data-shell-body style="max-width:420px;text-align:center;font:400 13px system-ui, sans-serif;color:hsl(215.4 16.3% 46.9%);padding:0 20px;">Agar preview update aayi hai to page thodi der stable shell par rahega. White page ke bajaye yeh recovery state dikhni chahiye.</div>
       <div data-shell-actions style="display:none;gap:10px;flex-wrap:wrap;justify-content:center;">
         <button type="button" data-shell-reload style="border:0;border-radius:9999px;background:hsl(221.2 83.2% 53.3%);color:white;padding:10px 16px;font:600 13px system-ui,sans-serif;cursor:pointer;">Reload safely</button>
-        <button type="button" data-shell-auth style="border:1px solid hsl(214.3 31.8% 91.4%);border-radius:9999px;background:white;color:hsl(222.2 84% 4.9%);padding:10px 16px;font:600 13px system-ui,sans-serif;cursor:pointer;">Open sign in</button>
+        <button type="button" data-shell-auth style="border:1px solid hsl(214.3 31.8% 91.4%);border-radius:9999px;background:white;color:hsl(222.2 84% 4.9%);padding:10px 16px;font:600 13px system-ui,sans-serif;cursor:pointer;">${fallbackActionLabel}</button>
       </div>
     </div>
   `;
@@ -108,17 +110,19 @@ const ensureStartupShell = () => {
 
   const handleOpenSignIn = () => {
     clearStartupShellRecoveryTimer();
-    window.location.replace(new URL("/crm-auth", window.location.origin).toString());
+    window.location.replace(
+      new URL(isSensitivePreviewRouteWindow() ? "/crm-auth" : "/", window.location.origin).toString(),
+    );
   };
 
   const handleRuntimeFatal = () => {
-    promoteStartupShellToRecovery("Runtime issue detect hui hai. Niche diye options se CRM ko safely recover karo.");
+    promoteStartupShellToRecovery("Runtime issue detect hui hai. Niche diye options se page ko safely recover karo.");
   };
 
   const handleDevServerStatus = (event: Event) => {
     const status = (event as CustomEvent<{ status?: string }>).detail?.status;
     if (status === "update_ready" || status === "disconnected") {
-      promoteStartupShellToRecovery("Dev connection/update ne CRM startup ko interrupt kiya. Ab yahan se safe reload kar sakte ho.");
+      promoteStartupShellToRecovery("Dev connection/update ne startup ko interrupt kiya. Ab yahan se safe reload kar sakte ho.");
     }
   };
 
@@ -148,7 +152,7 @@ const isSensitiveRouteAppReady = () => {
 
   return Boolean(
     root.querySelector(
-      "main, aside, button, h1, h2, [aria-live='polite'], [data-sonner-toaster], [class*='animate-spin']",
+      "header, nav, main, footer, section, aside, button, h1, h2, img, [aria-live='polite'], [data-sonner-toaster], [class*='animate-spin']",
     ),
   );
 };
@@ -164,7 +168,7 @@ const removeStartupShell = () => {
 
   if (typeof document === "undefined") return;
 
-  if (!isSensitivePreviewRouteWindow()) {
+  if (!shouldStabilizeStartupShellWindow()) {
     cleanupShell();
     return;
   }
@@ -176,7 +180,7 @@ const removeStartupShell = () => {
 
   const root = document.getElementById("root");
   if (!root) {
-    promoteStartupShellToRecovery("CRM root mount nahi ho paaya. Safe reload try karo.");
+    promoteStartupShellToRecovery("App root mount nahi ho paaya. Safe reload try karo.");
     return;
   }
 
@@ -196,7 +200,7 @@ const removeStartupShell = () => {
       return;
     }
 
-    promoteStartupShellToRecovery("CRM UI mount confirm nahi hui, isliye white screen avoid karne ke liye recovery panel hold par rakha gaya hai.");
+    promoteStartupShellToRecovery("Page UI mount confirm nahi hui, isliye white screen avoid karne ke liye recovery panel hold par rakha gaya hai.");
   }, STARTUP_SHELL_HIDE_WAIT_MS);
 };
 
