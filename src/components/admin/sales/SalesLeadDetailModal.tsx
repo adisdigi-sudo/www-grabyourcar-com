@@ -67,6 +67,8 @@ export function SalesLeadDetailModal({
   const [grossLoanAmount, setGrossLoanAmount] = useState(lead.gross_loan_amount || "");
   const [loanProtectionAmount, setLoanProtectionAmount] = useState(lead.loan_protection_amount || "");
   const [advancePaid, setAdvancePaid] = useState(lead.advance_paid || "");
+  const [interestRate, setInterestRate] = useState(lead.interest_rate || "");
+  const [tenureMonths, setTenureMonths] = useState(lead.tenure_months || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showShareOffer, setShowShareOffer] = useState(false);
 
@@ -874,6 +876,10 @@ export function SalesLeadDetailModal({
                   }}
                   advancePaid={advancePaid}
                   setAdvancePaid={setAdvancePaid}
+                  interestRate={interestRate}
+                  setInterestRate={setInterestRate}
+                  tenureMonths={tenureMonths}
+                  setTenureMonths={setTenureMonths}
                   breakdown={salesBreakdown}
                 />
 
@@ -954,7 +960,12 @@ export function SalesLeadDetailModal({
           bookingAmount: Number(bookingAmount) || undefined,
           processingFees: Number(processingFees) || undefined,
           otherExpenses: Number(otherExpenses) || undefined,
-          otherExpensesLabel: otherExpensesLabel !== "Other Expenses" ? otherExpensesLabel : undefined,
+          otherExpensesLabel: otherExpensesLabel !== "Other Bank Charges" ? otherExpensesLabel : undefined,
+          grossLoanAmount: Number(grossLoanAmount) || undefined,
+          loanProtectionAmount: Number(loanProtectionAmount) || undefined,
+          advancePaid: Number(advancePaid) || undefined,
+          interestRate: Number(interestRate) || undefined,
+          tenureMonths: Number(tenureMonths) || undefined,
         })}
       />
     </Dialog>

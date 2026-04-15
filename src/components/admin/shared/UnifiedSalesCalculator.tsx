@@ -18,6 +18,10 @@ interface UnifiedSalesCalculatorProps {
   setBookingAmount: (v: string) => void;
   advancePaid: string;
   setAdvancePaid: (v: string) => void;
+  interestRate?: string;
+  setInterestRate?: (v: string) => void;
+  tenureMonths?: string;
+  setTenureMonths?: (v: string) => void;
   breakdown: {
     finalCarPrice: number;
     grossLoanAmount: number;
@@ -37,6 +41,13 @@ interface UnifiedSalesCalculatorProps {
 
 const fmtINR = (v: number) => `Rs. ${Math.round(v).toLocaleString("en-IN")}`;
 
+function calcEMI(principal: number, ratePA: number, months: number) {
+  if (principal <= 0 || months <= 0) return 0;
+  const r = ratePA / 12 / 100;
+  if (r === 0) return Math.round(principal / months);
+  return Math.round((principal * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1));
+}
+
 export function UnifiedSalesCalculator({
   finalCarPrice,
   setFinalCarPrice,
@@ -54,8 +65,18 @@ export function UnifiedSalesCalculator({
   setBookingAmount,
   advancePaid,
   setAdvancePaid,
+  interestRate,
+  setInterestRate,
+  tenureMonths,
+  setTenureMonths,
   breakdown,
 }: UnifiedSalesCalculatorProps) {
+  const rate = Number(interestRate) || 0;
+  const tenure = Number(tenureMonths) || 0;
+  const emi = calcEMI(breakdown.grossLoanAmount, rate, tenure);
+  const totalPayable = emi * tenure;
+  const totalInterest = totalPayable - breakdown.grossLoanAmount;
+
   return (
     <div className="space-y-3">
       {/* Input Fields */}
@@ -68,6 +89,12 @@ export function UnifiedSalesCalculator({
         <div><Label className="text-[10px]">Other Charge Label</Label><Input value={otherChargesLabel} onChange={e => setOtherChargesLabel(e.target.value)} placeholder="e.g. File Charges" /></div>
         <div><Label className="text-[10px]">Booking / Token Paid</Label><Input type="number" value={bookingAmount} onChange={e => setBookingAmount(e.target.value)} placeholder="e.g. 51000" /></div>
         <div><Label className="text-[10px]">Advance / Any Amount Paid</Label><Input type="number" value={advancePaid} onChange={e => setAdvancePaid(e.target.value)} placeholder="e.g. 25000" /></div>
+        {setInterestRate && (
+          <div><Label className="text-[10px]">Interest Rate (% p.a.)</Label><Input type="number" step="0.1" value={interestRate} onChange={e => setInterestRate(e.target.value)} placeholder="e.g. 8.5" /></div>
+        )}
+        {setTenureMonths && (
+          <div><Label className="text-[10px]">Tenure (months)</Label><Input type="number" value={tenureMonths} onChange={e => setTenureMonths(e.target.value)} placeholder="e.g. 60" /></div>
+        )}
       </div>
 
       {/* Receipt-style Breakdown */}
@@ -87,7 +114,7 @@ export function UnifiedSalesCalculator({
             Section B: Bank Loan Breakdown
           </p>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">Gross Loan Amount</span>
+            <span className="text-muted-foreground">Gross Loan Amount (Sanctioned)</span>
             <span className="font-medium">{fmtINR(breakdown.grossLoanAmount)}</span>
           </div>
           {breakdown.processingFees > 0 && (
@@ -137,10 +164,39 @@ export function UnifiedSalesCalculator({
             <span>💰 Final Balance Payable</span>
             <span>{fmtINR(breakdown.balancePayableByYou)}</span>
           </div>
-          <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-            <span>Total Customer Pocket (Booking + Advance + Balance)</span>
-            <span>{fmtINR(breakdown.totalCustomerContribution)}</span>
-          </div>
+
+          {/* SECTION D: EMI on Gross Loan */}
+          {emi > 0 && (
+            <>
+              <p className="text-[10px] text-violet-600 font-semibold uppercase tracking-wider mt-3 mb-1">
+                Section D: EMI Details (on Gross Loan)
+              </p>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Loan Amount for EMI</span>
+                <span className="font-medium">{fmtINR(breakdown.grossLoanAmount)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Interest Rate</span>
+                <span className="font-medium">{rate}% p.a.</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Tenure</span>
+                <span className="font-medium">{tenure} months ({(tenure / 12).toFixed(1)} yrs)</span>
+              </div>
+              <div className="border-t border-border/60 pt-1.5 flex items-center justify-between gap-3 font-bold text-primary text-lg">
+                <span>📱 Monthly EMI</span>
+                <span>{fmtINR(emi)}/mo</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                <span>Total Interest</span>
+                <span>{fmtINR(totalInterest)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                <span>Total Payable (Principal + Interest)</span>
+                <span>{fmtINR(totalPayable)}</span>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
