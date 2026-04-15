@@ -198,75 +198,6 @@ async function sendMessage(
   return { success: false, error: "All delivery attempts failed" };
 }
 
-function shouldRetry(errorMsg: string) {
-  const normalized = errorMsg.toLowerCase();
-
-  if (
-    normalized.includes("invalid api key") ||
-    normalized.includes("error validating access token") ||
-    normalized.includes("session is invalid") ||
-    normalized.includes("template name does not exist") ||
-    normalized.includes("image url can't be null") ||
-    normalized.includes("missing configuration")
-  ) {
-    return false;
-  }
-
-  return true;
-}
-
-async function sendEmail(
-  to: string,
-  subject: string,
-  htmlBody: string,
-  name: string,
-  provider: string
-): Promise<{ success: boolean; provider_message_id?: string; error?: string }> {
-  const resendApiKey = Deno.env.get("RESEND_API_KEY");
-  
-  if (provider === "resend" || !provider) {
-    if (!resendApiKey) return { success: false, error: "Resend API key not configured" };
-    
-    const resp = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: "GrabYourCar <noreply@grabyourcar.com>",
-        to: [to],
-        subject: subject || "Message from GrabYourCar",
-        html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-          <h2 style="color:#1a1a1a;">Hi ${name || ""},</h2>
-          <div style="color:#333;line-height:1.6;">${htmlBody.replace(/\n/g, "<br/>")}</div>
-          <hr style="margin-top:30px;border:none;border-top:1px solid #eee;"/>
-          <p style="color:#999;font-size:12px;">GrabYourCar — Your Trusted Automotive Partner</p>
-        </div>`,
-      }),
-    });
-
-    const data = await resp.json().catch(() => ({}));
-    if (resp.ok && data.id) return { success: true, provider_message_id: data.id };
-    return { success: false, error: data.message || "Email send failed" };
-  }
-
-  // Lovable email provider — use the transactional email Edge Function
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const resp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      templateName: "campaign-broadcast",
-      recipientEmail: to,
-      idempotencyKey: `campaign-${Date.now()}-${to}`,
-      templateData: { name, message: htmlBody, subject },
-    }),
-  });
-
-  const data = await resp.json().catch(() => ({}));
-  if (resp.ok) return { success: true, provider_message_id: data.messageId || "lovable" };
-  return { success: false, error: data.error || "Lovable email send failed" };
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -281,8 +212,11 @@ serve(async (req) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return new Response(JSON.stringify({ error: "Missing database credentials" }), {
+  const hasFinbite = Boolean((FINBITE_BEARER_TOKEN || FINBITE_API_KEY) && FINBITE_WHATSAPP_CLIENT);
+  const hasMeta = Boolean(WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID);
+
+  if ((!hasFinbite && !hasMeta) || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return new Response(JSON.stringify({ error: "Missing configuration (need WhatsApp provider + database credentials)" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -293,31 +227,15 @@ serve(async (req) => {
     const batchSize = body.batchSize || 50;
     const campaignId = body.campaignId;
 
-    // Fetch campaign to determine channel
-    let campaignChannel = "whatsapp";
-    let emailSubject = "";
-    let emailProvider = "resend";
-    if (campaignId) {
-      const { data: campaign } = await supabase.from("wa_campaigns").select("channel, email_subject, email_provider").eq("id", campaignId).single();
-      if (campaign) {
-        campaignChannel = campaign.channel || "whatsapp";
-        emailSubject = campaign.email_subject || "";
-        emailProvider = campaign.email_provider || "resend";
-      }
-    }
-
-    // Check opt-outs (for WhatsApp)
+    // Check opt-outs
     const { data: optOuts } = await supabase.from("wa_opt_outs").select("phone");
     const optOutSet = new Set((optOuts || []).map((o: { phone: string }) => o.phone));
 
     // Fetch queued messages
-    const dueIso = new Date().toISOString();
     let query = supabase
       .from("wa_message_queue")
       .select("*")
       .in("status", ["queued"])
-      .or(`scheduled_at.is.null,scheduled_at.lte.${dueIso}`)
-      .or(`next_retry_at.is.null,next_retry_at.lte.${dueIso}`)
       .order("priority", { ascending: true })
       .order("created_at", { ascending: true })
       .limit(batchSize);
@@ -340,65 +258,9 @@ serve(async (req) => {
     let sent = 0, failed = 0, skipped = 0;
 
     for (const msg of messages) {
-      const msgChannel = msg.variables_data?.channel || campaignChannel;
-
-      // ── Email Channel ──
-      if (msgChannel === "email") {
-        const emailTo = msg.phone; // For email campaigns, phone field stores the email
-        if (!emailTo || !emailTo.includes("@")) {
-          await supabase.from("wa_message_queue").update({
-            status: "failed", error_message: "Invalid email", failed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-          }).eq("id", msg.id);
-          failed++;
-          continue;
-        }
-
-        const result = await sendEmail(emailTo, emailSubject, msg.message_content, msg.variables_data?.name || "", emailProvider);
-
-        if (result.success) {
-          await supabase.from("wa_message_queue").update({
-            status: "sent", sent_at: new Date().toISOString(),
-            provider_message_id: result.provider_message_id || null, updated_at: new Date().toISOString(),
-          }).eq("id", msg.id);
-
-          await supabase.from("wa_message_logs").insert({
-            phone: emailTo, customer_name: msg.variables_data?.name || null,
-            message_type: "email", message_content: msg.message_content,
-            trigger_event: "campaign", campaign_id: msg.campaign_id || null,
-            lead_id: msg.lead_id || null, provider: emailProvider,
-            channel: "email", provider_message_id: result.provider_message_id || null,
-            status: "sent", sent_at: new Date().toISOString(),
-          });
-          sent++;
-        } else {
-          await handleFailure(supabase, msg, result.error || "Email send failed");
-          failed++;
-        }
-
-        await new Promise(r => setTimeout(r, 100));
-        continue;
-      }
-
-      // ── RCS Channel (stub) ──
-      if (msgChannel === "rcs") {
-        await supabase.from("wa_message_queue").update({
-          status: "failed", error_message: "RCS provider not yet integrated",
-          failed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-        }).eq("id", msg.id);
-
-        await supabase.from("wa_message_logs").insert({
-          phone: msg.phone, customer_name: msg.variables_data?.name || null,
-          message_type: "rcs", message_content: msg.message_content,
-          trigger_event: "campaign", campaign_id: msg.campaign_id || null,
-          channel: "rcs", status: "failed", sent_at: new Date().toISOString(),
-        });
-        failed++;
-        continue;
-      }
-
-      // ── WhatsApp Channel (default) ──
       const phone = normalizePhone(msg.phone);
 
+      // Check opt-out
       if (optOutSet.has(phone.short) || optOutSet.has(`91${phone.short}`) || optOutSet.has(msg.phone)) {
         await supabase.from("wa_message_queue").update({
           status: "cancelled", error_message: "Opted out", updated_at: new Date().toISOString(),
@@ -415,25 +277,17 @@ serve(async (req) => {
         continue;
       }
 
-      const hasFinbite = Boolean((FINBITE_BEARER_TOKEN || FINBITE_API_KEY) && FINBITE_WHATSAPP_CLIENT);
-      const hasMeta = Boolean(WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID);
-
-      if (!hasFinbite && !hasMeta) {
-        await supabase.from("wa_message_queue").update({
-          status: "failed", error_message: "No WhatsApp provider configured",
-          failed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-        }).eq("id", msg.id);
-        failed++;
-        continue;
-      }
-
       const result = await sendMessage(
         FINBITE_BEARER_TOKEN || FINBITE_API_KEY || "",
         FINBITE_WHATSAPP_CLIENT || "",
-        FINBITE_CLIENT_ID, FINBITE_API_KEY || undefined,
-        phone, msg.message_content, msg.template_name, msg.variables_data,
+        FINBITE_CLIENT_ID,
+        FINBITE_API_KEY || undefined,
+        phone,
+        msg.message_content,
+        msg.template_name, msg.variables_data,
         msg.media_url, msg.media_type,
-        WHATSAPP_ACCESS_TOKEN || undefined, WHATSAPP_PHONE_NUMBER_ID || undefined
+        WHATSAPP_ACCESS_TOKEN || undefined,
+        WHATSAPP_PHONE_NUMBER_ID || undefined
       );
 
       if (result.success) {
@@ -442,28 +296,35 @@ serve(async (req) => {
           provider_message_id: result.provider_message_id || null, updated_at: new Date().toISOString(),
         }).eq("id", msg.id);
 
+        // Also log to wa_message_logs for data ownership
         await supabase.from("wa_message_logs").insert({
-          phone: msg.phone, template_name: msg.template_name || null,
+          phone: msg.phone,
+          template_name: msg.template_name || null,
           message_type: msg.template_name ? "template" : "text",
           message_content: msg.message_content,
           trigger_event: msg.automation_rule_id ? "automation" : "campaign",
-          campaign_id: msg.campaign_id || null, lead_id: msg.lead_id || null,
-          provider: "finbite", channel: "whatsapp",
+          campaign_id: msg.campaign_id || null,
+          lead_id: msg.lead_id || null,
+          provider: "finbite",
           provider_message_id: result.provider_message_id || null,
-          status: "sent", sent_at: new Date().toISOString(),
+          status: "sent",
+          sent_at: new Date().toISOString(),
         });
+
         sent++;
       } else {
         await handleFailure(supabase, msg, result.error || "Unknown");
         failed++;
       }
 
+      // Rate limiting
       await new Promise(r => setTimeout(r, 200));
     }
 
+    // Update campaign stats if applicable
     if (campaignId) await updateCampaignStats(supabase, campaignId);
 
-    console.log(`Queue processed (${campaignChannel}): ${sent} sent, ${failed} failed, ${skipped} skipped`);
+    console.log(`Queue processed: ${sent} sent, ${failed} failed, ${skipped} skipped`);
 
     return new Response(JSON.stringify({ processed: messages.length, sent, failed, skipped }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -479,9 +340,7 @@ serve(async (req) => {
 async function handleFailure(supabase: ReturnType<typeof createClient>, msg: { id: string; attempts?: number; max_attempts?: number }, errorMsg: string) {
   const nextAttempt = (msg.attempts || 0) + 1;
   const maxAttempts = msg.max_attempts || 3;
-  const retryable = shouldRetry(errorMsg);
-
-  if (retryable && nextAttempt < maxAttempts) {
+  if (nextAttempt < maxAttempts) {
     const delayMs = Math.pow(3, nextAttempt) * 60000;
     await supabase.from("wa_message_queue").update({
       status: "queued", attempts: nextAttempt,
@@ -492,7 +351,7 @@ async function handleFailure(supabase: ReturnType<typeof createClient>, msg: { i
     await supabase.from("wa_message_queue").update({
       status: "failed", attempts: nextAttempt,
       failed_at: new Date().toISOString(),
-      error_message: retryable ? `Max retries exceeded. Last: ${errorMsg}` : errorMsg,
+      error_message: `Max retries exceeded. Last: ${errorMsg}`,
       updated_at: new Date().toISOString(),
     }).eq("id", msg.id);
   }

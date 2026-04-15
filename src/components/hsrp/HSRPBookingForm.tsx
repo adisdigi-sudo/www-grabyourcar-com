@@ -296,7 +296,7 @@ export function HSRPBookingForm({
                   className={cn(
                     "w-12 h-12 rounded-full flex items-center justify-center transition-all",
                     isActive && "bg-primary text-white shadow-lg scale-110",
-                    isCompleted && "bg-primary/20 text-foreground",
+                    isCompleted && "bg-primary/20 text-primary",
                     !isActive && !isCompleted && "bg-muted text-muted-foreground"
                   )}
                 >
@@ -337,7 +337,7 @@ export function HSRPBookingForm({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Car className="w-5 h-5 text-foreground" />
+                <Car className="w-5 h-5 text-primary" />
                 Vehicle Details
               </CardTitle>
               <CardDescription>
@@ -460,7 +460,7 @@ export function HSRPBookingForm({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5 text-foreground" />
+                <User className="w-5 h-5 text-primary" />
                 Owner Details
               </CardTitle>
               <CardDescription>
@@ -544,7 +544,7 @@ export function HSRPBookingForm({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-foreground" />
+                <MapPin className="w-5 h-5 text-primary" />
                 Address & Delivery
               </CardTitle>
               <CardDescription>
@@ -624,7 +624,7 @@ export function HSRPBookingForm({
                       <Label htmlFor="homeInstallation" className="text-base font-semibold flex items-center gap-2">
                         <Home className="w-4 h-4" />
                         Doorstep Installation
-                        <Badge className="bg-primary/20 text-foreground">+{formatPrice(homeInstallationPrice)}</Badge>
+                        <Badge className="bg-primary/20 text-primary">+{formatPrice(homeInstallationPrice)}</Badge>
                       </Label>
                       <p className="text-sm text-muted-foreground mt-1">
                         Get HSRP installed at your doorstep by our certified technician
@@ -678,7 +678,7 @@ export function HSRPBookingForm({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-foreground" />
+                <FileText className="w-5 h-5 text-primary" />
                 Review & Confirm
               </CardTitle>
               <CardDescription>
@@ -695,7 +695,7 @@ export function HSRPBookingForm({
                     <p className="text-sm text-muted-foreground">{selectedService?.description}</p>
                   </div>
                   <div className="text-right">
-                    <span className="text-2xl font-bold text-foreground">{formatPrice(selectedPrice)}</span>
+                    <span className="text-2xl font-bold text-primary">{formatPrice(selectedPrice)}</span>
                   </div>
                 </div>
               </div>
@@ -751,7 +751,7 @@ export function HSRPBookingForm({
                   {formData.address}, {formData.city}, {formData.state} - {formData.pincode}
                 </p>
                 {homeInstallation && (
-                  <Badge className="mt-2 bg-primary/10 text-foreground">
+                  <Badge className="mt-2 bg-primary/10 text-primary">
                     <Home className="w-3 h-3 mr-1" />
                     Doorstep Installation Selected
                   </Badge>
@@ -777,7 +777,7 @@ export function HSRPBookingForm({
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total Amount</span>
-                    <span className="text-foreground">{formatPrice(totalAmount)}</span>
+                    <span className="text-primary">{formatPrice(totalAmount)}</span>
                   </div>
                 </div>
               </div>
@@ -785,11 +785,11 @@ export function HSRPBookingForm({
               {/* Trust Badges */}
               <div className="flex flex-wrap gap-4 justify-center">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Shield className="w-4 h-4 text-foreground" />
+                  <Shield className="w-4 h-4 text-primary" />
                   <span>100% Secure Payment</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <CheckCircle2 className="w-4 h-4 text-foreground" />
+                  <CheckCircle2 className="w-4 h-4 text-primary" />
                   <span>Govt. Authorized</span>
                 </div>
               </div>

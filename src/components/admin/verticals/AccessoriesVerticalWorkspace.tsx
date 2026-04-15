@@ -48,8 +48,7 @@ export function AccessoriesVerticalWorkspace() {
       </div>
 
       <div>
-        {activeTab === "products" && <AccessoriesManagement />}
-        {activeTab === "crosssell" && <CrossSellManagement />}
+        {activeTab === "products" ? <AccessoriesManagement /> : <CrossSellManagement />}
       </div>
     </div>
   );

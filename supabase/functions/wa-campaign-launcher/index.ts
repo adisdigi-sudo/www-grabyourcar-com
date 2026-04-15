@@ -43,8 +43,6 @@ serve(async (req) => {
       });
     }
 
-    const campaignChannel = campaign.channel || "whatsapp";
-
     // Handle pause/resume/cancel
     if (action === "pause") {
       await supabase.from("wa_campaigns").update({ status: "paused", paused_at: new Date().toISOString() }).eq("id", campaignId);
@@ -62,26 +60,39 @@ serve(async (req) => {
       });
     }
 
-    // Launch campaign
+    // Launch campaign — build the queue
     if (campaign.status !== "draft" && campaign.status !== "scheduled") {
       return new Response(JSON.stringify({ error: `Cannot launch campaign in ${campaign.status} status` }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Build leads query from segment_rules
+    // 1. Build leads query from segment_rules
     const segmentRules = campaign.segment_rules || [];
     let leadsQuery = supabase.from("leads").select("id, name, phone, email, priority, service_category, created_at, city, car_model");
 
     for (const rule of segmentRules) {
       if (!rule.field || !rule.operator || rule.value === undefined) continue;
+      
       switch (rule.operator) {
-        case "equals": leadsQuery = leadsQuery.eq(rule.field, rule.value); break;
-        case "not_equals": leadsQuery = leadsQuery.neq(rule.field, rule.value); break;
-        case "contains": leadsQuery = leadsQuery.ilike(rule.field, `%${rule.value}%`); break;
-        case "in": leadsQuery = leadsQuery.in(rule.field, Array.isArray(rule.value) ? rule.value : [rule.value]); break;
-        case "gte": leadsQuery = leadsQuery.gte(rule.field, rule.value); break;
-        case "lte": leadsQuery = leadsQuery.lte(rule.field, rule.value); break;
+        case "equals":
+          leadsQuery = leadsQuery.eq(rule.field, rule.value);
+          break;
+        case "not_equals":
+          leadsQuery = leadsQuery.neq(rule.field, rule.value);
+          break;
+        case "contains":
+          leadsQuery = leadsQuery.ilike(rule.field, `%${rule.value}%`);
+          break;
+        case "in":
+          leadsQuery = leadsQuery.in(rule.field, Array.isArray(rule.value) ? rule.value : [rule.value]);
+          break;
+        case "gte":
+          leadsQuery = leadsQuery.gte(rule.field, rule.value);
+          break;
+        case "lte":
+          leadsQuery = leadsQuery.lte(rule.field, rule.value);
+          break;
       }
     }
 
@@ -94,53 +105,21 @@ serve(async (req) => {
       });
     }
 
-    // Get opt-outs (for WhatsApp)
+    // 2. Get opt-outs
     const { data: optOuts } = await supabase.from("wa_opt_outs").select("phone");
     const optOutSet = new Set((optOuts || []).map(o => o.phone));
 
-    const messageContent = campaign.message_content || (campaignChannel === "email" ? "Hello from GrabYourCar!" : "Hello from GrabYourCar! 🚗");
+    // 3. Filter out opted-out and invalid leads
+    const messageContent = campaign.message_content || "Hello from GrabYourCar! 🚗";
+    const validLeads = leads.filter(l => {
+      if (!l.phone) return false;
+      const clean = l.phone.replace(/\D/g, "").replace(/^91/, "");
+      return !optOutSet.has(clean) && !optOutSet.has(`91${clean}`) && /^[6-9]\d{9}$/.test(clean);
+    });
 
-    // Filter leads based on channel
-    let validLeads: any[];
-    if (campaignChannel === "email") {
-      // For email campaigns, filter leads with valid emails
-      validLeads = leads.filter(l => l.email && l.email.includes("@"));
-    } else {
-      // For WhatsApp/RCS, filter by phone
-      validLeads = leads.filter(l => {
-        if (!l.phone) return false;
-        const clean = l.phone.replace(/\D/g, "").replace(/^91/, "");
-        return !optOutSet.has(clean) && !optOutSet.has(`91${clean}`) && /^[6-9]\d{9}$/.test(clean);
-      });
-    }
-
-    // ─── STRICT META CATEGORY ENFORCEMENT ───
-    // Determine meta_category for this campaign
-    const campaignMetaCategory = campaign.meta_category || "marketing"; // default bulk = marketing
-    console.log(`📋 Campaign category: ${campaignMetaCategory}`);
-
-    // For marketing campaigns, template MUST be approved marketing template
-    // For utility campaigns, template MUST be approved utility template
-    if (campaign.template_id) {
-      const { data: tpl } = await supabase
-        .from("wa_templates")
-        .select("category, status")
-        .eq("id", campaign.template_id)
-        .single();
-      
-      if (tpl && tpl.status !== "approved") {
-        await supabase.from("wa_campaigns").update({ status: "failed", completed_at: new Date().toISOString() }).eq("id", campaignId);
-        return new Response(JSON.stringify({ error: `Template not approved (status: ${tpl.status}). Only approved templates can be used in campaigns.` }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (tpl && tpl.category !== campaignMetaCategory) {
-        console.warn(`⚠️ Template category (${tpl.category}) differs from campaign category (${campaignMetaCategory})`);
-      }
-    }
-
-    // Create queue entries
-    const queueEntries = validLeads.map((lead) => {
+    // 4. Create queue entries
+    const queueEntries = validLeads.map((lead, idx) => {
+      // Personalize message
       const personalizedMsg = messageContent
         .replace(/\{name\}/gi, lead.name || "Customer")
         .replace(/\{phone\}/gi, lead.phone || "")
@@ -151,14 +130,13 @@ serve(async (req) => {
       return {
         campaign_id: campaignId,
         lead_id: lead.id,
-        phone: campaignChannel === "email" ? lead.email : lead.phone,
+        phone: lead.phone,
         message_content: personalizedMsg,
         media_url: campaign.media_url || null,
         media_type: campaign.media_type || null,
         status: "queued",
         priority: 5,
-        meta_category: campaignMetaCategory,
-        variables_data: { name: lead.name, phone: lead.phone, city: lead.city, email: lead.email, channel: campaignChannel },
+        variables_data: { name: lead.name, phone: lead.phone, city: lead.city },
       };
     });
 
@@ -168,7 +146,7 @@ serve(async (req) => {
       await supabase.from("wa_message_queue").insert(batch);
     }
 
-    // Update campaign status
+    // 5. Update campaign status
     await supabase.from("wa_campaigns").update({
       status: "queued",
       total_queued: validLeads.length,
@@ -176,26 +154,21 @@ serve(async (req) => {
       started_at: new Date().toISOString(),
     }).eq("id", campaignId);
 
-    console.log(`Campaign ${campaignId} (${campaignChannel}) launched: ${validLeads.length} messages queued`);
+    console.log(`Campaign ${campaignId} launched: ${validLeads.length} messages queued (${leads.length - validLeads.length} filtered)`);
 
-    // Trigger queue processor
+    // 6. Trigger queue processor
     const processorUrl = `${SUPABASE_URL}/functions/v1/wa-queue-processor`;
-    const processorResponse = await fetch(processorUrl, {
+    fetch(processorUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
       },
       body: JSON.stringify({ campaignId, batchSize: campaign.batch_size || 50 }),
-    });
-
-    if (!processorResponse.ok) {
-      console.error("Failed to trigger processor:", await processorResponse.text());
-    }
+    }).catch(err => console.error("Failed to trigger processor:", err));
 
     return new Response(JSON.stringify({
       success: true,
-      channel: campaignChannel,
       queued: validLeads.length,
       filtered: leads.length - validLeads.length,
       totalLeads: leads.length,

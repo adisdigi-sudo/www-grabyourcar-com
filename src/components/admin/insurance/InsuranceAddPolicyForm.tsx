@@ -57,28 +57,16 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
     }
     setSearching(true);
     try {
-      const cleanPhone = searchPhone.replace(/\D/g, "");
       const { data } = await supabase
         .from("insurance_clients")
-        .select("id, customer_name, phone, email, vehicle_number, vehicle_make, vehicle_model, current_insurer, current_policy_type, current_premium, current_policy_number, policy_start_date, policy_expiry_date, ncb_percentage")
-        .eq("phone", cleanPhone)
+        .select("id, customer_name, phone")
+        .eq("phone", searchPhone.replace(/\D/g, ""))
         .limit(1);
 
       if (data && data.length > 0) {
-        const client = data[0];
-        setClientId(client.id);
-        setClientName(client.customer_name || client.phone);
-        
-        // Pre-fill form with existing client's previous policy data
-        setForm(prev => ({
-          ...prev,
-          insurer: client.current_insurer || prev.insurer,
-          policy_type: client.current_policy_type || prev.policy_type,
-          premium_amount: client.current_premium ? String(client.current_premium) : prev.premium_amount,
-          ncb_percentage: client.ncb_percentage ? String(client.ncb_percentage) : prev.ncb_percentage,
-        }));
-        
-        toast.success(`Found client: ${client.customer_name || client.phone}. Previous policy data loaded.`);
+        setClientId(data[0].id);
+        setClientName(data[0].customer_name || data[0].phone);
+        toast.success(`Found client: ${data[0].customer_name || data[0].phone}`);
       } else {
         toast.error("Client not found. Switch to 'New Client' tab to add.");
         setClientId(null);
@@ -212,28 +200,6 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
       }).select("id").single();
       if (policyErr) throw policyErr;
 
-      const bookingDate = form.start_date || new Date().toISOString().split("T")[0];
-
-      await supabase
-        .from("insurance_clients")
-        .update({
-          current_policy_number: form.policy_number,
-          current_policy_type: form.policy_type,
-          current_insurer: form.insurer || "Unknown",
-          current_premium: form.premium_amount ? Number(form.premium_amount) : null,
-          policy_start_date: form.start_date || bookingDate,
-          policy_expiry_date: form.expiry_date || null,
-          booking_date: bookingDate,
-          lead_status: "won",
-          pipeline_stage: "policy_issued",
-          renewal_reminder_set: Boolean(form.expiry_date),
-          renewal_reminder_date: form.expiry_date || null,
-          incentive_eligible: true,
-          journey_last_event: "policy_issued",
-          journey_last_event_at: new Date().toISOString(),
-        } as any)
-        .eq("id", finalClientId);
-
       // Upload document if provided
       if (docFile && newPolicy) {
         const docUrl = await uploadDocument(newPolicy.id);
@@ -251,32 +217,10 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
         description: `${form.insurer || "Unknown"} policy ${form.policy_number} added${docFile ? " with document" : ""}`,
       });
 
-      // Auto-send WhatsApp policy confirmation
-      const clientPhone = clientMode === "existing" ? searchPhone : newClient.phone;
-      const clientDisplayName = clientMode === "existing" ? clientName : newClient.customer_name;
-      if (clientPhone) {
-        try {
-          const vehicleInfo = clientMode === "existing" ? "" : [newClient.vehicle_make, newClient.vehicle_model].filter(Boolean).join(" ");
-          const policyMsg = `🎉 Congratulations ${clientDisplayName || "Customer"}!\n\nYour car insurance policy has been issued!\n\n📋 *Policy Details:*\n• Policy #: ${form.policy_number}\n• Insurer: ${form.insurer || "N/A"}\n• Premium: ₹${form.premium_amount || "N/A"}${vehicleInfo ? `\n• Vehicle: ${vehicleInfo}` : ""}\n• Valid: ${form.start_date || "N/A"} to ${form.expiry_date || "N/A"}\n\nYour policy document will be shared shortly.\n\nThank you for choosing GrabYourCar! 🚗`;
-
-          await supabase.functions.invoke("whatsapp-send", {
-            body: {
-              to: clientPhone,
-              message: policyMsg,
-              messageType: "text",
-              name: clientDisplayName || "Customer",
-              logEvent: "policy_added_auto_send",
-            },
-          });
-        } catch (waErr) {
-          console.warn("Auto WhatsApp on policy add failed:", waErr);
-        }
-      }
-
       const replacedCount = previousPolicies?.length || 0;
       toast.success(replacedCount > 0 
-        ? `✅ Policy added & WhatsApp sent! ${replacedCount} previous policy(s) auto-renewed.`
-        : "✅ Policy added & WhatsApp sent!");
+        ? `✅ New policy added! ${replacedCount} previous policy(s) auto-marked as renewed.`
+        : "✅ Policy added successfully!");
       
       // Reset form
       setForm({

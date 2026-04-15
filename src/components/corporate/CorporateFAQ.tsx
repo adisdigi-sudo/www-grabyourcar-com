@@ -48,7 +48,7 @@ export const CorporateFAQ = () => {
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-10 md:mb-12">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
-              <HelpCircle className="h-6 w-6 text-foreground" />
+              <HelpCircle className="h-6 w-6 text-primary" />
             </div>
             <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-3">
               Frequently Asked Questions
@@ -80,14 +80,14 @@ export const CorporateFAQ = () => {
               Have more questions?{" "}
               <a
                 href="tel:+1155578093"
-                className="text-foreground font-medium hover:underline"
+                className="text-primary font-medium hover:underline"
               >
                 Call us at +91 98559 24442
               </a>{" "}
               or{" "}
               <a
                 href="mailto:corporate@grabyourcar.com"
-                className="text-foreground font-medium hover:underline"
+                className="text-primary font-medium hover:underline"
               >
                 email our corporate team
               </a>

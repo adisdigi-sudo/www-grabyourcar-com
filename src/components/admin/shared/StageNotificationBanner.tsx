@@ -81,21 +81,7 @@ export function buildInsuranceNotifications(clients: any[]): NotificationItem[] 
   const items: NotificationItem[] = [];
   const now = new Date();
 
-  // Skip clients that are already resolved (lost, won, policy_issued, lapsed)
-  const RESOLVED_STAGES = ["lost", "policy_issued", "closed"];
-  const RESOLVED_STATUSES = ["won", "lost", "lapsed", "cancelled"];
-
   clients.forEach(c => {
-    const stage = (c.pipeline_stage || "").toLowerCase();
-    const status = (c.lead_status || "").toLowerCase();
-
-    // Skip resolved clients entirely — no notifications for them
-    if (RESOLVED_STAGES.includes(stage) || RESOLVED_STATUSES.includes(status)) return;
-
-    // Skip clients moved out of overdue (moved to pipeline, removed, or retargeted)
-    if (["removed", "moved_to_pipeline"].includes(c.overdue_reason || "")) return;
-    if (c.retarget_status === "scheduled") return;
-
     // Renewal coming
     if (c.policy_expiry_date) {
       const days = differenceInDays(new Date(c.policy_expiry_date), now);
@@ -119,20 +105,17 @@ export function buildInsuranceNotifications(clients: any[]): NotificationItem[] 
       }
     }
 
-    // Follow-up due — skip if call_status is already "completed" or "done"
+    // Follow-up due
     if (c.follow_up_date) {
-      const callDone = ["completed", "done", "successful"].includes((c.call_status || "").toLowerCase());
-      if (!callDone) {
-        const fuDate = new Date(c.follow_up_date);
-        const hours = differenceInHours(fuDate, now);
-        if (hours <= 24 && hours >= -48) {
-          items.push({
-            id: `followup-${c.id}`,
-            type: hours < 0 ? "overdue" : "followup",
-            title: `${c.customer_name || "Client"} — follow-up ${hours < 0 ? "overdue" : "today"}`,
-            subtitle: c.follow_up_time ? `at ${c.follow_up_time}` : c.phone,
-          });
-        }
+      const fuDate = new Date(c.follow_up_date);
+      const hours = differenceInHours(fuDate, now);
+      if (hours <= 24 && hours >= -48) {
+        items.push({
+          id: `followup-${c.id}`,
+          type: hours < 0 ? "overdue" : "followup",
+          title: `${c.customer_name || "Client"} — follow-up ${hours < 0 ? "overdue" : "today"}`,
+          subtitle: c.follow_up_time ? `at ${c.follow_up_time}` : c.phone,
+        });
       }
     }
   });

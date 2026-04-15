@@ -54,7 +54,7 @@ export default function VehicleLookup() {
 
   const handleLookup = async () => {
     const cleaned = vehicleNumber.replace(/\s+/g, "").toUpperCase();
-    if (!/^[A-Z]{2,3}\d{0,2}[A-Z]{0,3}\d{3,4}$/.test(cleaned) || cleaned.length < 5) {
+    if (!/^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{4}$/.test(cleaned)) {
       setError("Enter a valid Indian vehicle number (e.g., DL01AB1234)");
       return;
     }
@@ -97,7 +97,7 @@ export default function VehicleLookup() {
         <div className="container mx-auto px-4 max-w-3xl text-center">
           <div className="flex justify-center mb-4">
             <div className="p-3 rounded-2xl bg-primary/10">
-              <Car className="h-8 w-8 text-foreground" />
+              <Car className="h-8 w-8 text-primary" />
             </div>
           </div>
           <h1 className="text-3xl font-bold mb-2">Vehicle RC Lookup</h1>

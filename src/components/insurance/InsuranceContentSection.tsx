@@ -26,7 +26,7 @@ const policyTypes = [
   {
     title: "Comprehensive Insurance",
     tag: "Recommended",
-    tagColor: "bg-primary/10 text-foreground",
+    tagColor: "bg-primary/10 text-primary",
     desc: "Includes Third Party + own damage from accidents, theft, fire, natural disasters, and rat bites.",
   },
   {
@@ -53,7 +53,7 @@ export function InsuranceContentSection() {
         <div className="max-w-3xl mx-auto text-center mb-20">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <h2 className="text-3xl md:text-5xl font-heading font-bold mb-6">
-              What is <span className="text-foreground">car insurance</span>?
+              What is <span className="text-primary">car insurance</span>?
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
               Car insurance provides financial protection against damages or losses to your vehicle from accidents, natural disasters, theft, or fire. A Comprehensive policy also covers third-party liabilities, ensuring you comply with the Motor Vehicles Act, 1988 while protecting your own car.
@@ -69,7 +69,7 @@ export function InsuranceContentSection() {
             viewport={{ once: true }}
             className="text-2xl md:text-3xl font-heading font-bold text-center mb-12"
           >
-            Key features of <span className="text-foreground">online car insurance</span>
+            Key features of <span className="text-primary">online car insurance</span>
           </motion.h3>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {keyFeatures.map((feature, i) => (
@@ -83,7 +83,7 @@ export function InsuranceContentSection() {
               >
                 <div className="bg-card rounded-2xl border border-border/60 p-5 h-full hover:border-primary/30 hover:shadow-[0_15px_40px_-10px_hsl(var(--primary)/0.08)] transition-all duration-500 flex items-start gap-4">
                   <div className="w-12 h-12 rounded-xl bg-primary/8 group-hover:bg-primary/15 flex items-center justify-center shrink-0 transition-colors duration-300">
-                    <feature.icon className="h-6 w-6 text-foreground" />
+                    <feature.icon className="h-6 w-6 text-primary" />
                   </div>
                   <div>
                     <h4 className="font-semibold text-sm mb-1 text-foreground">{feature.title}</h4>
@@ -104,7 +104,7 @@ export function InsuranceContentSection() {
             className="text-center mb-12"
           >
             <h3 className="text-2xl md:text-3xl font-heading font-bold">
-              Types of car insurance <span className="text-foreground">policies</span>
+              Types of car insurance <span className="text-primary">policies</span>
             </h3>
           </motion.div>
           <div className="grid sm:grid-cols-2 gap-6 max-w-4xl mx-auto">
@@ -126,7 +126,7 @@ export function InsuranceContentSection() {
 
                   {/* Acko-style arrow */}
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-foreground">Learn more</span>
+                    <span className="text-xs font-semibold text-primary">Learn more</span>
                     <div className="w-9 h-9 rounded-full border-2 border-border/60 group-hover:border-primary group-hover:bg-primary flex items-center justify-center transition-all duration-300">
                       <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
                     </div>

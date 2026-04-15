@@ -51,7 +51,7 @@ export const ShareButtons = ({ title, url }: ShareButtonsProps) => {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuItem onClick={() => handleShare("whatsapp")} className="cursor-pointer">
-          <MessageCircle className="h-4 w-4 mr-2 text-foreground" />
+          <MessageCircle className="h-4 w-4 mr-2 text-success" />
           WhatsApp
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleShare("facebook")} className="cursor-pointer">
@@ -64,7 +64,7 @@ export const ShareButtons = ({ title, url }: ShareButtonsProps) => {
         </DropdownMenuItem>
         <DropdownMenuItem onClick={copyToClipboard} className="cursor-pointer">
           {copied ? (
-            <Check className="h-4 w-4 mr-2 text-foreground" />
+            <Check className="h-4 w-4 mr-2 text-success" />
           ) : (
             <Link2 className="h-4 w-4 mr-2" />
           )}

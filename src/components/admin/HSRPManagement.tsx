@@ -235,19 +235,6 @@ export const HSRPManagement = () => {
     const updates: Partial<HSRPBooking> = { order_status: newStatus };
     if (newStatus === 'completed') {
       updates.completed_at = new Date().toISOString();
-      // 📧 Send HSRP completed email
-      const booking = bookings?.find(b => b.id === bookingId);
-      if (booking?.email) {
-        import("@/lib/emailTriggers").then(({ sendHsrpCompletedEmail }) => {
-          sendHsrpCompletedEmail({
-            email: booking.email,
-            name: booking.owner_name,
-            registrationNumber: booking.registration_number,
-            serviceType: booking.service_type,
-            bookingId: bookingId.slice(0, 8),
-          });
-        });
-      }
     }
     updateBookingMutation.mutate({ id: bookingId, updates });
   };

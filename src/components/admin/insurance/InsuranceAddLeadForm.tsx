@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { UserPlus, Loader2, Save } from "lucide-react";
-import { normalizePhoneNumber, normalizeVehicleRegistration } from "@/lib/insuranceIdentity";
 
 export function InsuranceAddLeadForm({ onSuccess }: { onSuccess?: () => void }) {
   const [saving, setSaving] = useState(false);
@@ -35,54 +34,42 @@ export function InsuranceAddLeadForm({ onSuccess }: { onSuccess?: () => void }) 
     }
     setSaving(true);
     try {
-      const phone = normalizePhoneNumber(form.phone);
-      const cleanVehicle = normalizeVehicleRegistration(form.vehicle_number) || null;
-
-      // Check for existing client ONLY by vehicle registration number
-      let existing: any[] | null = null;
-      if (cleanVehicle) {
-        const { data } = await supabase
-          .from("insurance_clients")
-          .select("id, customer_name, vehicle_number, duplicate_count")
-          .limit(200);
-        existing = (data || []).filter((client) => normalizeVehicleRegistration(client.vehicle_number) === cleanVehicle).slice(0, 1);
-      }
+      // Check if client exists
+      const phone = form.phone.replace(/\D/g, "");
+      const { data: existing } = await supabase
+        .from("insurance_clients")
+        .select("id")
+        .eq("phone", phone)
+        .limit(1);
 
       if (existing && existing.length > 0) {
-        const dup = existing[0];
-        const newDupCount = (dup.duplicate_count || 0) + 1;
-
-        // Update existing with new info
+        // Update existing
         await supabase.from("insurance_clients").update({
-          duplicate_count: newDupCount,
-          is_duplicate: true,
-          customer_name: form.customer_name || dup.customer_name || undefined,
+          customer_name: form.customer_name || undefined,
           email: form.email || undefined,
-          vehicle_number: cleanVehicle || dup.vehicle_number || undefined,
+          vehicle_number: form.vehicle_number || undefined,
           vehicle_make: form.vehicle_make || undefined,
           vehicle_model: form.vehicle_model || undefined,
           current_policy_type: form.current_policy_type || undefined,
           current_insurer: form.current_insurer || undefined,
           notes: form.notes || undefined,
-        }).eq("id", dup.id);
+        }).eq("id", existing[0].id);
 
         await supabase.from("insurance_activity_log").insert({
-          client_id: dup.id,
-          activity_type: "duplicate_lead",
-          title: `Duplicate entry #${newDupCount + 1}`,
-          description: `Duplicate lead detected via manual entry. Vehicle: ${cleanVehicle || 'N/A'}, Phone: ${phone}`,
+          client_id: existing[0].id,
+          activity_type: "lead_created",
+          title: "Lead updated manually",
+          description: `Lead info updated via manual entry`,
         });
 
-        toast.info(`⚠️ Duplicate lead (Entry #${newDupCount + 1}) — record updated`, {
-          description: `${dup.customer_name} • ${dup.vehicle_number || phone}`,
-        });
+        toast.success("Existing client updated!");
       } else {
         // Create new
         const { data: newClient } = await supabase.from("insurance_clients").insert({
           phone,
           customer_name: form.customer_name || null,
           email: form.email || null,
-          vehicle_number: cleanVehicle,
+          vehicle_number: form.vehicle_number || null,
           vehicle_make: form.vehicle_make || null,
           vehicle_model: form.vehicle_model || null,
           current_policy_type: form.current_policy_type || null,

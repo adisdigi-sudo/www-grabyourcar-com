@@ -309,7 +309,7 @@ const DealerLocatorPage = () => {
                <div className="flex flex-wrap items-center justify-between gap-3">
                  <div className="flex items-center gap-3">
                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                     <BookmarkCheck className="h-5 w-5 text-foreground" />
+                     <BookmarkCheck className="h-5 w-5 text-primary" />
                    </div>
                    <div>
                      <p className="font-medium text-sm">Welcome back!</p>
@@ -357,12 +357,12 @@ const DealerLocatorPage = () => {
               transition={{ duration: 0.5 }}
               className="max-w-4xl mx-auto text-center relative z-10"
             >
-              <Badge className="mb-6 bg-primary/10 text-foreground border-primary/20 px-4 py-2 text-sm">
+              <Badge className="mb-6 bg-primary/10 text-primary border-primary/20 px-4 py-2 text-sm">
                 <MapPin className="h-4 w-4 mr-2" />
                 Dealer Network
               </Badge>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-                Find <span className="text-foreground relative">
+                Find <span className="text-primary relative">
                   Authorized Dealers
                   <Sparkles className="absolute -top-2 -right-6 h-5 w-5 text-amber-500 animate-pulse" />
                 </span>
@@ -382,7 +382,7 @@ const DealerLocatorPage = () => {
                   className="flex items-center gap-3 bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl px-5 py-3"
                 >
                   <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Building2 className="h-6 w-6 text-foreground" />
+                    <Building2 className="h-6 w-6 text-primary" />
                   </div>
                   <div className="text-left">
                     <p className="text-2xl font-bold">{dealerLocatorData.length}+</p>
@@ -728,7 +728,7 @@ const DealerLocatorPage = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Map */}
                 <div className="lg:col-span-2">
-                  <Suspense fallback={<div className="h-[400px] lg:h-[600px] flex items-center justify-center bg-muted rounded-lg"><Loader2 className="h-8 w-8 animate-spin text-foreground" /></div>}>
+                  <Suspense fallback={<div className="h-[400px] lg:h-[600px] flex items-center justify-center bg-muted rounded-lg"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
                     <DealerMap
                       dealers={filteredDealers}
                       selectedDealer={selectedDealer}

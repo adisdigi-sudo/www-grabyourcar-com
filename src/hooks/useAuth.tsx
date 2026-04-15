@@ -2,41 +2,10 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-const AUTH_BOOTSTRAP_TIMEOUT_MS = 15000;
-const AUTH_STORAGE_KEY = import.meta.env.VITE_SUPABASE_PROJECT_ID
-  ? `sb-${import.meta.env.VITE_SUPABASE_PROJECT_ID}-auth-token`
-  : null;
-
-const readPersistedSession = (): Session | null => {
-  if (typeof window === "undefined" || !AUTH_STORAGE_KEY) {
-    return null;
-  }
-
-  try {
-    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      const candidate = parsed.find((entry) => entry && typeof entry === "object" && "access_token" in entry);
-      return (candidate as Session | undefined) ?? null;
-    }
-
-    if (parsed && typeof parsed === "object" && "access_token" in parsed) {
-      return parsed as Session;
-    }
-  } catch (error) {
-    console.warn("[Auth] Failed to read persisted session cache", error);
-  }
-
-  return null;
-};
-
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  initialized: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; data?: { user: User | null } }>;
   signInWithPhone: (phone: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -49,81 +18,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
-    let bootstrapResolved = false;
-    let bootstrapTimeout: number | null = null;
-
-    const clearBootstrapTimeout = () => {
-      if (bootstrapTimeout) {
-        window.clearTimeout(bootstrapTimeout);
-        bootstrapTimeout = null;
-      }
-    };
-
-    const applySession = (nextSession: Session | null) => {
-      if (!isMounted) return;
-
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, nextSession) => {
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
-    };
-
-    const finishBootstrap = (nextSession: Session | null) => {
-      if (!isMounted) return;
-
-      bootstrapResolved = true;
-      clearBootstrapTimeout();
-      applySession(nextSession);
-      setInitialized(true);
       setLoading(false);
-    };
-
-    const persistedSession = readPersistedSession();
-    if (persistedSession) {
-      applySession(persistedSession);
-    }
-
-    bootstrapTimeout = window.setTimeout(() => {
-      if (!isMounted) return;
-
-      const fallbackSession = readPersistedSession();
-      console.warn("[Auth] Session bootstrap timed out; continuing with cached session fallback", {
-        hasCachedSession: !!fallbackSession,
-      });
-      finishBootstrap(fallbackSession);
-    }, AUTH_BOOTSTRAP_TIMEOUT_MS);
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      applySession(nextSession ?? readPersistedSession());
-
-      if (bootstrapResolved || event !== "INITIAL_SESSION") {
-        clearBootstrapTimeout();
-        if (isMounted) {
-          setInitialized(true);
-          setLoading(false);
-        }
-      }
     });
 
-    supabase.auth
-      .getSession()
-      .then(({ data: { session: activeSession } }) => {
-        finishBootstrap(activeSession ?? readPersistedSession());
-      })
-      .catch((error) => {
-        console.warn("[Auth] Failed to restore session during bootstrap", error);
+    supabase.auth.getSession().then(({ data: { session: activeSession } }) => {
+      setSession(activeSession);
+      setUser(activeSession?.user ?? null);
+      setLoading(false);
+    });
 
-        if (!isMounted) return;
-        finishBootstrap(readPersistedSession());
-      });
-
-    return () => {
-      isMounted = false;
-      clearBootstrapTimeout();
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const signInWithPhone = async (phone: string) => {
@@ -203,7 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, initialized, signIn, signInWithPhone, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signInWithPhone, signOut }}>
       {children}
     </AuthContext.Provider>
   );

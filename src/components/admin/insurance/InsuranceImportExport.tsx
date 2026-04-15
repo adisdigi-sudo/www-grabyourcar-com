@@ -457,7 +457,7 @@ function ImportWizard() {
                 pincode: row.pincode || null,
                 date_of_birth: row.date_of_birth ? parseFlexibleDate(row.date_of_birth) : null,
                 gender: row.gender || null,
-                lead_source: row.lead_source || "rollover",
+                lead_source: row.lead_source || "csv_import",
                 notes: row.notes || null,
               };
 
@@ -485,8 +485,7 @@ function ImportWizard() {
                 gst_amount: row.gst_amount ? parseLocalizedNumber(row.gst_amount) : null,
                 payment_mode: row.payment_mode || null,
                 status: row.status || "active",
-                source_label: row.lead_source || "Rollover",
-              } as any);
+              });
             }
           } else if (detectedType === "insurance") {
             if (!phone || phone.length < 10) { errors++; continue; }
@@ -503,7 +502,7 @@ function ImportWizard() {
                   phone,
                   customer_name: customerName,
                   current_insurer: row.insurer || null,
-                  lead_source: "rollover",
+                  lead_source: "csv_import",
                 }).select("id").maybeSingle();
               
               if (!newClient) { errors++; continue; }
@@ -520,8 +519,7 @@ function ImportWizard() {
                 idv: row.idv ? parseLocalizedNumber(row.idv) : null,
                 ncb_discount: row.ncb_discount ? parseLocalizedNumber(row.ncb_discount) : null,
                 status: row.status || "active",
-                source_label: "Rollover",
-              } as any);
+              });
               added++;
             } else {
               await supabase.from("insurance_policies").insert({
@@ -536,8 +534,7 @@ function ImportWizard() {
                 idv: row.idv ? parseLocalizedNumber(row.idv) : null,
                 ncb_discount: row.ncb_discount ? parseLocalizedNumber(row.ncb_discount) : null,
                 status: row.status || "active",
-                source_label: row.lead_source || "Rollover",
-              } as any);
+              });
               added++;
             }
           }

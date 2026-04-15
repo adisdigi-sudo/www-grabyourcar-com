@@ -1,4 +1,4 @@
-import { forwardRef, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -47,7 +47,7 @@ interface EMICustomizerModalProps {
   pdfConfig?: Partial<EMIPDFConfig>;
 }
 
-export const EMICustomizerModal = forwardRef<HTMLDivElement, EMICustomizerModalProps>(({ 
+export const EMICustomizerModal = ({
   open,
   onOpenChange,
   carName,
@@ -56,7 +56,7 @@ export const EMICustomizerModal = forwardRef<HTMLDivElement, EMICustomizerModalP
   selectedCity,
   onRoadPrice,
   pdfConfig,
-}, ref) => {
+}: EMICustomizerModalProps) => {
   const basePrice = onRoadPrice.onRoadPrice;
   
   // Default values
@@ -178,10 +178,10 @@ export const EMICustomizerModal = forwardRef<HTMLDivElement, EMICustomizerModalP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent ref={ref} className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-foreground" />
+            <Calculator className="h-5 w-5 text-primary" />
             Customize EMI & Download Quote
           </DialogTitle>
           <DialogDescription>
@@ -203,7 +203,7 @@ export const EMICustomizerModal = forwardRef<HTMLDivElement, EMICustomizerModalP
             </div>
             <div className="text-right">
               <p className="text-xs text-muted-foreground">On-Road Price</p>
-              <p className="text-xl font-bold text-foreground">{formatCurrency(basePrice)}</p>
+              <p className="text-xl font-bold text-primary">{formatCurrency(basePrice)}</p>
               {selectedCity && (
                 <p className="text-xs text-muted-foreground mt-1">in {selectedCity}</p>
               )}
@@ -230,7 +230,7 @@ export const EMICustomizerModal = forwardRef<HTMLDivElement, EMICustomizerModalP
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-2">
-                <PiggyBank className="h-4 w-4 text-foreground" />
+                <PiggyBank className="h-4 w-4 text-primary" />
                 Down Payment
               </Label>
               <div className="flex items-center gap-2">
@@ -324,7 +324,7 @@ export const EMICustomizerModal = forwardRef<HTMLDivElement, EMICustomizerModalP
           <div className="space-y-3 pt-4 border-t">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-2">
-                <Gift className="h-4 w-4 text-foreground" />
+                <Gift className="h-4 w-4 text-success" />
                 Add Discount Offer
               </Label>
               <Button
@@ -384,7 +384,7 @@ export const EMICustomizerModal = forwardRef<HTMLDivElement, EMICustomizerModalP
                       <Tag className="h-3.5 w-3.5" />
                       Final Price After Discount
                     </span>
-                    <span className="font-bold text-foreground">{formatCurrency(basePrice - discountAmount)}</span>
+                    <span className="font-bold text-success">{formatCurrency(basePrice - discountAmount)}</span>
                   </div>
                 )}
               </div>
@@ -411,7 +411,7 @@ export const EMICustomizerModal = forwardRef<HTMLDivElement, EMICustomizerModalP
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-muted/50 rounded-lg p-3 text-center">
               <p className="text-xs text-muted-foreground">Down Payment</p>
-              <p className="font-bold text-foreground">{formatCurrency(downPayment)}</p>
+              <p className="font-bold text-primary">{formatCurrency(downPayment)}</p>
               <p className="text-xs text-muted-foreground">{downPaymentPercent}% of price</p>
             </div>
             <div className="bg-muted/50 rounded-lg p-3 text-center">
@@ -421,7 +421,7 @@ export const EMICustomizerModal = forwardRef<HTMLDivElement, EMICustomizerModalP
             </div>
             <div className="bg-muted/50 rounded-lg p-3 text-center">
               <p className="text-xs text-muted-foreground">Total Interest</p>
-              <p className="font-bold text-foreground">{formatCurrency(totalInterest)}</p>
+              <p className="font-bold text-accent">{formatCurrency(totalInterest)}</p>
               <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                 <TrendingUp className="h-3 w-3" />
                 {((totalInterest / loanPrincipal) * 100).toFixed(1)}% of loan
@@ -429,7 +429,7 @@ export const EMICustomizerModal = forwardRef<HTMLDivElement, EMICustomizerModalP
             </div>
             <div className="bg-muted/50 rounded-lg p-3 text-center">
               <p className="text-xs text-muted-foreground">Total Payable</p>
-              <p className="font-bold text-foreground">{formatCurrency(totalPayment + downPayment)}</p>
+              <p className="font-bold text-primary">{formatCurrency(totalPayment + downPayment)}</p>
               <p className="text-xs text-muted-foreground">incl. down payment</p>
             </div>
           </div>
@@ -448,6 +448,4 @@ export const EMICustomizerModal = forwardRef<HTMLDivElement, EMICustomizerModalP
       </DialogContent>
     </Dialog>
   );
-});
-
-EMICustomizerModal.displayName = "EMICustomizerModal";
+};

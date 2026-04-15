@@ -1,1 +1,0 @@
-ALTER TABLE public.loan_applications ADD COLUMN IF NOT EXISTS sanction_letter_url text;

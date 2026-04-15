@@ -156,7 +156,6 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
       let query = supabase
         .from('leads')
         .select('*')
-        .eq('is_legacy', false)
         .order('created_at', { ascending: false });
       
       if (statusFilter !== 'all') {

@@ -47,7 +47,7 @@ export const CarLoanTrustSection = () => {
               className="text-center p-5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors border border-transparent hover:border-primary/10"
             >
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <item.icon className="w-5 h-5 text-foreground" />
+                <item.icon className="w-5 h-5 text-primary" />
               </div>
               <h3 className="font-semibold text-sm text-foreground mb-1">{item.title}</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
@@ -67,7 +67,7 @@ export const CarLoanTrustSection = () => {
                 <ul className="space-y-2">
                   {doc.items.map((item, j) => (
                     <li key={j} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <FileCheck className="w-3.5 h-3.5 text-foreground shrink-0" />
+                      <FileCheck className="w-3.5 h-3.5 text-primary shrink-0" />
                       {item}
                     </li>
                   ))}

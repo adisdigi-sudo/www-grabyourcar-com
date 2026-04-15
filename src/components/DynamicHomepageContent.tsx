@@ -206,7 +206,7 @@ export const DynamicFeaturedCars = () => {
                     <h3 className="font-bold text-lg">{car.title}</h3>
                   )}
                   {car.subtitle && (
-                    <p className="text-foreground font-semibold">{car.subtitle}</p>
+                    <p className="text-primary font-semibold">{car.subtitle}</p>
                   )}
                   {car.description && (
                     <p className="text-muted-foreground text-sm mt-2 line-clamp-2">

@@ -30,8 +30,8 @@ const FUEL_OPTIONS = ['Petrol','Diesel','Electric','Hybrid','CNG','LPG'];
 const TRANSMISSION_OPTIONS = ['Manual','Automatic','AMT','CVT','DCT','iMT'];
 
 // ─── Sub-item types ───
-interface CarImage { url: string; alt_text: string; is_primary: boolean; file?: File }
-interface CarColor { name: string; hex_code: string; image_url: string; file?: File }
+interface CarImage { url: string; alt_text: string; is_primary: boolean }
+interface CarColor { name: string; hex_code: string; image_url: string }
 interface CarVariant {
   name: string; price: string; price_numeric: string; fuel_type: string; transmission: string;
   ex_showroom: string; rto: string; insurance: string; tcs: string; on_road_price: string;
@@ -77,16 +77,6 @@ const emptyRow = (): CarRow => ({
   pros: "", cons: "", key_highlights: "", competitors: "", brochure_url: "",
   status: 'draft',
 });
-
-const autoCalcOnRoad = (exShowroom: string): { rto: string; insurance: string; tcs: string; on_road_price: string } => {
-  const ex = Number(exShowroom) || 0;
-  if (ex === 0) return { rto: '', insurance: '', tcs: '', on_road_price: '' };
-  const rto = Math.round(ex * 0.08);
-  const insurance = Math.round(ex * 0.035);
-  const tcs = ex > 1000000 ? Math.round(ex * 0.01) : 0;
-  const onRoad = ex + rto + insurance + tcs + 500 + 1000 + 15000;
-  return { rto: String(rto), insurance: String(insurance), tcs: String(tcs), on_road_price: String(onRoad) };
-};
 
 const emptyVariant = (): CarVariant => ({
   name: "", price: "", price_numeric: "", fuel_type: "Petrol", transmission: "Manual",
@@ -222,16 +212,6 @@ export const ExcelCarEntry = ({ onClose }: { onClose?: () => void }) => {
     }
   };
 
-  // ─── Image upload helper ───
-  const uploadFile = async (file: File, carSlug: string, prefix: string): Promise<string> => {
-    const ext = file.name.split('.').pop() || 'jpg';
-    const path = `${carSlug}/${prefix}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from('car-images').upload(path, file, { upsert: true });
-    if (error) throw error;
-    const { data: { publicUrl } } = supabase.storage.from('car-images').getPublicUrl(path);
-    return publicUrl;
-  };
-
   // ─── Save ───
   const saveRowMutation = useMutation({
     mutationFn: async ({ row, index }: { row: CarRow; index: number }) => {
@@ -258,35 +238,19 @@ export const ExcelCarEntry = ({ onClose }: { onClose?: () => void }) => {
       if (error) throw error;
       const carId = carData.id;
 
-      // 2) Upload images if files present, then insert
+      // 2) Images
       if (row.images.length > 0) {
-        const imgs = [];
-        for (let idx = 0; idx < row.images.length; idx++) {
-          const img = row.images[idx];
-          let finalUrl = img.url.trim();
-          if (img.file) {
-            finalUrl = await uploadFile(img.file, slug, `gallery-${idx}`);
-          }
-          if (finalUrl) {
-            imgs.push({ car_id: carId, url: finalUrl, alt_text: img.alt_text || row.name, is_primary: img.is_primary, sort_order: idx + 1 });
-          }
-        }
+        const imgs = row.images.filter(i => i.url.trim()).map((img, idx) => ({
+          car_id: carId, url: img.url.trim(), alt_text: img.alt_text || row.name, is_primary: img.is_primary, sort_order: idx + 1
+        }));
         if (imgs.length) await supabase.from('car_images').insert(imgs);
       }
 
-      // 3) Upload color images if files present, then insert
+      // 3) Colors
       if (row.colors.length > 0) {
-        const cols = [];
-        for (let idx = 0; idx < row.colors.length; idx++) {
-          const c = row.colors[idx];
-          let imgUrl = c.image_url || '';
-          if (c.file) {
-            imgUrl = await uploadFile(c.file, slug, `color-${c.name.replace(/\s+/g, '-').toLowerCase()}`);
-          }
-          if (c.name.trim()) {
-            cols.push({ car_id: carId, name: c.name, hex_code: c.hex_code, image_url: imgUrl || null, sort_order: idx + 1 });
-          }
-        }
+        const cols = row.colors.filter(c => c.name.trim()).map((c, idx) => ({
+          car_id: carId, name: c.name, hex_code: c.hex_code, image_url: c.image_url || null, sort_order: idx + 1
+        }));
         if (cols.length) await supabase.from('car_colors').insert(cols);
       }
 
@@ -573,17 +537,10 @@ export const ExcelCarEntry = ({ onClose }: { onClose?: () => void }) => {
                             {row.images.map((img, ii) => (
                               <div key={ii} className="flex items-center gap-2 bg-background rounded-md border p-1.5">
                                 <div className="w-12 h-9 rounded border bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                                  {(img.url || img.file) ? <img src={img.file ? URL.createObjectURL(img.file) : img.url} className="w-full h-full object-cover" alt="" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />}
+                                  {img.url ? <img src={img.url} className="w-full h-full object-cover" alt="" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />}
                                 </div>
-                                <Input value={img.url} onChange={e => { const imgs = [...row.images]; imgs[ii] = { ...imgs[ii], url: e.target.value, file: undefined }; updateSubArray(ri, 'images', imgs); }} placeholder="Image URL or upload →" className="h-7 text-[10px] flex-1" />
-                                <label className="cursor-pointer text-[9px] font-bold px-2 py-1 rounded border border-dashed border-primary/50 text-primary hover:bg-primary/10 whitespace-nowrap flex items-center gap-1">
-                                  <Upload className="h-3 w-3" />Upload
-                                  <input type="file" accept="image/*" className="hidden" onChange={e => {
-                                    const file = e.target.files?.[0];
-                                    if (file) { const imgs = [...row.images]; imgs[ii] = { ...imgs[ii], file, url: '' }; updateSubArray(ri, 'images', imgs); }
-                                  }} />
-                                </label>
-                                <Input value={img.alt_text} onChange={e => { const imgs = [...row.images]; imgs[ii] = { ...imgs[ii], alt_text: e.target.value }; updateSubArray(ri, 'images', imgs); }} placeholder="Alt text" className="h-7 text-[10px] w-28" />
+                                <Input value={img.url} onChange={e => { const imgs = [...row.images]; imgs[ii] = { ...imgs[ii], url: e.target.value }; updateSubArray(ri, 'images', imgs); }} placeholder="Image URL (OEM source)" className="h-7 text-[10px] flex-1" />
+                                <Input value={img.alt_text} onChange={e => { const imgs = [...row.images]; imgs[ii] = { ...imgs[ii], alt_text: e.target.value }; updateSubArray(ri, 'images', imgs); }} placeholder="Alt text" className="h-7 text-[10px] w-32" />
                                 <button onClick={() => { const imgs = [...row.images]; imgs[ii] = { ...imgs[ii], is_primary: !imgs[ii].is_primary }; updateSubArray(ri, 'images', imgs); }} className={cn("text-[9px] font-bold px-2 py-0.5 rounded border whitespace-nowrap", img.is_primary ? "bg-primary text-primary-foreground border-primary" : "text-muted-foreground border-border")}>
                                   {img.is_primary ? '★ Hero' : 'Set Hero'}
                                 </button>
@@ -608,19 +565,7 @@ export const ExcelCarEntry = ({ onClose }: { onClose?: () => void }) => {
                                 <input type="color" value={color.hex_code} onChange={e => { const cols = [...row.colors]; cols[ci] = { ...cols[ci], hex_code: e.target.value }; updateSubArray(ri, 'colors', cols); }} className="w-8 h-7 rounded border cursor-pointer shrink-0" />
                                 <Input value={color.name} onChange={e => { const cols = [...row.colors]; cols[ci] = { ...cols[ci], name: e.target.value }; updateSubArray(ri, 'colors', cols); }} placeholder="Color Name (e.g., Napoli Black)" className="h-7 text-[10px] w-40" />
                                 <Input value={color.hex_code} onChange={e => { const cols = [...row.colors]; cols[ci] = { ...cols[ci], hex_code: e.target.value }; updateSubArray(ri, 'colors', cols); }} placeholder="#000000" className="h-7 text-[10px] w-24 font-mono" />
-                                {(color.image_url || color.file) && (
-                                  <div className="w-10 h-7 rounded border bg-muted overflow-hidden shrink-0">
-                                    <img src={color.file ? URL.createObjectURL(color.file) : color.image_url} className="w-full h-full object-cover" alt="" />
-                                  </div>
-                                )}
-                                <Input value={color.image_url} onChange={e => { const cols = [...row.colors]; cols[ci] = { ...cols[ci], image_url: e.target.value, file: undefined }; updateSubArray(ri, 'colors', cols); }} placeholder="Color car image URL or upload →" className="h-7 text-[10px] flex-1" />
-                                <label className="cursor-pointer text-[9px] font-bold px-2 py-1 rounded border border-dashed border-primary/50 text-primary hover:bg-primary/10 whitespace-nowrap flex items-center gap-1">
-                                  <Upload className="h-3 w-3" />Upload
-                                  <input type="file" accept="image/*" className="hidden" onChange={e => {
-                                    const file = e.target.files?.[0];
-                                    if (file) { const cols = [...row.colors]; cols[ci] = { ...cols[ci], file, image_url: '' }; updateSubArray(ri, 'colors', cols); }
-                                  }} />
-                                </label>
+                                <Input value={color.image_url} onChange={e => { const cols = [...row.colors]; cols[ci] = { ...cols[ci], image_url: e.target.value }; updateSubArray(ri, 'colors', cols); }} placeholder="Color-specific car image URL" className="h-7 text-[10px] flex-1" />
                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => updateSubArray(ri, 'colors', row.colors.filter((_, j) => j !== ci))}><Trash2 className="h-3 w-3" /></Button>
                               </div>
                             ))}
@@ -651,7 +596,7 @@ export const ExcelCarEntry = ({ onClose }: { onClose?: () => void }) => {
                                     <tr key={vi} className="hover:bg-accent/30">
                                       <td className="border border-border/40 p-px"><Input value={v.name} onChange={e => { const vs = [...row.variants]; vs[vi] = { ...vs[vi], name: e.target.value }; updateSubArray(ri, 'variants', vs); }} placeholder="LXi" className="h-6 text-[10px] border-0" /></td>
                                       <td className="border border-border/40 p-px"><Input value={v.price} onChange={e => { const vs = [...row.variants]; vs[vi] = { ...vs[vi], price: e.target.value }; updateSubArray(ri, 'variants', vs); }} placeholder="₹6.49L" className="h-6 text-[10px] border-0" /></td>
-                                      <td className="border border-border/40 p-px"><Input value={v.ex_showroom} onChange={e => { const val = e.target.value.replace(/\D/g,''); const calc = autoCalcOnRoad(val); const vs = [...row.variants]; vs[vi] = { ...vs[vi], ex_showroom: val, price_numeric: val, rto: calc.rto, insurance: calc.insurance, tcs: calc.tcs, on_road_price: calc.on_road_price }; updateSubArray(ri, 'variants', vs); }} placeholder="649000" className="h-6 text-[10px] border-0 font-mono" /></td>
+                                      <td className="border border-border/40 p-px"><Input value={v.ex_showroom} onChange={e => { const vs = [...row.variants]; vs[vi] = { ...vs[vi], ex_showroom: e.target.value.replace(/\D/g,''), price_numeric: e.target.value.replace(/\D/g,'') }; updateSubArray(ri, 'variants', vs); }} placeholder="649000" className="h-6 text-[10px] border-0 font-mono" /></td>
                                       <td className="border border-border/40 p-px"><Input value={v.rto} onChange={e => { const vs = [...row.variants]; vs[vi] = { ...vs[vi], rto: e.target.value.replace(/\D/g,'') }; updateSubArray(ri, 'variants', vs); }} placeholder="51920" className="h-6 text-[10px] border-0 font-mono" /></td>
                                       <td className="border border-border/40 p-px"><Input value={v.insurance} onChange={e => { const vs = [...row.variants]; vs[vi] = { ...vs[vi], insurance: e.target.value.replace(/\D/g,'') }; updateSubArray(ri, 'variants', vs); }} placeholder="22715" className="h-6 text-[10px] border-0 font-mono" /></td>
                                       <td className="border border-border/40 p-px"><Input value={v.tcs} onChange={e => { const vs = [...row.variants]; vs[vi] = { ...vs[vi], tcs: e.target.value.replace(/\D/g,'') }; updateSubArray(ri, 'variants', vs); }} placeholder="0" className="h-6 text-[10px] border-0 font-mono" /></td>

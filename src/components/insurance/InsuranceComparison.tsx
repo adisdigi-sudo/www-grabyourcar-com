@@ -22,7 +22,7 @@ export function InsuranceComparison() {
           className="text-center max-w-2xl mx-auto mb-16"
         >
           <h2 className="text-3xl md:text-5xl font-heading font-bold mb-4">
-            Top insurance <span className="text-foreground">providers</span>
+            Top insurance <span className="text-primary">providers</span>
           </h2>
           <p className="text-lg text-muted-foreground">
             Compare quotes from India's leading car insurance companies
@@ -45,7 +45,7 @@ export function InsuranceComparison() {
                     <div>
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-xl font-heading font-bold">{insurer.name}</h3>
-                        <span className="text-[10px] font-bold bg-primary/10 text-foreground px-2.5 py-1 rounded-full">{insurer.highlight}</span>
+                        <span className="text-[10px] font-bold bg-primary/10 text-primary px-2.5 py-1 rounded-full">{insurer.highlight}</span>
                       </div>
                       <div className="flex items-center gap-4 text-sm">
                         <div className="flex items-center gap-1">
@@ -55,7 +55,7 @@ export function InsuranceComparison() {
                         </div>
                         <span className="text-border">|</span>
                         <span className="text-muted-foreground">
-                          <span className="font-semibold text-foreground">{insurer.claimRatio}</span> claims
+                          <span className="font-semibold text-primary">{insurer.claimRatio}</span> claims
                         </span>
                         <span className="text-border">|</span>
                         <span className="text-muted-foreground">
@@ -66,7 +66,7 @@ export function InsuranceComparison() {
 
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground mb-0.5">Starting from</p>
-                      <p className="text-3xl font-heading font-bold text-foreground">{insurer.premium}</p>
+                      <p className="text-3xl font-heading font-bold text-primary">{insurer.premium}</p>
                       <p className="text-xs text-muted-foreground">per year</p>
                     </div>
                   </div>
@@ -74,7 +74,7 @@ export function InsuranceComparison() {
                   <div className="flex flex-wrap gap-2 mb-5">
                     {insurer.features.map((feature) => (
                       <div key={feature} className="flex items-center gap-1.5 text-sm bg-muted/50 px-3 py-1.5 rounded-full">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-foreground" />
+                        <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                         {feature}
                       </div>
                     ))}

@@ -1,502 +1,516 @@
-import { useState, useMemo, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useMemo, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { usePartnerLink, useUpdatePartnerLink, useCheckPartnerLinkHealth } from "@/hooks/usePartnerLink";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { dedupeInsuranceClients, dedupeInsurancePolicies, getClientEffectiveDate, getPolicyEffectiveDate, normalizePhoneNumber, normalizePolicyNumber, normalizeVehicleRegistration } from "@/lib/insuranceIdentity";
-import { LEAD_SOURCES, normalizeInsuranceStage as normalizeStage } from "@/lib/insuranceStages";
-import { differenceInDays, format, startOfMonth, endOfMonth, parse } from "date-fns";
-import { fetchAllPages } from "@/lib/fetchAllPages";
+import { format, differenceInDays, subDays } from "date-fns";
 import {
-  UserPlus, Clock, CheckCircle2, Shield, TrendingUp,
-  Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight, Rocket, ExternalLink, Settings2, AlertCircle
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import {
+  UserPlus, Phone, FileText, Clock, CheckCircle2, XCircle,
+  Search, PhoneCall, User, Car, Shield, TrendingUp, Send,
+  MessageSquare, CalendarIcon, Bell, Plus, X,
+  ChevronRight, CreditCard, Upload, RefreshCw, FileSpreadsheet, BookOpen, CalendarClock,
+  Filter, Eye, AlertTriangle, ArrowUpDown
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import InsuranceQuoteModal from "./InsuranceQuoteModal";
+import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner, buildInsuranceNotifications } from "../shared/StageNotificationBanner";
-import { AdminRenderBoundary } from "../shared/AdminRenderBoundary";
-import { BulkRenewalQuoteGenerator } from "./BulkRenewalQuoteGenerator";
-import { InsuranceLeadPipeline, type Client } from "./InsuranceLeadPipeline";
-import { InsurancePolicyBook, type PolicyRecord } from "./InsurancePolicyBook";
-import { InsuranceComingRenewals } from "./InsuranceComingRenewals";
-import { InsuranceOverdueRenewals } from "./InsuranceOverdueRenewals";
-import { InsurancePremiumCalculator } from "./InsurancePremiumCalculator";
-import { InsuranceKpiDetailDialog } from "./InsuranceKpiDetailDialog";
-import { InsuranceRenewalCampaign } from "./InsuranceRenewalCampaign";
-import { InsurancePerformance } from "./InsurancePerformance";
-import { OmniChatPanel } from "../shared/OmniChatPanel";
 
-type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "renewal_campaign" | "performance";
-type KpiType = "total_leads" | "in_pipeline" | "won" | "active_policies" | "conversion" | null;
+// ── 6+1 Pipeline Stages ──
+const PIPELINE_STAGES = [
+  { value: "new_lead", label: "New Lead", icon: UserPlus, color: "from-blue-500 to-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30", border: "border-blue-200 dark:border-blue-800", text: "text-blue-700 dark:text-blue-300", dot: "bg-blue-500" },
+  { value: "smart_calling", label: "Smart Calling", icon: PhoneCall, color: "from-amber-500 to-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30", border: "border-amber-200 dark:border-amber-800", text: "text-amber-700 dark:text-amber-300", dot: "bg-amber-500" },
+  { value: "quote_shared", label: "Quote Shared", icon: Send, color: "from-cyan-500 to-cyan-600", bg: "bg-cyan-50 dark:bg-cyan-950/30", border: "border-cyan-200 dark:border-cyan-800", text: "text-cyan-700 dark:text-cyan-300", dot: "bg-cyan-500" },
+  { value: "follow_up", label: "Follow-Up", icon: Clock, color: "from-orange-500 to-orange-600", bg: "bg-orange-50 dark:bg-orange-950/30", border: "border-orange-200 dark:border-orange-800", text: "text-orange-700 dark:text-orange-300", dot: "bg-orange-500" },
+  { value: "won", label: "Won", icon: CheckCircle2, color: "from-emerald-500 to-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-200 dark:border-emerald-800", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-500" },
+  { value: "lost", label: "Lost", icon: XCircle, color: "from-slate-400 to-slate-500", bg: "bg-slate-50 dark:bg-slate-900/30", border: "border-slate-200 dark:border-slate-700", text: "text-slate-500 dark:text-slate-400", dot: "bg-slate-400" },
+  { value: "policy_issued", label: "Policy Issued", icon: Shield, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-200 dark:border-emerald-800", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-600" },
+];
 
-type LegacyInsuranceLead = {
+const STAGE_MAP: Record<string, string> = {
+  new_lead: "new_lead",
+  contact_attempted: "smart_calling",
+  requirement_collected: "smart_calling",
+  quote_shared: "quote_shared",
+  follow_up: "follow_up",
+  won: "won",
+  lost: "lost",
+  policy_issued: "policy_issued",
+  smart_calling: "smart_calling",
+};
+
+const normalizeStage = (stage: string | null): string => STAGE_MAP[stage || "new_lead"] || "new_lead";
+
+const CALL_STATUSES = ["Interested", "Not Interested", "Call Back", "No Answer", "Wrong Number"];
+const LOST_REASONS = ["Too expensive", "Existing agent", "No response", "Not renewing", "Competitor offer", "Other"];
+const LEAD_SOURCES = ["Meta", "Google Ads", "Referral", "Walk-in", "WhatsApp Broadcast", "Website", "Manual", "CSV Import"];
+
+const SOURCE_COLORS: Record<string, string> = {
+  Meta: "bg-blue-100 text-blue-700 border-blue-200",
+  "Google Ads": "bg-red-100 text-red-700 border-red-200",
+  Referral: "bg-purple-100 text-purple-700 border-purple-200",
+  "Walk-in": "bg-green-100 text-green-700 border-green-200",
+  "WhatsApp Broadcast": "bg-emerald-100 text-emerald-700 border-emerald-200",
+  Website: "bg-indigo-100 text-indigo-700 border-indigo-200",
+  Manual: "bg-gray-100 text-gray-700 border-gray-200",
+  "CSV Import": "bg-violet-100 text-violet-700 border-violet-200",
+  "csv_import": "bg-violet-100 text-violet-700 border-violet-200",
+};
+
+interface Client {
   id: string;
   customer_name: string | null;
   phone: string;
-  source: string | null;
-};
+  email: string | null;
+  city: string | null;
+  vehicle_number: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  vehicle_year: number | null;
+  current_insurer: string | null;
+  current_policy_type: string | null;
+  current_premium: number | null;
+  ncb_percentage: number | null;
+  previous_claim: boolean | null;
+  policy_expiry_date: string | null;
+  policy_start_date: string | null;
+  current_policy_number: string | null;
+  lead_source: string | null;
+  lead_status: string | null;
+  assigned_executive: string | null;
+  priority: string | null;
+  pipeline_stage: string | null;
+  contact_attempts: number | null;
+  quote_amount: number | null;
+  quote_insurer: string | null;
+  lost_reason: string | null;
+  follow_up_date: string | null;
+  follow_up_time: string | null;
+  call_status: string | null;
+  call_remarks: string | null;
+  renewal_reminder_set: boolean | null;
+  renewal_reminder_date: string | null;
+  incentive_eligible: boolean | null;
+  notes: string | null;
+  created_at: string;
+}
 
-type ChatComposerDraft = {
-  phone: string;
-  name?: string | null;
-  message: string;
-};
+interface PolicyRecord {
+  id: string;
+  client_id: string;
+  policy_number: string | null;
+  policy_type: string;
+  insurer: string;
+  premium_amount: number | null;
+  start_date: string;
+  expiry_date: string | null;
+  status: string | null;
+  is_renewal: boolean | null;
+  issued_date: string | null;
+  plan_name: string | null;
+  idv: number | null;
+  policy_document_url: string | null;
+  created_at: string;
+  // Joined client data
+  insurance_clients: {
+    customer_name: string | null;
+    phone: string;
+    city: string | null;
+    vehicle_number: string | null;
+    vehicle_make: string | null;
+    vehicle_model: string | null;
+    lead_source: string | null;
+  } | null;
+}
+
+// ── Source display helper ──
+function formatSource(source: string | null, createdAt: string): string {
+  if (!source) return "Unknown";
+  const date = format(new Date(createdAt), "dd MMM yyyy");
+  if (source === "csv_import" || source === "CSV Import") return `Imported on ${date}`;
+  if (source.startsWith("IB_") || source.toLowerCase().includes("insurebook")) return `Imported on ${date}`;
+  return source;
+}
+
+// ── Expiry status helper ──
+function getExpiryStatus(expiryDate: string | null): { label: string; className: string } {
+  if (!expiryDate) return { label: "No Expiry", className: "bg-muted text-muted-foreground" };
+  const days = differenceInDays(new Date(expiryDate), new Date());
+  if (days < 0) return { label: `Expired ${Math.abs(days)}d ago`, className: "bg-red-100 text-red-700 border-red-200" };
+  if (days <= 7) return { label: `Expires in ${days}d`, className: "bg-red-100 text-red-700 border-red-200 animate-pulse" };
+  if (days <= 15) return { label: `Expires in ${days}d`, className: "bg-orange-100 text-orange-700 border-orange-200" };
+  if (days <= 30) return { label: `Expires in ${days}d`, className: "bg-amber-100 text-amber-700 border-amber-200" };
+  if (days <= 60) return { label: `Expires in ${days}d`, className: "bg-blue-100 text-blue-700 border-blue-200" };
+  return { label: `Active (${days}d)`, className: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+}
 
 export function InsuranceWorkspace() {
   const queryClient = useQueryClient();
-  const [activeView, setActiveView] = useState<ActiveView>("pipeline");
-  const [kpiDetail, setKpiDetail] = useState<KpiType>(null);
-  const [showCalcDialog, setShowCalcDialog] = useState(false);
+  const [selectedStage, setSelectedStage] = useState<string>("all");
+  const [search, setSearch] = useState("");
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [draggingClient, setDraggingClient] = useState<Client | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<"crm" | "policy_book" | "renewals">("crm");
   const [showImport, setShowImport] = useState(false);
+
+  // Renewal filters
+  const [renewalWindow, setRenewalWindow] = useState<string>("all");
+  const [renewalSearch, setRenewalSearch] = useState("");
+  const [renewalSort, setRenewalSort] = useState<"days_asc" | "days_desc" | "name">("days_asc");
+
+  // Policy Book filters
+  const [pbSearch, setPbSearch] = useState("");
+  const [pbPartnerFilter, setPbPartnerFilter] = useState("all");
+
+  // Modals
+  const [showLostDialog, setShowLostDialog] = useState(false);
+  const [lostReason, setLostReason] = useState("");
+  const [lostRemarks, setLostRemarks] = useState("");
+  const [pendingMoveClient, setPendingMoveClient] = useState<Client | null>(null);
+
+  const [showCallingDialog, setShowCallingDialog] = useState(false);
+  const [callStatus, setCallStatus] = useState("");
+  const [callRemarks, setCallRemarks] = useState("");
+
+  const [showFollowUpDialog, setShowFollowUpDialog] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState<Date | undefined>();
+  const [followUpTime, setFollowUpTime] = useState("10:00");
+  const [followUpRemarks, setFollowUpRemarks] = useState("");
+
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [showUploadPolicy, setShowUploadPolicy] = useState(false);
+  const [showRenewalDialog, setShowRenewalDialog] = useState(false);
+  const [renewalDate, setRenewalDate] = useState<Date | undefined>();
+
+  // Add Lead
   const [showAddLead, setShowAddLead] = useState(false);
-  const [showPartnerLink, setShowPartnerLink] = useState(false);
-  const [editPartnerUrl, setEditPartnerUrl] = useState("");
-  const [chatDraft, setChatDraft] = useState<ChatComposerDraft | null>(null);
+  const [newLead, setNewLead] = useState({ customer_name: "", phone: "", email: "", city: "", vehicle_number: "", vehicle_make: "", vehicle_model: "", lead_source: "Manual", notes: "" });
 
-  const { data: partnerLink, isError: partnerLinkError } = usePartnerLink("insurance", "PolicyBazaar");
-  const updatePartnerLink = useUpdatePartnerLink();
-  const checkHealth = useCheckPartnerLinkHealth();
-  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
-  const [newLead, setNewLead] = useState({
-    customer_name: "", phone: "", email: "", city: "",
-    vehicle_number: "", vehicle_make: "", vehicle_model: "",
-    lead_source: "Manual", notes: "",
-  });
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const toggleSelect = (id: string) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleSelectAll = (ids: string[]) => setSelectedIds(prev => prev.size === ids.length ? new Set() : new Set(ids));
 
-  useEffect(() => {
-    const notifyAndRefresh = (lead: { customer_name?: string | null; phone?: string | null; lead_source?: string | null; source?: string | null }) => {
-      queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
-      toast.success("New insurance lead received", {
-        description: [lead.customer_name || "Unknown", lead.phone || "", lead.lead_source || lead.source || "Unknown"].filter(Boolean).join(" • "),
-      });
-    };
-
-    const channel = supabase
-      .channel("insurance-workspace-live")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "insurance_clients" },
-        (payload) => notifyAndRefresh(payload.new as Client)
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "insurance_leads" },
-        (payload) => notifyAndRefresh(payload.new as LegacyInsuranceLead)
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "insurance_policies" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
-          queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
-
+  // Data - CRM leads
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["ins-workspace-clients"],
     queryFn: async () => {
-      const data = await fetchAllPages<Client>(async (from, to) =>
-        supabase
-          .from("insurance_clients")
-          .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, picked_up_by, picked_up_at, booking_date, booked_by, overdue_reason, overdue_custom_reason, overdue_marked_at, duplicate_count, is_duplicate, created_at, updated_at")
-          .eq("is_legacy", false)
-          .order("updated_at", { ascending: false })
-          .order("created_at", { ascending: false })
-          .range(from, to)
-      );
-
-      return data;
+      const { data, error } = await supabase
+        .from("insurance_clients")
+        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, created_at")
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      if (error) throw error;
+      return (data || []) as Client[];
     },
   });
 
-  const { data: allPolicies = [] } = useQuery({
+  // Data - Actual booked policies from insurance_policies table
+  const { data: policies = [] } = useQuery({
     queryKey: ["ins-policies-book"],
     queryFn: async () => {
-      const data = await fetchAllPages<PolicyRecord>(async (from, to) =>
-        supabase
-          .from("insurance_policies")
-          .select("id, client_id, policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal, issued_date, plan_name, idv, policy_document_url, source_label, renewal_count, previous_policy_id, booking_date, created_at, updated_at, insurance_clients(customer_name, phone, city, vehicle_number, vehicle_make, vehicle_model, lead_source, booking_date, updated_at, created_at)")
-          .order("expiry_date", { ascending: true })
-          .order("updated_at", { ascending: false })
-          .order("created_at", { ascending: false })
-          .range(from, to)
-      );
-
-      return data;
+      const { data, error } = await supabase
+        .from("insurance_policies")
+        .select("id, client_id, policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal, issued_date, plan_name, idv, policy_document_url, created_at, insurance_clients(customer_name, phone, city, vehicle_number, vehicle_make, vehicle_model, lead_source)")
+        .in("status", ["active", "renewed"])
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as PolicyRecord[];
     },
   });
 
-  const dedupedClients = useMemo(() => dedupeInsuranceClients(clients), [clients]);
+  // Counts
+  const stageCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    PIPELINE_STAGES.forEach(s => { counts[s.value] = 0; });
+    clients.forEach(c => {
+      const stage = normalizeStage(c.pipeline_stage);
+      if (counts[stage] !== undefined) counts[stage]++;
+    });
+    return counts;
+  }, [clients]);
 
-  const isWon = (c: Client) => {
-    const stage = normalizeStage(c.pipeline_stage, c.lead_status, c);
-    return stage === "won" || stage === "policy_issued";
+  const totalLeads = clients.length;
+  const wonCount = stageCounts["won"] || 0;
+  const policyCount = stageCounts["policy_issued"] || 0;
+  const lostCount = stageCounts["lost"] || 0;
+  const convRate = totalLeads > 0 ? (((wonCount + policyCount) / totalLeads) * 100).toFixed(1) : "0";
+
+  const insNotifications = useMemo(() => buildInsuranceNotifications(clients), [clients]);
+
+  // Policy Book — from insurance_policies (actual booked policies only)
+  const pbPartners = useMemo(() => {
+    const set = new Set(policies.map(p => p.insurer).filter(Boolean));
+    return Array.from(set).sort() as string[];
+  }, [policies]);
+
+  const filteredPolicyBook = useMemo(() => {
+    let result = policies;
+    if (pbPartnerFilter !== "all") result = result.filter(p => p.insurer === pbPartnerFilter);
+    if (pbSearch.trim()) {
+      const s = pbSearch.toLowerCase();
+      result = result.filter(p =>
+        p.insurance_clients?.customer_name?.toLowerCase().includes(s) ||
+        p.insurance_clients?.phone?.includes(s) ||
+        p.insurance_clients?.vehicle_number?.toLowerCase().includes(s) ||
+        p.policy_number?.toLowerCase().includes(s) ||
+        p.insurer?.toLowerCase().includes(s)
+      );
+    }
+    return result;
+  }, [policies, pbPartnerFilter, pbSearch]);
+
+  // Renewal — only upcoming renewals (expiry within 90 days from today) from insurance_policies
+  const renewalPolicies = useMemo(() => {
+    const now = new Date();
+    const all = policies.filter(p => {
+      if (!p.expiry_date || p.status === "renewed") return false;
+      const days = differenceInDays(new Date(p.expiry_date), now);
+      return days >= 0 && days <= 90;
+    });
+
+    let result = all;
+    if (renewalWindow === "7") result = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 7; });
+    else if (renewalWindow === "15") result = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 15; });
+    else if (renewalWindow === "30") result = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 30; });
+    else if (renewalWindow === "60") result = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 60; });
+
+    if (renewalSearch.trim()) {
+      const s = renewalSearch.toLowerCase();
+      result = result.filter(p =>
+        p.insurance_clients?.customer_name?.toLowerCase().includes(s) ||
+        p.insurance_clients?.phone?.includes(s) ||
+        p.insurance_clients?.vehicle_number?.toLowerCase().includes(s)
+      );
+    }
+
+    return result.sort((a, b) => {
+      if (renewalSort === "name") return (a.insurance_clients?.customer_name || "").localeCompare(b.insurance_clients?.customer_name || "");
+      if (renewalSort === "days_desc") return new Date(b.expiry_date!).getTime() - new Date(a.expiry_date!).getTime();
+      return new Date(a.expiry_date!).getTime() - new Date(b.expiry_date!).getTime();
+    });
+  }, [policies, renewalWindow, renewalSearch, renewalSort]);
+
+  // Renewal summary counts — from insurance_policies only
+  const renewalSummary = useMemo(() => {
+    const now = new Date();
+    const all = policies.filter(p => p.expiry_date && p.status !== "renewed");
+    const upcoming = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 90; });
+    return {
+      within7: upcoming.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 7; }).length,
+      within15: upcoming.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 15; }).length,
+      within30: upcoming.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 30; }).length,
+      within60: upcoming.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 60; }).length,
+      total: upcoming.length,
+    };
+  }, [policies]);
+
+  // CRM filter
+  const filtered = useMemo(() => {
+    let result = selectedStage === "all" ? clients : clients.filter(c => normalizeStage(c.pipeline_stage) === selectedStage);
+    if (search.trim()) {
+      const s = search.toLowerCase();
+      result = result.filter(c =>
+        c.customer_name?.toLowerCase().includes(s) ||
+        c.phone?.includes(s) ||
+        c.vehicle_number?.toLowerCase().includes(s) ||
+        c.city?.toLowerCase().includes(s)
+      );
+    }
+    return result;
+  }, [clients, selectedStage, search]);
+
+  const displayPhone = (phone: string | null) => (!phone || phone.startsWith("IB_")) ? null : phone;
+  const getWhatsAppLink = (phone: string | null) => {
+    if (!phone || phone.startsWith("IB_")) return null;
+    const clean = phone.replace(/\D/g, "");
+    return `https://wa.me/${clean.startsWith("91") ? clean : `91${clean}`}`;
   };
-  const isLost = (c: Client) => normalizeStage(c.pipeline_stage, c.lead_status, c) === "lost";
 
-  const policyBookPolicies = useMemo(() => {
-    const existingClientIds = new Set(
-      allPolicies
-        .map((policy) => policy.client_id)
-        .filter(Boolean) as string[]
-    );
-
-    const fallbackPolicies: PolicyRecord[] = dedupedClients
-      .filter((client) => isWon(client) && !existingClientIds.has(client.id) && Boolean(client.current_policy_number?.trim()))
-      .map((client) => ({
-        id: `fallback-${client.id}`,
-        client_id: client.id,
-        policy_number: client.current_policy_number || null,
-        policy_type: client.current_policy_type || null,
-        insurer: client.current_insurer || client.quote_insurer || null,
-        premium_amount: client.current_premium || client.quote_amount || null,
-        start_date: client.policy_start_date || client.booking_date || null,
-        expiry_date: client.policy_expiry_date || null,
-        status: "active",
-        is_renewal: false,
-        issued_date: client.booking_date || null,
-        plan_name: null,
-        idv: null,
-        policy_document_url: null,
-        source_label: "Recovered Won Client",
-        renewal_count: 0,
-        previous_policy_id: null,
-        booking_date: client.booking_date || client.policy_start_date || null,
-        created_at: client.created_at,
-        updated_at: client.updated_at,
-        insurance_clients: {
-          customer_name: client.customer_name || "—",
-          phone: client.phone || "",
-          city: client.city || null,
-          vehicle_number: client.vehicle_number || null,
-          vehicle_make: client.vehicle_make || null,
-          vehicle_model: client.vehicle_model || null,
-          lead_source: client.lead_source || null,
-          booking_date: client.booking_date || null,
-          updated_at: client.updated_at,
-          created_at: client.created_at,
-        },
-      }));
-
-    return dedupeInsurancePolicies([...fallbackPolicies, ...allPolicies]);
-  }, [allPolicies, dedupedClients]);
-
-  const performancePolicies = useMemo(() => {
-    const all: PolicyRecord[] = [
-      ...allPolicies,
-      ...policyBookPolicies.filter((p) => String(p.id).startsWith("fallback-")),
-    ];
-
-    // Deduplicate by client_id — keep best policy per client to prevent double-counting
-    const bestByClient = new Map<string, PolicyRecord>();
-    const noClient: PolicyRecord[] = [];
-
-    all.forEach((policy) => {
-      if (!policy.client_id) { noClient.push(policy); return; }
-      const existing = bestByClient.get(policy.client_id);
-      if (!existing
-        || (policy.policy_number && !existing.policy_number)
-        || ((policy.updated_at || '') > (existing.updated_at || ''))
-      ) {
-        bestByClient.set(policy.client_id, policy);
+  // Move mutation
+  const moveStage = useMutation({
+    mutationFn: async ({ clientId, newStage, extras }: { clientId: string; newStage: string; extras?: Record<string, any> }) => {
+      const update: any = { pipeline_stage: newStage, ...extras };
+      if (newStage === "smart_calling") {
+        const client = clients.find(c => c.id === clientId);
+        update.contact_attempts = (client?.contact_attempts || 0) + 1;
+        update.last_contacted_at = new Date().toISOString();
       }
-    });
+      const { error } = await supabase.from("insurance_clients").update(update).eq("id", clientId);
+      if (error) throw error;
 
-    return [...bestByClient.values(), ...noClient];
-  }, [allPolicies, policyBookPolicies]);
-
-  const monthOptions = useMemo(() => {
-    // Find earliest date from data
-    let earliest = new Date();
-    dedupedClients.forEach((client) => {
-      const d = getClientEffectiveDate(client);
-      if (d) { const dt = new Date(d); if (dt < earliest) earliest = dt; }
-    });
-    policyBookPolicies.forEach((policy) => {
-      const d = getPolicyEffectiveDate(policy);
-      if (d) { const dt = new Date(d); if (dt < earliest) earliest = dt; }
-    });
-
-    // Generate continuous range from earliest month to current month
-    const now = new Date();
-    const startMonth = startOfMonth(earliest);
-    const endMonth = startOfMonth(now);
-    const months: { value: string; label: string }[] = [];
-    let cursor = endMonth;
-    while (cursor >= startMonth && months.length < 24) {
-      const value = format(cursor, "yyyy-MM");
-      months.push({ value, label: format(cursor, "MMM yyyy") });
-      cursor = new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1);
-    }
-    return months;
-  }, [dedupedClients, policyBookPolicies]);
-
-  const monthStart = useMemo(() => startOfMonth(parse(`${selectedMonth}-01`, "yyyy-MM-dd", new Date())), [selectedMonth]);
-  const monthEnd = useMemo(() => endOfMonth(monthStart), [monthStart]);
-
-  const monthFilteredClients = useMemo(() =>
-    dedupedClients.filter((client) => {
-      const rawDate = getClientEffectiveDate(client);
-      if (!rawDate) return false;
-      const date = new Date(rawDate);
-      return date >= monthStart && date <= monthEnd;
-    }),
-  [dedupedClients, monthEnd, monthStart]);
-
-  const monthFilteredPolicies = useMemo(() =>
-    policyBookPolicies.filter((policy) => {
-      const rawDate = getPolicyEffectiveDate(policy);
-      if (!rawDate) return false;
-      const date = new Date(rawDate);
-      return date >= monthStart && date <= monthEnd;
-    }),
-  [monthEnd, monthStart, policyBookPolicies]);
-
-  // Split policies into running (Policy Book) vs overdue (expired)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const runningPolicies = useMemo(() =>
-    policyBookPolicies.filter(p => {
-      const status = (p.status || "").toLowerCase();
-      if (!p.policy_number?.trim()) return false;
-      if (["renewed", "lapsed", "cancelled", "lost"].includes(status)) return false;
-      if (!p.expiry_date || !p.start_date) return true;
-      const expiry = new Date(p.expiry_date);
-      const start = new Date(p.start_date);
-      if (expiry < start) return true;
-      return expiry >= today;
-    }), [policyBookPolicies, today.toDateString()]
-  );
-  const RESOLVED_STATUSES = ["renewed", "cancelled", "lost", "lapsed"];
-  const overduePolicies = useMemo(() => {
-    const persistedOverduePolicies = dedupeInsurancePolicies(
-      allPolicies.filter((p) => {
-        if (!p.expiry_date) return false;
-        if (RESOLVED_STATUSES.includes((p.status || "").toLowerCase())) return false;
-        const client = dedupedClients.find((c) => c.id === p.client_id);
-        if (client?.retarget_status === "scheduled") return false;
-        if (["removed", "moved_to_pipeline"].includes(client?.overdue_reason || "")) return false;
-        return new Date(p.expiry_date) < today;
-      })
-    );
-
-    const existingKeys = new Set(
-      persistedOverduePolicies.map((policy) =>
-        normalizeVehicleRegistration(policy.insurance_clients?.vehicle_number) ||
-        normalizePolicyNumber(policy.policy_number) ||
-        `client:${policy.client_id}`
-      )
-    );
-
-    const fallbackOverduePolicies: PolicyRecord[] = dedupedClients
-      .filter((client) => {
-        if (!client.policy_expiry_date) return false;
-        if (client.retarget_status === "scheduled") return false;
-        if (["removed", "moved_to_pipeline"].includes(client.overdue_reason || "")) return false;
-        // Don't exclude active pipeline stages — overdue stays visible until explicitly resolved
-        if (new Date(client.policy_expiry_date) >= today) return false;
-
-        const key =
-          normalizeVehicleRegistration(client.vehicle_number) ||
-          normalizePolicyNumber(client.current_policy_number) ||
-          `client:${client.id}`;
-
-        return !existingKeys.has(key);
-      })
-      .map((client) => ({
-        id: `overdue-fallback-${client.id}`,
-        client_id: client.id,
-        policy_number: client.current_policy_number || null,
-        policy_type: client.current_policy_type || null,
-        insurer: client.current_insurer || client.quote_insurer || null,
-        premium_amount: client.current_premium || client.quote_amount || null,
-        start_date: client.policy_start_date || client.booking_date || null,
-        expiry_date: client.policy_expiry_date || null,
-        status: "overdue_fallback",
-        is_renewal: false,
-        issued_date: client.booking_date || null,
-        plan_name: null,
-        idv: null,
-        policy_document_url: null,
-        source_label: "Recovered Overdue Client",
-        renewal_count: 0,
-        previous_policy_id: null,
-        booking_date: client.booking_date || client.policy_start_date || null,
-        created_at: client.created_at,
-        updated_at: client.updated_at,
-        insurance_clients: {
-          customer_name: client.customer_name || "—",
-          phone: client.phone || "",
-          city: client.city || null,
-          vehicle_number: client.vehicle_number || null,
-          vehicle_make: client.vehicle_make || null,
-          vehicle_model: client.vehicle_model || null,
-          lead_source: client.lead_source || null,
-          booking_date: client.booking_date || null,
-          updated_at: client.updated_at,
-          created_at: client.created_at,
-        },
-      } as PolicyRecord));
-
-    return [...persistedOverduePolicies, ...fallbackOverduePolicies];
-  }, [allPolicies, dedupedClients, today]);
-
-  const totalLeads = monthFilteredClients.length;
-  const wonCountMonth = monthFilteredPolicies.filter((policy) => (policy.status || "").toLowerCase() === "active").length;
-  const lostCount = monthFilteredClients.filter(isLost).length;
-  const inPipeline = totalLeads - wonCountMonth - lostCount;
-
-  // Total counts (not month-filtered) for tab badges
-  const totalRunningPolicies = runningPolicies.length;
-  const totalWonPolicies = policyBookPolicies.filter(p => (p.status || "").toLowerCase() === "active").length;
-
-  // Month-wise conversion calculation based on real booking/policy dates
-  const monthWiseConversion = useMemo(() => {
-    const monthMap: Record<string, { total: number; won: number; renewals: number; rollovers: number; wonClients: Set<string> }> = {};
-
-    dedupedClients.forEach((client) => {
-      const effectiveDate = getClientEffectiveDate(client);
-      if (!effectiveDate) return;
-      const d = new Date(effectiveDate);
-      const key = format(d, "yyyy-MM");
-      if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0, wonClients: new Set() };
-      monthMap[key].total++;
-      const src = (client.lead_source || "").toLowerCase();
-      if (src.includes("renewal") || src.includes("renew")) monthMap[key].renewals++;
-      if (src.includes("rollover") || src.includes("roll")) monthMap[key].rollovers++;
-    });
-
-    policyBookPolicies.forEach((policy) => {
-      const policyDate = getPolicyEffectiveDate(policy);
-      if (!policyDate) return;
-      const d = new Date(policyDate);
-      const key = format(d, "yyyy-MM");
-      if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0, wonClients: new Set() };
-      monthMap[key].won++;
-      if (policy.client_id) monthMap[key].wonClients.add(policy.client_id);
-    });
-
-    return Object.entries(monthMap)
-      .sort((a, b) => b[0].localeCompare(a[0]))
-      .slice(0, 12)
-      .map(([month, d]) => ({
-        month: format(new Date(month + "-01"), "MMM yyyy"),
-        total: d.total,
-        won: d.won,
-        rate: d.total > 0 ? ((d.wonClients.size / d.total) * 100).toFixed(1) : "0",
-        renewals: d.renewals,
-        rollovers: d.rollovers,
-      }));
-  }, [dedupedClients, policyBookPolicies]);
-
-  // Current month conversion rate
-  const selectedMonthLabel = format(parse(`${selectedMonth}-01`, "yyyy-MM-dd", new Date()), "MMM yyyy");
-  const currentMonthData = monthWiseConversion.find(m => m.month === selectedMonthLabel);
-  const convRate = currentMonthData ? currentMonthData.rate : "0";
-
-  const activePolicies = monthFilteredPolicies.filter(p => (p.status || "").toLowerCase() === "active").length;
-  const renewalsDue = useMemo(() => {
-    const now = new Date();
-    return runningPolicies.filter(p => p.expiry_date && p.status !== "renewed" && differenceInDays(new Date(p.expiry_date), now) >= 0 && differenceInDays(new Date(p.expiry_date), now) <= 60).length;
-  }, [runningPolicies]);
-  const urgentRenewals = useMemo(() => {
-    const now = new Date();
-    return runningPolicies.filter(p => p.expiry_date && p.status !== "renewed" && differenceInDays(new Date(p.expiry_date), now) >= 0 && differenceInDays(new Date(p.expiry_date), now) <= 7).length;
-  }, [runningPolicies]);
-  const overdueCount = overduePolicies.length;
-
-  const insNotifications = useMemo(() => buildInsuranceNotifications(dedupedClients), [dedupedClients]);
-
-  const addLead = async () => {
-    if (!newLead.phone.trim()) { toast.error("Phone is required"); return; }
-    if (!newLead.customer_name.trim()) { toast.error("Name is required"); return; }
-
-    const cleanPhone = normalizePhoneNumber(newLead.phone);
-    const cleanVehicle = normalizeVehicleRegistration(newLead.vehicle_number) || null;
-
-    // Duplicate detection must be strict: only same vehicle registration counts as duplicate
-    let existing: Array<{ id: string; customer_name: string | null; vehicle_number: string | null; duplicate_count: number | null }> | null = null;
-
-    if (cleanVehicle) {
-      const { data } = await supabase
-        .from("insurance_clients")
-        .select("id, customer_name, vehicle_number, duplicate_count")
-        .limit(200);
-
-      existing = (data || []).filter((client) => normalizeVehicleRegistration(client.vehicle_number) === cleanVehicle).slice(0, 1);
-    }
-
-    if (existing && existing.length > 0) {
-      const dup = existing[0];
-      const newDupCount = (dup.duplicate_count || 0) + 1;
-      await supabase.from("insurance_clients").update({
-        duplicate_count: newDupCount,
-        is_duplicate: true,
-        customer_name: newLead.customer_name.trim() || dup.customer_name,
-        email: newLead.email.trim() || undefined,
-        city: newLead.city.trim() || undefined,
-        vehicle_number: cleanVehicle || dup.vehicle_number,
-        vehicle_make: newLead.vehicle_make.trim() || undefined,
-        vehicle_model: newLead.vehicle_model.trim() || undefined,
-        notes: newLead.notes.trim() || undefined,
-        updated_at: new Date().toISOString(),
-      }).eq("id", dup.id);
-      toast.info(`⚠️ Duplicate lead detected (Entry #${newDupCount + 1}) — existing record updated`, {
-        description: `${dup.customer_name} • ${dup.vehicle_number || cleanVehicle}`,
+      const stage = PIPELINE_STAGES.find(s => s.value === newStage);
+      await supabase.from("insurance_activity_log").insert({
+        client_id: clientId,
+        activity_type: "stage_change",
+        title: `Pipeline → ${stage?.label}`,
+        description: extras?.lost_reason ? `Lost: ${extras.lost_reason}` : `Moved to ${stage?.label}`,
+        metadata: { new_stage: newStage, ...extras } as any,
       });
+
+      if (newStage === "won") {
+        await supabase.from("insurance_clients").update({ is_active: true, lead_status: "won" }).eq("id", clientId);
+      }
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+      const stage = PIPELINE_STAGES.find(s => s.value === vars.newStage);
+      if (vars.newStage === "won") {
+        toast.success("🎉 Won! Policy created in Policy Book", { duration: 4000 });
+      } else {
+        toast.success(`Moved to ${stage?.label}`);
+      }
+
+      // Auto-prompt next logical action after stage move
+      const movedClient = clients.find(c => c.id === vars.clientId);
+      if (movedClient) {
+        const nextClient = { ...movedClient, pipeline_stage: vars.newStage };
+        setTimeout(() => {
+          if (vars.newStage === "new_lead") {
+            // Prompt to call
+            setPendingMoveClient(nextClient); setCallStatus(""); setCallRemarks(""); setShowCallingDialog(true);
+            toast.info("📞 Next: Make the first call", { duration: 3000 });
+          } else if (vars.newStage === "smart_calling") {
+            // After calling, prompt for quote or follow-up
+            setSelectedClient(nextClient);
+            toast.info("📋 Next: Share a quote or schedule follow-up", { duration: 3000 });
+          } else if (vars.newStage === "quote_shared") {
+            // Prompt for follow-up scheduling
+            setPendingMoveClient(nextClient); setFollowUpDate(undefined); setFollowUpTime("10:00"); setFollowUpRemarks(""); setShowFollowUpDialog(true);
+            toast.info("📅 Next: Schedule a follow-up", { duration: 3000 });
+          } else if (vars.newStage === "won") {
+            // Prompt renewal reminder
+            setSelectedClient(nextClient); setRenewalDate(undefined); setShowRenewalDialog(true);
+            toast.info("🔔 Next: Set renewal reminder for incentive eligibility", { duration: 4000 });
+          } else if (vars.newStage === "policy_issued") {
+            setSelectedClient(null);
+            toast.success("✅ Policy issued! Lead workflow complete.", { duration: 4000 });
+          } else {
+            setSelectedClient(null);
+          }
+        }, 400);
+      } else {
+        setSelectedClient(null);
+      }
+      setShowLostDialog(false);
+      setShowCallingDialog(false);
+      setShowFollowUpDialog(false);
+    },
+    onError: (err: any) => toast.error(err?.message || "Failed to update"),
+  });
+
+  // Add Lead mutation
+  const addLeadMutation = useMutation({
+    mutationFn: async () => {
+      if (!newLead.phone.trim()) throw new Error("Phone is required");
+      if (!newLead.customer_name.trim()) throw new Error("Name is required");
+      const { error } = await supabase.from("insurance_clients").insert({
+        customer_name: newLead.customer_name.trim(),
+        phone: newLead.phone.trim(),
+        email: newLead.email.trim() || null,
+        city: newLead.city.trim() || null,
+        vehicle_number: newLead.vehicle_number.trim() || null,
+        vehicle_make: newLead.vehicle_make.trim() || null,
+        vehicle_model: newLead.vehicle_model.trim() || null,
+        lead_source: newLead.lead_source || "Manual",
+        notes: newLead.notes.trim() || null,
+        pipeline_stage: "new_lead",
+        lead_status: "new",
+        priority: "medium",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("✅ New lead added!");
       queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
       setShowAddLead(false);
       setNewLead({ customer_name: "", phone: "", email: "", city: "", vehicle_number: "", vehicle_make: "", vehicle_model: "", lead_source: "Manual", notes: "" });
+    },
+    onError: (err: any) => toast.error(err?.message || "Failed to add lead"),
+  });
+
+  const handleMove = useCallback((client: Client, targetStage: string) => {
+    const currentStage = normalizeStage(client.pipeline_stage);
+    if (currentStage === targetStage) return;
+    if (targetStage === "policy_issued" && !client.renewal_reminder_set) {
+      toast.error("⚠️ Set renewal reminder first!", { duration: 5000 });
       return;
     }
+    if (targetStage === "lost") {
+      setPendingMoveClient(client); setLostReason(""); setLostRemarks(""); setShowLostDialog(true);
+    } else if (targetStage === "smart_calling") {
+      setPendingMoveClient(client); setCallStatus(""); setCallRemarks(""); setShowCallingDialog(true);
+    } else if (targetStage === "follow_up") {
+      setPendingMoveClient(client); setFollowUpDate(undefined); setFollowUpTime("10:00"); setFollowUpRemarks(""); setShowFollowUpDialog(true);
+    } else {
+      moveStage.mutate({ clientId: client.id, newStage: targetStage });
+    }
+  }, [moveStage, clients]);
 
-    const { error } = await supabase.from("insurance_clients").insert({
-      customer_name: newLead.customer_name.trim(),
-      phone: cleanPhone,
-      email: newLead.email.trim() || null,
-      city: newLead.city.trim() || null,
-      vehicle_number: cleanVehicle,
-      vehicle_make: newLead.vehicle_make.trim() || null,
-      vehicle_model: newLead.vehicle_model.trim() || null,
-      lead_source: newLead.lead_source || "Manual",
-      notes: newLead.notes.trim() || null,
-      pipeline_stage: "new_lead",
-      lead_status: "new",
-      priority: "medium",
-      duplicate_count: 0,
-      is_duplicate: false,
-    });
-    if (error) { toast.error(error.message); return; }
-    toast.success("✅ New lead added!");
+  const confirmLost = () => {
+    if (!pendingMoveClient || !lostReason) { toast.error("Select a reason"); return; }
+    moveStage.mutate({ clientId: pendingMoveClient.id, newStage: "lost", extras: { lost_reason: lostReason, notes: lostRemarks || undefined } });
+  };
+  const confirmCalling = () => {
+    if (!pendingMoveClient || !callStatus) { toast.error("Select call status"); return; }
+    if (!callRemarks.trim()) { toast.error("Add remarks"); return; }
+    moveStage.mutate({ clientId: pendingMoveClient.id, newStage: "smart_calling", extras: { call_status: callStatus, call_remarks: callRemarks } });
+  };
+  const confirmFollowUp = () => {
+    if (!pendingMoveClient || !followUpDate) { toast.error("Pick a date"); return; }
+    moveStage.mutate({ clientId: pendingMoveClient.id, newStage: "follow_up", extras: { follow_up_date: format(followUpDate, "yyyy-MM-dd"), follow_up_time: followUpTime, notes: followUpRemarks || undefined } });
+  };
+  const setRenewalReminder = async () => {
+    if (!selectedClient || !renewalDate) { toast.error("Pick a date"); return; }
+    const { error } = await supabase.from("insurance_clients").update({
+      renewal_reminder_set: true,
+      renewal_reminder_date: format(renewalDate, "yyyy-MM-dd"),
+      incentive_eligible: true,
+      pipeline_stage: "policy_issued",
+    }).eq("id", selectedClient.id);
+    if (error) { toast.error("Failed"); return; }
+    toast.success("✅ Renewal reminder set — incentive eligible!");
     queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
-    setShowAddLead(false);
-    setNewLead({ customer_name: "", phone: "", email: "", city: "", vehicle_number: "", vehicle_make: "", vehicle_model: "", lead_source: "Manual", notes: "" });
+    setShowRenewalDialog(false);
+    setSelectedClient(null);
   };
 
-  const TABS = [
-    { key: "pipeline" as const, label: "Lead Pipeline", icon: Shield, count: totalLeads, urgent: false },
-    { key: "policy_book" as const, label: "Policy Book", icon: BookOpen, count: totalRunningPolicies, urgent: false },
-    { key: "renewals" as const, label: "Coming Renewals", icon: CalendarClock, count: renewalsDue, urgent: urgentRenewals > 0 },
-    { key: "overdue" as const, label: "Overdue", icon: AlertTriangle, count: overdueCount, urgent: overdueCount > 0 },
-    { key: "bulk_tools" as const, label: "Bulk Tools", icon: Wrench, count: 0, urgent: false },
-    { key: "renewal_campaign" as const, label: "Renewal Campaign", icon: Rocket, count: 0, urgent: false },
-    { key: "performance" as const, label: "Performance", icon: TrendingUp, count: wonCountMonth, urgent: false },
-  ];
+  // Drag handlers
+  const handleDragStart = (client: Client) => setDraggingClient(client);
+  const handleDragEnd = () => { setDraggingClient(null); setDragOverStage(null); };
+  const handleDragOver = (e: React.DragEvent, stage: string) => { e.preventDefault(); setDragOverStage(stage); };
+  const handleDrop = (e: React.DragEvent, stage: string) => {
+    e.preventDefault();
+    if (draggingClient && normalizeStage(draggingClient.pipeline_stage) !== stage) {
+      handleMove(draggingClient, stage);
+    }
+    setDragOverStage(null);
+    setDraggingClient(null);
+  };
+
+  const getSourceColor = (src: string | null) => SOURCE_COLORS[src || ""] || "bg-muted text-muted-foreground border-border";
 
   return (
     <div className="space-y-5">
+      {/* KPI Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-900 p-5 sm:p-6 text-white">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-60" />
         <div className="relative">
@@ -507,68 +521,24 @@ export function InsuranceWorkspace() {
               </div>
               Insurance Workspace
             </h2>
-            <div className="flex gap-2 flex-wrap">
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="h-9 w-[140px] bg-white/15 text-white border-white/20 backdrop-blur-sm [&>svg]:text-white/80">
-                  <SelectValue placeholder="Month" />
-                </SelectTrigger>
-                <SelectContent>
-                  {monthOptions.map((month) => (
-                    <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex gap-2">
               <Button size="sm" onClick={() => setShowImport(true)} className="gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white border border-white/20">
-                <FileSpreadsheet className="h-4 w-4" /> Rollover
+                <FileSpreadsheet className="h-4 w-4" /> Import
               </Button>
               <Button size="sm" onClick={() => setShowAddLead(true)} className="gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/20">
                 <Plus className="h-4 w-4" /> Add Lead
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  if (partnerLink?.partner_url) {
-                    window.open(partnerLink.partner_url, "_blank");
-                  } else {
-                    toast.error("Partner link not found. Add it in settings.");
-                    setShowPartnerLink(true);
-                  }
-                }}
-                className={cn(
-                  "gap-1.5 text-white border",
-                  partnerLinkError ? "bg-red-500/80 hover:bg-red-500 border-red-400/30" : "bg-emerald-500/80 hover:bg-emerald-500 border-emerald-400/30"
-                )}
-              >
-                {partnerLinkError ? <AlertCircle className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
-                Get Quote
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setEditPartnerUrl(partnerLink?.partner_url || "");
-                  setShowPartnerLink(true);
-                }}
-                className="gap-1 text-white/70 hover:text-white hover:bg-white/10 px-2"
-                title="Update Partner Quote Link"
-              >
-                <Settings2 className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
-              { label: "Total Leads", value: totalLeads, icon: UserPlus, bgc: "bg-blue-500/20", kpi: "total_leads" as KpiType },
-              { label: "In Pipeline", value: inPipeline, icon: Clock, bgc: "bg-orange-400/20", kpi: "in_pipeline" as KpiType },
-              { label: "Won / Issued", value: wonCountMonth, icon: CheckCircle2, bgc: "bg-emerald-400/20", kpi: "won" as KpiType },
-              { label: "Active Policies", value: totalRunningPolicies, icon: BookOpen, bgc: "bg-cyan-400/20", kpi: "active_policies" as KpiType },
-              { label: `Conv (${selectedMonthLabel})`, value: `${convRate}%`, icon: TrendingUp, bgc: "bg-violet-400/20", kpi: "conversion" as KpiType },
+              { label: "Total Leads", value: totalLeads, icon: UserPlus, bgc: "bg-blue-500/20" },
+              { label: "In Pipeline", value: totalLeads - wonCount - policyCount - lostCount, icon: Clock, bgc: "bg-orange-400/20" },
+              { label: "Won", value: wonCount + policyCount, icon: CheckCircle2, bgc: "bg-emerald-400/20" },
+              { label: "Lost", value: lostCount, icon: XCircle, bgc: "bg-slate-400/20" },
+              { label: "Conversion", value: `${convRate}%`, icon: TrendingUp, bgc: "bg-violet-400/20" },
             ].map(kpi => (
-              <div
-                key={kpi.label}
-                className={`${kpi.bgc} backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10 cursor-pointer hover:border-white/30 hover:scale-[1.02] transition-all`}
-                onClick={() => setKpiDetail(kpi.kpi)}
-              >
+              <div key={kpi.label} className={`${kpi.bgc} backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10`}>
                 <div className="flex items-center gap-2 mb-1">
                   <kpi.icon className="h-4 w-4 text-white/70" />
                   <span className="text-[10px] uppercase tracking-wider text-white/70">{kpi.label}</span>
@@ -580,479 +550,495 @@ export function InsuranceWorkspace() {
         </div>
       </div>
 
+      {/* 3 View Tabs */}
       <div className="flex gap-2 bg-muted/50 p-1 rounded-xl border">
-        {TABS.map(tab => (
-          <Button key={tab.key} variant={activeView === tab.key ? "default" : "ghost"} size="sm"
-            className={cn("flex-1 gap-1.5 text-xs", activeView === tab.key && "shadow-sm")}
-            onClick={() => setActiveView(tab.key)}>
+        {[
+          { key: "crm" as const, label: "Insurance CRM", icon: Shield, count: totalLeads },
+          { key: "policy_book" as const, label: "Policy Book", icon: BookOpen, count: policies.length },
+          { key: "renewals" as const, label: "Renewal Data", icon: CalendarClock, count: renewalSummary.total },
+        ].map(tab => (
+          <Button key={tab.key} variant={activeView === tab.key ? "default" : "ghost"} size="sm" className={cn("flex-1 gap-1.5 text-xs", activeView === tab.key && "shadow-sm")} onClick={() => { setActiveView(tab.key); setSelectedIds(new Set()); }}>
             <tab.icon className="h-3.5 w-3.5" />
             {tab.label}
             {tab.count > 0 && <Badge variant={activeView === tab.key ? "secondary" : "outline"} className="text-[9px] h-4 px-1">{tab.count}</Badge>}
-            {tab.urgent && (
-              <span className="relative flex h-2 w-2 ml-1">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-              </span>
+            {tab.key === "renewals" && renewalSummary.within7 > 0 && (
+              <span className="relative flex h-2 w-2 ml-1"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" /></span>
             )}
           </Button>
         ))}
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-              <Calculator className="h-3.5 w-3.5" />
-              Premium Calculator
-            </div>
-            <h3 className="text-lg font-bold text-foreground">Generate quotes with OD, TP, NCB and add-on pricing</h3>
-            <p className="text-sm text-muted-foreground">Create quotes, generate PDF, share via WhatsApp — all quotes auto-saved.</p>
-          </div>
-          <Button onClick={() => setShowCalcDialog(true)} className="gap-2 self-start sm:self-auto">
-            Open Calculator
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
       {insNotifications.length > 0 && <StageNotificationBanner items={insNotifications} />}
 
-      <LeadImportDialog
-        open={showImport}
-        onOpenChange={setShowImport}
-        title="Rollover Insurance Data"
-        requirePhone={false}
-        templateColumns={["booking_date", "insured_name", "registration_number", "insurer", "policy_no", "premium", "status"]}
-        onImport={async (rows) => {
-          const normalizeImportKey = (value: string) =>
-            value
-              .trim()
-              .toLowerCase()
-              .replace(/^\ufeff/, "")
-              .replace(/[^a-z0-9]+/g, "_")
-              .replace(/^_+|_+$/g, "");
-
-          const normalizeImportPolicyNumber = (value: string | null | undefined) =>
-            (value || "")
-              .replace(/^#+/, "")
-              .replace(/\s+/g, "")
-              .toUpperCase()
-              .trim();
-
-          const getRowValue = (row: Record<string, string>, keys: string[]) => {
-            const entries = new Map(
-              Object.entries(row).map(([key, value]) => [normalizeImportKey(key), String(value || "").trim()])
-            );
-
-            for (const key of keys) {
-              const match = entries.get(normalizeImportKey(key));
-              if (match) return match;
-            }
-
-            return "";
-          };
-
-          const parseImportDate = (value: string) => value.match(/\d{4}-\d{2}-\d{2}/)?.[0] || null;
-
-          const parseImportNumber = (value: string) => {
-            const cleaned = value.replace(/[^0-9.]/g, "");
-            if (!cleaned) return null;
-            const parsed = Number(cleaned);
-            return Number.isFinite(parsed) ? parsed : null;
-          };
-
-          const deriveExpiryDate = (startDate: string | null) => {
-            if (!startDate) return null;
-            const next = new Date(`${startDate}T00:00:00`);
-            if (Number.isNaN(next.getTime())) return null;
-            next.setFullYear(next.getFullYear() + 1);
-            next.setDate(next.getDate() - 1);
-            return format(next, "yyyy-MM-dd");
-          };
-
-          const clientByPolicy = new Map<string, string>();
-          const clientByVehicle = new Map<string, string>();
-          const clientByPhone = new Map<string, string>();
-          const policyByNumber = new Map<string, Pick<PolicyRecord, "id" | "client_id" | "policy_number">>();
-
-          const rememberClient = (clientId: string, policyNumber?: string | null, vehicleNumber?: string | null, phone?: string | null) => {
-            if (policyNumber) clientByPolicy.set(policyNumber, clientId);
-            if (vehicleNumber) clientByVehicle.set(vehicleNumber, clientId);
-            if (phone) clientByPhone.set(phone, clientId);
-          };
-
-          clients.forEach((client) => {
-            rememberClient(
-              client.id,
-              normalizeImportPolicyNumber(client.current_policy_number || ""),
-              normalizeVehicleRegistration(client.vehicle_number || "") || null,
-              normalizePhoneNumber(client.phone || "") || null
-            );
-          });
-
-          allPolicies.forEach((policy) => {
-            const key = normalizeImportPolicyNumber(policy.policy_number || "");
-            if (!key) return;
-            policyByNumber.set(key, { id: policy.id, client_id: policy.client_id, policy_number: policy.policy_number });
-            if (policy.client_id) clientByPolicy.set(key, policy.client_id);
-          });
-
-          const latestPolicyStartByVehicle = new Map<string, string>();
-
-          rows.forEach((row) => {
-            const statusText = getRowValue(row, ["status"]);
-            if (statusText.toLowerCase() !== "sale complete") return;
-
-            const vehicleNumber = normalizeVehicleRegistration(getRowValue(row, ["registration_number", "vehicle_number"])) || null;
-            const bookingDate = parseImportDate(getRowValue(row, ["booking_date", "ticket_raised_on"])) || parseImportDate(getRowValue(row, ["issuance_rej_date"]));
-            const issuedDate = parseImportDate(getRowValue(row, ["issuance_rej_date"])) || bookingDate;
-            const policyStartDate = issuedDate || bookingDate;
-
-            if (!vehicleNumber || !policyStartDate) return;
-
-            const existing = latestPolicyStartByVehicle.get(vehicleNumber);
-            if (!existing || policyStartDate > existing) {
-              latestPolicyStartByVehicle.set(vehicleNumber, policyStartDate);
-            }
-          });
-
-          let inserted = 0;
-          let updated = 0;
-          let skipped = 0;
-          let duplicatesInFile = 0;
-          let failed = 0;
-          const seenUploadKeys = new Set<string>();
-
-          for (const row of rows) {
-            const policyNumber = normalizeImportPolicyNumber(getRowValue(row, ["policy_no", "policy_number"]));
-            const vehicleNumber = normalizeVehicleRegistration(getRowValue(row, ["registration_number", "vehicle_number"])) || null;
-            const cleanPhone = normalizePhoneNumber(getRowValue(row, ["phone", "mobile"])) || null;
-            const leadId = getRowValue(row, ["lead_id"]);
-            const rowKey = vehicleNumber
-              ? `vehicle:${vehicleNumber}|policy:${policyNumber || "no-policy"}`
-              : policyNumber
-                ? `policy:${policyNumber}`
-                : leadId
-                  ? `lead:${leadId}`
-                  : "";
-
-            if (!rowKey) {
-              skipped++;
-              continue;
-            }
-
-            if (seenUploadKeys.has(rowKey)) {
-              duplicatesInFile++;
-              continue;
-            }
-            seenUploadKeys.add(rowKey);
-
-            const statusText = getRowValue(row, ["status"]);
-            const statusLower = statusText.toLowerCase();
-            const isSaleComplete = statusLower === "sale complete";
-            const isRejected = statusLower.includes("reject");
-            const customerName = getRowValue(row, ["insured_name", "customer_name", "name"]) || "Insurance Client";
-            const bookingDate = parseImportDate(getRowValue(row, ["booking_date", "ticket_raised_on"])) || parseImportDate(getRowValue(row, ["issuance_rej_date"]));
-            const issuedDate = parseImportDate(getRowValue(row, ["issuance_rej_date"])) || bookingDate;
-            const policyStartDate = issuedDate || bookingDate;
-            const policyExpiryDate = deriveExpiryDate(policyStartDate);
-            const latestVehiclePolicyStart = vehicleNumber ? latestPolicyStartByVehicle.get(vehicleNumber) : null;
-            const premium = parseImportNumber(getRowValue(row, ["premium"]));
-            const netPremium = parseImportNumber(getRowValue(row, ["net_premium"]));
-            const idv = parseImportNumber(getRowValue(row, ["sum_insured"]));
-            const tpPremium = parseImportNumber(getRowValue(row, ["tp_premium"]));
-            const discount = parseImportNumber(getRowValue(row, ["discount"]));
-            const insurer = getRowValue(row, ["insurer"]);
-            const policyType = getRowValue(row, ["policy_type"]);
-            const planName = getRowValue(row, ["plan_name"]);
-            const vehicleModel = getRowValue(row, ["vehicle_model_name", "vehicle_model"]);
-            const vehicleMake = getRowValue(row, ["make_name", "vehicle_make"]);
-            const city = getRowValue(row, ["city"]);
-            const state = getRowValue(row, ["state"]);
-            const pincode = getRowValue(row, ["pin_code", "pincode"]);
-            const email = getRowValue(row, ["email"]);
-            const dateOfBirth = parseImportDate(getRowValue(row, ["dob"]));
-            const vehicleRegistrationDate = parseImportDate(getRowValue(row, ["registration_date"]));
-            const vehicleFuelType = getRowValue(row, ["fuel_type"]);
-            const bookingMode = getRowValue(row, ["booking_mode"]);
-            const partnerName = getRowValue(row, ["partner_name"]);
-            const businessType = getRowValue(row, ["business_type"]);
-            const applicationNumber = getRowValue(row, ["application_no"]);
-            const fallbackPhone = `MISSING_PHONE_${policyNumber || vehicleNumber || leadId || Date.now()}`;
-            const noteParts = [
-              planName && `Plan: ${planName}`,
-              applicationNumber && `Application: ${applicationNumber}`,
-              businessType && `Business: ${businessType}`,
-              bookingMode && `Mode: ${bookingMode}`,
-              partnerName && `Partner: ${partnerName}`,
-              !cleanPhone && "Phone missing in CSV import",
-            ].filter(Boolean);
-            const notes = noteParts.length ? noteParts.join(" • ").slice(0, 500) : null;
-            const leadStatus = isSaleComplete ? "won" : isRejected ? "lost" : "new";
-            const pipelineStage = isSaleComplete ? "policy_issued" : isRejected ? "lost" : "new_lead";
-            const sourceLabel = businessType.toLowerCase() === "rollover" ? "Won (Renewal)" : "Won (New)";
-            const importedPolicyStatus = isSaleComplete
-              ? latestVehiclePolicyStart && policyStartDate && latestVehiclePolicyStart > policyStartDate
-                ? "renewed"
-                : policyExpiryDate && new Date(policyExpiryDate) < today
-                  ? "lapsed"
-                  : "active"
-              : isRejected
-                ? "cancelled"
-                : "draft";
-
-            let clientId =
-              (policyNumber ? clientByPolicy.get(policyNumber) : undefined) ||
-              (vehicleNumber ? clientByVehicle.get(vehicleNumber) : undefined);
-
-            const existingPolicy = policyNumber ? policyByNumber.get(policyNumber) : undefined;
-            if (!clientId && existingPolicy?.client_id) clientId = existingPolicy.client_id;
-
-            if (!clientId && policyNumber) {
-              const { data } = await supabase
-                .from("insurance_clients")
-                .select("id, phone, vehicle_number, current_policy_number")
-                .eq("current_policy_number", policyNumber)
-                .limit(1)
-                .maybeSingle();
-
-              if (data?.id) {
-                clientId = data.id;
-                rememberClient(data.id, normalizeImportPolicyNumber(data.current_policy_number || ""), normalizeVehicleRegistration(data.vehicle_number || "") || null, normalizePhoneNumber(data.phone || "") || null);
-              }
-            }
-
-            if (!clientId && vehicleNumber) {
-              const { data } = await supabase
-                .from("insurance_clients")
-                .select("id, phone, vehicle_number, current_policy_number")
-                .ilike("vehicle_number", vehicleNumber)
-                .limit(1)
-                .maybeSingle();
-
-              if (data?.id) {
-                clientId = data.id;
-                rememberClient(data.id, normalizeImportPolicyNumber(data.current_policy_number || ""), normalizeVehicleRegistration(data.vehicle_number || "") || null, normalizePhoneNumber(data.phone || "") || null);
-              }
-            }
-
-            const existingClient = clientId
-              ? ((clients as any[]).find((client) => client.id === clientId) || null)
-              : null;
-
-            const shouldRefreshCurrentPolicy = Boolean(
-              isSaleComplete && (
-                !existingClient ||
-                !existingClient.policy_start_date ||
-                !policyStartDate ||
-                policyStartDate >= existingClient.policy_start_date
-              )
-            );
-
-            const clientPayload = {
-              customer_name: customerName,
-              lead_source: "CSV Booking Report",
-              lead_status: leadStatus,
-              pipeline_stage: pipelineStage,
-              priority: "medium",
-              is_legacy: false,
-              updated_at: new Date().toISOString(),
-              ...(cleanPhone ? { phone: cleanPhone } : {}),
-              ...(email ? { email } : {}),
-              ...(city ? { city } : {}),
-              ...(state ? { state } : {}),
-              ...(pincode ? { pincode } : {}),
-              ...(dateOfBirth ? { date_of_birth: dateOfBirth } : {}),
-              ...(vehicleNumber ? { vehicle_number: vehicleNumber } : {}),
-              ...(vehicleMake ? { vehicle_make: vehicleMake } : {}),
-              ...(vehicleModel ? { vehicle_model: vehicleModel } : {}),
-              ...(vehicleFuelType ? { vehicle_fuel_type: vehicleFuelType } : {}),
-              ...(vehicleRegistrationDate ? { vehicle_registration_date: vehicleRegistrationDate } : {}),
-              ...(insurer ? { quote_insurer: insurer } : {}),
-              ...(premium !== null ? { quote_amount: premium } : {}),
-              ...(shouldRefreshCurrentPolicy && insurer ? { current_insurer: insurer } : {}),
-              ...(shouldRefreshCurrentPolicy && policyNumber ? { current_policy_number: policyNumber } : {}),
-              ...(shouldRefreshCurrentPolicy && policyType ? { current_policy_type: policyType } : {}),
-              ...(shouldRefreshCurrentPolicy && policyStartDate && isSaleComplete ? { policy_start_date: policyStartDate, policy_expiry_date: policyExpiryDate, renewal_reminder_set: true, renewal_reminder_date: policyExpiryDate } : {}),
-              ...(shouldRefreshCurrentPolicy && premium !== null ? { current_premium: premium } : {}),
-              ...(bookingDate ? { booking_date: bookingDate } : {}),
-              ...(isRejected ? { lost_reason: statusText } : {}),
-              ...(isSaleComplete ? { incentive_eligible: true } : {}),
-              ...(notes ? { notes } : {}),
-            };
-
-            if (clientId) {
-              const { error } = await supabase.from("insurance_clients").update(clientPayload).eq("id", clientId);
-              if (error) {
-                failed++;
-                continue;
-              }
-              updated++;
-            } else {
-              const { data, error } = await supabase
-                .from("insurance_clients")
-                .insert({
-                  ...clientPayload,
-                  phone: cleanPhone || fallbackPhone,
-                  duplicate_count: 0,
-                  is_duplicate: false,
-                })
-                .select("id")
-                .single();
-
-              if (error || !data?.id) {
-                failed++;
-                continue;
-              }
-
-              clientId = data.id;
-              inserted++;
-            }
-
-            if (!clientId) {
-              failed++;
-              continue;
-            }
-
-            rememberClient(clientId, policyNumber, vehicleNumber, cleanPhone || fallbackPhone);
-
-            if (isSaleComplete && policyNumber) {
-              const policyPayload = {
-                client_id: clientId,
-                policy_number: policyNumber,
-                status: importedPolicyStatus,
-                renewal_status: importedPolicyStatus === "renewed" ? "renewed" : "pending",
-                is_renewal: businessType.toLowerCase() === "rollover",
-                source_label: sourceLabel,
-                ...(policyType ? { policy_type: policyType } : {}),
-                ...(insurer ? { insurer } : {}),
-                ...(planName ? { plan_name: planName } : {}),
-                ...(premium !== null ? { premium_amount: premium } : {}),
-                ...(netPremium !== null ? { net_premium: netPremium } : {}),
-                ...(premium !== null && netPremium !== null ? { gst_amount: Math.max(premium - netPremium, 0) } : {}),
-                ...(idv !== null ? { idv } : {}),
-                ...(discount !== null ? { ncb_discount: discount } : {}),
-                ...(policyStartDate ? { start_date: policyStartDate } : {}),
-                ...(policyExpiryDate ? { expiry_date: policyExpiryDate } : {}),
-                ...(issuedDate ? { issued_date: issuedDate } : {}),
-                ...(bookingDate ? { booking_date: bookingDate } : {}),
-                ...(tpPremium !== null ? { addon_premium: tpPremium } : {}),
-                updated_at: new Date().toISOString(),
-              };
-
-              if (existingPolicy?.id) {
-                await supabase.from("insurance_policies").update(policyPayload).eq("id", existingPolicy.id);
-              } else {
-                // Check for existing policy with same client + policy_number to prevent duplicates
-                const { data: existingDup } = await supabase
-                  .from("insurance_policies")
-                  .select("id")
-                  .eq("client_id", clientId)
-                  .eq("policy_number", policyNumber)
-                  .limit(1)
-                  .maybeSingle();
-
-                if (existingDup?.id) {
-                  // Update existing instead of inserting duplicate
-                  await supabase.from("insurance_policies").update(policyPayload).eq("id", existingDup.id);
-                  policyByNumber.set(policyNumber, { id: existingDup.id, client_id: clientId, policy_number: policyNumber });
-                } else {
-                  if (importedPolicyStatus === "active") {
-                    await supabase
-                      .from("insurance_policies")
-                      .update({ status: "renewed", renewal_status: "renewed" })
-                      .eq("client_id", clientId)
-                      .eq("status", "active");
-                  }
-
-                  const { data: newPol } = await supabase.from("insurance_policies").insert({
-                    ...policyPayload,
-                    renewal_count: businessType.toLowerCase() === "rollover" ? 1 : 0,
-                  } as any).select("id").maybeSingle();
-                  if (newPol?.id) {
-                    policyByNumber.set(policyNumber, { id: newPol.id, client_id: clientId, policy_number: policyNumber });
-                  }
-                }
-              }
-            }
-          }
-
-          if (duplicatesInFile > 0 || skipped > 0) {
-            toast.info(`${duplicatesInFile} duplicate rows skipped, ${skipped} rows could not be matched`);
-          }
-          if (failed > 0) {
-            toast.error(`${failed} rows failed during sync`);
-          }
-          toast.success(`${inserted} new entries added, ${updated} existing entries synced`);
+      <LeadImportDialog open={showImport} onOpenChange={setShowImport} title="Import Insurance Leads" templateColumns={["name", "phone", "city", "vehicle_number", "vehicle_make", "vehicle_model", "source"]}
+        onImport={async (leads) => {
+          const rows = leads.map(l => ({ customer_name: l.name || l.customer_name || "Unknown", phone: (l.phone || l.mobile || "").replace(/\D/g, ""), city: l.city || null, vehicle_number: l.vehicle_number || null, vehicle_make: l.vehicle_make || null, vehicle_model: l.vehicle_model || null, lead_source: l.source || "CSV Import", pipeline_stage: "smart_calling", lead_status: "new", priority: "medium" }));
+          const { error } = await supabase.from("insurance_clients").insert(rows);
+          if (error) throw error;
           queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
-          queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
         }}
       />
 
-      {activeView === "pipeline" && (
-        <AdminRenderBoundary contextLabel="Insurance pipeline">
-          <InsuranceLeadPipeline clients={clients} isLoading={isLoading} onOpenChat={setChatDraft} />
-        </AdminRenderBoundary>
-      )}
+      {/* ── POLICY BOOK — Actual Booked Policies ── */}
       {activeView === "policy_book" && (
-        <AdminRenderBoundary contextLabel="Insurance policy book">
-          <InsurancePolicyBook policies={runningPolicies} />
-        </AdminRenderBoundary>
-      )}
-      {activeView === "renewals" && (
-        <AdminRenderBoundary contextLabel="Insurance renewals">
-          <div><InsuranceComingRenewals policies={runningPolicies as PolicyRecord[]} /></div>
-        </AdminRenderBoundary>
-      )}
-      {activeView === "overdue" && (
-        <AdminRenderBoundary contextLabel="Insurance overdue renewals">
-          <div><InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={dedupedClients} /></div>
-        </AdminRenderBoundary>
-      )}
-      {activeView === "bulk_tools" && (
-        <AdminRenderBoundary contextLabel="Insurance bulk tools">
-          <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />
-        </AdminRenderBoundary>
-      )}
-      {activeView === "renewal_campaign" && (
-        <AdminRenderBoundary contextLabel="Insurance renewal campaign">
-          <InsuranceRenewalCampaign />
-        </AdminRenderBoundary>
-      )}
-      {activeView === "performance" && (
-        <AdminRenderBoundary contextLabel="Insurance performance">
-          <InsurancePerformance clients={dedupedClients} policies={performancePolicies as PolicyRecord[]} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} monthOptions={monthOptions} />
-        </AdminRenderBoundary>
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="relative flex-1 max-w-md"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="Search name, phone, vehicle, policy, insurer..." value={pbSearch} onChange={e => setPbSearch(e.target.value)} className="pl-10 h-9 text-sm" /></div>
+            <Select value={pbPartnerFilter} onValueChange={setPbPartnerFilter}><SelectTrigger className="w-[180px] h-9 text-xs"><SelectValue placeholder="All Partners" /></SelectTrigger><SelectContent><SelectItem value="all">All Partners / Insurers</SelectItem>{pbPartners.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select>
+            {selectedIds.size > 0 && (
+              <Button size="sm" variant="default" className="gap-1.5 text-xs" onClick={() => { const sel = filteredPolicyBook.filter(p => selectedIds.has(p.id)); sel.forEach((p, i) => { const ph = p.insurance_clients?.phone; if (ph && !ph.startsWith("IB_")) { const clean = ph.replace(/\D/g, ""); const wa = `https://wa.me/${clean.startsWith("91") ? clean : `91${clean}`}?text=${encodeURIComponent(`Hi ${p.insurance_clients?.customer_name || ""}, your policy ${p.policy_number || ""} details are ready.`)}`; setTimeout(() => window.open(wa, "_blank"), i * 500); } }); toast.success(`Opening WhatsApp for ${sel.length} clients`); }}><Send className="h-3.5 w-3.5" /> Send Bulk ({selectedIds.size})</Button>
+            )}
+            <Badge variant="outline" className="text-xs">{filteredPolicyBook.length} policies</Badge>
+          </div>
+          <Card><CardContent className="p-0"><div className="overflow-x-auto"><Table>
+            <TableHeader><TableRow className="bg-muted/30">
+              <TableHead className="w-8"><input type="checkbox" className="rounded" checked={selectedIds.size === filteredPolicyBook.length && filteredPolicyBook.length > 0} onChange={() => toggleSelectAll(filteredPolicyBook.map(p => p.id))} /></TableHead>
+              <TableHead className="text-[10px] font-bold uppercase w-8">#</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Customer</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Phone</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Vehicle</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Insurer</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Policy No.</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Type</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Premium</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Start</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Expiry</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Status</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase w-16">Action</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {filteredPolicyBook.length === 0 ? (
+                <TableRow><TableCell colSpan={13} className="text-center py-12 text-muted-foreground"><BookOpen className="h-8 w-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No booked policies found</p></TableCell></TableRow>
+              ) : filteredPolicyBook.map((policy, idx) => {
+                const c = policy.insurance_clients;
+                const phone = displayPhone(c?.phone || null);
+                const waLink = getWhatsAppLink(c?.phone || null);
+                const expiryStatus = getExpiryStatus(policy.expiry_date);
+                return (
+                  <TableRow key={policy.id} className="hover:bg-muted/30 text-xs">
+                    <TableCell onClick={e => e.stopPropagation()}><input type="checkbox" className="rounded" checked={selectedIds.has(policy.id)} onChange={() => toggleSelect(policy.id)} /></TableCell>
+                    <TableCell className="font-mono text-muted-foreground">{idx + 1}</TableCell>
+                    <TableCell><div className="flex items-center gap-2"><div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shrink-0"><User className="h-3 w-3 text-white" /></div><div><p className="font-semibold text-xs">{c?.customer_name || "—"}</p><p className="text-[10px] text-muted-foreground">{c?.city || "—"}</p></div></div></TableCell>
+                    <TableCell className="font-mono text-xs">{phone || "—"}</TableCell>
+                    <TableCell><div><p className="font-mono font-semibold text-xs">{c?.vehicle_number || "—"}</p><p className="text-[10px] text-muted-foreground">{[c?.vehicle_make, c?.vehicle_model].filter(Boolean).join(" ") || "—"}</p></div></TableCell>
+                    <TableCell className="text-xs">{policy.insurer}</TableCell>
+                    <TableCell className="font-mono text-xs">{policy.policy_number || "—"}</TableCell>
+                    <TableCell><Badge variant="outline" className="text-[9px]">{policy.policy_type}</Badge></TableCell>
+                    <TableCell className="font-semibold text-xs">{policy.premium_amount ? `₹${policy.premium_amount.toLocaleString("en-IN")}` : "—"}</TableCell>
+                    <TableCell className="text-xs">{format(new Date(policy.start_date), "dd/MM/yy")}</TableCell>
+                    <TableCell className="text-xs">{policy.expiry_date ? format(new Date(policy.expiry_date), "dd/MM/yy") : "—"}</TableCell>
+                    <TableCell><Badge variant="outline" className={cn("text-[8px] px-1", expiryStatus.className)}>{expiryStatus.label}</Badge></TableCell>
+                    <TableCell onClick={e => e.stopPropagation()}><div className="flex gap-0.5">
+                      {phone && <a href={`tel:${c?.phone}`}><Button variant="ghost" size="icon" className="h-6 w-6"><PhoneCall className="h-3 w-3 text-primary" /></Button></a>}
+                      {waLink && <a href={waLink} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="icon" className="h-6 w-6"><MessageSquare className="h-3 w-3 text-green-600" /></Button></a>}
+                    </div></TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table></div></CardContent></Card>
+        </div>
       )}
 
-      <Dialog open={!!chatDraft} onOpenChange={(open) => !open && setChatDraft(null)}>
-        <DialogContent className="max-w-5xl p-0 overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-0">
-            <DialogTitle>WhatsApp Chat Composer</DialogTitle>
-          </DialogHeader>
-          {chatDraft && (
-            <div className="p-6 pt-4">
-              <OmniChatPanel
-                phone={chatDraft.phone}
-                context="Car Insurance"
-                initialMessage={chatDraft.message}
-                initialName={chatDraft.name || undefined}
-              />
+      {/* ── RENEWAL DATA — Upcoming Only (30/60/90d) ── */}
+      {activeView === "renewals" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            {[
+              { label: "≤ 7 Days", count: renewalSummary.within7, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/20 border-red-200", filter: "7" },
+              { label: "≤ 15 Days", count: renewalSummary.within15, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950/20 border-orange-200", filter: "15" },
+              { label: "≤ 30 Days", count: renewalSummary.within30, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/20 border-amber-200", filter: "30" },
+              { label: "≤ 60 Days", count: renewalSummary.within60, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/20 border-blue-200", filter: "60" },
+              { label: "≤ 90 Days (All)", count: renewalSummary.total, color: "text-foreground", bg: "bg-muted/50 border-border", filter: "all" },
+            ].map(s => (
+              <Card key={s.label} className={cn("cursor-pointer hover:shadow-md transition-all border", s.bg, renewalWindow === s.filter && "ring-2 ring-primary shadow-md")} onClick={() => setRenewalWindow(renewalWindow === s.filter ? "all" : s.filter)}>
+                <CardContent className="pt-3 pb-3 text-center"><p className={cn("text-2xl font-bold", s.color)}>{s.count}</p><p className="text-[10px] text-muted-foreground font-medium">{s.label}</p></CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="relative flex-1 max-w-md"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="Search name, phone, vehicle..." value={renewalSearch} onChange={e => setRenewalSearch(e.target.value)} className="pl-10 h-9 text-sm" /></div>
+            <Select value={renewalSort} onValueChange={(v: any) => setRenewalSort(v)}><SelectTrigger className="w-[180px] h-9 text-xs"><ArrowUpDown className="h-3 w-3 mr-1.5" /><SelectValue /></SelectTrigger><SelectContent><SelectItem value="days_asc">Expiry: Soonest First</SelectItem><SelectItem value="days_desc">Expiry: Latest First</SelectItem><SelectItem value="name">Name: A-Z</SelectItem></SelectContent></Select>
+            {selectedIds.size > 0 && (
+              <Button size="sm" variant="default" className="gap-1.5 text-xs" onClick={() => { const sel = renewalPolicies.filter(p => selectedIds.has(p.id)); sel.forEach((p, i) => { const ph = p.insurance_clients?.phone; if (ph && !ph.startsWith("IB_")) { const clean = ph.replace(/\D/g, ""); const name = p.insurance_clients?.customer_name || ""; const days = differenceInDays(new Date(p.expiry_date!), new Date()); const wa = `https://wa.me/${clean.startsWith("91") ? clean : `91${clean}`}?text=${encodeURIComponent(`Hi ${name}, your ${p.insurer} policy expires in ${days} days. Contact us for the best renewal quote!`)}`; setTimeout(() => window.open(wa, "_blank"), i * 500); } }); toast.success(`Opening WhatsApp for ${sel.length} renewals`); }}><Send className="h-3.5 w-3.5" /> Send Renewal Quotes ({selectedIds.size})</Button>
+            )}
+            <Badge variant="outline" className="text-xs shrink-0">{renewalPolicies.length} upcoming</Badge>
+          </div>
+          <Card><CardContent className="p-0"><div className="overflow-x-auto"><Table>
+            <TableHeader><TableRow className="bg-muted/30">
+              <TableHead className="w-8"><input type="checkbox" className="rounded" checked={selectedIds.size === renewalPolicies.length && renewalPolicies.length > 0} onChange={() => toggleSelectAll(renewalPolicies.map(p => p.id))} /></TableHead>
+              <TableHead className="text-[10px] font-bold uppercase w-8">#</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Customer</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Phone</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Vehicle</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Insurer</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Policy No.</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Premium</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Expiry</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase">Days Left</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase w-20">Action</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {renewalPolicies.length === 0 ? (
+                <TableRow><TableCell colSpan={11} className="text-center py-12 text-muted-foreground"><CalendarClock className="h-8 w-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No upcoming renewals in this window</p></TableCell></TableRow>
+              ) : renewalPolicies.map((policy, idx) => {
+                const days = differenceInDays(new Date(policy.expiry_date!), new Date());
+                const isUrgent = days <= 7;
+                const isWarning = days > 7 && days <= 15;
+                const c = policy.insurance_clients;
+                const phone = displayPhone(c?.phone || null);
+                const waLink = getWhatsAppLink(c?.phone || null);
+                return (
+                  <TableRow key={policy.id} className={cn("text-xs transition-colors", isUrgent ? "bg-red-50/50 dark:bg-red-950/10 hover:bg-red-50" : isWarning ? "bg-orange-50/30 dark:bg-orange-950/10 hover:bg-orange-50/50" : "hover:bg-muted/30")}>
+                    <TableCell onClick={e => e.stopPropagation()}><input type="checkbox" className="rounded" checked={selectedIds.has(policy.id)} onChange={() => toggleSelect(policy.id)} /></TableCell>
+                    <TableCell className="font-mono text-muted-foreground">{idx + 1}</TableCell>
+                    <TableCell><div className="flex items-center gap-2"><div className={cn("w-7 h-7 rounded-full flex items-center justify-center shrink-0", isUrgent ? "bg-gradient-to-br from-red-500 to-red-600" : isWarning ? "bg-gradient-to-br from-amber-500 to-amber-600" : "bg-gradient-to-br from-blue-500 to-blue-600")}><CalendarClock className="h-3 w-3 text-white" /></div><div><p className="font-semibold text-xs">{c?.customer_name || "—"}</p><p className="text-[10px] text-muted-foreground">{c?.city || ""}</p></div></div></TableCell>
+                    <TableCell className="font-mono text-xs">{phone || "—"}</TableCell>
+                    <TableCell><div><p className="font-mono font-semibold text-xs">{c?.vehicle_number || "—"}</p><p className="text-[10px] text-muted-foreground">{[c?.vehicle_make, c?.vehicle_model].filter(Boolean).join(" ") || ""}</p></div></TableCell>
+                    <TableCell className="text-xs">{policy.insurer}</TableCell>
+                    <TableCell className="font-mono text-xs">{policy.policy_number || "—"}</TableCell>
+                    <TableCell className="font-semibold text-xs">{policy.premium_amount ? `₹${policy.premium_amount.toLocaleString("en-IN")}` : "—"}</TableCell>
+                    <TableCell className="text-xs font-medium">{format(new Date(policy.expiry_date!), "dd MMM yyyy")}</TableCell>
+                    <TableCell><Badge variant="outline" className={cn("text-[10px] font-bold", isUrgent ? "bg-red-100 text-red-700 border-red-200" : isWarning ? "bg-orange-100 text-orange-700 border-orange-200" : days <= 30 ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-blue-100 text-blue-700 border-blue-200")}>{days} days</Badge></TableCell>
+                    <TableCell onClick={e => e.stopPropagation()}><div className="flex gap-0.5">
+                      {phone && <a href={`tel:${c?.phone}`}><Button variant="ghost" size="icon" className="h-6 w-6"><PhoneCall className="h-3 w-3 text-primary" /></Button></a>}
+                      {waLink && <a href={waLink} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="icon" className="h-6 w-6"><MessageSquare className="h-3 w-3 text-green-600" /></Button></a>}
+                    </div></TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table></div></CardContent></Card>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════ */}
+      {/* ── CRM VIEW (Enhanced Lead Table) ── */}
+      {/* ══════════════════════════════════════════════════ */}
+      {activeView === "crm" && (<>
+      {/* Stage Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <Button size="sm" variant={selectedStage === "all" ? "default" : "outline"} onClick={() => setSelectedStage("all")} className="shrink-0 h-8 text-xs">
+          All ({totalLeads})
+        </Button>
+        {PIPELINE_STAGES.map(stage => {
+          const count = stageCounts[stage.value] || 0;
+          const Icon = stage.icon;
+          return (
+            <Button
+              key={stage.value}
+              size="sm"
+              variant={selectedStage === stage.value ? "default" : "outline"}
+              onClick={() => setSelectedStage(stage.value)}
+              onDragOver={(e) => handleDragOver(e, stage.value)}
+              onDrop={(e) => handleDrop(e, stage.value)}
+              className={cn(
+                "shrink-0 h-8 text-xs gap-1.5",
+                selectedStage !== stage.value && stage.text,
+                dragOverStage === stage.value && "ring-2 ring-primary/40 scale-105"
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {stage.label}
+              {count > 0 && <Badge variant="secondary" className="text-[10px] h-4 px-1 ml-1">{count}</Badge>}
+            </Button>
+          );
+        })}
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="Search name, phone, vehicle, city..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-9" />
+      </div>
+
+      {/* Lead Table - Clean Row/Column Layout */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="text-[10px] font-bold uppercase w-8">#</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Customer</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Phone</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Vehicle</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Insurer</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Stage</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Source</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Expiry</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Premium</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Follow-Up</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Created</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase w-24">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={12} className="text-center py-12 text-muted-foreground">Loading...</TableCell>
+                  </TableRow>
+                ) : filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={12} className="text-center py-12 text-muted-foreground">
+                      <Shield className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">No leads found</p>
+                      <Button size="sm" variant="outline" className="mt-3 gap-1.5" onClick={() => setShowAddLead(true)}>
+                        <Plus className="h-3.5 w-3.5" /> Add First Lead
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ) : filtered.map((client, idx) => {
+                  const normStage = normalizeStage(client.pipeline_stage);
+                  const stage = PIPELINE_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
+                  const phone = displayPhone(client.phone);
+                  const waLink = getWhatsAppLink(client.phone);
+                  const daysToExpiry = client.policy_expiry_date ? differenceInDays(new Date(client.policy_expiry_date), new Date()) : null;
+
+                  return (
+                    <TableRow
+                      key={client.id}
+                      draggable
+                      onDragStart={() => handleDragStart(client)}
+                      onDragEnd={handleDragEnd}
+                      className="cursor-pointer text-xs hover:bg-muted/30 transition-colors group"
+                      onClick={() => setSelectedClient(client)}
+                    >
+                      <TableCell className="font-mono text-muted-foreground">{idx + 1}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className={cn("w-7 h-7 rounded-full bg-gradient-to-br flex items-center justify-center shrink-0", stage.color)}>
+                            <User className="h-3 w-3 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-xs leading-tight">{client.customer_name || "Unknown"}</p>
+                            <p className="text-[10px] text-muted-foreground">{client.city || "—"}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{phone || "—"}</TableCell>
+                      <TableCell>
+                        <div>
+                          {client.vehicle_number && <p className="font-mono font-semibold text-xs">{client.vehicle_number}</p>}
+                          <p className="text-[10px] text-muted-foreground">{[client.vehicle_make, client.vehicle_model].filter(Boolean).join(" ") || "—"}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs">{client.current_insurer || "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={cn("text-[9px] px-1.5", stage.bg, stage.text, "border", stage.border)}>
+                          {stage.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={cn("text-[9px]", getSourceColor(client.lead_source))}>
+                          {formatSource(client.lead_source, client.created_at)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {daysToExpiry !== null ? (
+                          <span className={cn("text-xs font-semibold",
+                            daysToExpiry < 0 ? "text-red-600" : daysToExpiry <= 7 ? "text-red-600" : daysToExpiry <= 30 ? "text-orange-600" : "text-muted-foreground"
+                          )}>
+                            {daysToExpiry < 0 ? `Exp ${Math.abs(daysToExpiry)}d` : `${daysToExpiry}d`}
+                          </span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="text-xs font-medium">
+                        {client.current_premium ? `₹${client.current_premium.toLocaleString("en-IN")}` : client.quote_amount ? `₹${client.quote_amount.toLocaleString("en-IN")}` : "—"}
+                      </TableCell>
+                      <TableCell className="text-[10px]">
+                        {client.follow_up_date ? (
+                          <span className={cn("font-medium",
+                            differenceInDays(new Date(client.follow_up_date), new Date()) < 0 ? "text-red-600" : "text-orange-600"
+                          )}>
+                            {format(new Date(client.follow_up_date), "dd MMM")}
+                            {client.follow_up_time ? ` ${client.follow_up_time}` : ""}
+                          </span>
+                        ) : "—"}
+                      </TableCell>
+                      <TableCell className="text-[10px] text-muted-foreground">
+                        {format(new Date(client.created_at), "dd MMM yy")}
+                      </TableCell>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <div className="flex gap-0.5 items-center">
+                          {phone && (
+                            <>
+                              <a href={`tel:${client.phone}`}>
+                                <Button variant="ghost" size="icon" className="h-6 w-6"><PhoneCall className="h-3 w-3 text-primary" /></Button>
+                              </a>
+                              {waLink && (
+                                <a href={waLink} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="ghost" size="icon" className="h-6 w-6"><MessageSquare className="h-3 w-3 text-green-600" /></Button>
+                                </a>
+                              )}
+                            </>
+                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="outline" className="h-6 text-[10px] gap-0.5 px-1.5">
+                                Move <ChevronRight className="h-2.5 w-2.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              {PIPELINE_STAGES.filter(s => s.value !== normStage).map(s => {
+                                const SIcon = s.icon;
+                                return (
+                                  <DropdownMenuItem key={s.value} onClick={() => handleMove(client, s.value)} className="gap-2 text-xs">
+                                    <SIcon className="h-3 w-3" /> {s.label}
+                                  </DropdownMenuItem>
+                                );
+                              })}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+          {filtered.length > 0 && (
+            <div className="flex items-center justify-between px-4 py-2 border-t text-xs text-muted-foreground bg-muted/20">
+              <span>Showing {filtered.length} leads</span>
+              <span>{stageCounts["won"] + stageCounts["policy_issued"]} won • {stageCounts["lost"]} lost • {convRate}% conversion</span>
             </div>
           )}
+        </CardContent>
+      </Card>
+      </>)}
+
+      {/* ── CLIENT DETAIL DIALOG ── */}
+      <Dialog open={!!selectedClient && !showLostDialog && !showCallingDialog && !showFollowUpDialog && !showQuoteModal && !showUploadPolicy && !showRenewalDialog} onOpenChange={(o) => { if (!o) setSelectedClient(null); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          {selectedClient && (() => {
+            const normStage = normalizeStage(selectedClient.pipeline_stage);
+            const stage = PIPELINE_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
+            const phone = displayPhone(selectedClient.phone);
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <div className={cn("w-8 h-8 rounded-full bg-gradient-to-br flex items-center justify-center", stage.color)}>
+                      <User className="h-4 w-4 text-white" />
+                    </div>
+                    {selectedClient.customer_name || "Unknown"}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {/* Badges */}
+                  <div className="flex gap-2 flex-wrap">
+                    <Badge className={cn(stage.bg, stage.text, "border", stage.border)}>{stage.label}</Badge>
+                    <Badge variant="outline" className={getSourceColor(selectedClient.lead_source)}>
+                      {formatSource(selectedClient.lead_source, selectedClient.created_at)}
+                    </Badge>
+                    {(() => {
+                      const status = getExpiryStatus(selectedClient.policy_expiry_date);
+                      return <Badge variant="outline" className={cn(status.className)}>{status.label}</Badge>;
+                    })()}
+                    {selectedClient.incentive_eligible && <Badge className="bg-amber-100 text-amber-700 border-amber-200">⭐ Incentive Eligible</Badge>}
+                  </div>
+
+                  {/* Customer */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer</p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><span className="text-muted-foreground">Mobile:</span> {phone || "—"}</div>
+                      <div><span className="text-muted-foreground">Email:</span> {selectedClient.email || "—"}</div>
+                      <div><span className="text-muted-foreground">City:</span> {selectedClient.city || "—"}</div>
+                      <div><span className="text-muted-foreground">Attempts:</span> {selectedClient.contact_attempts || 0}</div>
+                    </div>
+                  </div>
+
+                  {/* Vehicle */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vehicle & Policy</p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><span className="text-muted-foreground">Number:</span> {selectedClient.vehicle_number || "—"}</div>
+                      <div><span className="text-muted-foreground">Model:</span> {[selectedClient.vehicle_make, selectedClient.vehicle_model].filter(Boolean).join(" ") || "—"}</div>
+                      <div><span className="text-muted-foreground">Year:</span> {selectedClient.vehicle_year || "—"}</div>
+                      <div><span className="text-muted-foreground">Insurer:</span> {selectedClient.current_insurer || "—"}</div>
+                      <div><span className="text-muted-foreground">Policy No:</span> {selectedClient.current_policy_number || "—"}</div>
+                      <div><span className="text-muted-foreground">Policy Type:</span> {selectedClient.current_policy_type || "—"}</div>
+                      <div><span className="text-muted-foreground">Premium:</span> {selectedClient.current_premium ? `₹${selectedClient.current_premium.toLocaleString("en-IN")}` : "—"}</div>
+                      <div><span className="text-muted-foreground">NCB:</span> {selectedClient.ncb_percentage ? `${selectedClient.ncb_percentage}%` : "—"}</div>
+                      {selectedClient.policy_start_date && <div><span className="text-muted-foreground">Start:</span> {format(new Date(selectedClient.policy_start_date), "dd MMM yyyy")}</div>}
+                      {selectedClient.policy_expiry_date && <div><span className="text-muted-foreground">Expiry:</span> {format(new Date(selectedClient.policy_expiry_date), "dd MMM yyyy")}</div>}
+                    </div>
+                  </div>
+
+                  {/* Activity */}
+                  {(selectedClient.call_status || selectedClient.follow_up_date || selectedClient.lost_reason) && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Activity</p>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        {selectedClient.call_status && <div><span className="text-muted-foreground">Call:</span> {selectedClient.call_status}</div>}
+                        {selectedClient.call_remarks && <div className="col-span-2"><span className="text-muted-foreground">Remarks:</span> {selectedClient.call_remarks}</div>}
+                        {selectedClient.follow_up_date && <div><span className="text-muted-foreground">Follow-up:</span> {format(new Date(selectedClient.follow_up_date), "dd MMM yyyy")} {selectedClient.follow_up_time || ""}</div>}
+                        {selectedClient.lost_reason && <div className="col-span-2"><span className="text-muted-foreground">Lost Reason:</span> {selectedClient.lost_reason}</div>}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {selectedClient.notes && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notes</p>
+                      <p className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-2">{selectedClient.notes}</p>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="space-y-2 pt-2 border-t">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</p>
+                    <div className="flex flex-wrap gap-2">
+                      {phone && (
+                        <>
+                          <a href={`tel:${selectedClient.phone}`}>
+                            <Button size="sm" variant="outline" className="gap-1.5"><PhoneCall className="h-3.5 w-3.5" /> Call</Button>
+                          </a>
+                          <a href={getWhatsAppLink(selectedClient.phone) || "#"} target="_blank" rel="noopener noreferrer">
+                            <Button size="sm" variant="outline" className="gap-1.5 text-green-600 border-green-200"><MessageSquare className="h-3.5 w-3.5" /> WhatsApp</Button>
+                          </a>
+                        </>
+                      )}
+                      <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowQuoteModal(true)}>
+                        <FileText className="h-3.5 w-3.5" /> Generate Quote
+                      </Button>
+                      <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowUploadPolicy(true)}>
+                        <Upload className="h-3.5 w-3.5" /> Upload Policy
+                      </Button>
+                      {(normStage === "won" || normStage === "policy_issued") && (
+                        <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setRenewalDate(undefined); setShowRenewalDialog(true); }}>
+                          <Bell className="h-3.5 w-3.5" /> Set Renewal Reminder
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Move to Stage */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Move to Stage</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {PIPELINE_STAGES.filter(s => s.value !== normStage).map(s => {
+                        const SIcon = s.icon;
+                        return (
+                          <Button key={s.value} size="sm" variant="outline" className={cn("text-xs gap-1", s.text, "border", s.border)}
+                            onClick={() => handleMove(selectedClient, s.value)}>
+                            <SIcon className="h-3 w-3" /> {s.label}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showCalcDialog} onOpenChange={setShowCalcDialog}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><Calculator className="h-5 w-5 text-primary" /> Premium Calculator</DialogTitle></DialogHeader>
-          <InsurancePremiumCalculator onQuoteSaved={() => {
-            queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
-            queryClient.invalidateQueries({ queryKey: ["ins-bulk-quotes"] });
-          }} />
-        </DialogContent>
-      </Dialog>
-
+      {/* ── ADD LEAD DIALOG ── */}
       <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle className="flex items-center gap-2"><UserPlus className="h-5 w-5 text-primary" /> Add New Lead</DialogTitle></DialogHeader>
@@ -1102,74 +1088,146 @@ export function InsuranceWorkspace() {
                 <Input placeholder="e.g. Swift" value={newLead.vehicle_model} onChange={e => setNewLead(p => ({ ...p, vehicle_model: e.target.value }))} className="h-9" />
               </div>
             </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Notes</Label>
+              <Textarea placeholder="Any additional notes..." value={newLead.notes} onChange={e => setNewLead(p => ({ ...p, notes: e.target.value }))} className="h-16" />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddLead(false)}>Cancel</Button>
-            <Button onClick={addLead} disabled={!newLead.customer_name.trim() || !newLead.phone.trim()} className="gap-1.5">
-              <Plus className="h-4 w-4" /> Add Lead
+            <Button onClick={() => addLeadMutation.mutate()} disabled={addLeadMutation.isPending || !newLead.customer_name.trim() || !newLead.phone.trim()} className="gap-1.5">
+              {addLeadMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              Add Lead
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Partner Link Edit Dialog */}
-      <Dialog open={showPartnerLink} onOpenChange={setShowPartnerLink}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings2 className="h-5 w-5 text-primary" /> Update Partner Quote Link
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <Label className="text-xs font-medium">PolicyBazaar Partner URL</Label>
-              <Input
-                placeholder="Paste new PBPartner link here..."
-                value={editPartnerUrl}
-                onChange={e => setEditPartnerUrl(e.target.value)}
-                className="text-xs font-mono"
-              />
+      {/* ── LOST DIALOG ── */}
+      <Dialog open={showLostDialog} onOpenChange={setShowLostDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Why was this lead lost?</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {LOST_REASONS.map(r => (
+                <Button key={r} variant={lostReason === r ? "default" : "outline"} size="sm" onClick={() => setLostReason(r)}>{r}</Button>
+              ))}
             </div>
-            {partnerLink && (
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>Status: <Badge variant={partnerLink.health_status === "checked" ? "default" : "secondary"} className="text-[10px]">{partnerLink.health_status}</Badge></p>
-                {partnerLink.last_health_check && <p>Last checked: {new Date(partnerLink.last_health_check).toLocaleString()}</p>}
-                <p className="text-orange-500 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Yeh link expire hone pe yahan update karo — website + CRM dono jagah auto-sync hoga</p>
+            <Textarea placeholder="Additional remarks..." value={lostRemarks} onChange={e => setLostRemarks(e.target.value)} className="h-20" />
+          </div>
+          <DialogFooter>
+            <Button onClick={confirmLost} disabled={!lostReason} className="bg-red-600 hover:bg-red-700 text-white">Mark as Lost</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── SMART CALLING DIALOG ── */}
+      <Dialog open={showCallingDialog} onOpenChange={setShowCallingDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><PhoneCall className="h-5 w-5 text-amber-600" /> Smart Calling</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            {pendingMoveClient && displayPhone(pendingMoveClient.phone) && (
+              <div className="flex gap-2">
+                <a href={`tel:${pendingMoveClient.phone}`} className="flex-1">
+                  <Button className="w-full gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
+                    <Phone className="h-4 w-4" /> Dial {displayPhone(pendingMoveClient.phone)}
+                  </Button>
+                </a>
+                <a href={getWhatsAppLink(pendingMoveClient.phone) || "#"} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" className="gap-1.5 text-green-600 border-green-200"><MessageSquare className="h-4 w-4" /></Button>
+                </a>
               </div>
             )}
+            <div className="space-y-1">
+              <Label className="text-xs">Call Outcome *</Label>
+              <Select value={callStatus} onValueChange={setCallStatus}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Select status" /></SelectTrigger>
+                <SelectContent>
+                  {CALL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Remarks *</Label>
+              <Textarea placeholder="Call notes..." value={callRemarks} onChange={e => setCallRemarks(e.target.value)} className="h-20" />
+            </div>
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowPartnerLink(false)}>Cancel</Button>
-            {partnerLink && (
-              <Button variant="outline" size="sm" onClick={() => checkHealth.mutate(partnerLink)} className="gap-1">
-                <ExternalLink className="h-3.5 w-3.5" /> Test Link
-              </Button>
-            )}
-            <Button
-              size="sm"
-              onClick={() => {
-                if (!partnerLink?.id || !editPartnerUrl.trim()) return;
-                updatePartnerLink.mutate({ id: partnerLink.id, partner_url: editPartnerUrl.trim() });
-                setShowPartnerLink(false);
-              }}
-              disabled={!editPartnerUrl.trim() || updatePartnerLink.isPending}
-              className="gap-1"
-            >
-              Save & Sync
-            </Button>
+          <DialogFooter>
+            <Button onClick={confirmCalling} disabled={!callStatus || !callRemarks.trim()} className="bg-amber-600 hover:bg-amber-700 text-white">Save & Move</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <InsuranceKpiDetailDialog
-        open={!!kpiDetail}
-        onOpenChange={(v) => { if (!v) setKpiDetail(null); }}
-        kpiType={kpiDetail}
-        clients={monthFilteredClients}
-        policies={monthFilteredPolicies.filter(p => (p.status || "").toLowerCase() === "active")}
-        monthWiseConversion={monthWiseConversion}
-        monthLabel={selectedMonthLabel}
-      />
+      {/* ── FOLLOW-UP DIALOG ── */}
+      <Dialog open={showFollowUpDialog} onOpenChange={setShowFollowUpDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Clock className="h-5 w-5 text-orange-600" /> Schedule Follow-Up</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Follow-Up Date *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left h-9">
+                    <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                    {followUpDate ? format(followUpDate, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={followUpDate} onSelect={setFollowUpDate} /></PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Time</Label>
+              <Input type="time" value={followUpTime} onChange={e => setFollowUpTime(e.target.value)} className="h-9" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Notes</Label>
+              <Textarea placeholder="Follow-up notes..." value={followUpRemarks} onChange={e => setFollowUpRemarks(e.target.value)} className="h-16" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={confirmFollowUp} disabled={!followUpDate} className="bg-orange-600 hover:bg-orange-700 text-white">Schedule</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── QUOTE MODAL ── */}
+      {showQuoteModal && selectedClient && (
+        <InsuranceQuoteModal open={showQuoteModal} onOpenChange={setShowQuoteModal} client={selectedClient} />
+      )}
+
+      {/* ── UPLOAD POLICY ── */}
+      {showUploadPolicy && selectedClient && (
+        <Dialog open={showUploadPolicy} onOpenChange={setShowUploadPolicy}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader><DialogTitle>Upload Policy Document</DialogTitle></DialogHeader>
+            <InsurancePolicyDocumentUploader defaultClientId={selectedClient.id} onDone={() => setShowUploadPolicy(false)} />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* ── RENEWAL REMINDER DIALOG ── */}
+      <Dialog open={showRenewalDialog} onOpenChange={setShowRenewalDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-emerald-600" /> Set Renewal Reminder</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Setting a renewal reminder makes this client eligible for incentives and moves them to "Policy Issued" stage.</p>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left h-9">
+                  <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                  {renewalDate ? format(renewalDate, "PPP") : "Pick renewal date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={renewalDate} onSelect={setRenewalDate} /></PopoverContent>
+            </Popover>
+          </div>
+          <DialogFooter>
+            <Button onClick={setRenewalReminder} disabled={!renewalDate} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
+              <Bell className="h-4 w-4" /> Set Reminder & Move
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

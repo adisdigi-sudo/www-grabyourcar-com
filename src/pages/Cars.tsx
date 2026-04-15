@@ -500,7 +500,7 @@ const Cars = () => {
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-2 md:mb-4">
-                Explore <span className="text-foreground">{allCars.length}+</span> New Cars
+                Explore <span className="text-primary">{allCars.length}+</span> New Cars
               </h1>
               <p className="text-muted-foreground text-sm md:text-lg mb-4 md:mb-6">
                 Find your dream car from {availableBrands.length} brands with detailed specifications, prices & reviews
@@ -789,7 +789,7 @@ const Cars = () => {
                             title={isInCompare(car.id) ? "Remove from compare" : canAddMore ? "Add to compare" : "Max 3 cars"}
                           >
                             {isInCompare(car.id) ? (
-                              <Check className="h-4 w-4 text-foreground" />
+                              <Check className="h-4 w-4 text-primary" />
                             ) : (
                               <GitCompare className="h-4 w-4 text-muted-foreground" />
                             )}
@@ -809,7 +809,7 @@ const Cars = () => {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-foreground font-bold text-lg mb-3">{car.price}</p>
+                        <p className="text-primary font-bold text-lg mb-3">{car.price}</p>
                         <div className="flex flex-wrap gap-2 mb-4">
                           <Badge variant="outline" className="text-xs gap-1">
                             <Fuel className="h-3 w-3" />
@@ -876,7 +876,7 @@ const Cars = () => {
                                 <h3 className="font-semibold text-xl">{car.name}</h3>
                                 <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{car.tagline}</p>
                               </div>
-                              <p className="text-foreground font-bold text-xl shrink-0">{car.price}</p>
+                              <p className="text-primary font-bold text-xl shrink-0">{car.price}</p>
                             </div>
                             <div className="flex flex-wrap gap-2 mt-3">
                               <Badge variant="outline" className="text-xs gap-1">
@@ -932,7 +932,7 @@ const Cars = () => {
                               size="icon"
                               className={cn(
                                 "h-9 w-9",
-                                isInCompare(car.id) && "border-primary text-foreground"
+                                isInCompare(car.id) && "border-primary text-primary"
                               )}
                               onClick={() => handleCompareToggle(car.id)}
                               disabled={!canAddMore && !isInCompare(car.id)}

@@ -149,7 +149,7 @@ export const AccessoryDetailModal = ({ accessory, open, onOpenChange }: Accessor
 
             {/* Price */}
             <div className="flex items-baseline gap-3 mt-4">
-              <span className="text-3xl font-bold text-foreground">
+              <span className="text-3xl font-bold text-primary">
                 ₹{accessory.price.toLocaleString()}
               </span>
               {accessory.originalPrice && (
@@ -215,15 +215,15 @@ export const AccessoryDetailModal = ({ accessory, open, onOpenChange }: Accessor
             {/* Trust Badges */}
             <div className="grid grid-cols-3 gap-3 mt-6 pt-4 border-t">
               <div className="flex items-center gap-2 text-sm">
-                <Truck className="h-4 w-4 text-foreground" />
+                <Truck className="h-4 w-4 text-primary" />
                 <span>Free Delivery</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <Shield className="h-4 w-4 text-foreground" />
+                <Shield className="h-4 w-4 text-primary" />
                 <span>Genuine</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <RotateCcw className="h-4 w-4 text-foreground" />
+                <RotateCcw className="h-4 w-4 text-primary" />
                 <span>Easy Returns</span>
               </div>
             </div>

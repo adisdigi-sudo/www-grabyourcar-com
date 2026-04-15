@@ -3,7 +3,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Fuel, Settings2, Users, Calendar, MapPin, User, Navigation } from "lucide-react";
 import { RentalVehicle } from "@/hooks/useRentalServices";
-import { captureRentalJourneyStep } from "@/lib/rentalJourney";
 
 interface RentalVehicleCardProps {
   vehicle: RentalVehicle;
@@ -35,7 +34,7 @@ export const RentalVehicleCard = ({ vehicle, serviceType, onBook }: RentalVehicl
         <div className="p-4 pb-2 flex items-start justify-between">
           <div>
             <h3 className="font-bold text-foreground text-lg">{vehicle.name}</h3>
-            <p className="text-xs text-foreground font-medium">{vehicle.vehicle_type} • {vehicle.brand}</p>
+            <p className="text-xs text-primary font-medium">{vehicle.vehicle_type} • {vehicle.brand}</p>
           </div>
           <Badge variant="secondary" className="flex items-center gap-1">
             <ServiceIcon className="h-3 w-3" />
@@ -92,29 +91,6 @@ export const RentalVehicleCard = ({ vehicle, serviceType, onBook }: RentalVehicl
           )}
         </div>
 
-        {/* Pricing Details */}
-        <div className="px-4 py-2 flex flex-wrap gap-2 border-t border-border/50">
-          {serviceType === 'self-drive' && (
-            <>
-              <Badge variant="outline" className="text-[10px] border-primary/20 text-muted-foreground">300 KM/day</Badge>
-              <Badge variant="outline" className="text-[10px] border-primary/20 text-muted-foreground">Fuel not included</Badge>
-              <Badge variant="outline" className="text-[10px] border-primary/20 text-muted-foreground">₹5K-10K deposit</Badge>
-            </>
-          )}
-          {serviceType === 'with-driver' && (
-            <>
-              <Badge variant="outline" className="text-[10px] border-primary/20 text-muted-foreground">Driver included</Badge>
-              <Badge variant="outline" className="text-[10px] border-primary/20 text-muted-foreground">Fuel extra</Badge>
-            </>
-          )}
-          {serviceType === 'outstation' && (
-            <>
-              <Badge variant="outline" className="text-[10px] border-primary/20 text-muted-foreground">Driver + Fuel</Badge>
-              <Badge variant="outline" className="text-[10px] border-primary/20 text-muted-foreground">Min 250 KM/day</Badge>
-            </>
-          )}
-        </div>
-
         {/* Location */}
         {vehicle.location && (
           <div className="px-4 py-2 flex items-center gap-1.5 text-sm text-muted-foreground border-t border-border/50">
@@ -133,16 +109,7 @@ export const RentalVehicleCard = ({ vehicle, serviceType, onBook }: RentalVehicl
           <Button
             variant="cta"
             size="sm"
-            onClick={() => {
-              captureRentalJourneyStep("vehicle_selected", {
-                vehicleId: vehicle.id,
-                vehicleName: vehicle.name,
-                serviceType,
-                location: vehicle.location,
-                amount: price.amount,
-              });
-              onBook(vehicle);
-            }}
+            onClick={() => onBook(vehicle)}
             disabled={!vehicle.is_available}
             className="gap-1.5"
           >

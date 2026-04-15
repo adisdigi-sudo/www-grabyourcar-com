@@ -114,7 +114,6 @@ export const WhatsAppCTA = ({
 
   const handleClick = () => {
     trackWhatsAppClick(context, label);
-    import("@/lib/adTracking").then(({ trackWhatsAppConversion }) => trackWhatsAppConversion(context));
   };
 
   return (
@@ -155,16 +154,15 @@ export const WhatsAppFloatingButton = ({
 
   const handleClick = () => {
     trackWhatsAppClick('floating_button', 'Floating WhatsApp');
-    import("@/lib/adTracking").then(({ trackWhatsAppConversion }) => trackWhatsAppConversion("floating_button"));
   };
 
   return (
     <div className={cn("fixed bottom-20 right-3 z-40 flex flex-col items-center gap-1 sm:bottom-24 sm:right-6", className)}>
       {/* Label */}
       <div className="hidden items-center gap-1 whitespace-nowrap rounded-full border border-success/30 bg-gradient-to-r from-card via-card to-success/10 px-2.5 py-1 text-[11px] font-bold text-foreground shadow-lg glow-border-pulse sm:flex">
-        <Car className="h-3 w-3 text-foreground" />
+        <Car className="h-3 w-3 text-success" />
         <span>AutoBot</span>
-        <Sparkles className="h-2.5 w-2.5 animate-pulse text-foreground" />
+        <Sparkles className="h-2.5 w-2.5 animate-pulse text-success" />
       </div>
       {/* Button */}
       <a

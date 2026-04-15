@@ -99,7 +99,7 @@ export const WelcomeOTPGate = () => {
                   transition={{ type: "spring", bounce: 0.5 }}
                   className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4"
                 >
-                  <Sparkles className="h-10 w-10 text-foreground" />
+                  <Sparkles className="h-10 w-10 text-primary" />
                 </motion.div>
                 <h3 className="text-2xl font-heading font-bold mb-2">Welcome to Grabyourcar! 🚗</h3>
                 <p className="text-muted-foreground">
@@ -108,7 +108,7 @@ export const WelcomeOTPGate = () => {
               </motion.div>
             ) : step === "signing_in" ? (
               <motion.div key="signing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-8 text-center">
-                <Loader2 className="h-10 w-10 animate-spin text-foreground mx-auto mb-4" />
+                <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
                 <p className="text-muted-foreground">Setting up your account...</p>
               </motion.div>
             ) : step === "otp" ? (
@@ -177,7 +177,7 @@ export const WelcomeOTPGate = () => {
                   </Button>
 
                   <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                    <Shield className="h-3.5 w-3.5 text-foreground" />
+                    <Shield className="h-3.5 w-3.5 text-primary" />
                     <span>One-time verification • No spam • 100% secure</span>
                   </div>
 

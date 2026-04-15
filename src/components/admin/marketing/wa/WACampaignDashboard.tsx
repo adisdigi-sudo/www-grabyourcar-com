@@ -78,7 +78,7 @@ export function WACampaignDashboard() {
     const [campRes, segRes, tmplRes] = await Promise.all([
       supabase.from("wa_campaigns").select("*").order("created_at", { ascending: false }),
       supabase.from("wa_contact_segments").select("*").order("name"),
-      supabase.from("wa_templates").select("id, name, category, body, variables").eq("status", "approved"),
+      supabase.from("whatsapp_templates").select("id, name, category, content, variables").eq("is_active", true),
     ]);
     if (campRes.data) setCampaigns(campRes.data as any);
     if (segRes.data) setSegments(segRes.data);

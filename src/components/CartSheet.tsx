@@ -231,7 +231,7 @@ export const CartSheet = () => {
                     />
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-sm line-clamp-2">{item.name}</h4>
-                      <p className="text-foreground font-semibold mt-1">₹{item.price.toLocaleString()}</p>
+                      <p className="text-primary font-semibold mt-1">₹{item.price.toLocaleString()}</p>
                       
                       <div className="flex items-center gap-2 mt-2">
                         <Button 
@@ -278,7 +278,7 @@ export const CartSheet = () => {
                   <Separator />
                   <div className="flex justify-between font-semibold text-lg">
                     <span>Total</span>
-                    <span className="text-foreground">₹{totalPrice.toLocaleString()}</span>
+                    <span className="text-primary">₹{totalPrice.toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -406,7 +406,7 @@ export const CartSheet = () => {
               <Separator />
               <div className="flex justify-between font-semibold">
                 <span>Total</span>
-                <span className="text-foreground">₹{totalPrice.toLocaleString()}</span>
+                <span className="text-primary">₹{totalPrice.toLocaleString()}</span>
               </div>
             </div>
 

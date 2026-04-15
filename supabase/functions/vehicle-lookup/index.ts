@@ -161,7 +161,7 @@ serve(async (req) => {
   try {
     const { vehicle_number } = await req.json();
 
-    if (!vehicle_number || !/^[A-Z]{2,3}\d{0,2}[A-Z]{0,3}\d{3,4}$/.test(vehicle_number) || vehicle_number.length < 5) {
+    if (!vehicle_number || !/^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{4}$/.test(vehicle_number)) {
       return new Response(
         JSON.stringify({ error: "Invalid vehicle registration number" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

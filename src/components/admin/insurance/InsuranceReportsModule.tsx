@@ -89,11 +89,10 @@ export function InsuranceReportsModule() {
   const { data: policies = [] } = useQuery({
     queryKey: ["ins-report-policies"],
     queryFn: async () => {
-      // Fetch all policies ordered by expiry_date for correct renewal reporting
       const { data } = await supabase
         .from("insurance_policies")
         .select("*")
-        .order("expiry_date", { ascending: true });
+        .order("created_at", { ascending: false });
       return (data || []) as Policy[];
     },
   });
@@ -125,11 +124,9 @@ export function InsuranceReportsModule() {
       case "upcoming": {
         const days = parseInt(daysRange);
         list = list.filter((p) => {
-          if (!p.expiry_date || p.status === "expired" || p.status === "cancelled" || p.status === "renewed") return false;
+          if (!p.expiry_date || p.status === "expired" || p.status === "cancelled") return false;
           const exp = parseISO(p.expiry_date);
-          // Include recently expired (within 15 days) for actionability
-          const daysLeft = differenceInDays(exp, now);
-          return daysLeft >= -15 && daysLeft <= days;
+          return isAfter(exp, now) && isBefore(exp, addDays(now, days));
         });
         break;
       }
@@ -137,12 +134,12 @@ export function InsuranceReportsModule() {
         list = list.filter((p) => {
           if (!p.expiry_date) return false;
           const exp = parseISO(p.expiry_date);
-          return isBefore(exp, now) && p.renewal_status !== "renewed" && p.status !== "cancelled" && p.status !== "renewed";
+          return isBefore(exp, now) && p.renewal_status !== "renewed" && p.status !== "cancelled";
         });
         break;
       case "expired":
         list = list.filter(
-          (p) => (p.status === "expired" || p.status === "lapsed" || (p.expiry_date && isBefore(parseISO(p.expiry_date), now))) && p.status !== "renewed" && p.status !== "cancelled"
+          (p) => p.status === "expired" || (p.expiry_date && isBefore(parseISO(p.expiry_date), now))
         );
         break;
       case "renewal":

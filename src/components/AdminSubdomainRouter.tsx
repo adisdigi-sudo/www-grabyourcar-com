@@ -1,7 +1,6 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
-import { withPreviewParams } from "@/lib/previewRouting";
 import { Loader2 } from "lucide-react";
 
 interface AdminSubdomainRouterProps {
@@ -10,7 +9,7 @@ interface AdminSubdomainRouterProps {
 
 /**
  * Wrapper component that enforces admin-only routes on admin subdomain.
- * On admin.grabyourcar.com, only admin-safe routes are accessible.
+ * On admin.grabyourcar.com, only /admin, /admin-auth, and /admin-reset-password are accessible.
  * All other routes redirect to /admin-auth (if not logged in) or /admin (if logged in).
  */
 export const AdminSubdomainRouter = ({ children }: AdminSubdomainRouterProps) => {
@@ -29,13 +28,13 @@ export const AdminSubdomainRouter = ({ children }: AdminSubdomainRouterProps) =>
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background">
-        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   // Define allowed paths on admin subdomain
-  const allowedPaths = ["/crm", "/crm-auth", "/crm-reset-password", "/document-viewer", "/workspace", "/admin", "/admin-auth", "/admin-reset-password"];
+  const allowedPaths = ["/crm", "/crm-auth", "/crm-reset-password", "/workspace", "/admin", "/admin-auth", "/admin-reset-password"];
   const isAllowedPath = allowedPaths.some(
     (path) => location.pathname === path || location.pathname.startsWith(path + "/")
   );
@@ -47,8 +46,8 @@ export const AdminSubdomainRouter = ({ children }: AdminSubdomainRouterProps) =>
 
   // If not on an allowed path, redirect based on auth status
   if (user) {
-    return <Navigate to={withPreviewParams("/crm")} replace />;
+    return <Navigate to="/crm" replace />;
   } else {
-    return <Navigate to={withPreviewParams("/crm-auth")} replace />;
+    return <Navigate to="/crm-auth" replace />;
   }
 };

@@ -19,8 +19,6 @@ export interface CrossSellOffer {
   href: string;
   ctaText: string;
   gradient: string;
-  iconBg?: string;
-  iconColor?: string;
   highlight?: boolean;
 }
 
@@ -37,8 +35,6 @@ const allOffers: CrossSellOffer[] = [
     href: "/hsrp?addon=frame",
     ctaText: "Add to Booking",
     gradient: "from-emerald-500/20 to-emerald-600/10",
-    iconBg: "bg-emerald-500/15",
-    iconColor: "text-emerald-600",
     highlight: true,
   },
   {
@@ -50,8 +46,6 @@ const allOffers: CrossSellOffer[] = [
     href: "/car-loans",
     ctaText: "Check Eligibility",
     gradient: "from-blue-500/20 to-blue-600/10",
-    iconBg: "bg-blue-500/15",
-    iconColor: "text-blue-600",
   },
   {
     id: "car-insurance",
@@ -62,8 +56,6 @@ const allOffers: CrossSellOffer[] = [
     href: "/car-insurance",
     ctaText: "Get Quote",
     gradient: "from-purple-500/20 to-purple-600/10",
-    iconBg: "bg-purple-500/15",
-    iconColor: "text-purple-600",
   },
   {
     id: "accessories",
@@ -74,8 +66,6 @@ const allOffers: CrossSellOffer[] = [
     href: "/accessories",
     ctaText: "Shop Now",
     gradient: "from-amber-500/20 to-amber-600/10",
-    iconBg: "bg-amber-500/15",
-    iconColor: "text-amber-600",
   },
   {
     id: "extended-warranty",
@@ -88,8 +78,6 @@ const allOffers: CrossSellOffer[] = [
     href: "/cars?warranty=extended",
     ctaText: "Learn More",
     gradient: "from-rose-500/20 to-rose-600/10",
-    iconBg: "bg-rose-500/15",
-    iconColor: "text-rose-600",
   },
   {
     id: "self-drive",
@@ -100,8 +88,6 @@ const allOffers: CrossSellOffer[] = [
     href: "/self-drive-rentals",
     ctaText: "Book Test Drive",
     gradient: "from-teal-500/20 to-teal-600/10",
-    iconBg: "bg-teal-500/15",
-    iconColor: "text-teal-600",
   },
   {
     id: "hsrp-booking",
@@ -112,8 +98,6 @@ const allOffers: CrossSellOffer[] = [
     href: "/hsrp",
     ctaText: "Book Now",
     gradient: "from-green-500/20 to-green-600/10",
-    iconBg: "bg-green-500/15",
-    iconColor: "text-green-600",
   },
   {
     id: "finance-promo",
@@ -124,8 +108,6 @@ const allOffers: CrossSellOffer[] = [
     href: "/car-loans",
     ctaText: "Apply Now",
     gradient: "from-indigo-500/20 to-indigo-600/10",
-    iconBg: "bg-indigo-500/15",
-    iconColor: "text-indigo-600",
     highlight: true,
   },
 ];
@@ -146,7 +128,7 @@ interface CrossSellWidgetProps {
   context?: keyof typeof contextOffers;
   excludeIds?: string[];
   maxItems?: number;
-  layout?: "horizontal" | "vertical" | "compact" | "compact-grid";
+  layout?: "horizontal" | "vertical" | "compact";
   title?: string;
   showTitle?: boolean;
 }
@@ -166,67 +148,12 @@ export function CrossSellWidget({
 
   if (offers.length === 0) return null;
 
-  // 2x2 branded icon grid for mobile
-  if (layout === "compact-grid") {
-    return (
-      <div className="space-y-3">
-        {showTitle && (
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-success/10 rounded-lg">
-              <Zap className="h-4 w-4 text-foreground" />
-            </div>
-            <h3 className="font-bold text-base">{title}</h3>
-          </div>
-        )}
-        <div className="grid grid-cols-2 gap-3">
-          {offers.map((offer, index) => (
-            <Link key={offer.id} to={offer.href}>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.05 }}
-                className="relative group rounded-xl border border-border/60 bg-card p-4 hover:border-success/50 hover:shadow-md transition-all active:scale-[0.97] h-full"
-              >
-                {offer.badge && (
-                  <Badge className="absolute -top-2 -right-1 text-[9px] px-1.5 py-0 bg-success text-success-foreground shadow-sm z-10">
-                    {offer.badge}
-                  </Badge>
-                )}
-                <div className="flex flex-col items-center text-center gap-2.5">
-                  <div className={`w-11 h-11 rounded-xl ${offer.iconBg || 'bg-success/10'} flex items-center justify-center ${offer.iconColor || 'text-success'} group-hover:scale-110 transition-transform`}>
-                    {offer.icon}
-                   </div>
-                  <div className="space-y-0.5">
-                    <h4 className="font-semibold text-xs leading-tight line-clamp-2">{offer.title}</h4>
-                    <p className="text-[10px] text-muted-foreground leading-tight line-clamp-1">{offer.subtitle}</p>
-                  </div>
-                  {offer.price && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-bold text-foreground">{offer.price}</span>
-                      {offer.originalPrice && (
-                        <span className="text-[10px] text-muted-foreground line-through">{offer.originalPrice}</span>
-                      )}
-                    </div>
-                  )}
-                  <span className="text-[10px] font-medium text-foreground flex items-center gap-0.5">
-                    {offer.ctaText} <ArrowRight className="h-3 w-3" />
-                  </span>
-                </div>
-              </motion.div>
-            </Link>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   if (layout === "compact") {
     return (
       <div className="space-y-3">
         {showTitle && (
           <div className="flex items-center gap-2">
-            <Gift className="h-4 w-4 text-foreground" />
+            <Gift className="h-4 w-4 text-primary" />
             <h4 className="font-semibold text-sm">{title}</h4>
           </div>
         )}
@@ -250,7 +177,7 @@ export function CrossSellWidget({
                 </div>
                 {offer.price && (
                   <div className="text-right shrink-0">
-                    <span className="text-sm font-bold text-foreground">{offer.price}</span>
+                    <span className="text-sm font-bold text-primary">{offer.price}</span>
                     {offer.originalPrice && (
                       <span className="text-xs text-muted-foreground line-through ml-1">
                         {offer.originalPrice}
@@ -271,9 +198,9 @@ export function CrossSellWidget({
     <section className="py-8">
       {showTitle && (
         <div className="flex items-center gap-2 mb-6">
-          <Zap className="h-5 w-5 text-foreground" />
+          <Zap className="h-5 w-5 text-primary" />
           <h3 className="text-xl font-bold">{title}</h3>
-          <Badge className="bg-primary/10 text-foreground border-primary/20 text-xs">
+          <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
             Recommended
           </Badge>
         </div>
@@ -327,7 +254,7 @@ export function CrossSellWidget({
                   <div className="flex items-center justify-between">
                     {offer.price ? (
                       <div>
-                        <span className="text-xl font-bold text-foreground">{offer.price}</span>
+                        <span className="text-xl font-bold text-primary">{offer.price}</span>
                         {offer.originalPrice && (
                           <span className="text-sm text-muted-foreground line-through ml-2">
                             {offer.originalPrice}
@@ -365,7 +292,7 @@ export function CrossSellStrip({
   return (
     <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4">
       <div className="flex items-center gap-2 mb-3">
-        <Gift className="h-4 w-4 text-foreground" />
+        <Gift className="h-4 w-4 text-primary" />
         <span className="font-semibold text-sm">Add to Your Order</span>
         <Badge variant="secondary" className="text-[10px]">
           Special Offers
@@ -391,7 +318,7 @@ export function CrossSellStrip({
               </div>
               {offer.price && (
                 <div className="flex items-center gap-1">
-                  <span className="text-sm font-bold text-foreground">{offer.price}</span>
+                  <span className="text-sm font-bold text-primary">{offer.price}</span>
                   {offer.originalPrice && (
                     <span className="text-xs text-muted-foreground line-through">
                       {offer.originalPrice}

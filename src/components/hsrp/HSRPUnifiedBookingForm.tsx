@@ -189,7 +189,7 @@ export function HSRPUnifiedBookingForm() {
     const cleaned = formData.registrationNumber.replace(/\s+/g, "").toUpperCase();
     if (rcLookupTimer.current) clearTimeout(rcLookupTimer.current);
 
-    if (/^[A-Z]{2,3}\d{0,2}[A-Z]{0,3}\d{3,4}$/.test(cleaned) && cleaned.length >= 5 && cleaned !== lastLookedUp.current) {
+    if (/^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{4}$/.test(cleaned) && cleaned !== lastLookedUp.current) {
       rcLookupTimer.current = setTimeout(() => {
         lastLookedUp.current = cleaned;
         rcLookup.lookup(cleaned).then((result) => {
@@ -457,7 +457,7 @@ export function HSRPUnifiedBookingForm() {
     ? vehicleCategories.find(c => c.value === formData.vehicleCategory)
     : null;
   const cleanedRegistration = formData.registrationNumber.replace(/\s+/g, "").toUpperCase();
-  const hasValidRegistration = /^[A-Z]{2,3}\d{0,2}[A-Z]{0,3}\d{3,4}$/.test(cleanedRegistration) && cleanedRegistration.length >= 5;
+  const hasValidRegistration = /^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{4}$/.test(cleanedRegistration);
 
   return (
     <form
@@ -487,7 +487,7 @@ export function HSRPUnifiedBookingForm() {
                   </div>
                   <span className={cn(
                     "mt-1 text-[11px] sm:text-xs",
-                    isActive && "font-medium text-foreground",
+                    isActive && "font-medium text-primary",
                     !isActive && "text-muted-foreground"
                   )}>{s.title}</span>
                 </div>
@@ -507,11 +507,11 @@ export function HSRPUnifiedBookingForm() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/20 md:h-12 md:w-12">
-                  <IndianRupee className="h-5 w-5 text-foreground md:h-6 md:w-6" />
+                  <IndianRupee className="h-5 w-5 text-primary md:h-6 md:w-6" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Estimated Total</p>
-                  <p className="text-xl font-bold text-foreground md:text-2xl">{formatPrice(prices.total)}</p>
+                  <p className="text-xl font-bold text-primary md:text-2xl">{formatPrice(prices.total)}</p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-3 text-sm sm:justify-end sm:text-right">
@@ -539,7 +539,7 @@ export function HSRPUnifiedBookingForm() {
               <CardContent className="pt-6 space-y-6">
                 {/* Registration Number Input */}
                 <div className="text-center mb-4">
-                  <Car className="w-12 h-12 mx-auto text-foreground mb-2" />
+                  <Car className="w-12 h-12 mx-auto text-primary mb-2" />
                   <h3 className="text-xl font-semibold">Enter Your Vehicle Number</h3>
                   <p className="text-muted-foreground text-sm">We'll auto-detect your vehicle type & fetch details</p>
                 </div>
@@ -555,7 +555,7 @@ export function HSRPUnifiedBookingForm() {
                       autoFocus
                     />
                     {rcLookup.loading && (
-                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 animate-spin text-foreground" />
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 animate-spin text-primary" />
                     )}
                   </div>
                   {rcLookup.data?.source === "surepass" && (
@@ -681,7 +681,7 @@ export function HSRPUnifiedBookingForm() {
             <Card>
               <CardContent className="pt-6 space-y-6">
                 <div className="text-center mb-6">
-                  <User className="w-12 h-12 mx-auto text-foreground mb-2" />
+                  <User className="w-12 h-12 mx-auto text-primary mb-2" />
                   <h3 className="text-xl font-semibold">Your Details</h3>
                   <p className="text-muted-foreground">Verify & complete — auto-advances when done</p>
                 </div>
@@ -689,7 +689,7 @@ export function HSRPUnifiedBookingForm() {
                 {/* Show vehicle summary */}
                 {rcLookup.data && (
                   <div className="p-3 rounded-lg bg-muted/50 flex items-center gap-3 text-sm">
-                    <Car className="w-5 h-5 text-foreground" />
+                    <Car className="w-5 h-5 text-primary" />
                     <span className="font-mono font-semibold">{formData.registrationNumber}</span>
                     <span className="text-muted-foreground">•</span>
                     <span>{formData.vehicleMake} {formData.vehicleModel}</span>
@@ -749,7 +749,7 @@ export function HSRPUnifiedBookingForm() {
             <Card>
               <CardContent className="pt-6 space-y-6">
                 <div className="text-center mb-6">
-                  <MapPin className="w-12 h-12 mx-auto text-foreground mb-2" />
+                  <MapPin className="w-12 h-12 mx-auto text-primary mb-2" />
                   <h3 className="text-xl font-semibold">Delivery Address</h3>
                   <p className="text-muted-foreground">Where should we deliver?</p>
                 </div>

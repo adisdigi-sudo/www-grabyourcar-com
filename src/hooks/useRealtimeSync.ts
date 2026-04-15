@@ -59,52 +59,41 @@ const TABLE_QUERY_KEY_MAP: Record<string, string[]> = {
  * Hook to enable real-time synchronization across the entire app.
  * Call this once at the app root level.
  */
-export function useGlobalRealtimeSync(enabled: boolean = true) {
+export function useGlobalRealtimeSync() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!enabled) {
-      return;
-    }
-
-    const isAdminPath =
-      typeof window !== 'undefined' &&
-      ['/crm', '/crm-auth', '/crm-reset-password', '/workspace', '/admin', '/admin-auth', '/admin-reset-password'].some(
-        (path) => window.location.pathname === path || window.location.pathname.startsWith(`${path}/`)
-      );
-
-    if (isAdminPath) {
-      return;
-    }
-
     console.log('[Realtime] Setting up global sync...');
-
-    const channelName = `realtime-public-global-${Date.now()}`;
-    const channel = REALTIME_TABLES.reduce((realtimeChannel, table) => {
-      return realtimeChannel.on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table },
-        (payload) => {
-          console.log(`[Realtime] Change detected in ${table}:`, payload.eventType);
-
-          const queryKeys = TABLE_QUERY_KEY_MAP[table] || [];
-          queryKeys.forEach((key) => {
-            queryClient.invalidateQueries({ queryKey: [key] });
-          });
-        }
-      );
-    }, supabase.channel(channelName));
-
-    channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log('[Realtime] public sync subscribed');
-      }
+    
+    const channels = REALTIME_TABLES.map(table => {
+      return supabase
+        .channel(`realtime-${table}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table },
+          (payload) => {
+            console.log(`[Realtime] Change detected in ${table}:`, payload.eventType);
+            
+            // Invalidate relevant queries
+            const queryKeys = TABLE_QUERY_KEY_MAP[table] || [];
+            queryKeys.forEach(key => {
+              queryClient.invalidateQueries({ queryKey: [key] });
+            });
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log(`[Realtime] ${table} subscribed`);
+          }
+        });
     });
 
     return () => {
-      supabase.removeChannel(channel);
+      channels.forEach(channel => {
+        supabase.removeChannel(channel);
+      });
     };
-  }, [enabled, queryClient]);
+  }, [queryClient]);
 }
 
 /**

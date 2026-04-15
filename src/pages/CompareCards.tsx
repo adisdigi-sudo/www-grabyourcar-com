@@ -345,7 +345,7 @@ const CompareCars = () => {
         <div className="container mx-auto px-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <span className="ml-2 text-muted-foreground">Loading cars...</span>
             </div>
           ) : (
@@ -365,7 +365,7 @@ const CompareCars = () => {
                               />
                             )}
                             <h3 className="font-heading font-semibold text-sm md:text-lg">{car.name}</h3>
-                            <p className="text-foreground font-bold text-sm md:text-base">{car.price}</p>
+                            <p className="text-primary font-bold text-sm md:text-base">{car.price}</p>
                           </div>
                           <Button
                             variant="ghost"
@@ -422,7 +422,7 @@ const CompareCars = () => {
             <Card>
               <CardHeader className="p-4 md:p-6">
                 <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                  <CarIcon className="h-4 w-4 md:h-5 md:w-5 text-foreground" />
+                  <CarIcon className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                   Price & Availability
                 </CardTitle>
               </CardHeader>
@@ -443,7 +443,7 @@ const CompareCars = () => {
                       <TableRow>
                         <TableCell className="font-medium text-xs md:text-sm">Price Range</TableCell>
                         {activeCars.map((car) => (
-                          <TableCell key={String(car.id)} className="text-center font-semibold text-foreground text-xs md:text-sm">
+                          <TableCell key={String(car.id)} className="text-center font-semibold text-primary text-xs md:text-sm">
                             {car.price}
                           </TableCell>
                         ))}
@@ -492,7 +492,7 @@ const CompareCars = () => {
             <Card>
               <CardHeader className="p-4 md:p-6">
                 <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                  <Fuel className="h-4 w-4 md:h-5 md:w-5 text-foreground" />
+                  <Fuel className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                   Engine Specifications
                 </CardTitle>
               </CardHeader>
@@ -532,7 +532,7 @@ const CompareCars = () => {
             <Card>
               <CardHeader className="p-4 md:p-6">
                 <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                  <Maximize className="h-4 w-4 md:h-5 md:w-5 text-foreground" />
+                  <Maximize className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                   Dimensions
                 </CardTitle>
               </CardHeader>
@@ -572,7 +572,7 @@ const CompareCars = () => {
             <Card>
               <CardHeader className="p-4 md:p-6">
                 <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                  <Gauge className="h-4 w-4 md:h-5 md:w-5 text-foreground" />
+                  <Gauge className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                   Performance
                 </CardTitle>
               </CardHeader>
@@ -610,7 +610,7 @@ const CompareCars = () => {
             <Card>
               <CardHeader className="p-4 md:p-6">
                 <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                  <Zap className="h-4 w-4 md:h-5 md:w-5 text-foreground" />
+                  <Zap className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                   Features
                 </CardTitle>
               </CardHeader>
@@ -650,7 +650,7 @@ const CompareCars = () => {
             <Card>
               <CardHeader className="p-4 md:p-6">
                 <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                  <Shield className="h-4 w-4 md:h-5 md:w-5 text-foreground" />
+                  <Shield className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                   Offers & Discounts
                 </CardTitle>
               </CardHeader>
@@ -677,7 +677,7 @@ const CompareCars = () => {
                               <TableCell key={String(car.id)} className="text-center text-xs md:text-sm">
                                 {offer ? (
                                   <div>
-                                    <p className="font-semibold text-foreground text-xs md:text-sm">{offer.discount}</p>
+                                    <p className="font-semibold text-primary text-xs md:text-sm">{offer.discount}</p>
                                     <p className="text-[10px] md:text-xs text-muted-foreground">{offer.title}</p>
                                   </div>
                                 ) : (

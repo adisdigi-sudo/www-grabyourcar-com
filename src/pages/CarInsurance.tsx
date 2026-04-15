@@ -109,11 +109,11 @@ const CarInsurance = () => {
               className="text-center mb-8 md:mb-10"
             >
               <div className="inline-flex items-center gap-1.5 bg-primary/10 rounded-full px-4 py-1.5 mb-5">
-                <Shield className="h-3.5 w-3.5 text-foreground" />
-                <span className="text-xs font-bold text-foreground uppercase tracking-wider">IRDAI Authorised • Trusted by 50,000+ Customers</span>
+                <Shield className="h-3.5 w-3.5 text-primary" />
+                <span className="text-xs font-bold text-primary uppercase tracking-wider">IRDAI Authorised • Trusted by 50,000+ Customers</span>
               </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold text-foreground leading-tight mb-3">
-                Your trusted <span className="text-foreground">insurer</span> by your side
+                Your trusted <span className="text-primary">insurer</span> by your side
               </h1>
               <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
                 Compare plans from 20+ top insurers. Save up to 85% on your premium.
@@ -143,21 +143,21 @@ const CarInsurance = () => {
                 >
                   <div className="bg-card rounded-2xl border border-border/60 p-5 md:p-6 h-full flex flex-col hover:border-primary/40 hover:shadow-[0_16px_50px_-15px_hsl(var(--primary)/0.12)] transition-all duration-500 min-h-[180px]">
                     <div className="w-12 h-12 rounded-2xl bg-primary/8 flex items-center justify-center mb-4">
-                      <product.icon className="h-6 w-6 text-foreground" />
+                      <product.icon className="h-6 w-6 text-primary" />
                     </div>
                     <h3 className="text-lg font-heading font-bold text-foreground mb-2">{product.title}</h3>
                     <p className="text-sm text-muted-foreground mb-3">
-                      {product.highlight && <span className="text-foreground font-semibold">{product.highlight}</span>}
+                      {product.highlight && <span className="text-primary font-semibold">{product.highlight}</span>}
                       {product.highlightSuffix}
                     </p>
                     {product.badge && (
                       <div className="flex items-center gap-2 bg-primary/8 rounded-xl px-3 py-1.5 w-fit mb-3">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-foreground" />
+                        <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                         <span className="text-xs font-bold text-foreground">{product.badge}</span>
                       </div>
                     )}
                     <div className="mt-auto pt-3 flex items-center justify-between">
-                      <span className="text-sm font-bold text-foreground">Check Prices →</span>
+                      <span className="text-sm font-bold text-primary">Check Prices →</span>
                       <div className="w-9 h-9 rounded-full border-2 border-border/60 group-hover:border-primary group-hover:bg-primary flex items-center justify-center transition-all duration-300">
                         <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
                       </div>
@@ -172,7 +172,7 @@ const CarInsurance = () => {
               <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto p-4 md:p-6 w-[95vw] sm:w-full rounded-2xl">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2 text-xl font-heading">
-                    {activeProduct && <activeProduct.icon className="h-5 w-5 text-foreground" />}
+                    {activeProduct && <activeProduct.icon className="h-5 w-5 text-primary" />}
                     {activeProduct?.title}
                   </DialogTitle>
                 </DialogHeader>

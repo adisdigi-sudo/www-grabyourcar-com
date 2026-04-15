@@ -284,12 +284,12 @@ export const CategoryGrid = () => {
         </Button>
 
         {/* Gradient fade edges */}
-        <div className="absolute left-0 top-0 bottom-0 w-6 md:w-12 lg:w-20 bg-gradient-to-r from-secondary/50 to-transparent z-[5] pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-6 md:w-12 lg:w-20 bg-gradient-to-l from-secondary/50 to-transparent z-[5] pointer-events-none" />
+        <div className="absolute left-0 top-0 bottom-0 w-12 md:w-20 bg-gradient-to-r from-secondary/50 to-transparent z-[5] pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-12 md:w-20 bg-gradient-to-l from-secondary/50 to-transparent z-[5] pointer-events-none" />
 
         <div
           ref={scrollRef}
-          className="flex gap-4 px-4 md:px-12 lg:px-20 overflow-x-auto scrollbar-hide scroll-smooth"
+          className="flex gap-4 px-12 md:px-20 overflow-x-auto scrollbar-hide scroll-smooth"
         >
           {categories.map((category) => {
             const IconComponent = iconMap[category.icon] || Car;

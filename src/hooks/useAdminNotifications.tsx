@@ -3,28 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminAuth } from "./useAdminAuth";
 
-const getStoredPreference = (key: string, fallback: boolean) => {
-  if (typeof window === "undefined") return fallback;
-
-  try {
-    const stored = window.localStorage.getItem(key);
-    if (stored === null) return fallback;
-    return stored === "true";
-  } catch {
-    return fallback;
-  }
-};
-
-const setStoredPreference = (key: string, value: boolean) => {
-  if (typeof window === "undefined") return;
-
-  try {
-    window.localStorage.setItem(key, String(value));
-  } catch {
-    // Ignore blocked browser storage.
-  }
-};
-
 export interface Notification {
   id: string;
   type: 'hot_lead' | 'new_lead' | 'pending_order' | 'payment_received' | 'booking_confirmed' | 'urgent_followup' | 'overdue_followup' | 'insurance_renewal' | 'insurance_expiring';
@@ -89,8 +67,14 @@ const LARGE_PAYMENT_THRESHOLD = 50000;
 export const useAdminNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [soundEnabled, setSoundEnabled] = useState(() => getStoredPreference('admin-notification-sound', true));
-  const [emailAlertsEnabled, setEmailAlertsEnabled] = useState(() => getStoredPreference('admin-email-alerts', false));
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const stored = localStorage.getItem('admin-notification-sound');
+    return stored !== 'false';
+  });
+  const [emailAlertsEnabled, setEmailAlertsEnabled] = useState(() => {
+    const stored = localStorage.getItem('admin-email-alerts');
+    return stored === 'true';
+  });
   const { toast } = useToast();
   const { isAdmin } = useAdminAuth();
   const followupCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -98,7 +82,7 @@ export const useAdminNotifications = () => {
   const toggleSound = useCallback(() => {
     setSoundEnabled(prev => {
       const newValue = !prev;
-      setStoredPreference('admin-notification-sound', newValue);
+      localStorage.setItem('admin-notification-sound', String(newValue));
       return newValue;
     });
   }, []);
@@ -106,7 +90,7 @@ export const useAdminNotifications = () => {
   const toggleEmailAlerts = useCallback(() => {
     setEmailAlertsEnabled(prev => {
       const newValue = !prev;
-      setStoredPreference('admin-email-alerts', newValue);
+      localStorage.setItem('admin-email-alerts', String(newValue));
       return newValue;
     });
   }, []);
@@ -200,7 +184,7 @@ export const useAdminNotifications = () => {
         .gte('next_followup_at', now.toISOString())
         .lte('next_followup_at', oneHourFromNow.toISOString())
         .not('status', 'in', '("converted","lost")')
-        .order('next_followup_at', { ascending: true })
+        .order('next_follow_up_at', { ascending: true })
         .limit(3);
 
       if (!upcomingError && upcomingLeads && upcomingLeads.length > 0) {

@@ -24,7 +24,7 @@ const MyFavorites = () => {
   if (authLoading || favLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -41,7 +41,7 @@ const MyFavorites = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Heart className="h-6 w-6 text-foreground" />
+              <Heart className="h-6 w-6 text-primary" />
             </div>
             <div>
               <h1 className="text-2xl md:text-3xl font-heading font-bold">My Favorites</h1>
@@ -73,7 +73,7 @@ const MyFavorites = () => {
                   </div>
                   <CardContent className="p-5">
                     <h3 className="font-heading font-semibold text-lg mb-1">{car.name}</h3>
-                    <p className="text-foreground font-bold text-lg mb-3">{car.price}</p>
+                    <p className="text-primary font-bold text-lg mb-3">{car.price}</p>
                     <div className="flex gap-2 mb-4">
                       {car.fuelTypes.map((fuel) => (
                         <Badge key={fuel} variant="secondary" className="text-xs">

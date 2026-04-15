@@ -136,26 +136,13 @@ And provide a one-line recommended action.`,
 
       const { scores } = JSON.parse(toolCall.function.arguments);
 
-      // Update leads with scores — write to dedicated lead_scores table + leads columns
+      // Update leads with scores
       let updated = 0;
       for (const s of scores) {
-        // Upsert into lead_scores table
-        await supabase.from("lead_scores").upsert({
-          lead_id: s.lead_id,
-          score: s.score,
-          segment: s.segment,
-          reason: s.reason,
-          recommended_action: s.recommended_action,
-          scored_at: new Date().toISOString(),
-          scored_by: "ai_batch",
-        }, { onConflict: "lead_id" });
-
-        // Also update leads table for quick access
         const { error: updateError } = await supabase
           .from("leads")
           .update({
-            lead_score: s.score,
-            lead_segment: s.segment,
+            notes: `[AI Score: ${s.score}/100 | Segment: ${s.segment}] ${s.recommended_action}`,
           })
           .eq("id", s.lead_id);
         if (!updateError) updated++;

@@ -79,12 +79,12 @@ export const ResponsiveLogo = ({
   // Get dynamic dimensions from backend settings
   const getDimensions = () => {
     const defaultDimensions = {
-      header: { height: 48, width: undefined, maxWidth: 220 },
+      header: { height: 48, width: undefined, maxWidth: 200 },
       footer: { height: 44, width: undefined, maxWidth: 180 },
-      mobile: { height: 40, width: undefined, maxWidth: 140 },
+      mobile: { height: 36, width: undefined, maxWidth: 110 },
       sidebar: { height: 40, width: undefined, maxWidth: 150 },
       auth: { height: 72, width: undefined, maxWidth: 280 },
-      compact: { height: 32, width: undefined, maxWidth: 100 },
+      compact: { height: 28, width: undefined, maxWidth: 90 },
     };
 
     if (!brandingSettings) return defaultDimensions[variant];

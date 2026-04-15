@@ -1,1 +1,0 @@
-ALTER TABLE public.hsrp_bookings ADD COLUMN IF NOT EXISTS assigned_to TEXT;

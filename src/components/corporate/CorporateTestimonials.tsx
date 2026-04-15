@@ -124,7 +124,7 @@ export const CorporateTestimonials = () => {
           viewport={{ once: true }}
           className="text-center mb-12 md:mb-16"
         >
-          <span className="inline-block px-4 py-1.5 mb-4 text-xs font-semibold uppercase tracking-wider text-foreground bg-primary/10 rounded-full border border-primary/20">
+          <span className="inline-block px-4 py-1.5 mb-4 text-xs font-semibold uppercase tracking-wider text-primary bg-primary/10 rounded-full border border-primary/20">
             Client Testimonials
           </span>
           <h2 className="font-heading text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
@@ -182,8 +182,8 @@ export const CorporateTestimonials = () => {
                       {testimonials[current].designation}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                      <Building2 className="h-3 w-3 text-foreground" />
-                      <span className="text-sm font-medium text-foreground">
+                      <Building2 className="h-3 w-3 text-primary" />
+                      <span className="text-sm font-medium text-primary">
                         {testimonials[current].company}
                       </span>
                     </div>
@@ -195,14 +195,14 @@ export const CorporateTestimonials = () => {
                     {Array.from({ length: testimonials[current].rating }).map((_, i) => (
                       <Star
                         key={i}
-                        className="h-5 w-5 fill-primary text-foreground"
+                        className="h-5 w-5 fill-primary text-primary"
                       />
                     ))}
                   </div>
                   {testimonials[current].vehiclesOrdered && (
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-                      <Car className="h-4 w-4 text-foreground" />
-                      <span className="text-sm font-semibold text-foreground">
+                      <Car className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold text-primary">
                         {testimonials[current].vehiclesOrdered}
                       </span>
                     </div>
@@ -262,7 +262,7 @@ export const CorporateTestimonials = () => {
 
                       {/* Quote icon */}
                       <div className="absolute top-4 right-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Quote className="h-10 w-10 text-foreground" />
+                        <Quote className="h-10 w-10 text-primary" />
                       </div>
 
                       {/* Avatar and info */}
@@ -290,7 +290,7 @@ export const CorporateTestimonials = () => {
                         {Array.from({ length: testimonial.rating }).map((_, i) => (
                           <Star
                             key={i}
-                            className="h-3.5 w-3.5 fill-primary text-foreground"
+                            className="h-3.5 w-3.5 fill-primary text-primary"
                           />
                         ))}
                       </div>
@@ -303,8 +303,8 @@ export const CorporateTestimonials = () => {
                       {/* Footer */}
                       <div className="flex items-center justify-between pt-4 border-t border-border/50">
                         <div className="flex items-center gap-1.5">
-                          <Building2 className="h-3.5 w-3.5 text-foreground" />
-                          <span className="text-xs font-medium text-foreground">
+                          <Building2 className="h-3.5 w-3.5 text-primary" />
+                          <span className="text-xs font-medium text-primary">
                             {testimonial.company}
                           </span>
                         </div>

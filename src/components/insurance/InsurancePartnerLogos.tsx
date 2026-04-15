@@ -73,8 +73,8 @@ function InsurerTooltipContent({ partner }: { partner: InsurancePartner }) {
           <span className="font-medium">{partner.rating}/5</span>
         </div>
         <div className="flex items-center gap-2 pt-1 border-t border-border/50">
-          <Shield className="h-3.5 w-3.5 text-foreground" />
-          <span className="text-foreground font-medium">{partner.highlight}</span>
+          <Shield className="h-3.5 w-3.5 text-primary" />
+          <span className="text-primary font-medium">{partner.highlight}</span>
         </div>
       </div>
     </div>
@@ -102,7 +102,7 @@ export function InsurancePartnerLogos() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl md:text-5xl font-heading font-bold text-foreground mb-4 leading-tight">
-              Compare plans from <span className="text-foreground">20+ top insurers</span>
+              Compare plans from <span className="text-primary">20+ top insurers</span>
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               India's most trusted insurance providers with the highest claim settlement ratios — all in one place

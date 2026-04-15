@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  MessageSquare, Send, Search, User, Phone
+  MessageSquare, Send, Search, User, Clock, CheckCircle, Phone, 
+  Tag, UserPlus, ChevronRight
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -13,166 +14,73 @@ import { cn } from "@/lib/utils";
 
 interface Conversation {
   id: string;
-  phone: string;
+  phone_number: string;
   customer_name: string | null;
-  last_message: string | null;
-  last_message_at: string | null;
-  unread_count: number | null;
-  status: string | null;
-}
-
-interface InboxMessage {
-  id: string;
-  conversation_id: string;
-  direction: "inbound" | "outbound";
-  message_type: string;
-  content: string | null;
-  status: string | null;
-  sent_by_name: string | null;
-  created_at: string | null;
-  read_at: string | null;
-  delivered_at: string | null;
-  failed_at: string | null;
+  messages: Array<{ role: string; content: string; timestamp?: string }>;
+  status: string;
+  last_message_at: string;
+  created_at: string;
 }
 
 export function WAConversationInbox() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selected, setSelected] = useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [replyText, setReplyText] = useState("");
   const [search, setSearch] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isMessagesLoading, setIsMessagesLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const fetchConversations = useCallback(async () => {
-    setIsLoading(true);
-
-    const { data, error } = await supabase
-      .from("wa_conversations")
-      .select("id, phone, customer_name, last_message, last_message_at, unread_count, status")
-      .order("last_message_at", { ascending: false })
-      .limit(200);
-
-    if (error) {
-      console.error("Failed to load WhatsApp conversations:", error);
-      setConversations([]);
-      setSelected(null);
-      setIsLoading(false);
-      return;
-    }
-
-    const nextConversations = ((data || []) as Conversation[]).filter((item) => item.phone);
-    setConversations(nextConversations);
-    setSelected((current) => {
-      if (!nextConversations.length) return null;
-      if (!current) return nextConversations[0];
-      return nextConversations.find((item) => item.id === current.id) || nextConversations[0];
-    });
-    setIsLoading(false);
-  }, []);
-
-  const fetchMessages = useCallback(async (conversationId: string) => {
-    setIsMessagesLoading(true);
-
-    const { data, error } = await supabase
-      .from("wa_inbox_messages")
-      .select(
-        "id, conversation_id, direction, message_type, content, status, sent_by_name, created_at, read_at, delivered_at, failed_at"
-      )
-      .eq("conversation_id", conversationId)
-      .order("created_at", { ascending: true })
-      .limit(500);
-
-    if (error) {
-      console.error("Failed to load WhatsApp messages:", error);
-      setMessages([]);
-      setIsMessagesLoading(false);
-      return;
-    }
-
-    setMessages((data || []) as InboxMessage[]);
-    setIsMessagesLoading(false);
-  }, []);
-
   useEffect(() => {
     fetchConversations();
-
     const channel = supabase
       .channel("wa-inbox")
-      .on("postgres_changes", { event: "*", schema: "public", table: "wa_conversations" }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_conversations" }, () => {
         fetchConversations();
       })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
-  }, [fetchConversations]);
-
-  useEffect(() => {
-    if (!selected) {
-      setMessages([]);
-      return;
-    }
-
-    fetchMessages(selected.id);
-
-    if ((selected.unread_count || 0) > 0) {
-      supabase.from("wa_conversations").update({ unread_count: 0 }).eq("id", selected.id);
-    }
-
-    const channel = supabase
-      .channel(`wa-inbox-messages-${selected.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "wa_inbox_messages",
-          filter: `conversation_id=eq.${selected.id}`,
-        },
-        () => {
-          fetchMessages(selected.id);
-          fetchConversations();
-        }
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [selected, fetchMessages, fetchConversations]);
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [selected?.messages]);
+
+  const fetchConversations = async () => {
+    setIsLoading(true);
+    const { data } = await supabase
+      .from("whatsapp_conversations")
+      .select("*")
+      .order("last_message_at", { ascending: false });
+    if (data) setConversations(data as any);
+    setIsLoading(false);
+  };
 
   const handleReply = async () => {
     if (!selected || !replyText.trim()) return;
     setIsSending(true);
 
     try {
-      const { data: userData } = await supabase.auth.getUser();
-
-      const { data, error } = await supabase.functions.invoke("wa-send-inbox", {
-        body: {
-          conversation_id: selected.id,
-          phone: selected.phone,
-          message_type: "text",
-          content: replyText,
-          sent_by: userData?.user?.id,
-          sent_by_name: userData?.user?.email?.split("@")[0] || "Agent",
-        },
+      // Send via Finbite
+      const { error } = await supabase.functions.invoke("whatsapp-send", {
+        body: { to: selected.phone_number, message: replyText },
       });
 
-      if (error || !data?.success) {
-        if (data?.window_expired) {
-          toast({ title: "⏰ 24hr Window Expired", description: "Message not sent. Please send an approved template message to re-open the conversation.", variant: "destructive" });
-          setIsSending(false);
-          return;
-        }
-        throw new Error(data?.error || error?.message || "Failed to send reply");
-      }
+      if (error) throw error;
 
+      // Update conversation history
+      const updatedMessages = [
+        ...(selected.messages || []),
+        { role: "assistant", content: replyText, timestamp: new Date().toISOString() },
+      ].slice(-20);
+
+      await supabase.from("whatsapp_conversations").update({
+        messages: updatedMessages,
+        last_message_at: new Date().toISOString(),
+      }).eq("id", selected.id);
+
+      setSelected({ ...selected, messages: updatedMessages });
       setReplyText("");
       toast({ title: "Reply sent ✅" });
     } catch (err: any) {
@@ -183,15 +91,8 @@ export function WAConversationInbox() {
   };
 
   const filtered = conversations.filter(c =>
-    !search || c.customer_name?.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search)
+    !search || c.customer_name?.toLowerCase().includes(search.toLowerCase()) || c.phone_number.includes(search)
   );
-
-  const getMessageStatus = (message: InboxMessage) => {
-    if (message.read_at) return "Read";
-    if (message.delivered_at) return "Delivered";
-    if (message.failed_at) return "Failed";
-    return message.status || "Sent";
-  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px]">
@@ -205,14 +106,13 @@ export function WAConversationInbox() {
         </CardHeader>
         <CardContent className="p-0">
           <ScrollArea className="h-[520px]">
-            {isLoading ? (
-              <div className="p-6 text-center text-muted-foreground text-sm">Loading conversations...</div>
-            ) : filtered.length === 0 ? (
+            {filtered.length === 0 ? (
               <div className="p-6 text-center text-muted-foreground text-sm">
                 <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-30" />
                 No conversations yet
               </div>
             ) : filtered.map(conv => {
+              const lastMsg = conv.messages?.[conv.messages.length - 1];
               return (
                 <button
                   key={conv.id}
@@ -228,17 +128,15 @@ export function WAConversationInbox() {
                         <User className="h-4 w-4 text-primary" />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">{conv.customer_name || conv.phone}</p>
-                        <p className="text-xs text-muted-foreground truncate">{conv.last_message?.slice(0, 60) || "No messages"}</p>
+                        <p className="font-medium text-sm truncate">{conv.customer_name || conv.phone_number}</p>
+                        <p className="text-xs text-muted-foreground truncate">{lastMsg?.content?.slice(0, 40) || "No messages"}</p>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className="text-[10px] text-muted-foreground">
-                        {conv.last_message_at
-                          ? new Date(conv.last_message_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                          : "--:--"}
+                        {new Date(conv.last_message_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </span>
-                      {(conv.unread_count || 0) > 0 && (
+                      {lastMsg?.role === "user" && (
                         <Badge variant="default" className="text-[10px] px-1.5 py-0">New</Badge>
                       )}
                     </div>
@@ -264,12 +162,12 @@ export function WAConversationInbox() {
                   <div>
                     <p className="font-semibold">{selected.customer_name || "Unknown"}</p>
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Phone className="h-3 w-3" /> {selected.phone}
+                      <Phone className="h-3 w-3" /> {selected.phone_number}
                     </p>
                   </div>
                 </div>
                 <Badge variant={selected.status === "active" ? "default" : "secondary"}>
-                  {selected.status || "active"}
+                  {selected.status}
                 </Badge>
               </div>
             </CardHeader>
@@ -277,26 +175,21 @@ export function WAConversationInbox() {
             {/* Messages */}
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-3">
-                {isMessagesLoading ? (
-                  <div className="text-center text-sm text-muted-foreground py-6">Loading messages...</div>
-                ) : messages.length === 0 ? (
-                  <div className="text-center text-sm text-muted-foreground py-6">No messages in this conversation yet.</div>
-                ) : messages.map((msg) => (
-                  <div key={msg.id} className={cn("flex", msg.direction === "outbound" ? "justify-end" : "justify-start")}>
+                {(selected.messages || []).map((msg, i) => (
+                  <div key={i} className={cn("flex", msg.role === "assistant" ? "justify-end" : "justify-start")}>
                     <div className={cn(
                       "max-w-[75%] rounded-xl px-3 py-2 text-sm",
-                      msg.direction === "outbound" 
+                      msg.role === "assistant" 
                         ? "bg-primary text-primary-foreground rounded-br-sm" 
                         : "bg-muted rounded-bl-sm"
                     )}>
-                      <p className="whitespace-pre-wrap">{msg.content || "—"}</p>
-                      {msg.created_at && (
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      {msg.timestamp && (
                         <p className={cn(
                           "text-[10px] mt-1",
-                          msg.direction === "outbound" ? "text-primary-foreground/70" : "text-muted-foreground"
+                          msg.role === "assistant" ? "text-primary-foreground/70" : "text-muted-foreground"
                         )}>
-                          {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                          {msg.direction === "outbound" ? ` • ${getMessageStatus(msg)}` : ""}
+                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </p>
                       )}
                     </div>

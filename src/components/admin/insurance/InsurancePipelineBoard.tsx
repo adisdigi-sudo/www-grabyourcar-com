@@ -17,14 +17,13 @@ import {
   UserPlus, Phone, FileText, MessageSquare, Clock, CreditCard,
   CheckCircle2, XCircle, Bell, Search, ChevronRight, Upload,
   PhoneCall, User, Car, Shield, TrendingUp, Eye, Send, Flame,
-  MoreVertical, Share2, Plus, ArrowRight, Filter, Download, Database, SlidersHorizontal, X, CalendarIcon, MapPin, Loader2, Save
+  MoreVertical, Share2, Plus, ArrowRight, Filter, Download, Database, SlidersHorizontal, X, CalendarIcon, MapPin
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { format, differenceInDays, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
-import { sendWhatsApp } from "@/lib/sendWhatsApp";
 
 // ── 9-Stage Pipeline (STRICT) ──
 const PIPELINE_STAGES = [
@@ -85,43 +84,8 @@ interface Client {
   lost_reason: string | null;
   follow_up_date: string | null;
   current_premium: number | null;
-  current_policy_number: string | null;
   notes: string | null;
   created_at: string;
-  booking_date: string | null;
-  policy_start_date: string | null;
-  updated_at: string | null;
-}
-
-// Normalize stage based on lead_status and current_policy_number
-function normalizeClientStage(client: Client): string {
-  const stage = (client.pipeline_stage || "").toLowerCase();
-  const status = (client.lead_status || "").toLowerCase();
-
-  // If client has a policy number assigned, they are policy_issued
-  if (client.current_policy_number && client.current_policy_number.trim()) return "policy_issued";
-  if (stage === "policy_issued" || status === "won" || status === "converted") return "policy_issued";
-  if (stage === "lost" || status === "lost" || status === "not_interested") return "lost";
-
-  // Map known stages
-  const STAGE_LOOKUP: Record<string, string> = {
-    new_lead: "new_lead", new: "new_lead",
-    contact_attempted: "contact_attempted",
-    requirement_collected: "requirement_collected",
-    smart_calling: "contact_attempted",
-    contacted: "contact_attempted",
-    in_process: "contact_attempted",
-    quote_shared: "quote_shared",
-    follow_up: "follow_up",
-    interested: "follow_up",
-    hot_prospect: "follow_up",
-    payment_pending: "payment_pending",
-    renewal_queue: "renewal_queue",
-    won: "policy_issued",
-    converted: "policy_issued",
-  };
-
-  return STAGE_LOOKUP[stage] || STAGE_LOOKUP[status] || "new_lead";
 }
 
 export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardProps = {}) {
@@ -134,8 +98,6 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
   const [lostReason, setLostReason] = useState("");
   const [showUploadPolicy, setShowUploadPolicy] = useState(false);
   const [note, setNote] = useState("");
-  const [editFields, setEditFields] = useState<Record<string, string>>({});
-  const [savingEdit, setSavingEdit] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterSource, setFilterSource] = useState<string>("all");
@@ -155,15 +117,13 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_clients")
-        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, current_policy_number, notes, created_at, booking_date, policy_start_date, updated_at")
-        .eq("is_legacy", false)
+        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, notes, created_at")
+        .not("pipeline_stage", "is", null)
+        .not("pipeline_stage", "in", '("new_lead","policy_issued")')
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
-      return ((data || []).map((client) => ({
-        ...client,
-        pipeline_stage: normalizeClientStage(client),
-      }))) as Client[];
+      return (data || []) as Client[];
     },
   });
 
@@ -191,16 +151,6 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
   const activeFilterCount = [filterPriority, filterSource, filterCity, filterExecutive, filterDateRange, filterMonth].filter(f => f !== "all").length + (customDateFrom ? 1 : 0);
 
   // Get date cutoff based on filter
-  // Get the effective date for a client based on their stage
-  const getClientFilterDate = (c: Client) => {
-    const stage = c.pipeline_stage || "new_lead";
-    // For Won/Policy Issued clients, use booking or policy date
-    if (stage === "policy_issued") {
-      return c.booking_date || c.policy_start_date || c.updated_at || c.created_at;
-    }
-    return c.created_at;
-  };
-
   const getDateCutoff = (range: string): Date | null => {
     const now = new Date();
     if (range === "today") { const d = new Date(now); d.setHours(0,0,0,0); return d; }
@@ -208,13 +158,6 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     if (range === "7days") { const d = new Date(now); d.setDate(d.getDate() - 7); return d; }
     if (range === "30days") { const d = new Date(now); d.setDate(d.getDate() - 30); return d; }
     if (range === "90days") { const d = new Date(now); d.setDate(d.getDate() - 90); return d; }
-    return null;
-  };
-
-  const getDateRange = (range: string): { start: Date; end: Date } | null => {
-    const now = new Date();
-    if (range === "this_week") return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
-    if (range === "this_quarter") return { start: startOfQuarter(now), end: endOfQuarter(now) };
     return null;
   };
 
@@ -236,38 +179,31 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     if (filterExecutive !== "all") result = result.filter(c => c.assigned_executive === filterExecutive);
     // Date range preset filter
     if (filterDateRange !== "all" && filterDateRange !== "custom") {
-      const rangeResult = getDateRange(filterDateRange);
-      if (rangeResult) {
-        const rs = new Date(rangeResult.start); rs.setHours(0,0,0,0);
-        const re = new Date(rangeResult.end); re.setHours(23,59,59,999);
-        result = result.filter(c => { const d = new Date(getClientFilterDate(c)); return d >= rs && d <= re; });
-      } else {
-        const cutoff = getDateCutoff(filterDateRange);
-        if (cutoff) {
-          if (filterDateRange === "today" || filterDateRange === "yesterday") {
-            const eod = new Date(cutoff); eod.setHours(23,59,59,999);
-            result = result.filter(c => { const d = new Date(getClientFilterDate(c)); return d >= cutoff && d <= eod; });
-          } else {
-            result = result.filter(c => new Date(getClientFilterDate(c)) >= cutoff);
-          }
+      const cutoff = getDateCutoff(filterDateRange);
+      if (cutoff) {
+        if (filterDateRange === "today" || filterDateRange === "yesterday") {
+          const endOfDay = new Date(cutoff); endOfDay.setHours(23,59,59,999);
+          result = result.filter(c => { const d = new Date(c.created_at); return d >= cutoff && d <= endOfDay; });
+        } else {
+          result = result.filter(c => new Date(c.created_at) >= cutoff);
         }
       }
     }
     // Custom date range
     if (filterDateRange === "custom" && customDateFrom) {
       const from = new Date(customDateFrom); from.setHours(0,0,0,0);
-      result = result.filter(c => new Date(getClientFilterDate(c)) >= from);
+      result = result.filter(c => new Date(c.created_at) >= from);
       if (customDateTo) {
         const to = new Date(customDateTo); to.setHours(23,59,59,999);
-        result = result.filter(c => new Date(getClientFilterDate(c)) <= to);
+        result = result.filter(c => new Date(c.created_at) <= to);
       }
     }
     // Month filter
     if (filterMonth !== "all") {
-      result = result.filter((c) => {
-        const rawDate = getClientFilterDate(c);
-        if (!rawDate) return false;
-        return format(new Date(rawDate), "yyyy-MM") === filterMonth;
+      const [year, month] = filterMonth.split("-").map(Number);
+      result = result.filter(c => {
+        const d = new Date(c.created_at);
+        return d.getFullYear() === year && d.getMonth() === month;
       });
     }
     return result;
@@ -380,8 +316,6 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
           if (clientError) throw clientError;
           if (!client) throw new Error("Client not found for policy issuance");
 
-          let isRenewalPolicy = false;
-
           // If same vehicle_number exists, mark old active policies as "renewed"
           if (client.vehicle_number) {
             const normalizedVehicle = client.vehicle_number.trim().toUpperCase();
@@ -397,15 +331,6 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
               .map(c => c.id);
 
             if (sameClientIds.length > 0) {
-              const { data: existingVehiclePolicies, error: existingVehiclePoliciesErr } = await supabase
-                .from("insurance_policies")
-                .select("id")
-                .in("client_id", sameClientIds)
-                .limit(1);
-
-              if (existingVehiclePoliciesErr) throw existingVehiclePoliciesErr;
-              isRenewalPolicy = (existingVehiclePolicies?.length || 0) > 0;
-
               const { error: renewErr } = await supabase
                 .from("insurance_policies")
                 .update({ status: "renewed", renewal_status: "renewed" })
@@ -413,17 +338,6 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                 .eq("status", "active");
               if (renewErr) throw renewErr;
             }
-          }
-
-          if (!isRenewalPolicy) {
-            const { data: existingClientPolicies, error: existingClientPoliciesErr } = await supabase
-              .from("insurance_policies")
-              .select("id")
-              .eq("client_id", clientId)
-              .limit(1);
-
-            if (existingClientPoliciesErr) throw existingClientPoliciesErr;
-            isRenewalPolicy = (existingClientPolicies?.length || 0) > 0;
           }
 
           // Calculate dates
@@ -452,7 +366,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                 start_date: startDate,
                 expiry_date: expiryDate,
                 status: "active",
-                is_renewal: isRenewalPolicy,
+                is_renewal: false,
                 issued_date: today.toISOString().split("T")[0],
               });
               if (createErr) throw createErr;
@@ -467,7 +381,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
               start_date: startDate,
               expiry_date: expiryDate,
               status: "active",
-              is_renewal: isRenewalPolicy,
+              is_renewal: false,
               issued_date: today.toISOString().split("T")[0],
             });
             if (createErr) throw createErr;
@@ -571,14 +485,10 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
 
   const displayPhone = (phone: string | null) => (!phone || phone.startsWith("IB_")) ? null : phone;
 
-  const handleWhatsApp = (phone: string | null, name: string) => {
-    if (!phone || phone.startsWith("IB_")) return;
-    void sendWhatsApp({
-      phone,
-      message: `Hi ${name}, reaching out regarding your insurance. Contact us for the best deal!`,
-      name: name || undefined,
-      logEvent: "pipeline_board_whatsapp",
-    });
+  const getWhatsAppLink = (phone: string | null) => {
+    if (!phone || phone.startsWith("IB_")) return null;
+    const clean = phone.replace(/\D/g, "");
+    return `https://wa.me/${clean.startsWith("91") ? clean : `91${clean}`}`;
   };
 
   const getPriorityColor = (p: string | null) => {
@@ -725,11 +635,9 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                     <SelectItem value="all">All Time</SelectItem>
                     <SelectItem value="today">Today</SelectItem>
                     <SelectItem value="yesterday">Yesterday</SelectItem>
-                    <SelectItem value="this_week">This Week</SelectItem>
                     <SelectItem value="7days">Last 7 Days</SelectItem>
                     <SelectItem value="30days">Last 30 Days</SelectItem>
                     <SelectItem value="90days">Last 90 Days</SelectItem>
-                    <SelectItem value="this_quarter">This Quarter</SelectItem>
                     <SelectItem value="custom">Custom Range</SelectItem>
                   </SelectContent>
                 </Select>
@@ -834,7 +742,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
             const stage = PIPELINE_STAGES.find(s => s.value === (client.pipeline_stage || "new_lead")) || PIPELINE_STAGES[0];
             const stageIdx = PIPELINE_STAGES.findIndex(s => s.value === stage.value);
             const phone = displayPhone(client.phone);
-            const waLink = null; // wa.me removed, using API
+            const waLink = getWhatsAppLink(client.phone);
             const daysToExpiry = client.policy_expiry_date ? differenceInDays(new Date(client.policy_expiry_date), new Date()) : null;
 
             return (
@@ -923,10 +831,10 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                           <a href={`tel:${client.phone}`}>
                             <Button size="icon" variant="ghost" className="h-7 w-7"><PhoneCall className="h-3.5 w-3.5 text-primary" /></Button>
                           </a>
-                          {phone && (
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleWhatsApp(client.phone, client.customer_name || "")}>
-                              <MessageSquare className="h-3.5 w-3.5 text-primary" />
-                            </Button>
+                          {waLink && (
+                            <a href={waLink} target="_blank" rel="noopener noreferrer">
+                              <Button size="icon" variant="ghost" className="h-7 w-7"><MessageSquare className="h-3.5 w-3.5 text-primary" /></Button>
+                            </a>
                           )}
                         </>
                       )}
@@ -984,106 +892,11 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
       </Dialog>
 
       {/* Client Detail Sheet */}
-      <Dialog open={!!selectedClient && !showMoveDialog} onOpenChange={(o) => {
-        if (!o) { setSelectedClient(null); setEditFields({}); }
-        else if (selectedClient) {
-          setEditFields({
-            customer_name: selectedClient.customer_name || "",
-            phone: selectedClient.phone || "",
-            email: selectedClient.email || "",
-            city: selectedClient.city || "",
-            vehicle_number: selectedClient.vehicle_number || "",
-            vehicle_make: selectedClient.vehicle_make || "",
-            vehicle_model: selectedClient.vehicle_model || "",
-            vehicle_year: selectedClient.vehicle_year ? String(selectedClient.vehicle_year) : "",
-            current_insurer: selectedClient.current_insurer || "",
-            current_policy_type: selectedClient.current_policy_type || "",
-            current_premium: selectedClient.current_premium ? String(selectedClient.current_premium) : "",
-            ncb_percentage: selectedClient.ncb_percentage ? String(selectedClient.ncb_percentage) : "",
-          });
-        }
-      }}>
+      <Dialog open={!!selectedClient && !showMoveDialog} onOpenChange={(o) => { if (!o) setSelectedClient(null); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           {selectedClient && (() => {
             const stage = PIPELINE_STAGES.find(s => s.value === (selectedClient.pipeline_stage || "new_lead")) || PIPELINE_STAGES[0];
             const phone = displayPhone(selectedClient.phone);
-
-            const initEditIfEmpty = () => {
-              if (Object.keys(editFields).length === 0) {
-                setEditFields({
-                  customer_name: selectedClient.customer_name || "",
-                  phone: selectedClient.phone || "",
-                  email: selectedClient.email || "",
-                  city: selectedClient.city || "",
-                  vehicle_number: selectedClient.vehicle_number || "",
-                  vehicle_make: selectedClient.vehicle_make || "",
-                  vehicle_model: selectedClient.vehicle_model || "",
-                  vehicle_year: selectedClient.vehicle_year ? String(selectedClient.vehicle_year) : "",
-                  current_insurer: selectedClient.current_insurer || "",
-                  current_policy_type: selectedClient.current_policy_type || "",
-                  current_premium: selectedClient.current_premium ? String(selectedClient.current_premium) : "",
-                  ncb_percentage: selectedClient.ncb_percentage ? String(selectedClient.ncb_percentage) : "",
-                });
-              }
-            };
-            initEditIfEmpty();
-
-            const updateField = (key: string, value: string) => setEditFields(f => ({ ...f, [key]: value }));
-
-            const saveEdits = async () => {
-              setSavingEdit(true);
-              try {
-                const normalizedPhone = (editFields.phone || selectedClient.phone || "").replace(/\D/g, "");
-                const normalizedVehicleNumber = (editFields.vehicle_number || "")
-                  .replace(/[^A-Z0-9]/gi, "")
-                  .toUpperCase();
-
-                const updates: Record<string, any> = {
-                  customer_name: editFields.customer_name?.trim() || null,
-                  phone: normalizedPhone || selectedClient.phone,
-                  email: editFields.email?.trim() || null,
-                  city: editFields.city?.trim() || null,
-                  vehicle_number: normalizedVehicleNumber || null,
-                  vehicle_make: editFields.vehicle_make?.trim() || null,
-                  vehicle_model: editFields.vehicle_model?.trim() || null,
-                  vehicle_year: editFields.vehicle_year ? Number(editFields.vehicle_year) : null,
-                  current_insurer: editFields.current_insurer?.trim() || null,
-                  current_policy_type: editFields.current_policy_type?.trim() || null,
-                  current_premium: editFields.current_premium ? Number(editFields.current_premium) : null,
-                  ncb_percentage: editFields.ncb_percentage ? Number(editFields.ncb_percentage) : null,
-                };
-                const { data, error } = await supabase
-                  .from("insurance_clients")
-                  .update(updates)
-                  .eq("id", selectedClient.id)
-                  .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, notes, created_at")
-                  .maybeSingle();
-                if (error) throw error;
-                const refreshedClient = (data ? { ...data, pipeline_stage: data.pipeline_stage || "new_lead" } : { ...selectedClient, ...updates }) as Client;
-                toast.success("✅ Lead details updated!");
-                queryClient.invalidateQueries({ queryKey: ["insurance-pipeline-clients"] });
-                setSelectedClient(refreshedClient);
-                setEditFields({
-                  customer_name: refreshedClient.customer_name || "",
-                  phone: refreshedClient.phone || "",
-                  email: refreshedClient.email || "",
-                  city: refreshedClient.city || "",
-                  vehicle_number: refreshedClient.vehicle_number || "",
-                  vehicle_make: refreshedClient.vehicle_make || "",
-                  vehicle_model: refreshedClient.vehicle_model || "",
-                  vehicle_year: refreshedClient.vehicle_year ? String(refreshedClient.vehicle_year) : "",
-                  current_insurer: refreshedClient.current_insurer || "",
-                  current_policy_type: refreshedClient.current_policy_type || "",
-                  current_premium: refreshedClient.current_premium ? String(refreshedClient.current_premium) : "",
-                  ncb_percentage: refreshedClient.ncb_percentage ? String(refreshedClient.ncb_percentage) : "",
-                });
-              } catch (e: any) {
-                toast.error(e.message || "Failed to save");
-              } finally {
-                setSavingEdit(false);
-              }
-            };
-
             return (
               <>
                 <DialogHeader>
@@ -1091,7 +904,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                     <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${stage.color} flex items-center justify-center`}>
                       <User className="h-4 w-4 text-white" />
                     </div>
-                    Insurance Lead
+                    {selectedClient.customer_name || "Unknown"}
                   </DialogTitle>
                 </DialogHeader>
 
@@ -1105,80 +918,39 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                     {NEXT_ACTIONS[selectedClient.pipeline_stage || "new_lead"]}
                   </div>
 
-                  {/* Editable Customer Details */}
+                  {/* Customer Details */}
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Name</Label>
-                        <Input value={editFields.customer_name || ""} onChange={e => updateField("customer_name", e.target.value)} className="h-8 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Mobile</Label>
-                        <Input value={editFields.phone || ""} onChange={e => updateField("phone", e.target.value)} className="h-8 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Email</Label>
-                        <Input value={editFields.email || ""} onChange={e => updateField("email", e.target.value)} className="h-8 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">City</Label>
-                        <Input value={editFields.city || ""} onChange={e => updateField("city", e.target.value)} className="h-8 text-sm" />
-                      </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><span className="text-muted-foreground">Mobile:</span> {phone || "—"}</div>
+                      <div><span className="text-muted-foreground">Email:</span> {selectedClient.email || "—"}</div>
+                      <div><span className="text-muted-foreground">City:</span> {selectedClient.city || "—"}</div>
+                      <div><span className="text-muted-foreground">Source:</span> {selectedClient.lead_source || "—"}</div>
                     </div>
                   </div>
 
-                  {/* Editable Vehicle Details */}
+                  {/* Vehicle Details */}
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vehicle</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Vehicle Number</Label>
-                        <Input value={editFields.vehicle_number || ""} onChange={e => updateField("vehicle_number", e.target.value.toUpperCase())} placeholder="e.g. DL01AB1234" className="h-8 text-sm font-mono uppercase" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Make</Label>
-                        <Input value={editFields.vehicle_make || ""} onChange={e => updateField("vehicle_make", e.target.value)} className="h-8 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Model</Label>
-                        <Input value={editFields.vehicle_model || ""} onChange={e => updateField("vehicle_model", e.target.value)} className="h-8 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Year</Label>
-                        <Input type="number" value={editFields.vehicle_year || ""} onChange={e => updateField("vehicle_year", e.target.value)} className="h-8 text-sm" />
-                      </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><span className="text-muted-foreground">Number:</span> {selectedClient.vehicle_number || "—"}</div>
+                      <div><span className="text-muted-foreground">Model:</span> {selectedClient.vehicle_make} {selectedClient.vehicle_model || "—"}</div>
+                      <div><span className="text-muted-foreground">Year:</span> {selectedClient.vehicle_year || "—"}</div>
+                      <div><span className="text-muted-foreground">Insurer:</span> {selectedClient.current_insurer || "—"}</div>
                     </div>
                   </div>
 
-                  {/* Editable Insurance Details */}
+                  {/* Insurance Details */}
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Insurance</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Insurer</Label>
-                        <Input value={editFields.current_insurer || ""} onChange={e => updateField("current_insurer", e.target.value)} className="h-8 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Policy Type</Label>
-                        <Input value={editFields.current_policy_type || ""} onChange={e => updateField("current_policy_type", e.target.value)} className="h-8 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Premium (₹)</Label>
-                        <Input type="number" value={editFields.current_premium || ""} onChange={e => updateField("current_premium", e.target.value)} className="h-8 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">NCB %</Label>
-                        <Input type="number" value={editFields.ncb_percentage || ""} onChange={e => updateField("ncb_percentage", e.target.value)} className="h-8 text-sm" />
-                      </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><span className="text-muted-foreground">Type:</span> {selectedClient.current_policy_type || "—"}</div>
+                      <div><span className="text-muted-foreground">NCB:</span> {selectedClient.ncb_percentage ? `${selectedClient.ncb_percentage}%` : "—"}</div>
+                      <div><span className="text-muted-foreground">Premium:</span> {selectedClient.current_premium ? `₹${selectedClient.current_premium.toLocaleString("en-IN")}` : "—"}</div>
+                      <div><span className="text-muted-foreground">Claim:</span> {selectedClient.previous_claim ? "Yes" : "No"}</div>
+                      <div><span className="text-muted-foreground">Expiry:</span> {selectedClient.policy_expiry_date ? format(new Date(selectedClient.policy_expiry_date), "dd MMM yyyy") : "—"}</div>
                     </div>
                   </div>
-
-                  {/* Save Button */}
-                  <Button onClick={saveEdits} disabled={savingEdit} className="w-full gap-2">
-                    {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    {savingEdit ? "Saving..." : "Save Changes"}
-                  </Button>
 
                   {/* Notes */}
                   {selectedClient.notes && (
@@ -1200,9 +972,11 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                             <PhoneCall className="h-3.5 w-3.5" /> Call
                           </Button>
                         </a>
-                        <Button size="sm" variant="outline" className="gap-1.5 text-emerald-600 border-emerald-200" onClick={() => handleWhatsApp(selectedClient.phone, selectedClient.customer_name || "")}>
-                          <MessageSquare className="h-3.5 w-3.5" /> WhatsApp
-                        </Button>
+                        <a href={getWhatsAppLink(selectedClient.phone) || "#"} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="outline" className="gap-1.5 text-emerald-600 border-emerald-200">
+                            <MessageSquare className="h-3.5 w-3.5" /> WhatsApp
+                          </Button>
+                        </a>
                       </>
                     )}
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setShowUploadPolicy(true); }}>

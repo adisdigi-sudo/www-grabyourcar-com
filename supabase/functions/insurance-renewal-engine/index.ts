@@ -17,26 +17,40 @@ const corsHeaders = {
  * Template is loaded from insurance_renewal_settings (fully editable from admin).
  */
 
-const DEFAULT_TEMPLATE = `Hi *{{customer_name}}* 👋
+const DEFAULT_TEMPLATE = `🚗 *Grabyourcar Policy Renewal Reminder*
+━━━━━━━━━━━━━━━━━━━━━
 
-Your car insurance for *{{vehicle_model}}* {{vehicle_number_line}}is expiring on *{{expiry_date}}* — only *{{days_remaining}} days* left! ⏳
+Hello *{{customer_name}}*,
 
-Please renew it on time to avoid:
-❌ Loss of No Claim Bonus
-❌ Inspection hassles
-❌ Legal penalties
+We hope you are enjoying a smooth and safe drive!
+
+This is a friendly reminder from *Grabyourcar Insurance Desk* that your *{{vehicle_model}}* {{vehicle_number_line}}insurance policy is set to expire on *{{expiry_date}}* — just *{{days_remaining}} days* to go.
+
+Renewing your policy before the expiry helps you:
+
+✅ Avoid inspection hassles
+✅ Maintain your No Claim Bonus
+✅ Stay financially protected
+✅ Ensure uninterrupted coverage
+
+Our team has already prepared renewal assistance for you to make the process quick and seamless.
+
+👉 Simply *reply to this message* or click below to get your renewal quote instantly.
+
+🔗 Renew Now: https://www.grabyourcar.com/insurance
 
 {{policy_details_section}}
 
-✅ We can help you renew quickly with the best rates!
+If you need any help, feel free to contact your dedicated advisor.
 
-👉 *Reply here* or call us at {{advisor_number}} to get your renewal quote instantly.
+📞 {{advisor_number}}
+🌐 www.grabyourcar.com
 
-🔗 https://www.grabyourcar.com/insurance
+Thank you for trusting *Grabyourcar* — we look forward to protecting your journeys ahead.
 
-— *Team Grabyourcar* 🚗💚`;
+Drive safe! 🚘`;
 
-const DEFAULT_WINDOWS = [60, 45, 30, 15, 7];
+const DEFAULT_WINDOWS = [45, 30, 15, 7, 1];
 const DEFAULT_ADVISOR = "+91 98559 24442";
 
 function normalizePhone(phone: string): string | null {
@@ -178,20 +192,14 @@ serve(async (req) => {
 
       const message = custom_message || buildMessage(template, client, policy, daysRemaining, advisorNumber);
 
-      // Send via whatsapp-send using insurancefollowup Meta-approved template
-      const customerName = client.customer_name || "Valued Customer";
+      // Send via whatsapp-send
       const sendResp = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${SERVICE_KEY}`,
         },
-        body: JSON.stringify({
-          to: phone,
-          message,
-          name: customerName,
-          logEvent: "renewal_reminder",
-        }),
+        body: JSON.stringify({ to: phone, message }),
       });
       const sendResult = await sendResp.json();
 
@@ -253,19 +261,13 @@ serve(async (req) => {
 
           // Send WhatsApp
           try {
-            const clientName = client.customer_name || "Valued Customer";
             await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${SERVICE_KEY}`,
               },
-              body: JSON.stringify({
-                to: phone,
-                message,
-                name: clientName,
-                logEvent: "renewal_reminder_auto",
-              }),
+              body: JSON.stringify({ to: phone, message }),
             });
             results.triggered++;
           } catch (e) {
@@ -354,19 +356,13 @@ serve(async (req) => {
           const recoveryMsg = `⚠️ *Urgent: Policy Expired*\n━━━━━━━━━━━━━━━━━━━━━\n\nDear *${client.customer_name || "Valued Customer"}*,\n\nYour motor insurance for *${client.vehicle_model || "your vehicle"}* ${client.vehicle_number ? `(${client.vehicle_number}) ` : ""}expired on *${formatDate(policy.expiry_date)}*.\n\n🚨 *Without active insurance:*\n❌ You cannot file claims\n❌ Legal penalties may apply\n❌ NCB discount may be lost\n❌ Vehicle inspection may be required\n\n💡 *Renew now to avoid complications!*\nOur team can help you get the best rates even after expiry.\n\n📞 Call us: ${advisorNumber}\n🔗 https://www.grabyourcar.com/insurance\n\n— *Grabyourcar Insurance* 🚗`;
 
           try {
-            const recoveryName = client.customer_name || "Valued Customer";
             await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${SERVICE_KEY}`,
               },
-              body: JSON.stringify({
-                to: phone,
-                message: recoveryMsg,
-                name: recoveryName,
-                logEvent: "lapsed_recovery",
-              }),
+              body: JSON.stringify({ to: phone, message: recoveryMsg }),
             });
           } catch (e) {
             console.error("Recovery WA failed:", e);

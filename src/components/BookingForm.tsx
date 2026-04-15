@@ -18,8 +18,8 @@
  import { toast } from "sonner";
  import { AnimatePresence, motion } from "framer-motion";
  
+ import { supabase } from "@/integrations/supabase/client";
  import confetti from "canvas-confetti";
- import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
  
  interface BookingFormProps {
    carName: string;
@@ -64,22 +64,21 @@
    const submitLead = async () => {
      setIsSubmitting(true);
      try {
-       await captureWebsiteLead({
-         name: bookingForm.name,
-         phone: bookingForm.phone,
-         email: bookingForm.email,
-         carInterest: carName,
-         carBrand,
-         source: "car_detail_booking_form",
-         vertical: "car",
-         type: "booking",
-         priority: "high",
-         message: bookingForm.preferredDate ? `Preferred visit date: ${bookingForm.preferredDate}` : `Booking request for ${carBrand} ${carName}`,
-       });
+        const { error } = await supabase.from("leads").insert({
+          name: bookingForm.name.trim(),
+          customer_name: bookingForm.name.trim(),
+          phone: bookingForm.phone.trim(),
+          email: bookingForm.email.trim() || null,
+          car_brand: carBrand,
+          car_model: carName,
+          source: "car_detail_booking_form",
+          lead_type: "booking",
+          status: "new",
+          priority: "high",
+          notes: bookingForm.preferredDate ? `Preferred visit date: ${bookingForm.preferredDate}` : null,
+        });
 
-       // Ad conversion tracking
-       const { trackLeadConversion } = await import("@/lib/adTracking");
-       trackLeadConversion("car_detail_booking", { car: carName });
+       if (error) throw error;
 
        // Celebration!
        confetti({
@@ -106,7 +105,7 @@
           <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-success to-success/70 flex items-center justify-center shadow-md">
              <Car className="h-5 w-5 text-white" />
             <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-sm border border-success/20">
-              <Bot className="h-2.5 w-2.5 text-foreground" />
+              <Bot className="h-2.5 w-2.5 text-success" />
             </div>
            </div>
            <div className="flex-1">
@@ -132,7 +131,7 @@
             >
            <div className="space-y-1.5">
              <Label htmlFor="booking-name" className="text-xs font-medium flex items-center gap-1.5">
-               <User className="h-3.5 w-3.5 text-foreground" />
+               <User className="h-3.5 w-3.5 text-primary" />
                Full Name <span className="text-destructive">*</span>
              </Label>
              <Input
@@ -147,7 +146,7 @@
            
            <div className="space-y-1.5">
              <Label htmlFor="booking-phone" className="text-xs font-medium flex items-center gap-1.5">
-               <Phone className="h-3.5 w-3.5 text-foreground" />
+               <Phone className="h-3.5 w-3.5 text-primary" />
                WhatsApp Number <span className="text-destructive">*</span>
              </Label>
              <Input
@@ -215,11 +214,11 @@
            {/* Trust indicators */}
            <div className="flex flex-col gap-2 pt-3 border-t border-border/50">
              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Shield className="h-3.5 w-3.5 text-foreground" />
+              <Shield className="h-3.5 w-3.5 text-success" />
               <span><strong className="text-foreground">100% Secure</strong></span>
              </div>
              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-               <CheckCircle className="h-3.5 w-3.5 text-foreground" />
+               <CheckCircle className="h-3.5 w-3.5 text-success" />
               <span>Our team will contact you within <strong className="text-foreground">30 minutes</strong></span>
              </div>
            </div>

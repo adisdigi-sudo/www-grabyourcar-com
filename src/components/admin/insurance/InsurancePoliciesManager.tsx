@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAllPages } from "@/lib/fetchAllPages";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,14 +71,12 @@ export function InsurancePoliciesManager() {
   const { data: policies, isLoading } = useQuery({
     queryKey: ["ins-policies-full"],
     queryFn: async () => {
-      const data = await fetchAllPages<any>(async (from, to) =>
-        supabase
-          .from("insurance_policies")
-          .select("*, insurance_clients(customer_name, phone, vehicle_number, advisor_name, vehicle_make, vehicle_model)")
-          .order("expiry_date", { ascending: true })
-          .order("created_at", { ascending: false })
-          .range(from, to)
-      );
+      const { data, error } = await supabase
+        .from("insurance_policies")
+        .select("*, insurance_clients(customer_name, phone, vehicle_number, advisor_name, vehicle_make, vehicle_model)")
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      if (error) throw error;
       return data;
     },
   });

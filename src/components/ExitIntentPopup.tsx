@@ -6,30 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Gift, Loader2, CheckCircle, Shield, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
-import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
 
 const DISMISS_KEY = "gyc_exit_intent_dismissed";
 const CAPTURED_KEY = "gyc_exit_intent_captured";
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-
-const getStoredValue = (key: string) => {
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-};
-
-const setStoredValue = (key: string, value: string) => {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    // ignore blocked storage
-  }
-};
 
 const formSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(100),
@@ -44,10 +28,10 @@ export const ExitIntentPopup = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const captured = getStoredValue(CAPTURED_KEY);
+    const captured = localStorage.getItem(CAPTURED_KEY);
     if (captured) return;
 
-    const dismissed = getStoredValue(DISMISS_KEY);
+    const dismissed = localStorage.getItem(DISMISS_KEY);
     if (dismissed && Date.now() - parseInt(dismissed, 10) < SEVEN_DAYS_MS) return;
 
     const handleMouseLeave = (e: MouseEvent) => {
@@ -71,7 +55,7 @@ export const ExitIntentPopup = () => {
 
   const handleDismiss = useCallback(() => {
     setIsOpen(false);
-    setStoredValue(DISMISS_KEY, Date.now().toString());
+    localStorage.setItem(DISMISS_KEY, Date.now().toString());
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,21 +73,29 @@ export const ExitIntentPopup = () => {
 
     setIsSubmitting(true);
     try {
-      await captureWebsiteLead({
-        name: formData.name,
-        phone: formData.phone,
+      const { error } = await supabase.from("leads").insert({
+        name: formData.name.trim(),
+        customer_name: formData.name.trim(),
+        phone: formData.phone.trim(),
         source: "exit_intent",
-        vertical: "car",
-        type: "recovery",
+        lead_type: "recovery",
+        status: "new",
         priority: "high",
-        message: "Recovered lead from exit intent popup",
       });
+      if (error) throw error;
 
-      const { trackLeadConversion } = await import("@/lib/adTracking");
-      trackLeadConversion("exit_intent");
+      try {
+        await supabase.functions.invoke("whatsapp-send", {
+          body: {
+            phone: `91${formData.phone}`,
+            template: "lead_created",
+            params: { name: formData.name, car: "Priority Delivery" },
+          },
+        });
+      } catch { /* best effort */ }
 
       confetti({ particleCount: 60, spread: 50, origin: { y: 0.6 } });
-      setStoredValue(CAPTURED_KEY, "true");
+      localStorage.setItem(CAPTURED_KEY, "true");
       setIsSubmitted(true);
       setTimeout(() => setIsOpen(false), 3000);
     } catch {
@@ -123,7 +115,7 @@ export const ExitIntentPopup = () => {
         >
           {isSubmitted ? (
             <div className="p-8 text-center">
-              <CheckCircle className="h-14 w-14 text-foreground mx-auto mb-3" />
+              <CheckCircle className="h-14 w-14 text-success mx-auto mb-3" />
               <h3 className="text-xl font-heading font-bold mb-2">You're Locked In! 🔒</h3>
               <p className="text-sm text-muted-foreground">We'll share priority delivery offers on WhatsApp.</p>
             </div>

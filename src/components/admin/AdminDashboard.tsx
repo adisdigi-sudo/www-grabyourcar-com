@@ -17,8 +17,6 @@ import {
   type DateRange
 } from "./dashboard";
 import { CRMCommandWidget } from "./CRMCommandWidget";
-import { TaskEscalationView } from "./TaskEscalationView";
-import { EmployeeDailyReportsDashboard } from "./EmployeeDailyReportsDashboard";
 
 interface DashboardStats {
   totalLeads: number;
@@ -432,12 +430,6 @@ export const AdminDashboard = () => {
 
       {/* Team Performance Comparison */}
       <TeamPerformanceComparison dateRange={dateRange} />
-
-      {/* Task Escalation Overview */}
-      <TaskEscalationView />
-
-      {/* Employee Daily Reports */}
-      <EmployeeDailyReportsDashboard />
 
       {/* Scheduled Email Reports */}
       <ScheduledReportsManager />

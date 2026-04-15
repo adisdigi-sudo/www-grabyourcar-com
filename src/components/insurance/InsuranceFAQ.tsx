@@ -50,7 +50,7 @@ export function InsuranceFAQ() {
           className="text-center max-w-2xl mx-auto mb-14"
         >
           <h2 className="text-3xl md:text-5xl font-heading font-bold mb-4">
-            Frequently asked <span className="text-foreground">questions</span>
+            Frequently asked <span className="text-primary">questions</span>
           </h2>
           <p className="text-lg text-muted-foreground">
             Everything you need to know about car insurance

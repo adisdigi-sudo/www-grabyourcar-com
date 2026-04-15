@@ -6,4 +6,3 @@ export { WhatsAppMarketingPortal } from './WhatsAppMarketingPortal';
 export { CampaignAnalytics } from './CampaignAnalytics';
 export { MarketingAlerts } from './MarketingAlerts';
 export { EmailCampaignBuilder } from './EmailCampaignBuilder';
-export { UnifiedMarketingHub } from './UnifiedMarketingHub';

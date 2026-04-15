@@ -16,11 +16,9 @@ export const useCars = (options?: {
   bodyType?: string;
   isUpcoming?: boolean;
   useDatabase?: boolean;
-  enabled?: boolean;
 }) => {
   const queryClient = useQueryClient();
   const useDatabase = options?.useDatabase ?? true; // Default to database now
-  const enabled = options?.enabled ?? true;
 
   const query = useQuery({
     queryKey: ['cars', options],
@@ -32,35 +30,34 @@ export const useCars = (options?: {
         isUpcoming: options?.isUpcoming
       });
     },
-    enabled,
     staleTime: 1000 * 30, // 30 seconds - shorter for real-time feel
     refetchOnWindowFocus: true,
   });
 
   // Real-time subscription for cars and related tables
   useEffect(() => {
-    if (!useDatabase || !enabled) return;
+    if (!useDatabase) return;
 
     const tables = ['cars', 'car_images', 'car_colors', 'car_variants', 'car_specifications', 'car_features', 'car_brochures', 'car_offers'];
-    const channelName = `cars-list-realtime-${Date.now()}`;
-    const channel = tables.reduce((realtimeChannel, table) => {
-      return realtimeChannel.on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table },
-        () => {
-          console.log(`[Cars] Real-time update from ${table}`);
-          queryClient.invalidateQueries({ queryKey: ['cars'] });
-          queryClient.invalidateQueries({ queryKey: ['allCars'] });
-        }
-      );
-    }, supabase.channel(channelName));
-
-    channel.subscribe();
+    const channels = tables.map(table =>
+      supabase
+        .channel(`cars-list-${table}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table },
+          () => {
+            console.log(`[Cars] Real-time update from ${table}`);
+            queryClient.invalidateQueries({ queryKey: ['cars'] });
+            queryClient.invalidateQueries({ queryKey: ['allCars'] });
+          }
+        )
+        .subscribe()
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      channels.forEach(ch => supabase.removeChannel(ch));
     };
-  }, [enabled, useDatabase, queryClient]);
+  }, [useDatabase, queryClient]);
 
   return query;
 };
@@ -86,22 +83,22 @@ export const useCarBySlug = (slug: string | undefined, useDatabase = true) => {
     if (!slug || !useDatabase) return;
 
     const tables = ['cars', 'car_images', 'car_colors', 'car_variants', 'car_specifications', 'car_features', 'car_brochures', 'car_offers'];
-    const channelName = `car-${slug}-realtime-${Date.now()}`;
-    const channel = tables.reduce((realtimeChannel, table) => {
-      return realtimeChannel.on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table },
-        () => {
-          console.log(`[Car ${slug}] Real-time update from ${table}`);
-          queryClient.invalidateQueries({ queryKey: ['car', slug] });
-        }
-      );
-    }, supabase.channel(channelName));
-
-    channel.subscribe();
+    const channels = tables.map(table =>
+      supabase
+        .channel(`car-${slug}-${table}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table },
+          () => {
+            console.log(`[Car ${slug}] Real-time update from ${table}`);
+            queryClient.invalidateQueries({ queryKey: ['car', slug] });
+          }
+        )
+        .subscribe()
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      channels.forEach(ch => supabase.removeChannel(ch));
     };
   }, [slug, useDatabase, queryClient]);
 

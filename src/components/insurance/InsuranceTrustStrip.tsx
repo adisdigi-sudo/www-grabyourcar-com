@@ -22,7 +22,7 @@ export function InsuranceTrustStrip({ variant = "full" }: InsuranceTrustStripPro
     return (
       <div className="py-6 flex justify-center">
         <div className="flex items-center gap-2 opacity-40">
-          <Shield className="h-4 w-4 text-foreground" />
+          <Shield className="h-4 w-4 text-primary" />
           <span className="text-xs font-bold text-muted-foreground tracking-wider uppercase">
             Secured by GrabYourCar • IRDAI Authorised • Adis Makethemoney Services Pvt Ltd
           </span>
@@ -36,7 +36,7 @@ export function InsuranceTrustStrip({ variant = "full" }: InsuranceTrustStripPro
       <div className="flex flex-wrap items-center justify-center gap-4 py-4">
         {trustItems.map((item) => (
           <div key={item.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <item.icon className="h-3.5 w-3.5 text-foreground" />
+            <item.icon className="h-3.5 w-3.5 text-primary" />
             <span className="font-semibold">{item.label}</span>
           </div>
         ))}
@@ -57,7 +57,7 @@ export function InsuranceTrustStrip({ variant = "full" }: InsuranceTrustStripPro
           {/* GrabYourCar branding anchor */}
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Shield className="h-4.5 w-4.5 text-foreground" />
+              <Shield className="h-4.5 w-4.5 text-primary" />
             </div>
             <div className="text-left">
               <p className="text-xs font-bold text-foreground leading-tight">GrabYourCar</p>
@@ -73,7 +73,7 @@ export function InsuranceTrustStrip({ variant = "full" }: InsuranceTrustStripPro
             {trustItems.map((item) => (
               <div key={item.label} className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-primary/8 flex items-center justify-center">
-                  <item.icon className="h-4 w-4 text-foreground" />
+                  <item.icon className="h-4 w-4 text-primary" />
                 </div>
                 <div className="text-left">
                   <p className="text-xs font-bold text-foreground leading-tight">{item.label}</p>

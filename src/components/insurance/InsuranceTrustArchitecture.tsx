@@ -30,7 +30,7 @@ export function InsuranceTrustArchitecture() {
           className="text-center max-w-2xl mx-auto mb-16"
         >
           <h2 className="text-3xl md:text-5xl font-heading font-bold mb-4">
-            Why India <span className="text-foreground">trusts</span> GrabYourCar
+            Why India <span className="text-primary">trusts</span> GrabYourCar
           </h2>
         </motion.div>
 
@@ -48,7 +48,7 @@ export function InsuranceTrustArchitecture() {
               >
                 <div className="bg-card rounded-3xl border border-border/60 p-7 text-center h-full hover:border-primary/30 hover:shadow-[0_20px_60px_-15px_hsl(var(--primary)/0.1)] transition-all duration-500">
                   <div className="w-16 h-16 rounded-2xl bg-primary/8 flex items-center justify-center mx-auto mb-5">
-                    <IconComponent className="h-8 w-8 text-foreground" />
+                    <IconComponent className="h-8 w-8 text-primary" />
                   </div>
                   <h3 className="font-heading font-semibold text-base mb-2">{badge.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{badge.description}</p>
@@ -68,14 +68,14 @@ export function InsuranceTrustArchitecture() {
           <div className="bg-card rounded-3xl border border-border/60 p-8 md:p-10">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <Shield className="h-5 w-5 text-foreground" />
+                <Shield className="h-5 w-5 text-primary" />
               </div>
               <h3 className="font-heading font-bold text-lg">Regulatory Disclosure</h3>
             </div>
             <ul className="space-y-4">
               {compliancePoints.map((point) => (
                 <li key={point} className="flex items-start gap-3 text-sm text-muted-foreground">
-                  <CheckCircle2 className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
+                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                   <span className="leading-relaxed">{point}</span>
                 </li>
               ))}

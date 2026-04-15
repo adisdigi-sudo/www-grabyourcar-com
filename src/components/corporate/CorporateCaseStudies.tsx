@@ -102,7 +102,7 @@ export const CorporateCaseStudies = () => {
     <section className="py-16 md:py-24 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12 md:mb-16">
-          <span className="text-foreground text-sm font-semibold uppercase tracking-wider mb-2 block">
+          <span className="text-primary text-sm font-semibold uppercase tracking-wider mb-2 block">
             Success Stories
           </span>
           <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -126,7 +126,7 @@ export const CorporateCaseStudies = () => {
               {/* Header with industry badge */}
               <div className="p-6 pb-4 border-b border-border/50">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-foreground">
+                  <span className="px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
                     {study.industry}
                   </span>
                 </div>
@@ -142,7 +142,7 @@ export const CorporateCaseStudies = () => {
               <div className="grid grid-cols-3 divide-x divide-border/50 bg-secondary/30">
                 <div className="p-4 text-center">
                   <div className="flex items-center justify-center mb-1">
-                    <Car className="h-4 w-4 text-foreground mr-1" />
+                    <Car className="h-4 w-4 text-primary mr-1" />
                   </div>
                   <span className="block text-2xl font-bold text-foreground">
                     {study.metrics.vehiclesDelivered}
@@ -153,7 +153,7 @@ export const CorporateCaseStudies = () => {
                 </div>
                 <div className="p-4 text-center">
                   <div className="flex items-center justify-center mb-1">
-                    <Clock className="h-4 w-4 text-foreground mr-1" />
+                    <Clock className="h-4 w-4 text-primary mr-1" />
                   </div>
                   <span className="block text-2xl font-bold text-foreground">
                     {study.metrics.timeSaved}
@@ -164,7 +164,7 @@ export const CorporateCaseStudies = () => {
                 </div>
                 <div className="p-4 text-center">
                   <div className="flex items-center justify-center mb-1">
-                    <TrendingDown className="h-4 w-4 text-foreground mr-1" />
+                    <TrendingDown className="h-4 w-4 text-primary mr-1" />
                   </div>
                   <span className="block text-2xl font-bold text-foreground">
                     {study.metrics.costSavings}
@@ -180,7 +180,7 @@ export const CorporateCaseStudies = () => {
                 <ul className="space-y-2">
                   {study.highlights.map((highlight) => (
                     <li key={highlight} className="flex items-start gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-foreground flex-shrink-0 mt-0.5" />
+                      <CheckCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                       <span className="text-muted-foreground">{highlight}</span>
                     </li>
                   ))}
@@ -211,7 +211,7 @@ export const CorporateCaseStudies = () => {
               transition={{ duration: 0.5, delay: index * 0.1 }}
               className="text-center p-4 rounded-xl bg-primary/5 border border-primary/10"
             >
-              <stat.icon className="h-5 w-5 text-foreground mx-auto mb-2" />
+              <stat.icon className="h-5 w-5 text-primary mx-auto mb-2" />
               <span className="block text-2xl md:text-3xl font-bold text-foreground">
                 <AnimatedCounter 
                   value={stat.value} 

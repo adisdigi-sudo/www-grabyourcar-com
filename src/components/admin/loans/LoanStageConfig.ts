@@ -101,7 +101,7 @@ export const ALLOWED_TRANSITIONS: Record<LoanStage, LoanStage[]> = {
   interested: ['new_lead', 'smart_calling', 'offer_shared', 'loan_application', 'disbursed', 'lost'],
   offer_shared: ['new_lead', 'smart_calling', 'interested', 'loan_application', 'disbursed', 'lost'],
   loan_application: ['new_lead', 'smart_calling', 'interested', 'offer_shared', 'disbursed', 'lost'],
-  disbursed: [], // 🔒 Permanently locked — no transitions allowed
+  disbursed: ['new_lead', 'smart_calling', 'interested', 'offer_shared', 'loan_application', 'lost'],
   lost: ['new_lead', 'smart_calling', 'interested', 'offer_shared', 'loan_application', 'disbursed'],
 };
 

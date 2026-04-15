@@ -59,7 +59,7 @@ export const CarLoanBankComparison = () => {
                       </div>
                     </div>
                     {partner.highlight && (
-                      <Badge className="bg-primary/10 text-foreground border-primary/20 text-xs">
+                      <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
                         {partner.highlight}
                       </Badge>
                     )}
@@ -68,7 +68,7 @@ export const CarLoanBankComparison = () => {
                   {/* Rate */}
                   <div className="bg-primary/5 rounded-lg p-3 mb-4">
                     <p className="text-xs text-muted-foreground mb-0.5">Interest Rate</p>
-                    <p className="text-xl font-bold text-foreground">
+                    <p className="text-xl font-bold text-primary">
                       {partner.interest_rate_min}% - {partner.interest_rate_max}%
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -81,7 +81,7 @@ export const CarLoanBankComparison = () => {
                     <ul className="space-y-1.5">
                       {(partner.features || []).slice(0, 3).map((f: string, j: number) => (
                         <li key={j} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-foreground shrink-0" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
                           {f}
                         </li>
                       ))}

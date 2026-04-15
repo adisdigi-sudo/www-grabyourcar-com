@@ -23,7 +23,6 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { triggerFeedback } from "@/lib/feedback";
 import confetti from "canvas-confetti";
-import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
 
 const quickFormSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
@@ -116,15 +115,17 @@ export const FloatingCTA = () => {
 
   const submitQuickForm = async () => {
     try {
-      await captureWebsiteLead({
-        name: quickFormData.name,
-        phone: quickFormData.phone,
+      const { error } = await supabase.from("leads").insert({
+        name: quickFormData.name.trim(),
+        customer_name: quickFormData.name.trim(),
+        phone: quickFormData.phone.trim(),
         source: "floating_cta",
-        vertical: "car",
-        type: "quick_deal",
+        lead_type: "quick_deal",
+        status: "new",
         priority: "high",
-        message: "Quick deal request from floating CTA",
       });
+
+      if (error) throw error;
 
       confetti({
         particleCount: 100,
@@ -300,7 +301,7 @@ export const FloatingCTA = () => {
                       size="icon"
                       className="h-12 w-12 rounded-full shadow-lg group-hover:scale-110 transition-transform border-2 border-primary"
                     >
-                      <CalendarClock className="h-5 w-5 text-foreground" />
+                      <CalendarClock className="h-5 w-5 text-primary" />
                     </Button>
                   </button>
 
@@ -427,7 +428,7 @@ export const FloatingCTA = () => {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl flex items-center gap-2">
-              <Zap className="h-5 w-5 text-foreground" />
+              <Zap className="h-5 w-5 text-primary" />
               Get Best Deal
             </DialogTitle>
             <DialogDescription>
@@ -493,7 +494,7 @@ export const FloatingCTA = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl flex items-center gap-2">
-              <CalendarClock className="h-5 w-5 text-foreground" />
+              <CalendarClock className="h-5 w-5 text-primary" />
               Schedule a Call
             </DialogTitle>
             <DialogDescription>

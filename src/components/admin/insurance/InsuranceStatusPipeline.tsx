@@ -25,10 +25,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import InsuranceQuoteModal from "./InsuranceQuoteModal";
-import { OmniShareDialog } from "@/components/admin/shared/OmniShareDialog";
+import { SharePdfDialog } from "./SharePdfDialog";
 import { generateInsuranceQuotePdf } from "@/lib/generateInsuranceQuotePdf";
-import { ClientQuoteHistory } from "./ClientQuoteHistory";
-import { sendWhatsApp } from "@/lib/sendWhatsApp";
 
 const PIPELINE_STAGES = [
   { value: "new", label: "New Lead", icon: UserPlus, color: "bg-blue-500", lightBg: "bg-blue-50 dark:bg-blue-950/40", border: "border-blue-200 dark:border-blue-800", textColor: "text-blue-700 dark:text-blue-300", emoji: "🆕" },
@@ -71,15 +69,12 @@ interface Client {
 
 export function InsuranceStatusPipeline() {
   const [clients, setClients] = useState<Client[]>([]);
-  const [quoteCounts, setQuoteCounts] = useState<Record<string, number>>({});
   const [selectedStage, setSelectedStage] = useState("all");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [search, setSearch] = useState("");
   const [note, setNote] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editEmail, setEditEmail] = useState("");
-  const [editVehicleNumber, setEditVehicleNumber] = useState("");
-  const [savingContact, setSavingContact] = useState(false);
   const [viewMode, setViewMode] = useState<"cards" | "kanban">("cards");
   const [converting, setConverting] = useState(false);
   const [showAddPolicy, setShowAddPolicy] = useState(false);
@@ -89,39 +84,24 @@ export function InsuranceStatusPipeline() {
     premium_amount: "", start_date: "", expiry_date: "", status: "active",
   });
   const [savingPolicy, setSavingPolicy] = useState(false);
-  const [dialogTab, setDialogTab] = useState("details");
+  const [dialogTab, setDialogTab] = useState("journey");
   const [bulkSending, setBulkSending] = useState(false);
   const [renewalPreviewClient, setRenewalPreviewClient] = useState<Client | null>(null);
   const [renewalPreviewMsg, setRenewalPreviewMsg] = useState("");
   const [sendingRenewal, setSendingRenewal] = useState(false);
   const [showBulkPanel, setShowBulkPanel] = useState(false);
-  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
-  useEffect(() => { fetchClients(); fetchQuoteCounts(); }, []);
+  useEffect(() => { fetchClients(); }, []);
 
   const fetchClients = async () => {
+    // Only fetch leads that have been worked on (have a lead_status set)
     const { data } = await supabase
       .from("insurance_clients")
       .select("id, customer_name, phone, email, vehicle_model, vehicle_number, vehicle_make, current_insurer, lead_status, current_premium, lead_source, created_at")
+      .not("lead_status", "is", null)
       .order("created_at", { ascending: false })
       .limit(500);
-    setClients(((data || []).map((client) => ({
-      ...client,
-      lead_status: client.lead_status || "new",
-    }))) as Client[]);
-  };
-
-  const fetchQuoteCounts = async () => {
-    const { data } = await supabase
-      .from("quote_share_history" as any)
-      .select("customer_phone");
-    if (!data) return;
-    const counts: Record<string, number> = {};
-    (data as any[]).forEach((row: any) => {
-      const phone = (row.customer_phone || "").replace(/\D/g, "").slice(-10);
-      if (phone) counts[phone] = (counts[phone] || 0) + 1;
-    });
-    setQuoteCounts(counts);
+    setClients((data || []) as Client[]);
   };
 
   const stageCounts = useMemo(() =>
@@ -202,50 +182,39 @@ export function InsuranceStatusPipeline() {
       } as any);
 
       // ── Auto-create policy in Policy Book ──
-      // Check by vehicle registration number across ALL clients for renewal detection
-      let hasExistingVehiclePolicy = false;
-      const vehicleNumber = client.vehicle_number?.trim();
-      if (vehicleNumber) {
-        const normalizedVehicle = vehicleNumber.replace(/\s+/g, '').toUpperCase();
-
-        // Find any active policies for this vehicle across OTHER clients
-        const { data: vehiclePolicies } = await supabase
+      // If same vehicle_number exists, mark old policies as "renewed"
+      if (client.vehicle_number) {
+        // Find existing active policies for this vehicle
+        const { data: existingPolicies } = await supabase
           .from("insurance_policies")
-          .select("id, client_id, insurance_clients!inner(vehicle_number)")
-          .eq("status", "active")
-          .neq("client_id", clientId);
+          .select("id")
+          .eq("client_id", clientId)
+          .eq("status", "active");
 
-        const matchingVehiclePolicies = (vehiclePolicies || []).filter((p: any) => {
-          const vn = p.insurance_clients?.vehicle_number?.replace(/\s+/g, '').toUpperCase();
-          return vn === normalizedVehicle;
-        });
-
-        if (matchingVehiclePolicies.length > 0) {
-          hasExistingVehiclePolicy = true;
+        if (existingPolicies && existingPolicies.length > 0) {
+          // Mark all existing active policies as "renewed"
           await supabase
             .from("insurance_policies")
             .update({ status: "renewed", renewal_status: "renewed" })
-            .in("id", matchingVehiclePolicies.map((p: any) => p.id));
+            .in("id", existingPolicies.map(p => p.id));
         }
-      }
 
-      // Check current client's own active policies
-      const { data: existingActivePolicies } = await supabase
-        .from("insurance_policies")
-        .select("id, policy_number, renewal_count")
-        .eq("client_id", clientId)
-        .eq("status", "active")
-        .order("updated_at", { ascending: false });
+        // Also check if another client has same vehicle_number with active policy
+        const { data: otherVehiclePolicies } = await supabase
+          .from("insurance_clients")
+          .select("id")
+          .eq("vehicle_number", client.vehicle_number)
+          .neq("id", clientId);
 
-      const hasOwnActivePolicies = (existingActivePolicies || []).length > 0;
-      const isRenewal = hasExistingVehiclePolicy || hasOwnActivePolicies;
-
-      // Mark all current client's active policies as renewed
-      if (existingActivePolicies && existingActivePolicies.length > 0) {
-        await supabase
-          .from("insurance_policies")
-          .update({ status: "renewed", renewal_status: "renewed" })
-          .in("id", existingActivePolicies.map(p => p.id));
+        if (otherVehiclePolicies && otherVehiclePolicies.length > 0) {
+          for (const otherClient of otherVehiclePolicies) {
+            await supabase
+              .from("insurance_policies")
+              .update({ status: "renewed", renewal_status: "renewed" })
+              .eq("client_id", otherClient.id)
+              .eq("status", "active");
+          }
+        }
       }
 
       // Calculate policy dates
@@ -253,7 +222,8 @@ export function InsuranceStatusPipeline() {
       const startDate = client.policy_start_date || today.toISOString().split("T")[0];
       const expiryDate = client.policy_expiry_date || new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()).toISOString().split("T")[0];
 
-      const policyPayload = {
+      // Create new policy in policy book
+      const { error: policyError } = await supabase.from("insurance_policies").insert({
         client_id: clientId,
         policy_number: client.current_policy_number || null,
         policy_type: client.current_policy_type || "comprehensive",
@@ -262,13 +232,9 @@ export function InsuranceStatusPipeline() {
         start_date: startDate,
         expiry_date: expiryDate,
         status: "active",
-        is_renewal: isRenewal,
+        is_renewal: false,
         issued_date: today.toISOString().split("T")[0],
-        source_label: isRenewal ? "Won (Renewal)" : "Won (New)",
-      };
-
-      // Always INSERT new policy
-      const { error: policyError } = await supabase.from("insurance_policies").insert(policyPayload);
+      });
 
       if (policyError) {
         console.error("Policy creation failed:", policyError);
@@ -282,22 +248,6 @@ export function InsuranceStatusPipeline() {
           description: `Policy for ${client.vehicle_number || client.vehicle_model || "vehicle"} created. Start: ${startDate}, Expiry: ${expiryDate}`,
           metadata: { start_date: startDate, expiry_date: expiryDate, insurer: client.current_insurer || client.quote_insurer },
         } as any);
-      }
-
-      // 📧 Send insurance won email
-      if (client.email) {
-        const { sendInsuranceWonEmail } = await import("@/lib/emailTriggers");
-        sendInsuranceWonEmail({
-          email: client.email,
-          name: client.customer_name,
-          vehicleNumber: client.vehicle_number,
-          insurer: client.current_insurer || client.quote_insurer,
-          policyType: client.current_policy_type || "Comprehensive",
-          premium: client.quote_amount?.toLocaleString("en-IN") || client.current_premium?.toLocaleString("en-IN"),
-          policyNumber: client.current_policy_number,
-          expiryDate: expiryDate,
-          clientId: clientId,
-        });
       }
 
       toast.success("🎉 Lead converted & policy added to Policy Book!", {
@@ -325,38 +275,16 @@ export function InsuranceStatusPipeline() {
     if (!policyForm.policy_number) { toast.error("Policy number required"); return; }
     setSavingPolicy(true);
     try {
-      const trimmedPolicyNumber = policyForm.policy_number.trim();
-      const { data: activePolicies } = await supabase
-        .from("insurance_policies")
-        .select("id, policy_number")
-        .eq("client_id", selectedClient.id)
-        .eq("status", "active")
-        .order("updated_at", { ascending: false });
-
-      const matchedActivePolicy = activePolicies?.find((policy) => !policy.policy_number || policy.policy_number === trimmedPolicyNumber) || null;
-      const otherActivePolicies = (activePolicies || []).filter((policy) => policy.id !== matchedActivePolicy?.id);
-
-      if (otherActivePolicies.length > 0) {
-        await supabase
-          .from("insurance_policies")
-          .update({ status: "renewed", renewal_status: "renewed" })
-          .in("id", otherActivePolicies.map((policy) => policy.id));
-      }
-
-      const payload = {
+      const { error } = await supabase.from("insurance_policies").insert({
         client_id: selectedClient.id,
-        policy_number: trimmedPolicyNumber,
+        policy_number: policyForm.policy_number,
         policy_type: policyForm.policy_type,
         insurer: policyForm.insurer || null,
         premium_amount: policyForm.premium_amount ? Number(policyForm.premium_amount) : null,
         start_date: policyForm.start_date || null,
         expiry_date: policyForm.expiry_date || null,
         status: policyForm.status,
-      };
-
-      const { error } = matchedActivePolicy
-        ? await supabase.from("insurance_policies").update(payload).eq("id", matchedActivePolicy.id)
-        : await supabase.from("insurance_policies").insert(payload);
+      });
       if (error) throw error;
       await supabase.from("insurance_activity_log").insert({
         client_id: selectedClient.id,
@@ -383,24 +311,18 @@ export function InsuranceStatusPipeline() {
     return clean.startsWith("91") ? clean : `91${clean}`;
   };
 
-  const requestPolicyViaWhatsApp = async (client: Client) => {
-    if (!client.phone || client.phone.startsWith("IB_")) { toast.error("No phone number available"); return; }
-    const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
-    const msg = await getCrmMessage("insurance_policy_request", {
-      customer_name: client.customer_name || "Sir/Madam",
-      vehicle_info: client.vehicle_number ? `vehicle *${client.vehicle_number}*` : "your vehicle",
-    });
-    const result = await sendWhatsApp({
-      phone: client.phone,
-      message: msg,
-      name: client.customer_name || undefined,
-      logEvent: "policy_doc_request",
-    });
-    if (!result.success) return;
+  const requestPolicyViaWhatsApp = (client: Client) => {
+    const fullPhone = getWhatsAppPhone(client);
+    if (!fullPhone) { toast.error("No phone number available"); return; }
+    const message = encodeURIComponent(
+      `🙏 Namaste ${client.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe need your current motor insurance policy document for ${client.vehicle_number ? `vehicle *${client.vehicle_number}*` : "your vehicle"} to prepare the best renewal quote.\n\n📎 Please share:\n1️⃣ Current Policy PDF/Photo\n2️⃣ RC Copy (if available)\n\nYou can simply *reply to this message* with the documents.\n\nThank you! 🚗\n— *Grabyourcar Insurance*`
+    );
+    window.open(`https://wa.me/${fullPhone}?text=${message}`, "_blank");
+    toast.success("📱 WhatsApp opened to request documents!");
     supabase.from("insurance_activity_log").insert({
       client_id: client.id, activity_type: "whatsapp_sent",
-      title: "Policy document request sent via WhatsApp API",
-      description: `WhatsApp API message queued for ${client.phone}`,
+      title: "Policy document requested via WhatsApp",
+      description: `Document request sent to ${client.phone}`,
     } as any);
   };
 
@@ -651,7 +573,7 @@ export function InsuranceStatusPipeline() {
                 }`}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => { setSelectedClient(client); setEditPhone(phone || ""); setEditEmail(client.email || ""); setEditVehicleNumber(client.vehicle_number || ""); }}>
+                      <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => { setSelectedClient(client); setEditPhone(phone || ""); setEditEmail(client.email || ""); }}>
                         {/* Stage Indicator */}
                         <div className={`h-10 w-10 rounded-xl ${stage.color} flex items-center justify-center shrink-0 shadow-sm`}>
                           <stage.icon className="h-5 w-5 text-white" />
@@ -680,15 +602,6 @@ export function InsuranceStatusPipeline() {
                         {client.current_premium && (
                           <Badge variant="secondary" className="text-[10px] h-5">₹{client.current_premium.toLocaleString("en-IN")}</Badge>
                         )}
-                        {(() => {
-                          const phoneKey = (client.phone || "").replace(/\D/g, "").slice(-10);
-                          const qCount = quoteCounts[phoneKey];
-                          return qCount ? (
-                            <Badge variant="outline" className="text-[10px] h-5 border-emerald-300 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30">
-                              {qCount} {qCount === 1 ? "quote" : "quotes"}
-                            </Badge>
-                          ) : null;
-                        })()}
                         {/* Prepare Quote Button */}
                         <Button
                           size="sm"
@@ -704,17 +617,11 @@ export function InsuranceStatusPipeline() {
                                 <PhoneCall className="h-4 w-4 text-green-600" />
                               </Button>
                             </a>
-                             <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-green-50 dark:hover:bg-green-950/30" title="WhatsApp" onClick={async () => {
-                                const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-                                await sendWhatsApp({
-                                  phone: client.phone,
-                                  message: `🙏 Namaste ${client.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${client.vehicle_number ? ` for vehicle *${client.vehicle_number}*` : ""}.\n\n${client.current_insurer ? `🏢 Current insurer: *${client.current_insurer}*\n` : ""}${client.current_premium ? `💰 Premium: *₹${Number(client.current_premium).toLocaleString("en-IN")}*\n` : ""}\n✅ We can help you get the best renewal rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`,
-                                  name: client.customer_name,
-                                  logEvent: "status_pipeline_quick_whatsapp",
-                                });
-                             }}>
-                               <MessageSquare className="h-4 w-4 text-green-600" />
-                             </Button>
+                             <a href={`https://wa.me/91${phone}`} target="_blank" rel="noopener noreferrer">
+                              <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-green-50 dark:hover:bg-green-950/30" title="WhatsApp">
+                                <MessageSquare className="h-4 w-4 text-green-600" />
+                              </Button>
+                            </a>
                           </>
                         )}
                         <DropdownMenu>
@@ -759,9 +666,9 @@ export function InsuranceStatusPipeline() {
       </AnimatePresence>
 
       {/* ── Client Detail + Pipeline Dialog ── */}
-      <Dialog open={!!selectedClient} onOpenChange={() => { setSelectedClient(null); setShowAddPolicy(false); setDialogTab("details"); }}>
-        <DialogContent className="max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
-          <DialogHeader className="shrink-0">
+      <Dialog open={!!selectedClient} onOpenChange={() => { setSelectedClient(null); setShowAddPolicy(false); setDialogTab("journey"); }}>
+        <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <div className={`h-8 w-8 rounded-lg ${PIPELINE_STAGES.find(s => s.value === selectedClient?.lead_status)?.color || "bg-primary"} flex items-center justify-center`}>
                 <User className="h-4 w-4 text-white" />
@@ -775,134 +682,80 @@ export function InsuranceStatusPipeline() {
             </DialogTitle>
           </DialogHeader>
           {selectedClient && (
-            <Tabs value={dialogTab} onValueChange={(v) => { setDialogTab(v); if (v === "policies") fetchClientPolicies(selectedClient.id); }} className="flex flex-col min-h-0 flex-1">
-              <TabsList className="w-full bg-muted/50 shrink-0">
-                <TabsTrigger value="details" className="flex-1 gap-1.5 text-xs">
-                  <User className="h-3.5 w-3.5" /> Details
-                </TabsTrigger>
-                <TabsTrigger value="journey" className="flex-1 gap-1.5 text-xs">
-                  <GitBranch className="h-3.5 w-3.5" /> Journey
-                </TabsTrigger>
-                <TabsTrigger value="quote" className="flex-1 gap-1.5 text-xs">
-                  <FileText className="h-3.5 w-3.5" /> Quote
-                </TabsTrigger>
-                <TabsTrigger value="quote_history" className="flex-1 gap-1.5 text-xs">
-                  <Clock className="h-3.5 w-3.5" /> History
-                </TabsTrigger>
-                <TabsTrigger value="policies" className="flex-1 gap-1.5 text-xs">
-                  <ShieldCheck className="h-3.5 w-3.5" /> Policies
-                  {clientPolicies.length > 0 && <Badge variant="secondary" className="h-4 text-[10px] px-1">{clientPolicies.length}</Badge>}
-                </TabsTrigger>
-                <TabsTrigger value="notes" className="flex-1 gap-1.5 text-xs">
-                  <FileText className="h-3.5 w-3.5" /> Notes
-                </TabsTrigger>
-              </TabsList>
+            <div className="space-y-4">
+              {/* Contact Info */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Mobile</Label>
+                  <Input value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="Enter mobile" className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="Enter email" className="h-8 text-sm" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Vehicle</p>
+                  <p className="text-sm font-mono font-medium">{selectedClient.vehicle_number || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Source</p>
+                  <p className="text-sm font-medium">{selectedClient.lead_source || "—"}</p>
+                </div>
+              </div>
 
-              <div className="overflow-y-auto flex-1 min-h-0 mt-3">
-                {/* Details Tab - Contact Info + Communication */}
-                <TabsContent value="details" className="mt-0 space-y-4">
-                  {/* Contact Info */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Mobile</Label>
-                      <Input value={editPhone} onChange={e => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="Enter mobile" className="h-8 text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Email</Label>
-                      <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="Enter email" className="h-8 text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Vehicle Number</Label>
-                      <Input value={editVehicleNumber} onChange={e => setEditVehicleNumber(e.target.value.toUpperCase())} placeholder="e.g. DL01AB1234" className="h-8 text-sm font-mono uppercase" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Source</p>
-                      <p className="text-sm font-medium">{selectedClient.lead_source || "—"}</p>
-                    </div>
-                  </div>
-
-                  {/* Save Contact Button */}
-                  <Button
-                    size="sm"
-                    className="w-full gap-2"
-                    disabled={savingContact}
-                    onClick={async () => {
-                      setSavingContact(true);
-                      try {
-                        const normalizedPhone = editPhone.replace(/\D/g, "");
-                        const normalizedVehicleNumber = editVehicleNumber.replace(/[^A-Z0-9]/gi, "").toUpperCase();
-                        const updates: Record<string, any> = {};
-                        if (normalizedPhone !== (displayPhone(selectedClient.phone) || "")) updates.phone = normalizedPhone;
-                        if (editEmail !== (selectedClient.email || "")) updates.email = editEmail || null;
-                        if (normalizedVehicleNumber !== (selectedClient.vehicle_number || "")) updates.vehicle_number = normalizedVehicleNumber || null;
-                        if (Object.keys(updates).length === 0) { toast.info("No changes to save"); setSavingContact(false); return; }
-                        const { data, error } = await supabase
-                          .from("insurance_clients")
-                          .update(updates)
-                          .eq("id", selectedClient.id)
-                          .select("id, customer_name, phone, email, vehicle_model, vehicle_number, vehicle_make, current_insurer, lead_status, current_premium, lead_source, created_at")
-                          .maybeSingle();
-                        if (error) throw error;
-                        toast.success("✅ Details updated!");
-                        fetchClients();
-                        const refreshedClient = (data ? { ...data, lead_status: data.lead_status || "new" } : { ...selectedClient, ...updates }) as Client;
-                        setSelectedClient(refreshedClient);
-                        setEditPhone(refreshedClient.phone || "");
-                        setEditEmail(refreshedClient.email || "");
-                        setEditVehicleNumber(refreshedClient.vehicle_number || "");
-                      } catch (e: any) {
-                        toast.error(e.message || "Failed to save");
-                      } finally {
-                        setSavingContact(false);
-                      }
-                    }}
-                  >
-                    {savingContact ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    {savingContact ? "Saving..." : "Save Changes"}
-                  </Button>
-
-                  {/* Communication Hub */}
-                  <div className="flex flex-wrap gap-2 py-2 border-y">
-                    {editPhone && (
-                      <>
-                        <a href={`tel:${editPhone}`}>
-                          <Button size="sm" className="gap-1.5 bg-green-600 hover:bg-green-700 text-white">
-                            <PhoneCall className="h-3.5 w-3.5" /> Call
-                          </Button>
-                        </a>
-                         <Button size="sm" variant="outline" className="gap-1.5" onClick={async () => {
-                            const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-                            await sendWhatsApp({
-                              phone: editPhone,
-                              message: `🙏 Namaste ${selectedClient.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${selectedClient.vehicle_number ? ` for vehicle *${selectedClient.vehicle_number}*` : ""}.\n\n${selectedClient.current_insurer ? `🏢 Current insurer: *${selectedClient.current_insurer}*\n` : ""}${selectedClient.current_premium ? `💰 Premium: *₹${Number(selectedClient.current_premium).toLocaleString("en-IN")}*\n` : ""}\n✅ We can help you get the best renewal rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`,
-                              name: selectedClient.customer_name,
-                              logEvent: "status_pipeline_detail_whatsapp",
-                            });
-                        }}>
-                          <MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp
-                        </Button>
-                      </>
-                    )}
-                    {editEmail && (
-                      <a href={`mailto:${editEmail}`}>
-                        <Button size="sm" variant="outline" className="gap-1.5">
-                          <Mail className="h-3.5 w-3.5" /> Email
-                        </Button>
-                      </a>
-                    )}
-                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => shareClientDetails(selectedClient)}>
-                      <Share2 className="h-3.5 w-3.5" /> Share
+              {/* Communication Hub + WhatsApp Doc Request */}
+              <div className="flex flex-wrap gap-2 py-2 border-y">
+                {editPhone && (
+                  <>
+                    <a href={`tel:${editPhone}`}>
+                      <Button size="sm" className="gap-1.5 bg-green-600 hover:bg-green-700 text-white">
+                        <PhoneCall className="h-3.5 w-3.5" /> Call
+                      </Button>
+                    </a>
+                    <a href={`https://wa.me/91${editPhone}`} target="_blank" rel="noopener noreferrer">
+                      <Button size="sm" variant="outline" className="gap-1.5">
+                        <MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp
+                      </Button>
+                    </a>
+                  </>
+                )}
+                {editEmail && (
+                  <a href={`mailto:${editEmail}`}>
+                    <Button size="sm" variant="outline" className="gap-1.5">
+                      <Mail className="h-3.5 w-3.5" /> Email
                     </Button>
-                    <div className="ml-auto flex gap-1.5">
-                      <Button size="sm" variant="outline" className="gap-1.5 border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950" onClick={() => requestPolicyViaWhatsApp(selectedClient)}>
-                        <Upload className="h-3.5 w-3.5" /> Policy Share
-                      </Button>
-                      <Button size="sm" className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white" onClick={() => sendRenewalReminderWhatsApp(selectedClient)}>
-                        <Clock className="h-3.5 w-3.5" /> Renewal Reminder
-                      </Button>
-                    </div>
-                  </div>
-                </TabsContent>
+                  </a>
+                )}
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => shareClientDetails(selectedClient)}>
+                  <Share2 className="h-3.5 w-3.5" /> Share
+                </Button>
+                <div className="ml-auto flex gap-1.5">
+                  <Button size="sm" variant="outline" className="gap-1.5 border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950" onClick={() => requestPolicyViaWhatsApp(selectedClient)}>
+                    <Upload className="h-3.5 w-3.5" /> Policy Share
+                  </Button>
+                  <Button size="sm" className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white" onClick={() => sendRenewalReminderWhatsApp(selectedClient)}>
+                    <Clock className="h-3.5 w-3.5" /> Renewal Reminder
+                  </Button>
+                </div>
+              </div>
+
+              {/* Tabs: Journey / Quote / Policies / Notes */}
+              <Tabs value={dialogTab} onValueChange={(v) => { setDialogTab(v); if (v === "policies") fetchClientPolicies(selectedClient.id); }}>
+                <TabsList className="w-full bg-muted/50">
+                  <TabsTrigger value="journey" className="flex-1 gap-1.5 text-xs">
+                    <GitBranch className="h-3.5 w-3.5" /> Journey
+                  </TabsTrigger>
+                  <TabsTrigger value="quote" className="flex-1 gap-1.5 text-xs">
+                    <FileText className="h-3.5 w-3.5" /> Prepare Quote
+                  </TabsTrigger>
+                  <TabsTrigger value="policies" className="flex-1 gap-1.5 text-xs">
+                    <ShieldCheck className="h-3.5 w-3.5" /> Policies
+                    {clientPolicies.length > 0 && <Badge variant="secondary" className="h-4 text-[10px] px-1">{clientPolicies.length}</Badge>}
+                  </TabsTrigger>
+                  <TabsTrigger value="notes" className="flex-1 gap-1.5 text-xs">
+                    <FileText className="h-3.5 w-3.5" /> Notes
+                  </TabsTrigger>
+                </TabsList>
 
                 {/* Journey Tab */}
                 <TabsContent value="journey" className="mt-3 space-y-4">
@@ -976,31 +829,79 @@ export function InsuranceStatusPipeline() {
                   </Card>
                 </TabsContent>
 
-                {/* Quote Tab — Opens the full calculator modal */}
+                {/* Quote Tab */}
                 <TabsContent value="quote" className="mt-3">
                   <div className="text-center space-y-4">
                     <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800 p-4">
                       <FileText className="h-8 w-8 text-emerald-600 mx-auto mb-2" />
                       <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Prepare Insurance Quote</p>
-                      <p className="text-xs text-muted-foreground mt-1">Generate a branded PDF quote with full premium calculator for {selectedClient.customer_name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Generate a branded PDF quote for {selectedClient.customer_name}</p>
                     </div>
-                    <Button
-                      className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white h-12"
-                      onClick={() => setShowQuoteModal(true)}
-                    >
-                      <FileText className="h-5 w-5" /> Open Quote Calculator
-                    </Button>
-                    <p className="text-[10px] text-muted-foreground">Generates branded PDF with actual premium breakup • Auto-saves to Quote History</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white h-11"
+                        onClick={() => {
+                          const quoteData = {
+                            customerName: selectedClient.customer_name || "Customer",
+                            phone: selectedClient.phone,
+                            email: selectedClient.email || undefined,
+                            city: undefined,
+                            vehicleMake: selectedClient.vehicle_make || "N/A",
+                            vehicleModel: selectedClient.vehicle_model || "N/A",
+                            vehicleNumber: selectedClient.vehicle_number || "N/A",
+                            vehicleYear: new Date().getFullYear(),
+                            fuelType: "Petrol",
+                            insuranceCompany: selectedClient.current_insurer || "Best Available",
+                            policyType: "Comprehensive",
+                            idv: 500000,
+                            basicOD: 8000,
+                            odDiscount: 1500,
+                            ncbDiscount: 2000,
+                            thirdParty: 6521,
+                            securePremium: 500,
+                            addonPremium: 3500,
+                            addons: ["Zero Depreciation", "Engine Protection", "Roadside Assistance (RSA)"],
+                          };
+                          generateInsuranceQuotePdf(quoteData);
+                          toast.success("📄 Quote PDF downloaded!");
+                        }}
+                      >
+                        <Download className="h-4 w-4" /> Download PDF
+                      </Button>
+                      <Button
+                        className="gap-2 bg-green-600 hover:bg-green-700 text-white h-11"
+                        onClick={() => {
+                          const phone = (selectedClient.phone || "").replace(/\D/g, "");
+                          const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
+                          generateInsuranceQuotePdf({
+                            customerName: selectedClient.customer_name || "Customer",
+                            phone: selectedClient.phone,
+                            vehicleMake: selectedClient.vehicle_make || "N/A",
+                            vehicleModel: selectedClient.vehicle_model || "N/A",
+                            vehicleNumber: selectedClient.vehicle_number || "N/A",
+                            vehicleYear: new Date().getFullYear(),
+                            fuelType: "Petrol",
+                            insuranceCompany: selectedClient.current_insurer || "Best Available",
+                            policyType: "Comprehensive",
+                            idv: 500000,
+                            basicOD: 8000,
+                            odDiscount: 1500,
+                            ncbDiscount: 2000,
+                            thirdParty: 6521,
+                            securePremium: 500,
+                            addonPremium: 3500,
+                            addons: ["Zero Depreciation", "Engine Protection", "Roadside Assistance (RSA)"],
+                          });
+                          const msg = encodeURIComponent(`Hi ${selectedClient.customer_name}! Here is your insurance quote. Please find the PDF attached.\n\n— Grabyourcar Insurance\n📞 +91 98559 24442`);
+                          window.open(`https://wa.me/${fullPhone}?text=${msg}`, "_blank");
+                          toast.success("📱 PDF downloaded & WhatsApp opened!");
+                        }}
+                      >
+                        <MessageSquare className="h-4 w-4" /> WhatsApp
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">For detailed quote customization, use the Quote Hub from the sidebar</p>
                   </div>
-                </TabsContent>
-
-                {/* Quote History Tab */}
-                <TabsContent value="quote_history" className="mt-3">
-                  <ClientQuoteHistory
-                    clientId={selectedClient.id}
-                    clientPhone={selectedClient.phone}
-                    vehicleNumber={selectedClient.vehicle_number || undefined}
-                  />
                 </TabsContent>
 
                 {/* Policies Tab */}
@@ -1095,10 +996,14 @@ export function InsuranceStatusPipeline() {
                                 {/* Share policy via WhatsApp */}
                                 {displayPhone(selectedClient.phone) && (
                                   <Button size="icon" variant="ghost" className="h-7 w-7" title="Send policy via WhatsApp"
-                                    onClick={async () => {
-                                      const msgText = `📋 *Policy Details*\n━━━━━━━━━━━━━━━━\n📄 Policy: ${p.policy_number}\n🏢 Insurer: ${p.insurer || "N/A"}\n💰 Premium: ₹${p.premium_amount ? Number(p.premium_amount).toLocaleString("en-IN") : "N/A"}\n📅 Expiry: ${p.expiry_date ? new Date(p.expiry_date).toLocaleDateString("en-IN") : "N/A"}\n🚗 Vehicle: ${selectedClient.vehicle_number || "N/A"}\n\n— *Grabyourcar Insurance*`;
-                                      const { sendWhatsApp: sendWA } = await import("@/lib/sendWhatsApp");
-                                      await sendWA({ phone: selectedClient.phone, message: msgText, name: selectedClient.customer_name, logEvent: "policy_share" });
+                                    onClick={() => {
+                                      const phone = selectedClient.phone.replace(/\D/g, "");
+                                      const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
+                                      const msg = encodeURIComponent(
+                                        `📋 *Policy Details*\n━━━━━━━━━━━━━━━━\n📄 Policy: ${p.policy_number}\n🏢 Insurer: ${p.insurer || "N/A"}\n💰 Premium: ₹${p.premium_amount ? Number(p.premium_amount).toLocaleString("en-IN") : "N/A"}\n📅 Expiry: ${p.expiry_date ? new Date(p.expiry_date).toLocaleDateString("en-IN") : "N/A"}\n🚗 Vehicle: ${selectedClient.vehicle_number || "N/A"}\n\n— *Grabyourcar Insurance*`
+                                      );
+                                      window.open(`https://wa.me/${fullPhone}?text=${msg}`, "_blank");
+                                      toast.success("Sharing policy via WhatsApp!");
                                     }}>
                                     <Send className="h-3.5 w-3.5 text-green-600" />
                                   </Button>
@@ -1122,8 +1027,8 @@ export function InsuranceStatusPipeline() {
                     </div>
                   </div>
                 </TabsContent>
-              </div>
-            </Tabs>
+              </Tabs>
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -1197,34 +1102,6 @@ export function InsuranceStatusPipeline() {
           )}
         </DialogContent>
       </Dialog>
-      {/* Quote Calculator Modal */}
-      {selectedClient && showQuoteModal && (
-        <InsuranceQuoteModal
-          open={showQuoteModal}
-          onOpenChange={setShowQuoteModal}
-          client={{
-            id: selectedClient.id,
-            customer_name: selectedClient.customer_name || "Customer",
-            phone: selectedClient.phone,
-            email: selectedClient.email || undefined,
-            vehicle_number: selectedClient.vehicle_number || undefined,
-            vehicle_make: selectedClient.vehicle_make || undefined,
-            vehicle_model: selectedClient.vehicle_model || undefined,
-            vehicle_year: undefined,
-            current_insurer: selectedClient.current_insurer || undefined,
-            current_policy_type: undefined,
-            ncb_percentage: undefined,
-            previous_claim: undefined,
-            city: undefined,
-            current_premium: selectedClient.current_premium || undefined,
-            policy_expiry_date: undefined,
-          }}
-          onQuoteSent={() => {
-            toast.success("📋 Quote saved to history!");
-            fetchClients();
-          }}
-        />
-      )}
     </div>
   );
 }

@@ -134,25 +134,25 @@ export const TeamUserManagement = () => {
         throw new Error("Invalid email format");
       }
       
-      // Use secure edge function to find user by email (server-side only)
-      const { data, error } = await supabase.functions.invoke("admin-lookup-user", {
-        body: { email: trimmedEmail },
-      });
+      // Use Supabase admin API to find user by email
+      const { data: userData, error } = await (supabase.auth.admin as any).listUsers();
 
       if (error) {
-        throw new Error("Could not lookup user - make sure you're logged in as admin");
+        throw new Error("Could not fetch users - make sure you're logged in as admin");
       }
 
-      if (data?.found) {
+      const user = userData?.users?.find((u: any) => u.email?.toLowerCase() === trimmedEmail);
+      
+      if (user?.id) {
         setEmailLookupStatus({ 
           success: true, 
-          userId: data.userId,
-          message: `✓ Found: ${data.email}`
+          userId: user.id,
+          message: `✓ Found: ${user.email}`
         });
       } else {
         setEmailLookupStatus({ 
           success: false,
-          message: data?.message || `No user found with this email. They must sign up first.`
+          message: `No user found with this email. They must sign up first.`
         });
       }
     } catch (error: any) {

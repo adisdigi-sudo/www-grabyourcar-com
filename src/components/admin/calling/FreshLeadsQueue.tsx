@@ -13,12 +13,9 @@ import { toast } from "sonner";
 import { CallDispositionModal } from "./CallDispositionModal";
 import {
   Phone, MessageCircle, Search, Inbox, Clock, User,
-  MapPin, Car, Filter, ArrowUpRight, Flame, Globe, MessageSquare,
-  UserCheck, Users, Zap, CheckSquare
+  MapPin, Car, Filter, ArrowUpRight, Flame, Globe, MessageSquare
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
-import { LeadAssignmentPanel } from "../shared/LeadAssignmentPanel";
-import { Checkbox } from "@/components/ui/checkbox";
 
 const VERTICAL_SERVICE_MAP: Record<string, string[]> = {
   sales: ["car_inquiry", "general", "test_drive"],
@@ -41,14 +38,11 @@ const SOURCE_ICONS: Record<string, React.ElementType> = {
 
 export function FreshLeadsQueue() {
   const { user } = useAuth();
-  const { activeVertical, isManagerInVertical } = useVerticalAccess();
+  const { activeVertical } = useVerticalAccess();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filterSource, setFilterSource] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
-  const [filterAssignee, setFilterAssignee] = useState("all");
-  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
-  const [showAssignPanel, setShowAssignPanel] = useState(false);
 
   const [dispositionOpen, setDispositionOpen] = useState(false);
   const [activeCall, setActiveCall] = useState<{
@@ -58,25 +52,12 @@ export function FreshLeadsQueue() {
   const slug = activeVertical?.slug || "sales";
   const serviceCategories = VERTICAL_SERVICE_MAP[slug] || ["general"];
 
-  // Check if user is admin/manager or just employee
-  const { data: userRoles = [] } = useQuery({
-    queryKey: ["user-roles-queue", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-      return data?.map(d => d.role) || [];
-    },
-    enabled: !!user?.id,
-  });
-  const isAdmin = userRoles.includes("super_admin") || userRoles.includes("admin");
-  const canSeeAll = isAdmin || isManagerInVertical;
-
   const { data: leads = [], isLoading } = useQuery({
-    queryKey: ["fresh-leads", slug, activeVertical?.id, canSeeAll, user?.id],
+    queryKey: ["fresh-leads", slug, activeVertical?.id],
     queryFn: async () => {
       let query = supabase
         .from("leads")
-        .select("id, name, customer_name, phone, email, city, source, service_category, priority, status, car_brand, car_model, notes, created_at, vertical_id, lead_type, assigned_to")
+        .select("id, name, customer_name, phone, email, city, source, service_category, priority, status, car_brand, car_model, notes, created_at, vertical_id, lead_type")
         .in("status", ["new", "pending", "fresh", "contacted"])
         .order("created_at", { ascending: false })
         .limit(200);
@@ -85,11 +66,6 @@ export function FreshLeadsQueue() {
         query = query.eq("vertical_id", activeVertical.id);
       } else {
         query = query.in("service_category", serviceCategories);
-      }
-
-      // Employee: only see their assigned leads
-      if (!canSeeAll && user?.id) {
-        query = query.eq("assigned_to", user.id);
       }
 
       const { data, error } = await query;
@@ -104,8 +80,6 @@ export function FreshLeadsQueue() {
     let result = leads;
     if (filterSource !== "all") result = result.filter(l => l.source === filterSource);
     if (filterPriority !== "all") result = result.filter(l => l.priority === filterPriority);
-    if (filterAssignee === "unassigned") result = result.filter(l => !l.assigned_to);
-    else if (filterAssignee === "mine") result = result.filter(l => l.assigned_to === user?.id);
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(l =>
@@ -115,15 +89,7 @@ export function FreshLeadsQueue() {
       );
     }
     return result;
-  }, [leads, filterSource, filterPriority, filterAssignee, search, user?.id]);
-
-  const toggleSelectLead = (id: string) => {
-    setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  };
-  const toggleSelectAll = () => {
-    if (selectedLeads.length === filteredLeads.length) setSelectedLeads([]);
-    else setSelectedLeads(filteredLeads.map(l => l.id));
-  };
+  }, [leads, filterSource, filterPriority, search]);
 
   const handleCall = (phone: string, name: string, method: "phone" | "whatsapp", leadId?: string, leadType?: string) => {
     const cleanPhone = phone.replace(/\D/g, "");
@@ -132,13 +98,7 @@ export function FreshLeadsQueue() {
     if (method === "phone") {
       window.open(`tel:+${fullPhone}`, "_self");
     } else {
-      Promise.all([
-        import("@/lib/sendWhatsApp"),
-        import("@/lib/crmMessageTemplates"),
-      ]).then(async ([{ sendWhatsApp }, { getCrmMessage }]) => {
-        const msg = await getCrmMessage("fresh_lead_greeting", { customer_name: name });
-        sendWhatsApp({ phone, message: msg, name, logEvent: "fresh_lead_call" });
-      });
+      window.open(`https://wa.me/${fullPhone}`, "_blank");
     }
 
     setActiveCall({ phone, name, leadId, leadType: leadType || slug, method });
@@ -195,28 +155,6 @@ export function FreshLeadsQueue() {
         ))}
       </div>
 
-      {/* Bulk Actions */}
-      {canSeeAll && selectedLeads.length > 0 && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="p-3 flex items-center gap-3">
-            <Badge>{selectedLeads.length} selected</Badge>
-            <Button size="sm" variant="secondary" onClick={() => setShowAssignPanel(!showAssignPanel)}>
-              <UserCheck className="h-3 w-3 mr-1" /> Assign Selected
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setSelectedLeads([])}>Clear</Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {showAssignPanel && selectedLeads.length > 0 && (
-        <LeadAssignmentPanel
-          leadIds={selectedLeads}
-          verticalId={activeVertical?.id}
-          mode="bulk"
-          onAssigned={() => { setSelectedLeads([]); setShowAssignPanel(false); }}
-        />
-      )}
-
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
@@ -239,22 +177,6 @@ export function FreshLeadsQueue() {
             <SelectItem value="normal">Normal</SelectItem>
           </SelectContent>
         </Select>
-        {canSeeAll && (
-          <Select value={filterAssignee} onValueChange={setFilterAssignee}>
-            <SelectTrigger className="w-40"><SelectValue placeholder="Assignee" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Leads</SelectItem>
-              <SelectItem value="unassigned">Unassigned</SelectItem>
-              <SelectItem value="mine">My Leads</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
-        {canSeeAll && filteredLeads.length > 0 && (
-          <Button size="sm" variant="outline" onClick={toggleSelectAll}>
-            <CheckSquare className="h-3 w-3 mr-1" />
-            {selectedLeads.length === filteredLeads.length ? "Deselect All" : "Select All"}
-          </Button>
-        )}
       </div>
 
       {/* Leads List */}
@@ -277,13 +199,6 @@ export function FreshLeadsQueue() {
                 lead.priority === "high" ? "border-l-4 border-l-amber-500" : ""
               }`}>
                 <CardContent className="p-4 flex items-center justify-between gap-4">
-                  {canSeeAll && (
-                    <Checkbox
-                      checked={selectedLeads.includes(lead.id)}
-                      onCheckedChange={() => toggleSelectLead(lead.id)}
-                      className="shrink-0"
-                    />
-                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="font-semibold truncate">{lead.name || lead.customer_name || "Unknown"}</span>

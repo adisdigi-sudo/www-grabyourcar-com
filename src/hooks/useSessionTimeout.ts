@@ -15,7 +15,7 @@ export const useSessionTimeout = (enabled: boolean = true) => {
   const logout = useCallback(async () => {
     toast.error("Session expired due to inactivity. Please log in again.");
     await supabase.auth.signOut();
-    window.location.href = "/crm-auth";
+    window.location.href = "/admin-auth";
   }, []);
 
   const resetTimer = useCallback(() => {

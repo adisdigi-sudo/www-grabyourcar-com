@@ -184,7 +184,7 @@
          <div>
            <h3 className="font-bold text-lg flex items-center gap-2">
              AutoBot Verification
-             <Badge variant="outline" className="text-xs border-success/50 text-foreground">
+             <Badge variant="outline" className="text-xs border-success/50 text-success">
                <Shield className="h-3 w-3 mr-1" />
                Secure
              </Badge>
@@ -199,9 +199,9 @@
          <div className="text-center space-y-4">
            <div className="w-16 h-16 mx-auto rounded-full bg-success/10 flex items-center justify-center">
              {isSending ? (
-               <Loader2 className="h-8 w-8 text-foreground animate-spin" />
+               <Loader2 className="h-8 w-8 text-success animate-spin" />
              ) : (
-               <Phone className="h-8 w-8 text-foreground" />
+               <Phone className="h-8 w-8 text-success" />
              )}
            </div>
            <p className="text-sm text-muted-foreground">
@@ -260,7 +260,7 @@
  
            {/* Verifying State */}
            {isVerifying && (
-             <div className="flex items-center justify-center gap-2 text-foreground">
+             <div className="flex items-center justify-center gap-2 text-success">
                <Loader2 className="h-4 w-4 animate-spin" />
                <span className="text-sm">Verifying...</span>
              </div>
@@ -277,7 +277,7 @@
                  size="sm"
                  onClick={sendOTP}
                  disabled={isSending}
-                 className="text-foreground hover:text-success/80"
+                 className="text-success hover:text-success/80"
                >
                  <RefreshCw className="h-3 w-3 mr-1" />
                  Resend OTP

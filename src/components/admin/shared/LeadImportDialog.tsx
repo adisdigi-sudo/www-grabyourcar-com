@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, Copy, Download, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { parseCSV as parseDelimitedCSV } from "@/lib/spreadsheetUtils";
 
 interface LeadImportDialogProps {
   open: boolean;
@@ -13,25 +12,9 @@ interface LeadImportDialogProps {
   onImport: (leads: Record<string, string>[]) => Promise<void>;
   templateColumns: string[];
   title?: string;
-  requirePhone?: boolean;
 }
 
-const normalizeHeader = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/^\ufeff/, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-
-export function LeadImportDialog({
-  open,
-  onOpenChange,
-  onImport,
-  templateColumns,
-  title = "Import Leads",
-  requirePhone = true,
-}: LeadImportDialogProps) {
+export function LeadImportDialog({ open, onOpenChange, onImport, templateColumns, title = "Import Leads" }: LeadImportDialogProps) {
   const [csvText, setCsvText] = useState("");
   const [parsedLeads, setParsedLeads] = useState<Record<string, string>[]>([]);
   const [importing, setImporting] = useState(false);
@@ -39,40 +22,19 @@ export function LeadImportDialog({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const parseCSV = (text: string) => {
-    const rows = parseDelimitedCSV(text).filter((row) => row.some((cell) => cell.trim() !== ""));
-    if (rows.length < 2) {
-      setParsedLeads([]);
-      setErrors(["Need at least a header row and one data row"]);
-      return;
-    }
-
-    const headers = rows[0].map((header, index) => {
-      const normalized = normalizeHeader(header);
-      return normalized || `column_${index + 1}`;
-    });
-
+    const lines = text.trim().split("\n").filter(l => l.trim());
+    if (lines.length < 2) { setErrors(["Need at least a header row and one data row"]); return; }
+    const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g, "_"));
     const leads: Record<string, string>[] = [];
     const errs: string[] = [];
-
-    for (let i = 1; i < rows.length; i++) {
-      const values = rows[i];
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(",").map(v => v.trim());
+      if (values.length !== headers.length) { errs.push(`Row ${i + 1}: column count mismatch`); continue; }
       const lead: Record<string, string> = {};
-
-      headers.forEach((header, index) => {
-        lead[header] = values[index]?.trim() || "";
-      });
-
-      const hasAnyValue = Object.values(lead).some((value) => value.trim() !== "");
-      if (!hasAnyValue) continue;
-
-      if (requirePhone && !lead.phone && !lead.mobile) {
-        errs.push(`Row ${i + 1}: missing phone`);
-        continue;
-      }
-
+      headers.forEach((h, j) => { lead[h] = values[j]; });
+      if (!lead.phone && !lead.mobile) { errs.push(`Row ${i + 1}: missing phone`); continue; }
       leads.push(lead);
     }
-
     setParsedLeads(leads);
     setErrors(errs);
   };
@@ -89,9 +51,7 @@ export function LeadImportDialog({
     reader.readAsText(file);
   };
 
-  const handlePaste = () => {
-    if (csvText.trim()) parseCSV(csvText);
-  };
+  const handlePaste = () => { if (csvText.trim()) parseCSV(csvText); };
 
   const handleImport = async () => {
     if (parsedLeads.length === 0) return;
@@ -99,9 +59,7 @@ export function LeadImportDialog({
     try {
       await onImport(parsedLeads);
       toast.success(`✅ ${parsedLeads.length} leads imported successfully!`);
-      setCsvText("");
-      setParsedLeads([]);
-      setErrors([]);
+      setCsvText(""); setParsedLeads([]); setErrors([]);
       onOpenChange(false);
     } catch (err: any) {
       toast.error(err.message || "Import failed");
@@ -114,10 +72,7 @@ export function LeadImportDialog({
     const csv = templateColumns.join(",") + "\nJohn Doe,9876543210,Delhi,Referral\n";
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "import_template.csv";
-    a.click();
+    const a = document.createElement("a"); a.href = url; a.download = "import_template.csv"; a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -134,6 +89,7 @@ export function LeadImportDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Upload Methods */}
           <div className="grid grid-cols-2 gap-3">
             <Button variant="outline" className="h-20 flex-col gap-2 border-dashed border-2 hover:border-primary/50 hover:bg-primary/5" onClick={() => fileRef.current?.click()}>
               <Upload className="h-5 w-5 text-primary" />
@@ -147,6 +103,7 @@ export function LeadImportDialog({
 
           <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={handleFileUpload} />
 
+          {/* Paste Area */}
           <div className="space-y-1.5">
             <p className="text-xs font-medium text-muted-foreground">Or paste CSV data below:</p>
             <Textarea
@@ -160,6 +117,7 @@ export function LeadImportDialog({
             </Button>
           </div>
 
+          {/* Preview */}
           {parsedLeads.length > 0 && (
             <div className="rounded-lg border bg-emerald-50/50 dark:bg-emerald-950/20 p-3 space-y-2">
               <div className="flex items-center gap-2">
@@ -172,10 +130,8 @@ export function LeadImportDialog({
                 {parsedLeads.slice(0, 5).map((lead, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs bg-background/80 rounded px-2 py-1">
                     <Badge variant="outline" className="text-[9px]">#{i + 1}</Badge>
-                    <span className="font-medium">{lead.name || lead.customer_name || lead.insured_name || "—"}</span>
-                    <span className="text-muted-foreground font-mono">
-                      {lead.phone || lead.mobile || lead.registration_number || lead.vehicle_number || lead.policy_no || "—"}
-                    </span>
+                    <span className="font-medium">{lead.name || lead.customer_name || "—"}</span>
+                    <span className="text-muted-foreground font-mono">{lead.phone || lead.mobile}</span>
                   </div>
                 ))}
                 {parsedLeads.length > 5 && <p className="text-[10px] text-muted-foreground">...and {parsedLeads.length - 5} more</p>}
@@ -183,6 +139,7 @@ export function LeadImportDialog({
             </div>
           )}
 
+          {/* Errors */}
           {errors.length > 0 && (
             <div className="rounded-lg border border-red-200 bg-red-50/50 dark:bg-red-950/20 p-3 space-y-1">
               <div className="flex items-center gap-2 text-red-600">

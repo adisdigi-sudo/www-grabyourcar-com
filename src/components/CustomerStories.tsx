@@ -202,7 +202,7 @@ export const CustomerStories = () => {
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <div className="text-center mb-12 md:mb-16">
-          <Badge variant="outline" className="mb-4 px-4 py-1.5 text-sm font-medium border-primary/30 text-foreground animate-pulse">
+          <Badge variant="outline" className="mb-4 px-4 py-1.5 text-sm font-medium border-primary/30 text-primary animate-pulse">
             <Camera className="w-4 h-4 mr-2" />
             Real Delivery Stories
           </Badge>
@@ -226,7 +226,7 @@ export const CustomerStories = () => {
               className="text-center p-4 md:p-6 rounded-2xl bg-card border border-border/50 shadow-sm hover:shadow-md hover:border-primary/20 transition-all"
             >
               <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <stat.icon className="h-5 w-5 md:h-6 md:w-6 text-foreground" />
+                <stat.icon className="h-5 w-5 md:h-6 md:w-6 text-primary" />
               </div>
               <p className="font-heading text-xl md:text-3xl font-bold text-foreground">
                 <AnimatedCounter 
@@ -348,11 +348,11 @@ export const CustomerStories = () => {
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <p className="font-heading font-bold text-lg">{activeStory.name}</p>
-                          <CheckCircle className="w-5 h-5 text-foreground" />
+                          <CheckCircle className="w-5 h-5 text-primary" />
                         </div>
                         <p className="text-sm text-muted-foreground">{activeStory.location}</p>
                       </div>
-                      <Badge variant="secondary" className="bg-success/10 text-foreground border-success/20 text-base px-4 py-2 font-bold">
+                      <Badge variant="secondary" className="bg-success/10 text-success border-success/20 text-base px-4 py-2 font-bold">
                         <Heart className="w-4 h-4 mr-1.5 fill-success" />
                         Saved {activeStory.savings}
                       </Badge>
@@ -473,7 +473,7 @@ export const CustomerStories = () => {
         <div className="mt-8 text-center">
           <p className="text-xs text-muted-foreground max-w-xl mx-auto">
             📸 All photos are from actual customer deliveries. Names shared with consent. 
-            <a href="mailto:stories@grabyourcar.com" className="text-foreground hover:underline ml-1">
+            <a href="mailto:stories@grabyourcar.com" className="text-primary hover:underline ml-1">
               Share your story
             </a>
           </p>

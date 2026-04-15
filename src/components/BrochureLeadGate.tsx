@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Shield, Loader2, CheckCircle, Download } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
-import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
 
 const formSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(100),
@@ -72,23 +73,31 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
     // Submit directly without OTP
     setIsSubmitting(true);
     try {
-      await captureWebsiteLead({
-        name: formData.name,
-        phone: formData.phone,
-        city: formData.city,
-        carInterest: carName,
+      const { error } = await supabase.from("leads").insert({
+        name: formData.name.trim(),
+        customer_name: formData.name.trim(),
+        phone: formData.phone.trim(),
+        city: formData.city.trim(),
+        car_model: carName,
         source: "brochure_download",
-        vertical: "car",
-        type: "brochure",
+        lead_type: "brochure",
+        status: "new",
         priority: "medium",
-        message: `Brochure requested for ${carName}`,
       });
 
+      if (error) throw error;
+
+      try {
+        await supabase.functions.invoke("whatsapp-send", {
+          body: {
+            phone: `91${formData.phone}`,
+            template: "lead_created",
+            params: { name: formData.name, car: carName },
+          },
+        });
+      } catch { /* best effort */ }
+
       localStorage.setItem(`gyc_brochure_lead_${carSlug || carName}`, "true");
-
-      const { trackLeadConversion } = await import("@/lib/adTracking");
-      trackLeadConversion("brochure_download", { car: carName });
-
       confetti({ particleCount: 60, spread: 50, origin: { y: 0.6 } });
       setStep("success");
       triggerDownload();
@@ -114,7 +123,7 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
               <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-foreground" />
+                    <FileText className="h-5 w-5 text-primary" />
                     Download {carName} Brochure
                   </DialogTitle>
                   <DialogDescription>
@@ -151,7 +160,7 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
 
             {step === "success" && (
               <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-8">
-                <CheckCircle className="h-16 w-16 text-foreground mx-auto mb-4" />
+                <CheckCircle className="h-16 w-16 text-success mx-auto mb-4" />
                 <h3 className="text-xl font-bold mb-2">Brochure Downloaded! 🎉</h3>
                 <p className="text-muted-foreground text-sm">
                   Check your downloads. Our team will also share exclusive offers on WhatsApp.

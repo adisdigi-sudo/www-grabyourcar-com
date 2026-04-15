@@ -19,48 +19,10 @@ serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { action, leads, importId, source, fieldMapping, verticalId } = await req.json();
+    const { action, leads, importId, source, fieldMapping } = await req.json();
 
     // ── Webhook/API endpoint for external portals ──
     if (action === "webhook" || action === "api-push") {
-      // Authenticate webhook requests via shared secret
-      const WEBHOOK_SECRET = Deno.env.get("LEAD_IMPORT_WEBHOOK_SECRET");
-      const providedSecret = req.headers.get("X-Webhook-Secret");
-      
-      if (action === "webhook") {
-        if (!WEBHOOK_SECRET || providedSecret !== WEBHOOK_SECRET) {
-          return new Response(JSON.stringify({ error: "Unauthorized" }), {
-            status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      }
-
-      // For api-push, require valid JWT from authenticated admin
-      if (action === "api-push") {
-        const authHeader = req.headers.get("Authorization");
-        if (!authHeader) {
-          return new Response(JSON.stringify({ error: "Unauthorized - missing auth header" }), {
-            status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-        if (anonKey) {
-          const anonClient = createClient(SUPABASE_URL, anonKey);
-          const { data: { user: caller }, error: authError } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
-          if (authError || !caller) {
-            return new Response(JSON.stringify({ error: "Unauthorized - invalid token" }), {
-              status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-          // Verify caller has admin role
-          const { data: isAdminUser } = await supabase.rpc("is_admin", { _user_id: caller.id });
-          if (!isAdminUser) {
-            return new Response(JSON.stringify({ error: "Forbidden - admin access required" }), {
-              status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-        }
-      }
       if (!leads?.length) {
         return new Response(JSON.stringify({ error: "No leads provided" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -87,26 +49,20 @@ serve(async (req) => {
       for (const lead of leads) {
         try {
           // Map external fields to our schema
-          // Sanitize helper: limit length, strip HTML
-          const sanitize = (val: any, maxLen = 500): string | null => {
-            if (!val) return null;
-            return String(val).substring(0, maxLen).replace(/<[^>]*>/g, '').trim() || null;
-          };
-
           const mapped = {
-            customer_name: sanitize(lead.name || lead.customer_name || lead.customerName || "Unknown", 200),
+            customer_name: lead.name || lead.customer_name || lead.customerName || "Unknown",
             phone: (lead.phone || lead.mobile || lead.contact || "").replace(/\D/g, "").slice(-10),
-            email: sanitize(lead.email, 255),
-            source: sanitize(lead.source || source || "api_import", 100),
-            lead_type: sanitize(lead.lead_type || lead.type || "car_inquiry", 50),
+            email: lead.email || null,
+            source: lead.source || source || "api_import",
+            lead_type: lead.lead_type || lead.type || "car_inquiry",
             status: "new",
-            car_brand: sanitize(lead.car_brand || lead.brand, 100),
-            car_model: sanitize(lead.car_model || lead.model || lead.car, 100),
-            city: sanitize(lead.city || lead.location, 100),
-            buying_timeline: sanitize(lead.timeline || lead.buying_timeline, 100),
+            car_brand: lead.car_brand || lead.brand || null,
+            car_model: lead.car_model || lead.model || lead.car || null,
+            city: lead.city || lead.location || null,
+            buying_timeline: lead.timeline || lead.buying_timeline || null,
             budget_min: lead.budget_min || lead.budgetMin || null,
             budget_max: lead.budget_max || lead.budgetMax || null,
-            notes: sanitize(lead.notes || lead.remarks, 500),
+            notes: lead.notes || lead.remarks || null,
           };
 
           if (!mapped.phone || mapped.phone.length < 10) {
@@ -128,20 +84,12 @@ serve(async (req) => {
             continue;
           }
 
-          const { data: inserted, error: insertErr } = await supabase.from("leads").insert(mapped).select("id").single();
+          const { error: insertErr } = await supabase.from("leads").insert(mapped);
           if (insertErr) {
             failed++;
             errors.push({ row: lead, reason: insertErr.message });
           } else {
             imported++;
-            // Auto-assign via round-robin if verticalId provided
-            if (verticalId && inserted?.id) {
-              await supabase.rpc("auto_assign_lead_round_robin", {
-                p_vertical_id: verticalId,
-                p_lead_id: inserted.id,
-                p_assigned_by: null,
-              });
-            }
           }
         } catch (e: any) {
           failed++;
@@ -215,7 +163,7 @@ serve(async (req) => {
             continue;
           }
 
-          const { data: inserted, error: insertErr } = await supabase.from("leads").insert({
+          const { error: insertErr } = await supabase.from("leads").insert({
             customer_name: getMapped("customer_name") || getMapped("name") || "Unknown",
             phone,
             email: getMapped("email") || null,
@@ -226,20 +174,13 @@ serve(async (req) => {
             car_model: getMapped("car_model") || getMapped("model") || null,
             city: getMapped("city") || null,
             notes: getMapped("notes") || getMapped("remarks") || null,
-          }).select("id").single();
+          });
 
           if (insertErr) {
             failed++;
             errors.push({ phone, reason: insertErr.message });
           } else {
             imported++;
-            if (verticalId && inserted?.id) {
-              await supabase.rpc("auto_assign_lead_round_robin", {
-                p_vertical_id: verticalId,
-                p_lead_id: inserted.id,
-                p_assigned_by: null,
-              });
-            }
           }
         } catch (e: any) {
           failed++;

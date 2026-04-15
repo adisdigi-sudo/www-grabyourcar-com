@@ -39,11 +39,11 @@ export function InsuranceSmartNudge() {
           className="text-center mb-12"
         >
           <div className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
-            <Sparkles className="h-4 w-4 text-foreground" />
+            <Sparkles className="h-4 w-4 text-primary" />
             What Smart Buyers Choose
           </div>
           <h2 className="text-2xl md:text-4xl font-heading font-bold text-foreground">
-            Join the <span className="text-foreground">smart majority</span>
+            Join the <span className="text-primary">smart majority</span>
           </h2>
         </motion.div>
 
@@ -65,7 +65,7 @@ export function InsuranceSmartNudge() {
                 <span className={`text-3xl font-heading font-bold ${nudge.color}`}>{nudge.stat}</span>
                 <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{nudge.text}</p>
 
-                <div className="flex items-center gap-1.5 mt-4 text-xs text-foreground font-semibold">
+                <div className="flex items-center gap-1.5 mt-4 text-xs text-primary font-semibold">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   {nudge.highlight}
                 </div>

@@ -194,11 +194,7 @@ export const ManualQuoteGenerator = () => {
         fastag,
         registration,
         handling,
-        accessories,
-        extendedWarranty,
-        otherCharges,
-        otherChargesLabel: otherChargesLabel || undefined,
-        onRoadPrice: subtotal,
+        onRoadPrice: finalPrice,
       },
       downPayment: showEMI ? downPayment : 0,
       loanAmount: showEMI ? loanAmount : 0,
@@ -374,21 +370,10 @@ export const ManualQuoteGenerator = () => {
       setRegistration(estimatedRegistration);
       
       const total = exShowroom + estimatedRto + estimatedInsurance + estimatedTcs + fastag + estimatedHandling + estimatedRegistration;
-      const dp = Math.round(total * 0.2);
-      const loan = Math.round(total * 0.8);
-      setDownPayment(dp);
-      setLoanAmount(loan);
-      setShowEMI(true);
+      setDownPayment(Math.round(total * 0.2));
+      setLoanAmount(Math.round(total * 0.8));
       
-      // Auto-calculate EMI
-      const rate = interestRate / 12 / 100;
-      const months = tenure;
-      if (loan > 0 && rate > 0 && months > 0) {
-        const autoEmi = Math.round((loan * rate * Math.pow(1 + rate, months)) / (Math.pow(1 + rate, months) - 1));
-        toast.success(`Estimated values calculated! EMI: Rs. ${autoEmi.toLocaleString('en-IN')}/month`);
-      } else {
-        toast.success("Estimated values calculated based on ex-showroom price");
-      }
+      toast.success("Estimated values calculated based on ex-showroom price");
     }
   };
 

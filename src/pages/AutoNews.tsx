@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { GlobalSEO } from "@/components/seo/GlobalSEO";
+import { Helmet } from "react-helmet-async";
 import { 
   Newspaper, Clock, User, Tag, RefreshCw, Sparkles, 
   ArrowRight, TrendingUp, Zap, Car, Lightbulb, BarChart3
@@ -131,13 +131,10 @@ export default function AutoNews() {
 
   return (
     <>
-      <GlobalSEO
-        pageKey="auto_news"
-        title="Auto News India | Latest Car News & Updates | GrabYourCar"
-        description="Get the latest automotive news, car reviews, industry updates, and EV news from India. AI-powered news curation for car enthusiasts."
-        path="/auto-news"
-        keywords="auto news India, car news, automotive updates, EV news, car reviews India"
-      />
+      <Helmet>
+        <title>Auto News India | Latest Car News & Updates | GrabYourCar</title>
+        <meta name="description" content="Get the latest automotive news, car reviews, industry updates, and EV news from India. AI-powered news curation for car enthusiasts." />
+      </Helmet>
 
       <Header />
 
@@ -155,7 +152,7 @@ export default function AutoNews() {
               transition={{ duration: 0.6 }}
               className="text-center max-w-3xl mx-auto"
             >
-              <Badge className="mb-4 bg-primary/10 text-foreground hover:bg-primary/20 px-4 py-1.5">
+              <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/20 px-4 py-1.5">
                 <Sparkles className="h-3.5 w-3.5 mr-1.5" />
                 AI-Curated News
               </Badge>
@@ -164,7 +161,7 @@ export default function AutoNews() {
                 <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                   Auto News
                 </span>
-                <span className="text-foreground"> India</span>
+                <span className="text-primary"> India</span>
               </h1>
               
               <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
@@ -413,7 +410,7 @@ export default function AutoNews() {
               viewport={{ once: true }}
               className="text-center max-w-2xl mx-auto"
             >
-              <Newspaper className="h-10 w-10 text-foreground mx-auto mb-4" />
+              <Newspaper className="h-10 w-10 text-primary mx-auto mb-4" />
               <h2 className="text-2xl md:text-3xl font-heading font-bold mb-4">
                 Daily Auto Digest
               </h2>

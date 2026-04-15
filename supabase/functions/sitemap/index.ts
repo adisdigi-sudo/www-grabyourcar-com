@@ -58,12 +58,6 @@ Deno.serve(async (req) => {
       .eq("status", "published")
       .order("updated_at", { ascending: false });
 
-    // Fetch car brands for brand listing pages
-    const { data: brands } = await supabase
-      .from("car_brands")
-      .select("slug, updated_at")
-      .eq("is_active", true)
-      .order("name", { ascending: true });
 
     const today = new Date().toISOString().split("T")[0];
 
@@ -139,26 +133,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Add brand listing pages
-    if (brands && brands.length > 0) {
-      for (const brand of brands) {
-        const lastmod = brand.updated_at
-          ? new Date(brand.updated_at).toISOString().split("T")[0]
-          : today;
-
-        xml += `  <url>
-    <loc>${BASE_URL}/cars?brand=${brand.slug}</loc>
-    <lastmod>${lastmod}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-`;
-      }
-    }
-
     xml += `</urlset>`;
 
-    console.log(`Generated sitemap with ${staticPages.length} static + ${cars?.length || 0} car + ${blogs?.length || 0} blog + ${brands?.length || 0} brand pages`);
+    console.log(`Generated sitemap with ${staticPages.length} static + ${cars?.length || 0} car + ${blogs?.length || 0} blog pages`);
 
     return new Response(xml, {
       headers: {

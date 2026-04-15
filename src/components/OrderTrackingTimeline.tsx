@@ -147,7 +147,7 @@ export const OrderTrackingTimeline = ({
       <div className="mt-4 text-center">
         <p className="text-xs text-muted-foreground">
           {orderStatus.toLowerCase() === "delivered" || orderStatus.toLowerCase() === "completed" ? (
-            <span className="text-foreground font-medium">Your order has been delivered! 🎉</span>
+            <span className="text-primary font-medium">Your order has been delivered! 🎉</span>
           ) : orderStatus.toLowerCase() === "shipped" ? (
             "Your order is on the way!"
           ) : orderStatus.toLowerCase() === "processing" ? (

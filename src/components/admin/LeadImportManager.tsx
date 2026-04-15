@@ -23,10 +23,9 @@ const LEAD_FIELDS = [
 
 interface LeadImportManagerProps {
   verticalCategory?: string;
-  verticalId?: string;
 }
 
-export const LeadImportManager = ({ verticalCategory, verticalId }: LeadImportManagerProps = {}) => {
+export const LeadImportManager = ({ verticalCategory }: LeadImportManagerProps = {}) => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [csvData, setCsvData] = useState<Record<string, string>[]>([]);
@@ -103,7 +102,6 @@ export const LeadImportManager = ({ verticalCategory, verticalId }: LeadImportMa
           leads: csvData,
           source: importSource,
           fieldMapping,
-          verticalId,
         },
       });
       if (error) throw error;
@@ -130,7 +128,7 @@ export const LeadImportManager = ({ verticalCategory, verticalId }: LeadImportMa
       }
 
       const { data, error } = await supabase.functions.invoke("lead-import", {
-        body: { action: "api-push", leads, source: importSource, verticalId },
+        body: { action: "api-push", leads, source: importSource },
       });
       if (error) throw error;
       return data;

@@ -9,10 +9,6 @@ export interface OnRoadPriceBreakup {
   fastag: number;
   registration: number;
   handling: number;
-  accessories?: number;
-  extendedWarranty?: number;
-  otherCharges?: number;
-  otherChargesLabel?: string;
   onRoadPrice: number;
 }
 
@@ -29,8 +25,10 @@ export interface EMIPDFConfig {
   disclaimer?: string;
   footerCTA?: string;
   logoBase64?: string;
+  // Colors from backend (HEX format)
   primaryColor?: string;
   accentColor?: string;
+  // Social links
   socialLinks?: {
     instagram?: string;
     facebook?: string;
@@ -38,6 +36,7 @@ export interface EMIPDFConfig {
     youtube?: string;
     linkedin?: string;
   };
+  // Terms
   termsAndConditions?: string[];
   validityDays?: number;
 }
@@ -64,21 +63,20 @@ export interface EMIData {
   selectedColor?: string;
   selectedCity?: string;
   discount?: DiscountDetails;
-  customerName?: string;
-  customerPhone?: string;
 }
 
+// Default company details
 const DEFAULT_COMPANY: EMIPDFConfig = {
   companyName: "GRABYOURCAR",
   tagline: "India's Smarter Way to Buy New Cars",
   website: "www.grabyourcar.com",
   phone: "+91 98559 24442",
   email: "hello@grabyourcar.com",
-  address: "MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana - 122001",
+  address: "MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana – 122001",
   founder: "Anshdeep Singh",
   founderTitle: "Founder & CEO",
   partnerBanks: ["SBI", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak", "IDFC First", "Yes Bank"],
-  disclaimer: "This offer is valid for 7 days from the date of quotation. Ex-Showroom price is subject to change before billing as per manufacturer revision. Insurance and financing are arranged in-house by Grabyourcar.",
+  disclaimer: "This is an indicative estimate. Actual EMI may vary based on bank policies, credit score, and prevailing interest rates.",
   footerCTA: "Get the Best Car Loan - Lowest Interest Rates Guaranteed!",
   primaryColor: "#22c55e",
   accentColor: "#f59e0b",
@@ -90,784 +88,508 @@ const DEFAULT_COMPANY: EMIPDFConfig = {
     linkedin: "grabyourcar",
   },
   termsAndConditions: [
-    "This offer is valid for 7 days from the date of quotation.",
-    "Ex-Showroom price is subject to change before billing as per manufacturer revision.",
-    "Insurance and financing are arranged in-house by Grabyourcar.",
+    "Quote is valid for 7 days from generation date.",
+    "Prices are subject to change based on manufacturer price revisions or government regulations.",
+    "Actual EMI may vary based on bank policies, credit score, and prevailing interest rates.",
     "Processing fees and other bank charges may apply as per financing institution.",
   ],
   validityDays: 7,
 };
 
+// Helper: Convert HEX color to RGB tuple
 const hexToRgb = (hex: string): [number, number, number] => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
+  return result 
     ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
-    : [22, 163, 74];
+    : [22, 163, 74]; // Default green
 };
 
-const lightenColor = (rgb: [number, number, number], amount: number): [number, number, number] => [
-  Math.min(255, rgb[0] + amount),
-  Math.min(255, rgb[1] + amount),
-  Math.min(255, rgb[2] + amount),
-];
+// Helper: Lighten a color
+const lightenColor = (rgb: [number, number, number], amount: number): [number, number, number] => {
+  return [
+    Math.min(255, rgb[0] + amount),
+    Math.min(255, rgb[1] + amount),
+    Math.min(255, rgb[2] + amount),
+  ];
+};
 
-const darkenColor = (rgb: [number, number, number], amount: number): [number, number, number] => [
-  Math.max(0, rgb[0] - amount),
-  Math.max(0, rgb[1] - amount),
-  Math.max(0, rgb[2] - amount),
-];
+// Helper: Darken a color
+const darkenColor = (rgb: [number, number, number], amount: number): [number, number, number] => {
+  return [
+    Math.max(0, rgb[0] - amount),
+    Math.max(0, rgb[1] - amount),
+    Math.max(0, rgb[2] - amount),
+  ];
+};
 
-type RGB = [number, number, number];
-
-interface ColorPalette {
-  primary: RGB;
-  primaryLight: RGB;
-  primaryDark: RGB;
-  darkText: RGB;
-  grayText: RGB;
-  lightGray: RGB;
-  white: RGB;
-  watermark: RGB;
-  accent?: RGB;
-}
-
+// Static colors
 const STATIC_COLORS = {
-  darkText: [15, 23, 42] as RGB,
-  grayText: [71, 85, 105] as RGB,
-  lightGray: [241, 245, 249] as RGB,
-  white: [255, 255, 255] as RGB,
-  watermark: [229, 231, 235] as RGB,
+  darkText: [15, 23, 42] as [number, number, number],
+  grayText: [71, 85, 105] as [number, number, number],
+  lightGray: [241, 245, 249] as [number, number, number],
+  white: [255, 255, 255] as [number, number, number],
+  watermark: [229, 231, 235] as [number, number, number],
 };
 
-// Proper Indian number formatting: 1,23,45,678
-const formatIndianNumber = (num: number): string => {
-  const n = Math.round(num);
-  const str = n.toString();
-  if (str.length <= 3) return str;
-  let lastThree = str.substring(str.length - 3);
-  const remaining = str.substring(0, str.length - 3);
-  if (remaining.length > 0) {
-    lastThree = ',' + lastThree;
-  }
-  const formatted = remaining.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + lastThree;
-  return formatted;
-};
-
-const formatCurrency = (amount: number) => `Rs. ${formatIndianNumber(amount)}`;
-
-export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfig>, returnDoc?: boolean): Promise<jsPDF | void> => {
+export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfig>) => {
   const COMPANY = { ...DEFAULT_COMPANY, ...config };
   const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth(); // 210
-  const pageHeight = doc.internal.pageSize.getHeight(); // 297
-  const margin = 16;
-  const contentWidth = pageWidth - margin * 2;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 15;
+  let yPos = 0;
 
+  // Dynamic colors from config
   const primaryRgb = hexToRgb(COMPANY.primaryColor || "#22c55e");
-
-  const C = {
+  const accentRgb = hexToRgb(COMPANY.accentColor || "#f59e0b");
+  
+  const COLORS = {
     primary: primaryRgb,
     primaryLight: lightenColor(primaryRgb, 30),
     primaryDark: darkenColor(primaryRgb, 20),
+    accent: accentRgb,
+    gold: accentRgb, // Use accent as gold
     ...STATIC_COLORS,
   };
 
-  // Determine if this is a standalone EMI calc or car-specific quote
-  const isStandaloneEMI = !data.carName && !data.onRoadPrice;
-
-  if (isStandaloneEMI) {
-    // ============ STANDALONE EMI PDF (Clean reference design) ============
-    generateStandaloneEMIPdf(doc, data, COMPANY, C, pageWidth, pageHeight, margin, contentWidth);
-  } else {
-    // ============ CAR-SPECIFIC QUOTE PDF (Existing complex design) ============
-    generateCarQuotePdf(doc, data, COMPANY, C, pageWidth, pageHeight, margin, contentWidth);
-  }
-
-  // ============ RETURN or SAVE ============
-  if (returnDoc) {
-    return doc;
-  }
-
-  const carSuffix = data.carName ? `_${data.carName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")}` : "";
-  const emiSuffix = data.emi > 0 ? `_Rs${Math.round(data.loanPrincipal / 100000)}L_${data.tenure}m` : "";
-  const fileName = isStandaloneEMI
-    ? `EMI_Plan${emiSuffix}_${format(new Date(), "ddMMMyyyy")}.pdf`
-    : `Grabyourcar_Quote${carSuffix}_${format(new Date(), "ddMMMyyyy")}.pdf`;
-  doc.save(fileName);
-};
-
-// ═══════════════════════════════════════════════════════════
-// STANDALONE EMI PDF — Clean, professional single-page design
-// ═══════════════════════════════════════════════════════════
-function generateStandaloneEMIPdf(
-  doc: jsPDF, data: EMIData, COMPANY: EMIPDFConfig,
-  C: ColorPalette, pageWidth: number, pageHeight: number, margin: number, contentWidth: number
-) {
-  let y = 0;
-  const footerY = pageHeight - 12;
-  const maxContentY = footerY - 8;
-
-  const addContinuationPage = (title: string) => {
-    doc.addPage();
-    doc.setFillColor(...C.primary);
-    doc.rect(0, 0, pageWidth, 14, "F");
-    doc.setFontSize(10);
-    doc.setTextColor(...C.white);
-    doc.setFont("helvetica", "bold");
-    doc.text(title, margin, 9);
-    y = 22;
+  // Helper function for currency formatting
+  const formatCurrency = (amount: number) => {
+    const formatted = Math.round(amount).toLocaleString('en-IN');
+    return `Rs. ${formatted}`;
   };
 
-  const ensureSpace = (neededSpace: number, title = "Car Loan EMI Plan") => {
-    if (y + neededSpace > maxContentY) addContinuationPage(title);
-  };
+  // ============ WATERMARK ============
+  // Draw subtle diagonal watermarks using light color
+  doc.setFontSize(50);
+  doc.setTextColor(240, 240, 240);
+  doc.setFont("helvetica", "bold");
+  
+  // Save current state and rotate for watermarks
+  doc.saveGraphicsState();
+  
+  // Watermark text across the page
+  const watermarkText = "GRABYOURCAR";
+  doc.text(watermarkText, pageWidth / 2 - 30, pageHeight / 3, { 
+    align: "center",
+    angle: 45
+  });
+  doc.text(watermarkText, pageWidth / 2 - 30, pageHeight * 0.65, { 
+    align: "center",
+    angle: 45
+  });
+  
+  doc.restoreGraphicsState();
 
-  // ── HEADER ──
-  const headerH = 44;
-  doc.setFillColor(...C.primary);
-  doc.rect(0, 0, pageWidth, headerH, "F");
+  // ============ PREMIUM HEADER ============
+  // Header gradient background
+  doc.setFillColor(...COLORS.primary);
+  doc.rect(0, 0, pageWidth, 38, "F");
+  
+  // Accent stripe
+  doc.setFillColor(...COLORS.primaryDark);
+  doc.rect(0, 35, pageWidth, 3, "F");
+  
+  // Decorative corner elements
+  doc.setFillColor(...COLORS.primaryLight);
+  doc.circle(0, 0, 20, "F");
+  doc.setFillColor(...COLORS.primaryDark);
+  doc.circle(pageWidth, 38, 15, "F");
 
+  // Logo/Brand Section
   doc.setFontSize(22);
-  doc.setTextColor(...C.white);
+  doc.setTextColor(...COLORS.white);
   doc.setFont("helvetica", "bold");
-  doc.text("Car Loan EMI Plan", margin, 20);
-
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text("Professional estimate for customer discussion", margin, 32);
-
+  doc.text(COMPANY.companyName, margin, 18);
+  
+  // Tagline with premium styling
   doc.setFontSize(9);
-  doc.text(`GrabYourCar | ${COMPANY.website}`, pageWidth - margin, 26, { align: "right" });
-
-  y = headerH + 10;
-
-  // ── CUSTOMER DETAILS ──
-  if (data.customerName || data.customerPhone) {
-    ensureSpace(24);
-    const custBoxH = 18;
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(margin, y, contentWidth, custBoxH, 3, 3, "F");
-    doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(margin, y, contentWidth, custBoxH, 3, 3, "S");
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(71, 85, 105);
-    doc.text("PREPARED FOR", margin + 6, y + 5);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(30, 30, 30);
-    let custText = data.customerName || "";
-    if (data.customerPhone) custText += (custText ? "  |  " : "") + data.customerPhone;
-    doc.text(custText, margin + 6, y + 13);
-    y += custBoxH + 6;
-  }
-
-  // ── CAR MODEL ──
-  if (data.carName) {
-    ensureSpace(12);
-    doc.setFontSize(12);
-    doc.setTextColor(...C.primary);
-    doc.setFont("helvetica", "bold");
-    const carLabel = data.carName + (data.variantName ? ` — ${data.variantName}` : "");
-    doc.text(carLabel, margin, y + 4);
-    y += 12;
-  }
-
-  // ── EMI HERO BOX ──
-  const heroH = 56;
-  const heroX = margin + 16;
-  const heroW = contentWidth - 32;
-  ensureSpace(heroH + 18);
-
-  // Rounded border box
-  doc.setDrawColor(...C.primary);
-  doc.setLineWidth(1.5);
-  doc.roundedRect(heroX, y, heroW, heroH, 8, 8, "S");
-
-  // Large EMI amount
-  doc.setFontSize(36);
-  doc.setTextColor(...C.primary);
-  doc.setFont("helvetica", "bold");
-  doc.text(`Rs. ${formatIndianNumber(data.emi)}`, pageWidth / 2, y + 28, { align: "center" });
-
-  // Subtitle
-  doc.setFontSize(12);
-  doc.setTextColor(...C.grayText);
   doc.setFont("helvetica", "normal");
-  doc.text("Estimated Monthly EMI", pageWidth / 2, y + 42, { align: "center" });
-
-  y += heroH + 18;
-
-  // ── LOAN DETAILS TABLE ──
-  const rows = [
-    { label: "Loan Amount", value: `Rs. ${formatIndianNumber(data.loanAmount)}` },
-    { label: "Interest Rate (per annum)", value: `${data.interestRate}%` },
-    { label: "Tenure", value: `${data.tenure} months (${(data.tenure / 12).toFixed(1)} years)` },
-    { label: "Estimated Monthly EMI", value: `Rs. ${formatIndianNumber(data.emi)}` },
-    { label: "Total Interest Payable", value: `Rs. ${formatIndianNumber(data.totalInterest)}` },
-    { label: "Total Amount Payable", value: `Rs. ${formatIndianNumber(data.totalPayment)}` },
-  ];
-
-  const rowH = 14;
-  ensureSpace(rows.length * rowH + 26, "Loan Summary");
-  rows.forEach((row, i) => {
-    const rowY = y + i * rowH;
-
-    // Alternating background
-    if (i % 2 === 0) {
-      doc.setFillColor(245, 247, 250);
-      doc.rect(margin, rowY, contentWidth, rowH, "F");
-    }
-
-    // Left green accent bar
-    doc.setFillColor(...C.primary);
-    doc.rect(margin, rowY, 3, rowH, "F");
-
-    // Label
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-    doc.setFont("helvetica", "normal");
-    doc.text(row.label, margin + 10, rowY + 9);
-
-    // Value
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(30, 30, 30);
-    doc.text(row.value, pageWidth - margin - 6, rowY + 9, { align: "right" });
-  });
-
-  y += rows.length * rowH + 18;
-
-  // ── DOCUMENTS REQUIRED ──
-  ensureSpace(126, "Documents Required");
-  doc.setFontSize(14);
-  doc.setTextColor(30, 30, 30);
-  doc.setFont("helvetica", "bold");
-  doc.text("Documents Required", margin, y);
-  y += 8;
-
-  const colW = (contentWidth - 8) / 2;
-  const docBoxH = 100;
-
-  // Individual Applicant box
-  const leftX = margin;
-  doc.setFillColor(...C.primary);
-  doc.roundedRect(leftX, y, colW, 14, 3, 3, "F");
-  doc.setFontSize(9);
-  doc.setTextColor(...C.white);
-  doc.setFont("helvetica", "bold");
-  doc.text("Individual Applicant", leftX + 8, y + 9);
-
-  // Individual items
-  doc.setDrawColor(220, 225, 230);
-  doc.setLineWidth(0.3);
-  doc.roundedRect(leftX, y, colW, docBoxH, 3, 3, "S");
-
-  const individualDocs = [
-    "PAN Card",
-    "Aadhaar Card",
-    "Driving Licence or Passport",
-    "3 months bank statement",
-    "3 salary slips or ITR",
-    "Recent passport-size photo",
-  ];
-
-  doc.setFontSize(8.5);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(60, 60, 60);
-  individualDocs.forEach((item, i) => {
-    const itemY = y + 22 + i * 12;
-    // Circle bullet
-    doc.setDrawColor(...C.primary);
-    doc.setLineWidth(0.5);
-    doc.circle(leftX + 10, itemY, 2, "S");
-    doc.text(item, leftX + 16, itemY + 2.5);
-  });
-
-  // Corporate Applicant box
-  const rightX = margin + colW + 8;
-  doc.setFillColor(...C.primary);
-  doc.roundedRect(rightX, y, colW, 14, 3, 3, "F");
-  doc.setFontSize(9);
-  doc.setTextColor(...C.white);
-  doc.setFont("helvetica", "bold");
-  doc.text("Corporate Applicant", rightX + 8, y + 9);
-
-  doc.setDrawColor(220, 225, 230);
-  doc.setLineWidth(0.3);
-  doc.roundedRect(rightX, y, colW, docBoxH, 3, 3, "S");
-
-  const corporateDocs = [
-    "Company PAN",
-    "GST Certificate or Incorporation proof",
-    "Authorized signatory KYC",
-    "6 months company bank statement",
-    "Latest ITR and financials",
-    "Address proof of company",
-  ];
-
-  doc.setFontSize(8.5);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(60, 60, 60);
-  corporateDocs.forEach((item, i) => {
-    const itemY = y + 22 + i * 12;
-    doc.setDrawColor(...C.primary);
-    doc.setLineWidth(0.5);
-    doc.circle(rightX + 10, itemY, 2, "S");
-    doc.text(item, rightX + 16, itemY + 2.5);
-  });
-
-  y += docBoxH + 16;
-
-  // ── DISCLAIMER ──
-  ensureSpace(24, "Important Information");
-  doc.setDrawColor(200, 205, 210);
-  doc.setLineWidth(0.3);
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 8;
-
-  doc.setFontSize(7.5);
-  doc.setTextColor(120, 120, 120);
-  doc.setFont("helvetica", "normal");
-  doc.text(
-    "This is an indicative EMI estimate. Final loan terms, approval, and EMI may vary by lender policy, profile, and documentation.",
-    margin, y, { maxWidth: contentWidth }
-  );
-
-  // ── FOOTER ──
-  doc.setFontSize(7);
-  doc.setTextColor(140, 140, 140);
-  doc.setFont("helvetica", "normal");
-  doc.text(
-    `Generated on ${format(new Date(), "dd MMM yyyy, hh:mm a")} | GrabYourCar`,
-    margin, pageHeight - 12
-  );
-}
-
-// ═══════════════════════════════════════════════════════════
-// CAR-SPECIFIC QUOTE PDF — Full detailed design with breakups
-// ═══════════════════════════════════════════════════════════
-function generateCarQuotePdf(
-  doc: jsPDF, data: EMIData, COMPANY: EMIPDFConfig,
-  C: ColorPalette, pageWidth: number, pageHeight: number, margin: number, contentWidth: number
-) {
-  let y = 0;
-  const accentRgb: RGB = hexToRgb(COMPANY.accentColor || "#f59e0b");
-  const CA: ColorPalette & { accent: RGB } = { ...C, accent: accentRgb };
-
-  const hasDiscount = data.discount && data.discount.amount > 0;
-  const hasEMI = data.emi > 0 && data.tenure > 0;
-  const hasOnRoad = !!data.onRoadPrice;
-  const priceItems = hasOnRoad ? [
-    { label: "Ex-Showroom Price", value: data.onRoadPrice!.exShowroom },
-    { label: "RTO & Road Tax", value: data.onRoadPrice!.rto },
-    { label: "Insurance (1 Year)", value: data.onRoadPrice!.insurance },
-    { label: "TCS", value: data.onRoadPrice!.tcs },
-    { label: "FASTag", value: data.onRoadPrice!.fastag },
-    { label: "Registration", value: data.onRoadPrice!.registration },
-    { label: "Handling Charges", value: data.onRoadPrice!.handling },
-    { label: "Accessories", value: data.onRoadPrice!.accessories || 0 },
-    { label: "Extended Warranty", value: data.onRoadPrice!.extendedWarranty || 0 },
-    { label: data.onRoadPrice!.otherChargesLabel || "Other Charges", value: data.onRoadPrice!.otherCharges || 0 },
-  ].filter(item => item.value > 0) : [];
-
-  // Calculate the actual final car price after discount
-  const carFinalPrice = hasOnRoad
-    ? (hasDiscount ? data.onRoadPrice!.onRoadPrice - data.discount!.amount : data.onRoadPrice!.onRoadPrice)
-    : (hasDiscount ? data.loanAmount - data.discount!.amount : data.loanAmount);
-
-  const footerH = 28;
-  const footerStartY = pageHeight - footerH;
-  const maxContentY = footerStartY - 8;
-
-  // Helper: check if we need a new page, and if so add one with header
-  const checkPageBreak = (neededSpace: number) => {
-    if (y + neededSpace > maxContentY) {
-      // Draw footer on current page
-      drawQuoteFooter(doc, COMPANY, CA, pageWidth, footerStartY, footerH);
-      doc.addPage();
-      // Mini header on continuation page
-      doc.setFillColor(...CA.primary);
-      doc.rect(0, 0, pageWidth, 16, "F");
-      doc.setFontSize(10);
-      doc.setTextColor(...CA.white);
-      doc.setFont("helvetica", "bold");
-      doc.text(`${COMPANY.companyName} — Price Estimate (cont.)`, margin, 11);
-      y = 24;
-    }
-  };
-
-  // WATERMARK
-  doc.setFontSize(48);
-  doc.setTextColor(244, 244, 244);
-  doc.setFont("helvetica", "bold");
-  doc.text("GRABYOURCAR", pageWidth / 2 - 25, pageHeight / 3, { angle: 45 });
-  doc.text("GRABYOURCAR", pageWidth / 2 - 25, pageHeight * 0.65, { angle: 45 });
-
-  // HEADER
-  const headerH = 32;
-  doc.setFillColor(...CA.primary);
-  doc.rect(0, 0, pageWidth, headerH, "F");
-  doc.setFillColor(...CA.primaryDark);
-  doc.rect(0, headerH - 2, pageWidth, 2, "F");
-
-  doc.setFontSize(18);
-  doc.setTextColor(...CA.white);
-  doc.setFont("helvetica", "bold");
-  doc.text(COMPANY.companyName, margin, 14);
+  doc.text(COMPANY.tagline, margin, 26);
+  
+  // Contact Info - Right side
   doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.text(COMPANY.tagline, margin, 21);
+  const rightX = pageWidth - margin;
+  doc.text(COMPANY.phone, rightX, 14, { align: "right" });
+  doc.text(COMPANY.website, rightX, 21, { align: "right" });
+  doc.text(COMPANY.email, rightX, 28, { align: "right" });
 
-  const rX = pageWidth - margin;
-  doc.setFontSize(7);
-  doc.text(COMPANY.phone, rX, 11, { align: "right" });
-  doc.text(COMPANY.website, rX, 17, { align: "right" });
-  doc.text(COMPANY.email, rX, 23, { align: "right" });
-
-  doc.setFillColor(...CA.accent);
-  doc.roundedRect(margin, headerH - 6, 42, 8, 2, 2, "F");
-  doc.setFontSize(7);
-  doc.setTextColor(...CA.darkText);
+  // Document Type Badge
+  doc.setFillColor(...COLORS.gold);
+  doc.roundedRect(margin, 32, 55, 10, 2, 2, "F");
+  doc.setFontSize(8);
+  doc.setTextColor(...COLORS.darkText);
   doc.setFont("helvetica", "bold");
-  doc.text("PRICE ESTIMATE", margin + 21, headerH - 1, { align: "center" });
+  doc.text("PRICE ESTIMATE", margin + 27.5, 38.5, { align: "center" });
 
-  y = headerH + 8;
+  yPos = 50;
 
-  // CUSTOMER INFO BOX
-  if (data.customerName || data.customerPhone) {
-    const custBoxH = 18;
-    checkPageBreak(custBoxH + 4);
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(margin, y, contentWidth, custBoxH, 3, 3, "F");
-    doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(margin, y, contentWidth, custBoxH, 3, 3, "S");
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(71, 85, 105);
-    doc.text("PREPARED FOR", margin + 6, y + 5);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(30, 30, 30);
-    let custInfo = data.customerName || "";
-    if (data.customerPhone) custInfo += (custInfo ? "  |  " : "") + data.customerPhone;
-    doc.text(custInfo, margin + 6, y + 13);
-    y += custBoxH + 4;
-  }
-
+  // ============ VEHICLE INFORMATION CARD ============
   if (data.carName) {
-    const cleanName = data.carName.replace(/(\w+)\s+\1/gi, '$1');
-    const cardH = 30;
-    checkPageBreak(cardH + 6);
+    const cleanCarName = data.carName.replace(/(\w+)\s+\1/gi, '$1');
+    
+    // Premium card with shadow effect
     doc.setFillColor(250, 250, 250);
-    doc.roundedRect(margin + 1, y + 1, contentWidth, cardH, 3, 3, "F");
-    doc.setFillColor(...CA.white);
-    doc.roundedRect(margin, y, contentWidth, cardH, 3, 3, "F");
-    doc.setFillColor(...CA.primary);
-    doc.roundedRect(margin, y, 4, cardH, 3, 0, "F");
-    doc.rect(margin + 2, y, 2, cardH, "F");
-
+    doc.roundedRect(margin + 1, yPos + 1, pageWidth - margin * 2, 38, 4, 4, "F");
+    doc.setFillColor(...COLORS.white);
+    doc.roundedRect(margin, yPos, pageWidth - margin * 2, 38, 4, 4, "F");
+    
+    // Left accent bar
+    doc.setFillColor(...COLORS.primary);
+    doc.roundedRect(margin, yPos, 5, 38, 4, 0, "F");
+    doc.rect(margin + 3, yPos, 2, 38, "F");
+    
+    // Vehicle badge
+    doc.setFillColor(...COLORS.lightGray);
+    doc.roundedRect(margin + 12, yPos + 4, 45, 6, 1, 1, "F");
     doc.setFontSize(6);
-    doc.setTextColor(...CA.grayText);
+    doc.setTextColor(...COLORS.grayText);
     doc.setFont("helvetica", "bold");
-    doc.text("VEHICLE DETAILS", margin + 10, y + 6);
-
-    doc.setFontSize(13);
-    doc.setTextColor(...CA.darkText);
+    doc.text("VEHICLE DETAILS", margin + 14, yPos + 8.5);
+    
+    // Car name - premium typography
+    doc.setFontSize(16);
+    doc.setTextColor(...COLORS.darkText);
     doc.setFont("helvetica", "bold");
-    doc.text(cleanName.toUpperCase(), margin + 10, y + 15);
-
+    doc.text(cleanCarName.toUpperCase(), margin + 12, yPos + 20);
+    
+    // Variant & details
+    let detailY = yPos + 28;
     if (data.variantName) {
-      doc.setFontSize(8);
-      doc.setTextColor(...CA.grayText);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Variant: ${data.variantName}`, margin + 10, y + 22);
-    }
-
-    const infoX = pageWidth - margin - 6;
-    let infoY = y + 8;
-    doc.setFontSize(7);
-    doc.setTextColor(...CA.grayText);
-    doc.setFont("helvetica", "normal");
-    if (data.selectedColor) { doc.text(`Color: ${data.selectedColor}`, infoX, infoY, { align: "right" }); infoY += 6; }
-    if (data.selectedCity) { doc.text(`City: ${data.selectedCity}`, infoX, infoY, { align: "right" }); infoY += 6; }
-    if (hasOnRoad) {
-      doc.setFontSize(6);
-      doc.text("Final Price", infoX, infoY, { align: "right" });
-      doc.setFontSize(10);
-      doc.setTextColor(...CA.primary);
-      doc.setFont("helvetica", "bold");
-      doc.text(formatCurrency(carFinalPrice), infoX, infoY + 6, { align: "right" });
-    }
-    y += cardH + 6;
-  }
-
-  // ON-ROAD PRICE BREAKUP
-  if (hasOnRoad) {
-    const breakupH = 10 + priceItems.length * 7 + 14;
-    checkPageBreak(breakupH);
-
-    doc.setFillColor(...CA.primary);
-    doc.roundedRect(margin, y, contentWidth, 7, 2, 2, "F");
-    doc.setFontSize(8);
-    doc.setTextColor(...CA.white);
-    doc.setFont("helvetica", "bold");
-    doc.text("ON-ROAD PRICE BREAKUP", margin + 4, y + 5);
-    y += 10;
-
-    const rowH = 7;
-    priceItems.forEach((item, i) => {
-      if (i % 2 === 0) {
-        doc.setFillColor(...CA.lightGray);
-        doc.rect(margin, y - 2.5, contentWidth, rowH, "F");
-      }
-      doc.setFontSize(8);
-      doc.setTextColor(...CA.grayText);
-      doc.setFont("helvetica", "normal");
-      doc.text(item.label, margin + 4, y + 1.5);
-      doc.setTextColor(...CA.darkText);
-      doc.setFont("helvetica", "bold");
-      doc.text(formatCurrency(item.value), pageWidth - margin - 4, y + 1.5, { align: "right" });
-      y += rowH;
-    });
-
-    y += 2;
-    doc.setFillColor(...CA.primary);
-    doc.roundedRect(margin, y - 2, contentWidth, 10, 2, 2, "F");
-    doc.setFontSize(9);
-    doc.setTextColor(...CA.white);
-    doc.setFont("helvetica", "bold");
-    doc.text("Total On-Road Price", margin + 5, y + 4);
-    doc.setFontSize(10);
-    doc.text(formatCurrency(data.onRoadPrice!.onRoadPrice), pageWidth - margin - 5, y + 4, { align: "right" });
-    y += 14;
-
-    // DISCOUNT
-    if (hasDiscount) {
-      // Calculate needed height for discount section
-      const discountBoxH = data.discount!.remarks ? 28 : 22;
-      checkPageBreak(discountBoxH + 18);
-
-      const discountLabels: Record<string, string> = {
-        cash: "Cash Discount", exchange: "Exchange Bonus", accessory: "Accessory Discount",
-        corporate: "Corporate Discount", festival: "Festival Offer",
-        custom: data.discount!.label || "Special Discount",
-      };
-
-      doc.setFillColor(255, 251, 235);
-      doc.roundedRect(margin, y, contentWidth, discountBoxH, 3, 3, "F");
-      doc.setFillColor(...CA.accent);
-      doc.roundedRect(margin, y, 4, discountBoxH, 3, 0, "F");
-      doc.rect(margin + 2, y, 2, discountBoxH, "F");
-
-      doc.setFillColor(...CA.accent);
-      doc.roundedRect(margin + 10, y + 2, 42, 5, 1, 1, "F");
-      doc.setFontSize(5.5);
-      doc.setTextColor(...CA.darkText);
-      doc.setFont("helvetica", "bold");
-      doc.text("EXCLUSIVE OFFER", margin + 31, y + 5.5, { align: "center" });
-
       doc.setFontSize(9);
-      doc.setTextColor(...CA.darkText);
-      doc.setFont("helvetica", "bold");
-      doc.text(discountLabels[data.discount!.type], margin + 10, y + 14);
+      doc.setTextColor(...COLORS.grayText);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Variant: ${data.variantName}`, margin + 12, detailY);
+      detailY += 7;
+    }
 
+    // Right side - Color, City, and On-Road Price
+    const infoX = pageWidth - margin - 8;
+    let infoY = yPos + 10;
+    
+    if (data.selectedColor) {
+      doc.setFontSize(8);
+      doc.setTextColor(...COLORS.grayText);
+      doc.text(`Color: ${data.selectedColor}`, infoX, infoY, { align: "right" });
+      infoY += 7;
+    }
+    if (data.selectedCity) {
+      doc.text(`City: ${data.selectedCity}`, infoX, infoY, { align: "right" });
+      infoY += 7;
+    }
+    
+    // On-road price highlight
+    if (data.onRoadPrice) {
+      doc.setFontSize(7);
+      doc.text("On-Road Price", infoX, infoY, { align: "right" });
       doc.setFontSize(12);
-      doc.setTextColor(...CA.primary);
-      doc.text(`- ${formatCurrency(data.discount!.amount)}`, pageWidth - margin - 6, y + 14, { align: "right" });
-
-      if (data.discount!.remarks) {
-        doc.setFontSize(6.5);
-        doc.setTextColor(...CA.grayText);
-        doc.setFont("helvetica", "italic");
-        // Wrap remarks text to prevent overflow
-        const remarkLines = doc.splitTextToSize(data.discount!.remarks, contentWidth - 20);
-        remarkLines.slice(0, 2).forEach((line: string, idx: number) => {
-          doc.text(line, margin + 10, y + 20 + idx * 4);
-        });
-      }
-      y += discountBoxH + 4;
-
-      const finalPrice = data.onRoadPrice!.onRoadPrice - data.discount!.amount;
-      doc.setFillColor(...CA.primaryDark);
-      doc.roundedRect(margin, y, contentWidth, 10, 2, 2, "F");
-      doc.setFontSize(9);
-      doc.setTextColor(...CA.white);
+      doc.setTextColor(...COLORS.primary);
       doc.setFont("helvetica", "bold");
-      doc.text("YOUR FINAL PRICE (After Discount)", margin + 5, y + 6.5);
-      doc.setFontSize(10);
-      doc.text(formatCurrency(finalPrice), pageWidth - margin - 5, y + 6.5, { align: "right" });
-      y += 14;
+      doc.text(formatCurrency(data.onRoadPrice.onRoadPrice), infoX, infoY + 7, { align: "right" });
     }
+    
+    yPos += 46;
   }
 
-  // EMI SECTION
-  if (hasEMI) {
-    checkPageBreak(80);
-
-    const emiBoxH = 30;
-    doc.setFillColor(...CA.primaryLight);
-    doc.roundedRect(margin, y, contentWidth, emiBoxH, 4, 4, "F");
-    doc.setFillColor(...CA.primary);
-    doc.roundedRect(margin + 2, y + 2, contentWidth - 4, emiBoxH - 4, 3, 3, "F");
-
-    doc.setFontSize(8);
-    doc.setTextColor(...CA.white);
-    doc.setFont("helvetica", "normal");
-    doc.text("Your Monthly EMI", pageWidth / 2, y + 9, { align: "center" });
-
-    doc.setFontSize(24);
+  // ============ ON-ROAD PRICE BREAKUP ============
+  if (data.onRoadPrice) {
+    // Section header
+    doc.setFillColor(...COLORS.primary);
+    doc.roundedRect(margin, yPos, pageWidth - margin * 2, 8, 2, 2, "F");
+    doc.setFontSize(9);
+    doc.setTextColor(...COLORS.white);
     doc.setFont("helvetica", "bold");
-    doc.text(formatCurrency(data.emi), pageWidth / 2, y + 21, { align: "center" });
+    doc.text("ON-ROAD PRICE BREAKUP", margin + 5, yPos + 5.5);
+    yPos += 14;
+    
+    // Price items in two columns
+    const priceItems = [
+      { label: "Ex-Showroom Price", value: data.onRoadPrice.exShowroom },
+      { label: "RTO & Registration", value: data.onRoadPrice.rto },
+      { label: "Insurance (1 Year)", value: data.onRoadPrice.insurance },
+      { label: "TCS", value: data.onRoadPrice.tcs },
+      { label: "FASTag", value: data.onRoadPrice.fastag },
+      { label: "Registration", value: data.onRoadPrice.registration },
+      { label: "Handling Charges", value: data.onRoadPrice.handling },
+    ].filter(item => item.value > 0);
 
-    doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
-    doc.text(`for ${data.tenure} months @ ${data.interestRate}% p.a.`, pageWidth / 2, y + 27, { align: "center" });
-
-    y += emiBoxH + 5;
-
-    const gridH = 24;
-    doc.setFillColor(...CA.lightGray);
-    doc.roundedRect(margin, y, contentWidth, gridH, 2, 2, "F");
-
-    const colW = contentWidth / 4;
-    const loanItems = [
-      { label: "Car Price (Final)", value: formatCurrency(carFinalPrice) },
-      { label: "Down Payment", value: formatCurrency(data.downPayment) },
-      { label: "Loan Amount", value: formatCurrency(data.loanPrincipal) },
-      { label: "Total Payable", value: formatCurrency(data.totalPayment) },
-    ];
-
-    loanItems.forEach((item, i) => {
-      const cx = margin + i * colW + colW / 2;
-      doc.setFontSize(6);
-      doc.setTextColor(...CA.grayText);
-      doc.setFont("helvetica", "normal");
-      doc.text(item.label, cx, y + 8, { align: "center" });
-      doc.setFontSize(8);
-      doc.setTextColor(...CA.darkText);
-      doc.setFont("helvetica", "bold");
-      doc.text(item.value, cx, y + 16, { align: "center" });
-      if (i < 3) {
-        doc.setDrawColor(200, 200, 200);
-        doc.line(margin + (i + 1) * colW, y + 3, margin + (i + 1) * colW, y + gridH - 3);
+    priceItems.forEach((item, index) => {
+      // Alternating row background
+      if (index % 2 === 0) {
+        doc.setFillColor(...COLORS.lightGray);
+        doc.rect(margin, yPos - 3, pageWidth - margin * 2, 8, "F");
       }
+      
+      doc.setFontSize(9);
+      doc.setTextColor(...COLORS.grayText);
+      doc.text(item.label, margin + 4, yPos);
+      
+      doc.setTextColor(...COLORS.darkText);
+      doc.setFont("helvetica", "bold");
+      doc.text(formatCurrency(item.value), pageWidth - margin - 4, yPos, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      yPos += 8;
     });
 
-    y += gridH + 4;
-
-    doc.setFontSize(7);
-    doc.setTextColor(...CA.primary);
+    // Total row with premium styling
+    yPos += 3;
+    doc.setFillColor(...COLORS.primary);
+    doc.roundedRect(margin, yPos - 4, pageWidth - margin * 2, 12, 2, 2, "F");
+    
+    doc.setFontSize(10);
+    doc.setTextColor(...COLORS.white);
     doc.setFont("helvetica", "bold");
-    doc.text("PAYMENT BREAKDOWN", margin, y);
-    y += 5;
-
-    const principalPct = data.totalPayment > 0 ? (data.loanPrincipal / data.totalPayment) * 100 : 100;
-    doc.setFillColor(220, 220, 220);
-    doc.roundedRect(margin, y, contentWidth, 7, 2, 2, "F");
-    doc.setFillColor(...CA.primary);
-    doc.roundedRect(margin, y, contentWidth * principalPct / 100, 7, 2, 2, "F");
-    if (principalPct < 100) {
-      doc.setFillColor(...CA.accent);
-      doc.roundedRect(margin + contentWidth * principalPct / 100, y, contentWidth * (100 - principalPct) / 100, 7, 0, 2, "F");
+    doc.text("Total On-Road Price", margin + 6, yPos + 3);
+    doc.setFontSize(11);
+    doc.text(formatCurrency(data.onRoadPrice.onRoadPrice), pageWidth - margin - 6, yPos + 3, { align: "right" });
+    
+    yPos += 18;
+    
+    // ============ DISCOUNT SECTION ============
+    if (data.discount && data.discount.amount > 0) {
+      const discountLabels: Record<string, string> = {
+        cash: "Cash Discount",
+        exchange: "Exchange Bonus",
+        accessory: "Accessory Discount",
+        corporate: "Corporate Discount",
+        festival: "Festival Offer",
+        custom: data.discount.label || "Special Discount",
+      };
+      
+      // Discount card with gold accent
+      doc.setFillColor(255, 251, 235); // Amber 50
+      doc.roundedRect(margin, yPos, pageWidth - margin * 2, 28, 3, 3, "F");
+      
+      // Gold left accent
+      doc.setFillColor(...COLORS.gold);
+      doc.roundedRect(margin, yPos, 5, 28, 3, 0, "F");
+      doc.rect(margin + 3, yPos, 2, 28, "F");
+      
+      // Discount badge
+      doc.setFillColor(...COLORS.gold);
+      doc.roundedRect(margin + 12, yPos + 3, 50, 6, 1, 1, "F");
+      doc.setFontSize(6);
+      doc.setTextColor(...COLORS.darkText);
+      doc.setFont("helvetica", "bold");
+      doc.text("EXCLUSIVE OFFER", margin + 37, yPos + 7, { align: "center" });
+      
+      // Discount label
+      doc.setFontSize(10);
+      doc.setTextColor(...COLORS.darkText);
+      doc.setFont("helvetica", "bold");
+      doc.text(discountLabels[data.discount.type], margin + 12, yPos + 17);
+      
+      // Discount amount
+      doc.setFontSize(14);
+      doc.setTextColor(...COLORS.primary);
+      doc.text(`- ${formatCurrency(data.discount.amount)}`, pageWidth - margin - 8, yPos + 17, { align: "right" });
+      
+      // Remarks if any
+      if (data.discount.remarks) {
+        doc.setFontSize(7);
+        doc.setTextColor(...COLORS.grayText);
+        doc.setFont("helvetica", "italic");
+        doc.text(data.discount.remarks, margin + 12, yPos + 24);
+      }
+      
+      yPos += 34;
+      
+      // Final price after discount
+      const finalPrice = data.onRoadPrice.onRoadPrice - data.discount.amount;
+      doc.setFillColor(...COLORS.primaryDark);
+      doc.roundedRect(margin, yPos, pageWidth - margin * 2, 14, 2, 2, "F");
+      
+      doc.setFontSize(10);
+      doc.setTextColor(...COLORS.white);
+      doc.setFont("helvetica", "bold");
+      doc.text("YOUR FINAL PRICE (After Discount)", margin + 6, yPos + 9);
+      doc.setFontSize(12);
+      doc.text(formatCurrency(finalPrice), pageWidth - margin - 6, yPos + 9, { align: "right" });
+      
+      yPos += 20;
     }
-    y += 10;
-
-    doc.setFillColor(...CA.primary);
-    doc.circle(margin + 4, y, 2, "F");
-    doc.setFontSize(7);
-    doc.setTextColor(...CA.grayText);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Principal: ${formatCurrency(data.loanPrincipal)} (${Math.round(principalPct)}%)`, margin + 9, y + 1.5);
-    doc.setFillColor(...CA.accent);
-    doc.circle(pageWidth / 2 + 4, y, 2, "F");
-    doc.text(`Interest: ${formatCurrency(data.totalInterest)} (${Math.round(100 - principalPct)}%)`, pageWidth / 2 + 9, y + 1.5);
-    y += 7;
-
-    doc.setFontSize(7);
-    doc.setTextColor(...CA.primary);
-    doc.setFont("helvetica", "bold");
-    doc.text("PARTNERED FINANCE BANKS", margin, y);
-    y += 4;
-    const banks = COMPANY.partnerBanks || ["SBI", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak", "IDFC First", "Yes Bank"];
-    doc.setFontSize(6);
-    doc.setTextColor(...CA.grayText);
-    doc.setFont("helvetica", "normal");
-    doc.text(banks.join("  |  "), pageWidth / 2, y, { align: "center" });
-    y += 7;
   }
 
-  // TERMS & CONDITIONS
-  checkPageBreak(30);
-  const validUntil = format(addDays(new Date(), COMPANY.validityDays || 7), "dd MMM yyyy");
-  const termsH = 22;
-  doc.setFillColor(254, 249, 195);
-  doc.roundedRect(margin, y, contentWidth, termsH, 2, 2, "F");
-  doc.setFillColor(...CA.accent);
-  doc.roundedRect(margin, y, 3, termsH, 2, 0, "F");
-
-  doc.setFontSize(7);
-  doc.setTextColor(161, 98, 7);
-  doc.setFont("helvetica", "bold");
-  doc.text("Terms & Conditions:", margin + 6, y + 5);
-
-  doc.setFontSize(6);
+  // ============ EMI HERO SECTION ============
+  // Large EMI display with premium styling
+  doc.setFillColor(...COLORS.primaryLight);
+  doc.roundedRect(margin, yPos, pageWidth - margin * 2, 42, 5, 5, "F");
+  
+  // Inner gradient effect
+  doc.setFillColor(...COLORS.primary);
+  doc.roundedRect(margin + 2, yPos + 2, pageWidth - margin * 2 - 4, 38, 4, 4, "F");
+  
+  // EMI Label
+  doc.setFontSize(10);
+  doc.setTextColor(...COLORS.white);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(113, 63, 18);
-  const terms = [
-    `1. This offer is valid for 7 days (until ${validUntil}).`,
-    "2. Ex-Showroom price is subject to change before billing as per manufacturer revision.",
-    "3. Insurance and financing are arranged in-house by Grabyourcar.",
-    "4. Processing fees may apply per financing institution.",
-  ];
-  terms.forEach((t, i) => {
-    doc.text(t, margin + 6, y + 10 + i * 3);
-  });
-  y += termsH + 3;
+  doc.text("Your Monthly EMI", pageWidth / 2, yPos + 12, { align: "center" });
+  
+  // EMI Amount - Large and Bold
+  doc.setFontSize(32);
+  doc.setFont("helvetica", "bold");
+  doc.text(formatCurrency(data.emi), pageWidth / 2, yPos + 28, { align: "center" });
+  
+  // Tenure info
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(`for ${data.tenure} months @ ${data.interestRate}% p.a.`, pageWidth / 2, yPos + 37, { align: "center" });
+  
+  yPos += 50;
 
-  // DISCLAIMER
-  checkPageBreak(10);
-  doc.setFontSize(5.5);
-  doc.setTextColor(...CA.grayText);
+  // ============ LOAN DETAILS GRID ============
+  doc.setFillColor(...COLORS.lightGray);
+  doc.roundedRect(margin, yPos, pageWidth - margin * 2, 32, 3, 3, "F");
+  
+  const colWidth = (pageWidth - margin * 2) / 4;
+  const loanDetails = [
+    { label: "Car Price", value: formatCurrency(data.loanAmount) },
+    { label: "Down Payment", value: formatCurrency(data.downPayment) },
+    { label: "Loan Amount", value: formatCurrency(data.loanPrincipal) },
+    { label: "Total Payable", value: formatCurrency(data.totalPayment) },
+  ];
+  
+  loanDetails.forEach((item, index) => {
+    const x = margin + (index * colWidth) + colWidth / 2;
+    
+    doc.setFontSize(7);
+    doc.setTextColor(...COLORS.grayText);
+    doc.setFont("helvetica", "normal");
+    doc.text(item.label, x, yPos + 10, { align: "center" });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(...COLORS.darkText);
+    doc.setFont("helvetica", "bold");
+    doc.text(item.value, x, yPos + 20, { align: "center" });
+    
+    // Separator lines
+    if (index < 3) {
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin + (index + 1) * colWidth, yPos + 5, margin + (index + 1) * colWidth, yPos + 27);
+    }
+  });
+  
+  yPos += 38;
+
+  // ============ PAYMENT BREAKDOWN BAR ============
+  doc.setFontSize(9);
+  doc.setTextColor(...COLORS.primary);
+  doc.setFont("helvetica", "bold");
+  doc.text("PAYMENT BREAKDOWN", margin, yPos);
+  yPos += 8;
+  
+  const barWidth = pageWidth - margin * 2;
+  const principalPercent = data.totalPayment > 0 ? (data.loanPrincipal / data.totalPayment) * 100 : 100;
+  
+  // Bar background
+  doc.setFillColor(220, 220, 220);
+  doc.roundedRect(margin, yPos, barWidth, 10, 2, 2, "F");
+  
+  // Principal portion (Green)
+  doc.setFillColor(...COLORS.primary);
+  doc.roundedRect(margin, yPos, barWidth * principalPercent / 100, 10, 2, 2, "F");
+  
+  // Interest portion indicator
+  doc.setFillColor(...COLORS.gold);
+  if (principalPercent < 100) {
+    doc.roundedRect(margin + barWidth * principalPercent / 100, yPos, barWidth * (100 - principalPercent) / 100, 10, 0, 2, "F");
+  }
+  
+  yPos += 16;
+  
+  // Legend
+  doc.setFillColor(...COLORS.primary);
+  doc.circle(margin + 5, yPos, 3, "F");
+  doc.setFontSize(8);
+  doc.setTextColor(...COLORS.grayText);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Principal: ${formatCurrency(data.loanPrincipal)} (${Math.round(principalPercent)}%)`, margin + 12, yPos + 2);
+  
+  doc.setFillColor(...COLORS.gold);
+  doc.circle(pageWidth / 2 + 5, yPos, 3, "F");
+  doc.text(`Interest: ${formatCurrency(data.totalInterest)} (${Math.round(100 - principalPercent)}%)`, pageWidth / 2 + 12, yPos + 2);
+  
+  yPos += 12;
+
+  // ============ PARTNER BANKS ============
+  doc.setFontSize(8);
+  doc.setTextColor(...COLORS.primary);
+  doc.setFont("helvetica", "bold");
+  doc.text("PARTNERED FINANCE BANKS", margin, yPos);
+  yPos += 6;
+  
+  const banks = COMPANY.partnerBanks || ["SBI", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak", "IDFC First", "Yes Bank"];
+  doc.setFontSize(7);
+  doc.setTextColor(...COLORS.grayText);
+  doc.setFont("helvetica", "normal");
+  doc.text(banks.join("  |  "), pageWidth / 2, yPos, { align: "center" });
+  
+  yPos += 10;
+
+  // ============ TERMS & CONDITIONS ============
+  const validUntil = format(addDays(new Date(), 7), "dd MMM yyyy");
+  
+  doc.setFillColor(254, 249, 195); // Yellow-50
+  doc.roundedRect(margin, yPos, pageWidth - margin * 2, 28, 2, 2, "F");
+  
+  // Left accent bar
+  doc.setFillColor(...COLORS.gold);
+  doc.roundedRect(margin, yPos, 4, 28, 2, 0, "F");
+  
+  doc.setFontSize(8);
+  doc.setTextColor(161, 98, 7); // Yellow-700
+  doc.setFont("helvetica", "bold");
+  doc.text("Terms & Conditions:", margin + 8, yPos + 6);
+  
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(113, 63, 18); // Yellow-800
+  const terms = [
+    `1. This quote is valid until ${validUntil} (7 days from generation).`,
+    "2. Prices are subject to change based on manufacturer price revisions or government regulations.",
+    "3. Actual EMI may vary based on bank policies, credit score, and prevailing interest rates.",
+    "4. Processing fees and other bank charges may apply as per financing institution.",
+  ];
+  terms.forEach((term, index) => {
+    doc.text(term, margin + 8, yPos + 12 + (index * 4));
+  });
+  
+  yPos += 32;
+
+  // ============ DISCLAIMER ============
+  doc.setFontSize(6);
+  doc.setTextColor(...COLORS.grayText);
   doc.setFont("helvetica", "italic");
   doc.text(
     COMPANY.disclaimer || "This is an indicative estimate for reference purposes only.",
-    pageWidth / 2, y, { align: "center", maxWidth: contentWidth }
-  );
-  y += 6;
-
-  // Timestamp
-  doc.setFontSize(5.5);
-  doc.setTextColor(...CA.grayText);
-  doc.setFont("helvetica", "normal");
-  doc.text(
-    `Generated on ${format(new Date(), "dd MMM yyyy 'at' hh:mm a")} | Quote ID: GYC-${Date.now().toString().slice(-8)}`,
-    pageWidth / 2, Math.min(y + 4, maxContentY), { align: "center" }
+    pageWidth / 2, 
+    yPos, 
+    { align: "center", maxWidth: pageWidth - margin * 2 }
   );
 
-  // FOOTER
-  drawQuoteFooter(doc, COMPANY, CA, pageWidth, footerStartY, footerH);
-}
-
-// Helper: Draw footer on any page
-function drawQuoteFooter(
-  doc: jsPDF, COMPANY: EMIPDFConfig, CA: ColorPalette & { accent: RGB },
-  pageWidth: number, footerStartY: number, footerH: number
-) {
-  const margin = 16;
-  doc.setFillColor(...CA.primary);
-  doc.rect(0, footerStartY, pageWidth, footerH, "F");
-  doc.setFillColor(...CA.accent);
-  doc.rect(0, footerStartY, pageWidth, 1.5, "F");
-
-  doc.setFontSize(9);
-  doc.setTextColor(...CA.white);
+  // ============ PREMIUM FOOTER ============
+  const footerY = pageHeight - 22;
+  
+  // Footer background
+  doc.setFillColor(...COLORS.primary);
+  doc.rect(0, footerY - 5, pageWidth, 27, "F");
+  
+  // Decorative top border
+  doc.setFillColor(...COLORS.gold);
+  doc.rect(0, footerY - 5, pageWidth, 2, "F");
+  
+  // CTA
+  doc.setFontSize(10);
+  doc.setTextColor(...COLORS.white);
   doc.setFont("helvetica", "bold");
-  doc.text(COMPANY.footerCTA || "Get the Best Car Loan - Lowest Interest Rates Guaranteed!", pageWidth / 2, footerStartY + 7, { align: "center" });
-
-  doc.setFontSize(7);
+  doc.text(COMPANY.footerCTA || "Get the Best Car Loan - Lowest Interest Rates Guaranteed!", pageWidth / 2, footerY + 4, { align: "center" });
+  
+  // Contact info
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text(`${COMPANY.phone}  |  ${COMPANY.email}  |  ${COMPANY.website}`, pageWidth / 2, footerStartY + 12, { align: "center" });
-
+  doc.text(`${COMPANY.phone}  |  ${COMPANY.email}  |  ${COMPANY.website}`, pageWidth / 2, footerY + 9, { align: "center" });
+  
+  // Social Media Links (Clean text-based format for PDF compatibility)
   if (COMPANY.socialLinks) {
     const socials: string[] = [];
     if (COMPANY.socialLinks.instagram) socials.push(`IG: ${COMPANY.socialLinks.instagram}`);
@@ -875,28 +597,49 @@ function drawQuoteFooter(
     if (COMPANY.socialLinks.youtube) socials.push(`YT: ${COMPANY.socialLinks.youtube}`);
     if (COMPANY.socialLinks.twitter) socials.push(`X: ${COMPANY.socialLinks.twitter}`);
     if (COMPANY.socialLinks.linkedin) socials.push(`LI: ${COMPANY.socialLinks.linkedin}`);
+    
     if (socials.length > 0) {
-      doc.setFontSize(6);
-      doc.text(socials.join("   |   "), pageWidth / 2, footerStartY + 17, { align: "center" });
+      doc.setFontSize(7);
+      doc.setTextColor(...COLORS.white);
+      doc.text(socials.join("   |   "), pageWidth / 2, footerY + 14, { align: "center" });
     }
   }
-
+  
+  // Founder info
   if (COMPANY.founder) {
-    doc.setFontSize(6);
-    doc.setTextColor(...CA.darkText);
-    doc.text(`${COMPANY.founder}, ${COMPANY.founderTitle}  |  ${COMPANY.address}`, pageWidth / 2, footerStartY + 22, { align: "center" });
+    doc.setFontSize(7);
+    doc.setTextColor(...COLORS.darkText);
+    doc.text(`${COMPANY.founder}, ${COMPANY.founderTitle}  |  ${COMPANY.address}`, pageWidth / 2, footerY + 19, { align: "center" });
   }
-}
+
+  // Generated timestamp (above footer)
+  doc.setFontSize(6);
+  doc.setTextColor(...COLORS.grayText);
+  doc.text(`Generated on ${format(new Date(), "dd MMM yyyy 'at' hh:mm a")} | Quote ID: GYC-${Date.now().toString().slice(-8)}`, pageWidth / 2, footerY - 10, { align: "center" });
+
+  // ============ SAVE PDF ============
+  const carSuffix = data.carName ? `_${data.carName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")}` : "";
+  const fileName = `Grabyourcar_Quote${carSuffix}_${format(new Date(), "ddMMMyyyy")}.pdf`;
+  doc.save(fileName);
+};
 
 // Generate shareable WhatsApp message
 export const generateEMIWhatsAppMessage = (data: EMIData, config?: Partial<EMIPDFConfig>): string => {
   const COMPANY = { ...DEFAULT_COMPANY, ...config };
   const validUntil = format(addDays(new Date(), 7), "dd MMM yyyy");
+  
+  const formatCurrency = (amount: number) => {
+    const rounded = Math.round(amount);
+    if (rounded >= 10000000) return `Rs. ${(rounded / 10000000).toFixed(2)} Cr`;
+    if (rounded >= 100000) return `Rs. ${(rounded / 100000).toFixed(2)} L`;
+    return `Rs. ${rounded.toLocaleString("en-IN")}`;
+  };
+
+  const cleanCarName = data.carName?.replace(/(\w+)\s+\1/gi, '$1') || '';
 
   let message = `🚗 *Price Estimate from ${COMPANY.companyName}*\n`;
   message += `━━━━━━━━━━━━━━━━━━\n\n`;
-
-  const cleanCarName = data.carName?.replace(/(\w+)\s+\1/gi, '$1') || '';
+  
   if (cleanCarName) {
     message += `🚙 *${cleanCarName.toUpperCase()}*\n`;
     if (data.variantName) message += `   Variant: ${data.variantName}\n`;
@@ -905,6 +648,7 @@ export const generateEMIWhatsAppMessage = (data: EMIData, config?: Partial<EMIPD
     message += `\n`;
   }
 
+  // On-Road Price Breakup
   if (data.onRoadPrice) {
     message += `📋 *On-Road Price Breakup*\n`;
     message += `• Ex-Showroom: ${formatCurrency(data.onRoadPrice.exShowroom)}\n`;
@@ -913,11 +657,15 @@ export const generateEMIWhatsAppMessage = (data: EMIData, config?: Partial<EMIPD
     if (data.onRoadPrice.tcs > 0) message += `• TCS: ${formatCurrency(data.onRoadPrice.tcs)}\n`;
     message += `• Other Charges: ${formatCurrency(data.onRoadPrice.fastag + data.onRoadPrice.registration + data.onRoadPrice.handling)}\n`;
     message += `*On-Road Price: ${formatCurrency(data.onRoadPrice.onRoadPrice)}*\n\n`;
-
+    
+    // Discount section
     if (data.discount && data.discount.amount > 0) {
       const discountLabels: Record<string, string> = {
-        cash: "Cash Discount", exchange: "Exchange Bonus", accessory: "Accessory Discount",
-        corporate: "Corporate Discount", festival: "Festival Offer",
+        cash: "Cash Discount",
+        exchange: "Exchange Bonus",
+        accessory: "Accessory Discount",
+        corporate: "Corporate Discount",
+        festival: "Festival Offer",
         custom: data.discount.label || "Special Discount",
       };
       message += `🎁 *${discountLabels[data.discount.type]}*\n`;
@@ -927,34 +675,29 @@ export const generateEMIWhatsAppMessage = (data: EMIData, config?: Partial<EMIPD
       message += `\n✅ *FINAL PRICE: ${formatCurrency(finalPrice)}*\n\n`;
     }
   }
-
-  if (data.emi > 0) {
-    const whatsappCarPrice = data.onRoadPrice
-      ? (data.discount && data.discount.amount > 0 ? data.onRoadPrice.onRoadPrice - data.discount.amount : data.onRoadPrice.onRoadPrice)
-      : data.loanAmount;
-    message += `💰 *Loan Details*\n`;
-    message += `• Car Price (Final): ${formatCurrency(whatsappCarPrice)}\n`;
-    message += `• Down Payment: ${formatCurrency(data.downPayment)}\n`;
-    message += `• Loan Amount: ${formatCurrency(data.loanPrincipal)}\n`;
-    message += `• Interest Rate: ${data.interestRate}% p.a.\n`;
-    message += `• Tenure: ${data.tenure} months\n\n`;
-
-    message += `━━━━━━━━━━━━━━━━━━\n`;
-    message += `📅 *Monthly EMI: ${formatCurrency(data.emi)}*\n`;
-    message += `━━━━━━━━━━━━━━━━━━\n\n`;
-
-    message += `📊 *Payment Summary*\n`;
-    message += `• Total Payable: ${formatCurrency(data.totalPayment)}\n`;
-    message += `• Total Interest: ${formatCurrency(data.totalInterest)}\n\n`;
-
-    const banks = COMPANY.partnerBanks?.slice(0, 5).join(', ') || 'SBI, HDFC, ICICI, Axis, Kotak';
-    message += `🏦 *Partner Banks:* ${banks}\n\n`;
-  }
-
+  
+  message += `💰 *Loan Details*\n`;
+  message += `• Car Price: ${formatCurrency(data.loanAmount)}\n`;
+  message += `• Down Payment: ${formatCurrency(data.downPayment)}\n`;
+  message += `• Loan Amount: ${formatCurrency(data.loanPrincipal)}\n`;
+  message += `• Interest Rate: ${data.interestRate}% p.a.\n`;
+  message += `• Tenure: ${data.tenure} months\n\n`;
+  
+  message += `━━━━━━━━━━━━━━━━━━\n`;
+  message += `📅 *Monthly EMI: Rs. ${data.emi.toLocaleString("en-IN")}*\n`;
+  message += `━━━━━━━━━━━━━━━━━━\n\n`;
+  
+  message += `📊 *Payment Summary*\n`;
+  message += `• Total Payable: ${formatCurrency(data.totalPayment)}\n`;
+  message += `• Total Interest: ${formatCurrency(data.totalInterest)}\n\n`;
+  
+  const banks = COMPANY.partnerBanks?.slice(0, 5).join(', ') || 'SBI, HDFC, ICICI, Axis, Kotak';
+  message += `🏦 *Partner Banks:* ${banks}\n\n`;
+  
   message += `⚠️ *Terms:*\n`;
   message += `• Valid until ${validUntil}\n`;
   message += `• Subject to price/policy changes\n\n`;
-
+  
   message += `───────────────────\n`;
   message += `*${COMPANY.companyName}*\n`;
   message += `${COMPANY.tagline}\n`;
@@ -963,7 +706,8 @@ export const generateEMIWhatsAppMessage = (data: EMIData, config?: Partial<EMIPD
   if (COMPANY.founder) {
     message += `👤 ${COMPANY.founder}, ${COMPANY.founderTitle}\n`;
   }
-
+  
+  // Social media links
   if (COMPANY.socialLinks) {
     message += `\n📱 *Follow Us:*\n`;
     if (COMPANY.socialLinks.instagram) message += `IG: ${COMPANY.socialLinks.instagram} | `;
@@ -971,6 +715,6 @@ export const generateEMIWhatsAppMessage = (data: EMIData, config?: Partial<EMIPD
     if (COMPANY.socialLinks.youtube) message += `YT: ${COMPANY.socialLinks.youtube}\n`;
   }
   message += `───────────────────`;
-
+  
   return message;
 };

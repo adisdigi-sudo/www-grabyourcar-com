@@ -197,62 +197,36 @@ export const VariantPricingManagement = () => {
               </CardHeader>
               {car.variants.length > 0 && (
                 <CardContent className="pt-0">
-                  {/* Group variants by fuel type */}
-                  {(() => {
-                    const fuelGroups = new Map<string, CarVariant[]>();
-                    car.variants.forEach(v => {
-                      const fuel = v.fuel_type || 'Other';
-                      if (!fuelGroups.has(fuel)) fuelGroups.set(fuel, []);
-                      fuelGroups.get(fuel)!.push(v);
-                    });
-                    const groups = Array.from(fuelGroups.entries());
-                    const showHeaders = groups.length > 1;
-
-                    return groups.map(([fuelType, groupVariants]) => (
-                      <div key={fuelType} className="mb-4 last:mb-0">
-                        {showHeaders && (
-                          <div className="flex items-center gap-2 mb-2 mt-2">
-                            <Badge variant="outline" className="text-xs font-semibold">
-                              ⛽ {fuelType}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">{groupVariants.length} variant{groupVariants.length > 1 ? 's' : ''}</span>
-                          </div>
-                        )}
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Variant</TableHead>
-                              {!showHeaders && <TableHead>Fuel</TableHead>}
-                              <TableHead>Transmission</TableHead>
-                              <TableHead>Ex-Showroom</TableHead>
-                              <TableHead>On-Road</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {groupVariants.map((variant) => (
-                              <TableRow key={variant.id}>
-                                <TableCell className="font-medium">{variant.name}</TableCell>
-                                {!showHeaders && (
-                                  <TableCell>
-                                    <Badge variant="outline">{variant.fuel_type || '-'}</Badge>
-                                  </TableCell>
-                                )}
-                                <TableCell>
-                                  <Badge variant="secondary">{variant.transmission || '-'}</Badge>
-                                </TableCell>
-                                <TableCell className="font-mono">
-                                  {formatPrice(variant.ex_showroom || variant.price_numeric)}
-                                </TableCell>
-                                <TableCell className="font-mono font-medium">
-                                  {formatPrice(variant.on_road_price)}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    ));
-                  })()}
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Variant</TableHead>
+                        <TableHead>Fuel</TableHead>
+                        <TableHead>Transmission</TableHead>
+                        <TableHead>Ex-Showroom</TableHead>
+                        <TableHead>On-Road</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {car.variants.map((variant) => (
+                        <TableRow key={variant.id}>
+                          <TableCell className="font-medium">{variant.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{variant.fuel_type || '-'}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{variant.transmission || '-'}</Badge>
+                          </TableCell>
+                          <TableCell className="font-mono">
+                            {formatPrice(variant.ex_showroom || variant.price_numeric)}
+                          </TableCell>
+                          <TableCell className="font-mono font-medium">
+                            {formatPrice(variant.on_road_price)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               )}
             </Card>

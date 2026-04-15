@@ -19,7 +19,6 @@ import {
 import { BulkImportButton } from "./BulkClientImport";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
-import { sendWhatsApp } from "@/lib/sendWhatsApp";
 
 export function InsuranceClientsManager() {
   const [search, setSearch] = useState("");
@@ -270,16 +269,11 @@ export function InsuranceClientsManager() {
                                     <PhoneCall className="h-3.5 w-3.5 text-green-600" />
                                   </Button>
                                 </a>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp" onClick={() => {
-                                  void sendWhatsApp({
-                                    phone: c.phone,
-                                    message: `🙏 Namaste ${c.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${c.vehicle_number ? ` for vehicle *${c.vehicle_number}*` : ""}.\n\n✅ We can help you with the best rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`,
-                                    name: c.customer_name || undefined,
-                                    logEvent: "clients_manager_whatsapp",
-                                  });
-                                }}>
-                                  <MessageSquare className="h-3.5 w-3.5 text-green-600" />
-                                </Button>
+                                <a href={`https://wa.me/91${c.phone}`} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp">
+                                    <MessageSquare className="h-3.5 w-3.5 text-green-600" />
+                                  </Button>
+                                </a>
                               </>
                             )}
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="View" onClick={() => setViewClient(c)}>
@@ -457,16 +451,11 @@ function ClientDetailDialog({ client, policies, onClose }: { client: any; polici
                     <PhoneCall className="h-3.5 w-3.5" /> Call
                   </Button>
                 </a>
-                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
-                  void sendWhatsApp({
-                    phone: phone!,
-                    message: `Hi ${client.customer_name || ""}! This is GrabYourCar Insurance. How can we help?`,
-                    name: client.customer_name || undefined,
-                    logEvent: "clients_detail_whatsapp",
-                  });
-                }}>
-                  <MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp
-                </Button>
+                <a href={`https://wa.me/91${phone}`} target="_blank" rel="noopener noreferrer">
+                  <Button size="sm" variant="outline" className="gap-1.5">
+                    <MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp
+                  </Button>
+                </a>
                 <a href={`sms:${phone}`}>
                   <Button size="sm" variant="outline" className="gap-1.5">SMS</Button>
                 </a>

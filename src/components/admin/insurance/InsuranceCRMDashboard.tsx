@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,8 +29,6 @@ import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUpload
 import { BulkQuoteSharePanel, BulkLeadItem } from "./BulkQuoteSharePanel";
 import { FileSpreadsheet } from "lucide-react";
 import InsuranceQuoteModal from "./InsuranceQuoteModal";
-import { openInsuranceStorageFile } from "@/lib/insuranceDocumentViewer";
-import { sendWhatsApp } from "@/lib/sendWhatsApp";
 
 type ViewFilter = "all" | "7" | "15" | "30" | "60" | "expired";
 type StatusFilter = "all" | "won" | "lost" | "running" | "new" | "grabyourcar";
@@ -100,31 +98,6 @@ export function InsuranceCRMDashboard() {
 
   const now = useMemo(() => new Date(), []);
 
-  useEffect(() => {
-    const channel = supabase
-      .channel("insurance-crm-dashboard-live")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "insurance_clients" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["ins-dash-clients-policy-book"] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "insurance_policies" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["ins-dash-policies"] });
-          queryClient.invalidateQueries({ queryKey: ["ins-dash-clients-policy-book"] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
-
   const { data: clients } = useQuery({
     queryKey: ["ins-dash-clients-policy-book"],
     queryFn: async () => {
@@ -141,12 +114,10 @@ export function InsuranceCRMDashboard() {
   const { data: policies } = useQuery({
     queryKey: ["ins-dash-policies"],
     queryFn: async () => {
-      // Only fetch active/lapsed policies — exclude 'renewed'/'cancelled' to prevent duplicate entries
       const { data, error } = await supabase
         .from("insurance_policies")
         .select("id, client_id, policy_number, insurer, premium_amount, expiry_date, status, start_date, policy_type, plan_name, created_at, policy_document_url")
-        .in("status", ["active", "lapsed"])
-        .order("expiry_date", { ascending: true });
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -179,7 +150,6 @@ export function InsuranceCRMDashboard() {
         .then(({ error }) => {
           if (error) { toast.error("Failed to update status"); return; }
           queryClient.invalidateQueries({ queryKey: ["ins-dash-clients-policy-book"] });
-          queryClient.invalidateQueries({ queryKey: ["ins-dash-policies"] });
           toast.success("🎉 Client marked as WON! Upload their policy now.");
           setWonClientForUpload(clientId);
           setShowUploadPolicy(true);
@@ -312,10 +282,10 @@ export function InsuranceCRMDashboard() {
     return result;
   }, [rows, filter, statusFilterVal, search, searchField, showPendingDocs, dateFrom, dateTo]);
 
-   // Upcoming renewals: expiring within 60 days OR recently expired (within last 15 days) for actionability
+  // Upcoming renewals (expiring within 60 days)
   const upcomingRenewals = useMemo(() => {
     return rows
-      .filter(r => r.daysUntilRenewal !== null && r.daysUntilRenewal >= -15 && r.daysUntilRenewal <= 60)
+      .filter(r => r.daysUntilRenewal !== null && r.daysUntilRenewal >= 0 && r.daysUntilRenewal <= 60)
       .sort((a, b) => (a.daysUntilRenewal || 0) - (b.daysUntilRenewal || 0));
   }, [rows]);
 
@@ -433,7 +403,6 @@ export function InsuranceCRMDashboard() {
   const [quoteModalPolicy, setQuoteModalPolicy] = useState<PolicyRow | null>(null);
 
   const handleBulkSendMessage = useCallback(async () => {
-    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
     const phonePolicies = filtered.filter(p => p.rawPhone && p.rawPhone.length >= 10);
     if (phonePolicies.length === 0) {
       toast.error("No policies with valid phone numbers found");
@@ -441,28 +410,29 @@ export function InsuranceCRMDashboard() {
     }
     setBulkSending(true);
     let sent = 0, failed = 0;
-    const toastId = toast.loading(`Sending WhatsApp... 0/${phonePolicies.length}`);
-    for (let i = 0; i < phonePolicies.length; i++) {
-      const p = phonePolicies[i];
+    for (const p of phonePolicies) {
       try {
         const daysLeft = p.renewal_date ? differenceInDays(new Date(p.renewal_date), now) : null;
-        const msg = `Hi ${p.customer_name || "Customer"},\nYour ${p.insurer || "insurance"} policy ${p.policy_number || ""} ${daysLeft !== null && daysLeft <= 0 ? "has expired" : `expires in ${daysLeft} days`}.\nRenew now to stay protected! 🚗\n— GrabYourCar Insurance\n📞 +91 98559 24442`;
-        const result = await sendWhatsApp({
-          phone: p.rawPhone!,
-          message: msg,
-          name: p.customer_name || undefined,
-          logEvent: "bulk_renewal_reminder",
-          silent: true,
+        const msg = `Hi ${p.customer_name || "Customer"},\nYour ${p.insurer || "insurance"} policy ${p.policy_number || ""} ${daysLeft !== null && daysLeft <= 0 ? "has expired" : `expires in ${daysLeft} days`}.\nRenew now to stay protected! 🚗\n— GrabYourCar Insurance`;
+        const phone = p.rawPhone!.replace(/\D/g, "");
+        const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
+        
+        await supabase.from("wa_message_logs").insert({
+          phone: phone.length > 10 ? phone.slice(-10) : phone,
+          customer_name: p.customer_name || null,
+          message_type: "text",
+          message_content: msg,
+          trigger_event: "bulk_renewal_reminder",
+          provider: "finbite",
+          status: "queued",
         });
-        if (result.success) sent++; else failed++;
+        sent++;
       } catch {
         failed++;
       }
-      toast.loading(`Sending WhatsApp... ${sent + failed}/${phonePolicies.length}`, { id: toastId });
-      if (i < phonePolicies.length - 1) await new Promise(r => setTimeout(r, 500));
     }
     setBulkSending(false);
-    toast.success(`✅ Bulk WA done: ${sent} sent, ${failed} failed out of ${phonePolicies.length}`, { id: toastId });
+    toast.success(`Bulk message queued: ${sent} sent, ${failed} failed out of ${phonePolicies.length}`);
   }, [filtered, now]);
 
   const handleBulkSendNotification = useCallback(async () => {
@@ -510,30 +480,12 @@ export function InsuranceCRMDashboard() {
     toast.success("Policy details downloaded!");
   }, [now]);
 
-  const shareViaWhatsApp = useCallback(async (r: PolicyRow, phone: string) => {
+  const shareViaWhatsApp = useCallback((r: PolicyRow, phone: string) => {
     const cleanPhone = phone.replace(/\D/g, "");
-    if (!cleanPhone) {
-      toast.error("Valid WhatsApp number nahi mila");
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-send", {
-        body: {
-          to: cleanPhone,
-          message: getPolicyText(r),
-          name: r.customer_name,
-          logEvent: "policy_share",
-        },
-      });
-
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || "WhatsApp send failed");
-
-      toast.success(`✅ WhatsApp sent to ${r.customer_name || cleanPhone}`);
-    } catch (error: any) {
-      toast.error(error?.message || "WhatsApp API se send nahi hua");
-    }
+    const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
+    const text = encodeURIComponent(getPolicyText(r));
+    window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
+    toast.success("Opening WhatsApp...");
   }, []);
 
   const shareViaEmail = useCallback((r: PolicyRow, email: string) => {
@@ -927,14 +879,9 @@ export function InsuranceCRMDashboard() {
                               variant="ghost"
                               size="sm"
                               className="h-7 gap-1.5 text-[10px] text-primary hover:text-primary hover:bg-primary/5 px-2"
-                              onClick={async () => {
+                              onClick={() => {
                                 if (r.policy_document_url) {
-                                  try {
-                                    await openInsuranceStorageFile({ url: r.policy_document_url });
-                                  } catch (error) {
-                                    console.error("Failed to open policy document", error);
-                                    toast.error("Could not open policy document");
-                                  }
+                                  window.open(r.policy_document_url, "_blank");
                                 } else {
                                   setUploadTargetPolicyId(r.id);
                                   setShowUploadPolicy(true);
@@ -1139,34 +1086,32 @@ export function InsuranceCRMDashboard() {
                             <span className="font-semibold">₹{r.premium?.toLocaleString("en-IN") || "—"}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <div className="text-right">
-                            <p className="text-sm font-bold text-emerald-600">{r.daysUntilRenewal}d left</p>
-                            <p className="text-xs text-muted-foreground">
-                              Expires {r.renewal_date && format(new Date(r.renewal_date), "dd MMM yyyy")}
-                            </p>
-                          </div>
-                          {r.phone && (
-                            <Button
-                              size="icon"
-                              className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white"
-                              title="Send on WhatsApp"
-                              onClick={() => void shareViaWhatsApp(r, r.phone)}
-                            >
-                              <MessageSquare className="h-3.5 w-3.5" />
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="text-right">
+                              <p className="text-sm font-bold text-emerald-600">{r.daysUntilRenewal}d left</p>
+                              <p className="text-xs text-muted-foreground">
+                                Expires {r.renewal_date && format(new Date(r.renewal_date), "dd MMM yyyy")}
+                              </p>
+                            </div>
+                            {r.phone && (
+                              <a href={`https://wa.me/91${r.phone}`} target="_blank" rel="noopener noreferrer">
+                                <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="WhatsApp">
+                                  <MessageSquare className="h-3.5 w-3.5" />
+                                </Button>
+                              </a>
+                            )}
+                            {r.phone && (
+                              <a href={`tel:${r.phone}`}>
+                                <Button size="icon" className="h-7 w-7 bg-primary hover:bg-primary/90 text-primary-foreground" title="Call">
+                                  <Phone className="h-3 w-3" />
+                                </Button>
+                              </a>
+                            )}
+                            <Button variant="ghost" size="icon" className="h-7 w-7"
+                              onClick={() => setSelectedPolicy(r)}>
+                              <ExternalLink className="h-3.5 w-3.5" />
                             </Button>
-                          )}
-                          {r.phone && (
-                            <a href={`tel:${r.phone}`}>
-                              <Button size="icon" className="h-7 w-7 bg-primary hover:bg-primary/90 text-primary-foreground" title="Call">
-                                <Phone className="h-3 w-3" />
-                              </Button>
-                            </a>
-                          )}
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedPolicy(r)}>
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
+                          </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -1237,16 +1182,14 @@ export function InsuranceCRMDashboard() {
                               </DropdownMenu>
                             )}
                             {r.phone && (
-                              <Button
-                                size="icon"
-                                className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white"
-                                title="Send on WhatsApp"
-                                onClick={() => void shareViaWhatsApp(r, r.phone)}
-                              >
-                                <MessageSquare className="h-3.5 w-3.5" />
-                              </Button>
+                              <a href={`https://wa.me/91${r.phone}`} target="_blank" rel="noopener noreferrer">
+                                <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="WhatsApp">
+                                  <MessageSquare className="h-3.5 w-3.5" />
+                                </Button>
+                              </a>
                             )}
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedPolicy(r)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7"
+                              onClick={() => setSelectedPolicy(r)}>
                               <ExternalLink className="h-3.5 w-3.5" />
                             </Button>
                           </div>
@@ -1306,14 +1249,11 @@ export function InsuranceCRMDashboard() {
                               </a>
                             )}
                             {r.phone && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-1 h-7 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                                onClick={() => void shareViaWhatsApp(r, r.phone)}
-                              >
-                                WhatsApp
-                              </Button>
+                              <a href={`https://wa.me/91${r.phone}`} target="_blank" rel="noopener noreferrer">
+                                <Button variant="outline" size="sm" className="gap-1 h-7 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50">
+                                  WhatsApp
+                                </Button>
+                              </a>
                             )}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -1764,16 +1704,12 @@ ${currentPremium && renewalPremium ? `\n📊 *Comparison:*\n💰 Current: ${form
 
   const currentMessage = activeTemplate === "notice" ? buildNotice() : buildQuote();
 
-  const sendViaWhatsAppLink = async () => {
+  const sendViaWhatsAppLink = () => {
     const cleanPhone = phone.replace(/\D/g, "");
     if (!cleanPhone) { toast.error("Enter a valid phone number"); return; }
-    const result = await sendWhatsApp({
-      phone: cleanPhone,
-      message: currentMessage,
-      name: policy.customer_name || undefined,
-      logEvent: activeTemplate === "notice" ? "crm_dashboard_renewal_notice" : "crm_dashboard_renewal_quote",
-    });
-    if (!result.success) return;
+    const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
+    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(currentMessage)}`, "_blank");
+    toast.success(`${activeTemplate === "notice" ? "Renewal Notice" : "Renewal Quote"} opened in WhatsApp`);
     onClose();
   };
 
@@ -2009,7 +1945,7 @@ ${currentPremium && renewalPremium ? `\n📊 *Comparison:*\n💰 Current: ${form
             </Button>
           </div>
           <p className="text-[10px] text-center text-muted-foreground">
-            💡 Dono options ab direct WhatsApp API se send karte hain — browser wa.me fallback open nahi hoga.
+            💡 "WhatsApp" opens wa.me link • "Auto-Send" triggers WhatsApp API directly
           </p>
         </div>
       </DialogContent>
@@ -2095,15 +2031,12 @@ Thank you for choosing Grabyourcar for your motor insurance needs! Here's your p
 — *Grabyourcar Insurance* 🛡️`;
   };
 
-  const sendTemplateViaWhatsApp = async (template: string) => {
+  const sendTemplateViaWhatsApp = (template: string) => {
     const phone = whatsappNumber.replace(/\D/g, "");
     if (!phone) { toast.error("Enter a valid phone number"); return; }
-    await sendWhatsApp({
-      phone,
-      message: template,
-      name: policy.customer_name || undefined,
-      logEvent: "crm_dashboard_policy_share",
-    });
+    const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
+    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(template)}`, "_blank");
+    toast.success("WhatsApp opened!");
   };
 
   return (

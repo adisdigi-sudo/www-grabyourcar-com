@@ -38,8 +38,6 @@ const DEALER_TYPES = [
 const emptyForm = {
   company_name: "", dealer_type: "authorized", city: "", state: "",
   priority_level: 1, contact_email: "", contact_phone: "", address: "", notes: "",
-  brand_name: "", designation: "", pincode: "", region: "North",
-  website_url: "", gst_number: "", established_year: "", showroom_count: 1,
 };
 
 export default function DealerCompaniesManager() {
@@ -60,7 +58,7 @@ export default function DealerCompaniesManager() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const payload = { ...form, priority_level: Number(form.priority_level) || 1, showroom_count: Number(form.showroom_count) || 1, established_year: form.established_year ? Number(form.established_year) : null };
+      const payload = { ...form, priority_level: Number(form.priority_level) || 1 };
       if (editId) {
         const { error } = await supabase.from("dealer_companies").update(payload).eq("id", editId);
         if (error) throw error;
@@ -106,17 +104,13 @@ export default function DealerCompaniesManager() {
     (c.city || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const openEdit = (c: any) => {
+  const openEdit = (c: DealerCompany) => {
     setEditId(c.id);
     setForm({
       company_name: c.company_name, dealer_type: c.dealer_type, city: c.city || "",
-      state: c.state || "", priority_level: c.priority_level || 1,
+      state: c.state || "", priority_level: c.priority_level,
       contact_email: c.contact_email || "", contact_phone: c.contact_phone || "",
       address: c.address || "", notes: c.notes || "",
-      brand_name: c.brand_name || "", designation: c.designation || "", pincode: c.pincode || "",
-      region: c.region || "North", website_url: c.website_url || "",
-      gst_number: c.gst_number || "", established_year: c.established_year || "",
-      showroom_count: c.showroom_count || 1,
     });
     setDialogOpen(true);
   };
@@ -170,11 +164,8 @@ export default function DealerCompaniesManager() {
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>{editId ? "Edit" : "Add"} Dealer Company</DialogTitle></DialogHeader>
             <div className="grid gap-4">
+              <div className="grid gap-2"><Label>Company Name *</Label><Input value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2"><Label>Company / Showroom Name *</Label><Input value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} placeholder="e.g. Kiran Hyundai" /></div>
-                <div className="grid gap-2"><Label>Dealership Brand</Label><Input value={form.brand_name} onChange={e => setForm(f => ({ ...f, brand_name: e.target.value }))} placeholder="e.g. Hyundai, Maruti" /></div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
                 <div className="grid gap-2">
                   <Label>Type</Label>
                   <Select value={form.dealer_type} onValueChange={v => setForm(f => ({ ...f, dealer_type: v }))}>
@@ -182,36 +173,17 @@ export default function DealerCompaniesManager() {
                     <SelectContent>{DEALER_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-2"><Label>Designation</Label><Input value={form.designation} onChange={e => setForm(f => ({ ...f, designation: e.target.value }))} placeholder="e.g. Sales Manager" /></div>
                 <div className="grid gap-2"><Label>Priority (1-5)</Label><Input type="number" min={1} max={5} value={form.priority_level} onChange={e => setForm(f => ({ ...f, priority_level: Number(e.target.value) }))} /></div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2"><Label>City</Label><Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} /></div>
                 <div className="grid gap-2"><Label>State</Label><Input value={form.state} onChange={e => setForm(f => ({ ...f, state: e.target.value }))} /></div>
-                <div className="grid gap-2"><Label>Pincode</Label><Input value={form.pincode} onChange={e => setForm(f => ({ ...f, pincode: e.target.value }))} /></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2"><Label>Email</Label><Input value={form.contact_email} onChange={e => setForm(f => ({ ...f, contact_email: e.target.value }))} /></div>
                 <div className="grid gap-2"><Label>Phone</Label><Input value={form.contact_phone} onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))} /></div>
               </div>
-              <div className="grid gap-2"><Label>Full Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Full showroom address..." /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label>Region</Label>
-                  <Select value={form.region} onValueChange={v => setForm(f => ({ ...f, region: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {["North", "South", "East", "West", "Central", "North-East"].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2"><Label>Showroom Count</Label><Input type="number" min={1} value={form.showroom_count} onChange={e => setForm(f => ({ ...f, showroom_count: Number(e.target.value) }))} /></div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="grid gap-2"><Label>Website</Label><Input value={form.website_url} onChange={e => setForm(f => ({ ...f, website_url: e.target.value }))} placeholder="https://..." /></div>
-                <div className="grid gap-2"><Label>GST Number</Label><Input value={form.gst_number} onChange={e => setForm(f => ({ ...f, gst_number: e.target.value }))} /></div>
-                <div className="grid gap-2"><Label>Est. Year</Label><Input type="number" value={form.established_year} onChange={e => setForm(f => ({ ...f, established_year: e.target.value }))} placeholder="2010" /></div>
-              </div>
+              <div className="grid gap-2"><Label>Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>
               <div className="grid gap-2"><Label>Notes</Label><Input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
               <Button onClick={() => saveMutation.mutate()} disabled={!form.company_name || saveMutation.isPending}>
                 {saveMutation.isPending ? "Saving..." : editId ? "Update" : "Add Company"}

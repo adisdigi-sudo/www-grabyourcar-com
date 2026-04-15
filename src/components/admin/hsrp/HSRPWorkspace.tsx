@@ -1,8 +1,7 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useRealtimeTable } from "@/hooks/useRealtimeSync";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,10 +57,6 @@ export function HSRPWorkspace() {
   const [showModal, setShowModal] = useState(false);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [dragging, setDragging] = useState<any>(null);
-  const [prevCount, setPrevCount] = useState<number | null>(null);
-
-  // ── Real-time updates ──
-  useRealtimeTable('hsrp_bookings', ['hsrp-pipeline']);
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["hsrp-pipeline"],
@@ -72,16 +67,6 @@ export function HSRPWorkspace() {
       return (data || []).map((b: any) => ({ ...b, pipeline_stage: b.pipeline_stage || normalizeStage(b.order_status) }));
     },
   });
-
-  // ── New booking toast ──
-  useEffect(() => {
-    if (prevCount === null) { setPrevCount(bookings.length); return; }
-    if (bookings.length > prevCount) {
-      const newest = bookings[0];
-      if (newest) toast(`🆕 New HSRP Booking! ${newest.owner_name || ""} - ${newest.registration_number || ""}`);
-    }
-    setPrevCount(bookings.length);
-  }, [bookings.length]);
 
   // KPI
   const stageCounts = STAGES.reduce((acc, s) => {
@@ -286,29 +271,20 @@ export function HSRPWorkspace() {
 // ─── Card ───────────────────────────────────────────────────────────────
 function HSRPCard({ booking, onDragStart, onDragEnd, onClick, isDragging }: any) {
   const stage = booking.pipeline_stage;
-  const hsrpVars = {
-    owner_name: booking.owner_name || "",
-    registration_number: booking.registration_number || "",
-    tracking_id: booking.tracking_id || booking.id.slice(0, 8),
-    payment_amount: (booking.payment_amount || 0).toLocaleString("en-IN"),
-    service_type: booking.service_type || "HSRP",
-    schedule_date: booking.scheduled_date ? ` on ${format(new Date(booking.scheduled_date), "dd MMM")}` : "",
+  const waMessages: Record<string, string> = {
+    new_booking: `Hi ${booking.owner_name}, your HSRP/FASTag booking for ${booking.registration_number} has been received. Tracking ID: ${booking.tracking_id || booking.id.slice(0, 8)}. We'll verify your documents shortly. — GrabYourCar`,
+    verification: `Hi ${booking.owner_name}, we're verifying your documents for ${booking.registration_number}. Please ensure chassis & engine numbers are correct. — GrabYourCar`,
+    payment: `Hi ${booking.owner_name}, verification is done for ${booking.registration_number}! Please pay Rs.${(booking.payment_amount || 0).toLocaleString("en-IN")} to proceed. — GrabYourCar`,
+    scheduled: `Hi ${booking.owner_name}, your ${booking.service_type} installation for ${booking.registration_number} is scheduled${booking.scheduled_date ? ` on ${format(new Date(booking.scheduled_date), "dd MMM")}` : ""}. Keep your vehicle ready! — GrabYourCar`,
+    installation: `Hi ${booking.owner_name}, our technician is on the way for your ${booking.service_type} installation on ${booking.registration_number}. — GrabYourCar`,
+    completed: `Hi ${booking.owner_name}, your ${booking.service_type} has been installed on ${booking.registration_number}. Thank you for choosing GrabYourCar! 🚗`,
   };
-  const hsrpSlugMap: Record<string, string> = {
-    new_booking: "hsrp_new_booking",
-    verification: "hsrp_verification",
-    payment: "hsrp_payment",
-    scheduled: "hsrp_scheduled",
-    installation: "hsrp_installation",
-    completed: "hsrp_completed",
-  };
-  const handleWhatsApp = async (e: React.MouseEvent) => {
+
+  const handleWhatsApp = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
-    const slug = hsrpSlugMap[stage] || "hsrp_new_booking";
-    const msg = await getCrmMessage(slug, hsrpVars);
-    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-    await sendWhatsApp({ phone: booking.mobile || "", message: msg, name: booking.owner_name, logEvent: "hsrp_update" });
+    const phone = (booking.mobile || "").replace(/\D/g, "");
+    const msg = waMessages[stage] || waMessages.new_booking;
+    window.open(`https://wa.me/91${phone.replace(/^91/, "")}?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
   return (
@@ -492,18 +468,9 @@ function HSRPDetailModal({ open, onOpenChange, booking, onUpdate }: any) {
     toast.success("Receipt PDF downloaded!");
   };
 
-  const handleShareWhatsApp = async () => {
-    const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
-    const msg = await getCrmMessage("hsrp_share", {
-      owner_name: booking.owner_name || "",
-      registration_number: booking.registration_number || "",
-      service_type: booking.service_type || "HSRP",
-      payment_amount: (booking.payment_amount || 0).toLocaleString("en-IN"),
-      payment_status: booking.payment_status || "",
-      scheduled_line: booking.scheduled_date ? `Scheduled: ${booking.scheduled_date}` : "",
-    });
-    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-    await sendWhatsApp({ phone: booking.mobile || "", message: msg, name: booking.owner_name, logEvent: "hsrp_share" });
+  const handleShareWhatsApp = () => {
+    const msg = `*HSRP Booking - GrabYourCar*\n\nOwner: ${booking.owner_name}\nVehicle: ${booking.registration_number}\nService: ${booking.service_type}\nAmount: Rs.${(booking.payment_amount || 0).toLocaleString("en-IN")}\nStatus: ${booking.payment_status}\n${booking.scheduled_date ? `Scheduled: ${booking.scheduled_date}` : ""}\n\nwww.grabyourcar.com`;
+    window.open(`https://wa.me/91${booking.mobile?.replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
   return (

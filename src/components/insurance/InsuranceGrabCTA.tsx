@@ -69,7 +69,7 @@ export function InsuranceGrabCTA({ variant = "inline", source = "insurance_page"
           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <Gift className="h-6 w-6 text-foreground" />
+                <Gift className="h-6 w-6 text-primary" />
               </div>
               <div>
                 <p className="text-sm font-bold text-foreground">🎁 Buy Insurance & Get Free Gifts!</p>
@@ -100,7 +100,7 @@ export function InsuranceGrabCTA({ variant = "inline", source = "insurance_page"
         <p className="text-sm text-muted-foreground">
           🎁 <span className="font-semibold text-foreground">Free gifts</span> when you buy insurance via GrabYourCar
         </p>
-        <Button onClick={() => setOpen(true)} variant="outline" size="sm" className="rounded-full gap-1.5 font-bold border-primary/30 hover:bg-primary/5 text-foreground">
+        <Button onClick={() => setOpen(true)} variant="outline" size="sm" className="rounded-full gap-1.5 font-bold border-primary/30 hover:bg-primary/5 text-primary">
           <Sparkles className="h-3.5 w-3.5" />
           Check Price & Grab
           <ArrowRight className="h-3.5 w-3.5" />
@@ -125,7 +125,7 @@ function GrabDialog({ open, onClose, name, setName, phone, setPhone, isSubmittin
             <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="text-center mb-5">
                 <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                  <Gift className="h-7 w-7 text-foreground" />
+                  <Gift className="h-7 w-7 text-primary" />
                 </div>
                 <h3 className="text-xl font-heading font-bold text-foreground">Check Price & Grab Free Gifts</h3>
                 <p className="text-sm text-muted-foreground mt-1">Get the best insurance quote + exclusive freebies</p>
@@ -134,7 +134,7 @@ function GrabDialog({ open, onClose, name, setName, phone, setPhone, isSubmittin
               {/* Offer pills */}
               <div className="flex flex-wrap gap-2 justify-center mb-5">
                 {["🚗 Free Self-Drive Car", "✨ 3 Car Wash Coupons", "🎁 Free Perfumes"].map((o) => (
-                  <span key={o} className="text-[10px] font-bold bg-primary/10 text-foreground px-3 py-1.5 rounded-full border border-primary/20">{o}</span>
+                  <span key={o} className="text-[10px] font-bold bg-primary/10 text-primary px-3 py-1.5 rounded-full border border-primary/20">{o}</span>
                 ))}
               </div>
 
@@ -167,12 +167,12 @@ function GrabDialog({ open, onClose, name, setName, phone, setPhone, isSubmittin
           ) : (
             <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-6">
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200 }} className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="h-10 w-10 text-foreground" />
+                <CheckCircle2 className="h-10 w-10 text-primary" />
               </motion.div>
               <h3 className="text-xl font-heading font-bold text-foreground mb-2">You're All Set! 🎉</h3>
               <p className="text-sm text-muted-foreground mb-4">Our insurance expert will call you within 30 minutes with the best deal + your free gifts.</p>
               <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 mx-auto max-w-xs">
-                <Phone className="h-3.5 w-3.5 text-foreground" />
+                <Phone className="h-3.5 w-3.5 text-primary" />
                 <span>Expect call from <strong className="text-foreground">+91 98559 24442</strong></span>
               </div>
               <Button variant="outline" className="mt-5 rounded-xl" onClick={onClose}>Close</Button>

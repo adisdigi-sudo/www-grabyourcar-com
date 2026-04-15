@@ -28,10 +28,8 @@ function calculatePriceBreakup(exShowroom: number, stateCode: string = "DL") {
   const fastag = 500;
   const registration = 1000;
   const handling = 15000;
-  // Agent/Processing fees: ₹7,550 for cars above ₹10 Lakh
-  const agentFees = exShowroom > 1000000 ? 7550 : 0;
   
-  const onRoadPrice = exShowroom + rto + roadTax + insurance + tcs + fastag + registration + handling + agentFees;
+  const onRoadPrice = exShowroom + rto + roadTax + insurance + tcs + fastag + registration + handling;
   
   return {
     ex_showroom: exShowroom,

@@ -1,12 +1,11 @@
-import { useState, useMemo, useEffect, lazy, Suspense } from "react";
-import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
+import { useState, useMemo, useEffect } from "react";
 import { useEventTracking } from "@/hooks/useEventTracking";
 import { useParams, Link } from "react-router-dom";
 import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { FloatingCTA } from "@/components/FloatingCTA";
-
+import { PriceBreakup } from "@/components/PriceBreakup";
 import { DealerLocator } from "@/components/DealerLocator";
 import { ShareButtons } from "@/components/ShareButtons";
 import { CarStructuredData } from "@/components/seo/CarStructuredData";
@@ -19,17 +18,9 @@ import { CarPricingConfigurator } from "@/components/CarPricingConfigurator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
 import { 
   ChevronLeft, 
@@ -54,8 +45,7 @@ import {
   Calculator,
   Building2,
   GitCompareArrows,
-  FileText,
-  Sparkles
+  FileText
 } from "lucide-react";
 import { useCompare } from "@/hooks/useCompare";
 import { useCarColors, useCarGalleryImages } from "@/hooks/useCarColors";
@@ -94,24 +84,6 @@ const CompareButton = ({ carId }: { carId: string | number }) => {
   );
 };
 
-const MobileCompareButton = ({ carId }: { carId: string | number }) => {
-  const { addToCompare, removeFromCompare, isInCompare, canAddMore } = useCompare();
-  const inCompare = isInCompare(carId);
-
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => inCompare ? removeFromCompare(carId) : canAddMore && addToCompare(carId)}
-      disabled={!inCompare && !canAddMore}
-      className={`flex flex-col items-center gap-1 h-auto py-3 text-[10px] font-semibold ${inCompare ? 'border-primary bg-primary/10' : 'border-primary/30'}`}
-    >
-      <GitCompareArrows className="h-5 w-5 text-foreground" />
-      {inCompare ? 'Added' : 'Compare'}
-    </Button>
-  );
-};
-
 const CarDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   
@@ -126,10 +98,7 @@ const CarDetail = () => {
   
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(0);
-  const [pricingDrawerOpen, setPricingDrawerOpen] = useState(false);
-  const [bookingDrawerOpen, setBookingDrawerOpen] = useState(false);
   const { trackCarView, trackBrochureDownload, trackVariantClick, trackColorChange } = useEventTracking();
-  const compareCtx = useCompare();
 
   // Track car view
   useEffect(() => {
@@ -217,33 +186,26 @@ const CarDetail = () => {
       <Header />
       
       <main className="pt-20">
-
         {/* Breadcrumb */}
-        <div className="bg-secondary/50 py-3">
+        <div className="bg-secondary/50 py-4">
           <div className="container mx-auto px-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Link to="/" className="hover:text-primary transition-colors">Home</Link>
-              <ChevronRight className="h-3 w-3" />
+              <ChevronRight className="h-4 w-4" />
               <Link to="/#cars" className="hover:text-primary transition-colors">Cars</Link>
-              <ChevronRight className="h-3 w-3" />
+              <ChevronRight className="h-4 w-4" />
               <span className="text-foreground font-medium">{car.name}</span>
             </div>
           </div>
         </div>
 
-        {/* Car Details Section */}
-        <section className="py-6 lg:py-12">
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
-              {/* Left Column: Gallery + Desktop Booking + Desktop Why Buy */}
-              <div className="space-y-4">
-                {/* Car Name & Brand - Top */}
-                <div>
-                  <p className="text-muted-foreground font-medium text-sm">{car.brand}</p>
-                  <h1 className="font-heading text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">{car.name}</h1>
-                  {car.tagline && <p className="text-muted-foreground text-sm mt-1">{car.tagline}</p>}
-                </div>
 
+        {/* Car Details Section */}
+        <section className="py-8 md:py-12">
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+              {/* Color Gallery Viewer */}
+              <div className="space-y-4">
                 {/* Hot/Limited Badges */}
                 {(car.isHot || car.isLimited) && (
                   <div className="flex gap-2 mb-2">
@@ -261,8 +223,161 @@ const CarDetail = () => {
                   onColorChange={setSelectedColor}
                 />
 
+                {/* Book Your Car Form - Left Side */}
+                <div className="mt-6">
+                  <BookingForm carName={car.name} carBrand={car.brand} />
+                </div>
 
-                {/* WhatsApp Quick Actions below color patches */}
+                {/* Why Buy From Us - Utilizing blank space */}
+                <Card className="mt-6 border-border/50 bg-gradient-to-br from-card to-secondary/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Star className="h-5 w-5 text-accent" />
+                      Why Buy From Grabyourcar?
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
+                        <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
+                          <TrendingDown className="h-4 w-4 text-success" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-foreground">Best Price</p>
+                          <p className="text-[10px] text-muted-foreground">Guaranteed lowest price</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Clock className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-foreground">Fast Delivery</p>
+                          <p className="text-[10px] text-muted-foreground">Priority delivery slots</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
+                        <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
+                          <Gift className="h-4 w-4 text-accent" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-foreground">Free Accessories</p>
+                          <p className="text-[10px] text-muted-foreground">Worth ₹25,000+</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
+                        <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
+                          <Shield className="h-4 w-4 text-success" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-foreground">100% Genuine</p>
+                          <p className="text-[10px] text-muted-foreground">Authorized dealer</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Quick Contact */}
+                    <div className="mt-4 p-3 rounded-lg bg-gradient-to-r from-primary/10 to-success/10 border border-primary/20">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-primary" />
+                          <span className="text-xs font-medium">Need Help?</span>
+                        </div>
+                        <a href="tel:+1155578093" className="text-xs font-bold text-primary hover:underline">
+                          +1 155578093
+                        </a>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Car Info */}
+              <div className="space-y-6">
+                <div>
+                  <p className="text-primary font-medium mb-1">{car.brand}</p>
+                  <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-2">
+                    {car.name}
+                  </h1>
+                  <p className="text-muted-foreground text-lg">{car.tagline}</p>
+                </div>
+
+                {/* Quick Price Display - Links to top section */}
+                <div className="bg-gradient-to-r from-primary/10 via-success/10 to-primary/10 rounded-xl p-4 border border-primary/20">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Starting Price</p>
+                      <p className="text-2xl md:text-3xl font-bold text-primary">{car.price}</p>
+                      <p className="text-xs text-muted-foreground">Ex-showroom price</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Link to={`/car/${car.slug}/on-road-price`}>
+                        <Button variant="cta" size="sm">
+                          <IndianRupee className="h-4 w-4 mr-1" />
+                          On Road Price
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Specs - Moved after Price Card */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-card border border-border rounded-xl p-4 text-center">
+                    <Fuel className="h-6 w-6 mx-auto mb-2 text-primary" />
+                    <p className="text-sm text-muted-foreground">Fuel Type</p>
+                    <p className="font-semibold text-sm">{car.fuelTypes.join(" / ")}</p>
+                  </div>
+                  <div className="bg-card border border-border rounded-xl p-4 text-center">
+                    <Cog className="h-6 w-6 mx-auto mb-2 text-primary" />
+                    <p className="text-sm text-muted-foreground">Transmission</p>
+                    <p className="font-semibold text-sm">{car.transmission.join(" / ")}</p>
+                  </div>
+                  <div className="bg-card border border-border rounded-xl p-4 text-center">
+                    <Clock className="h-6 w-6 mx-auto mb-2 text-success" />
+                    <p className="text-sm text-muted-foreground">Availability</p>
+                    <p className="font-semibold text-sm text-success">{car.availability}</p>
+                  </div>
+                </div>
+
+                {/* CTA Buttons - Sales-Driven */}
+                <div className="flex flex-wrap gap-3">
+                  <Button variant="cta" size="lg" className="flex-1 font-semibold hover:scale-105 transition-transform">
+                    Get Best Price
+                  </Button>
+                  <CompareButton carId={car.id} />
+                  <ShareButtons title={`Check out ${car.name} on Grabyourcar`} />
+                  {car.brochureUrl && (
+                    <BrochureLeadGate
+                      brochureUrl={car.brochureUrl}
+                      carName={`${car.brand} ${car.name}`}
+                      carSlug={car.slug}
+                    >
+                      <Button 
+                        variant="outline" 
+                        size="lg" 
+                        className="font-semibold hover:scale-105 transition-transform"
+                      >
+                        <FileText className="h-5 w-5 mr-2" />
+                        Brochure
+                      </Button>
+                    </BrochureLeadGate>
+                  )}
+                  <WhatsAppSalesCTA 
+                    carName={`${car.brand} ${car.name}`} 
+                    type="price" 
+                    size="lg"
+                  />
+                  <a href="tel:+1155578093">
+                    <Button variant="call" size="lg" className="font-semibold hover:scale-105 transition-transform">
+                      <Phone className="h-5 w-5 mr-2" />
+                      Talk to Expert
+                    </Button>
+                  </a>
+                </div>
+
+                {/* Additional WhatsApp CTAs */}
+                {/* WhatsApp Lead Engine - Quick Actions */}
                 <WhatsAppQuickActions
                   carName={`${car.brand} ${car.name}`}
                   variant={car.variants?.[selectedVariant]?.name}
@@ -271,390 +386,144 @@ const CarDetail = () => {
                   size="sm"
                 />
 
-                {/* Mobile: 4 Action Buttons Grid right below car image */}
-                <div className="grid grid-cols-4 gap-2">
-                  <button
-                    onClick={() => setPricingDrawerOpen(true)}
-                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all active:scale-95"
-                  >
-                    <IndianRupee className="h-5 w-5" />
-                    <span className="text-[10px] font-bold leading-tight">Best Price</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      const { addToCompare, removeFromCompare, isInCompare, canAddMore } = compareCtx;
-                      const inCompare = isInCompare(car.id);
-                      if (inCompare) removeFromCompare(car.id);
-                      else if (canAddMore) addToCompare(car.id);
-                    }}
-                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all active:scale-95"
-                  >
-                    <GitCompareArrows className="h-5 w-5" />
-                    <span className="text-[10px] font-bold leading-tight">{compareCtx.isInCompare(car.id) ? 'Added' : 'Compare'}</span>
-                  </button>
-                  <a href="tel:+1155578093" className="w-full">
-                    <button className="w-full flex flex-col items-center gap-1.5 py-3 rounded-xl bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all active:scale-95">
-                      <Phone className="h-5 w-5" />
-                      <span className="text-[10px] font-bold leading-tight">Talk Expert</span>
-                    </button>
-                  </a>
-                  <button
-                    onClick={() => setBookingDrawerOpen(true)}
-                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all active:scale-95"
-                  >
-                    <Calendar className="h-5 w-5" />
-                    <span className="text-[10px] font-bold leading-tight">Book Car</span>
-                  </button>
-                </div>
-
-                {/* Why Buy - Auto-scrolling marquee */}
-                <div className="overflow-hidden rounded-xl border border-border/50 bg-gradient-to-r from-card to-secondary/20 p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Star className="h-4 w-4 text-foreground" />
-                    <span className="text-xs font-semibold">Why Buy From Grabyourcar?</span>
+                {/* Trust Badges */}
+                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Shield className="h-4 w-4 text-success" />
+                    <span>Verified Dealer</span>
                   </div>
-                  <div className="overflow-hidden">
-                    <div className="flex gap-3 animate-marquee">
-                      {[
-                        { icon: <TrendingDown className="h-3.5 w-3.5 text-foreground" />, label: "Best Price", sub: "Guaranteed lowest" },
-                        { icon: <Clock className="h-3.5 w-3.5 text-foreground" />, label: "Fast Delivery", sub: "Priority slots" },
-                        { icon: <Gift className="h-3.5 w-3.5 text-foreground" />, label: "Free Accessories", sub: "₹25,000+ worth" },
-                        { icon: <Shield className="h-3.5 w-3.5 text-foreground" />, label: "100% Genuine", sub: "Authorized dealer" },
-                        { icon: <TrendingDown className="h-3.5 w-3.5 text-foreground" />, label: "Best Price", sub: "Guaranteed lowest" },
-                        { icon: <Clock className="h-3.5 w-3.5 text-foreground" />, label: "Fast Delivery", sub: "Priority slots" },
-                        { icon: <Gift className="h-3.5 w-3.5 text-foreground" />, label: "Free Accessories", sub: "₹25,000+ worth" },
-                        { icon: <Shield className="h-3.5 w-3.5 text-foreground" />, label: "100% Genuine", sub: "Authorized dealer" },
-                      ].map((item, i) => (
-                        <div key={i} className="flex-shrink-0 flex items-center gap-1.5 bg-background/60 border border-border/30 rounded-lg px-3 py-2">
-                          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0">{item.icon}</div>
-                          <div>
-                            <p className="text-[10px] font-semibold text-foreground whitespace-nowrap">{item.label}</p>
-                            <p className="text-[8px] text-muted-foreground whitespace-nowrap">{item.sub}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="flex items-center gap-1.5">
+                    <Star className="h-4 w-4 text-accent" />
+                    <span>4.8/5 Rating</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <span>15+ Showrooms</span>
                   </div>
                 </div>
 
-                {/* Need Help bar */}
-                <div className="p-3 rounded-xl bg-gradient-to-r from-primary/10 to-success/10 border border-primary/20">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-foreground" />
-                      <span className="text-xs font-semibold">Need Help?</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <a href="tel:+1155578093" className="text-xs font-bold text-foreground hover:underline">
-                        +1 155578093
-                      </a>
-                      <WhatsAppSalesCTA carName={`${car.brand} ${car.name}`} type="price" size="sm" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mobile/Tablet: Structured Price & Variants Card */}
-                <div>
-                  <div className="rounded-2xl overflow-hidden border border-border/60 shadow-sm bg-card">
-                    {/* Price Row */}
-                    <div className="p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Ex-Showroom</p>
-                          <p className="text-xl font-bold text-foreground">{car.price}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">On-Road Price*</p>
-                          <p className="text-xl font-bold text-foreground">
-                            ₹{((car.variants?.[selectedVariant]?.priceNumeric || car.priceNumeric) / 100000).toFixed(2)} L
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Variant Pills */}
-                      {car.variants && car.variants.length > 0 && (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Select Variant</p>
-                            <p className="text-[9px] text-muted-foreground">
-                              {car.variants?.[selectedVariant]?.fuelType || car.fuelTypes?.[0]} • {car.variants?.[selectedVariant]?.transmission || car.transmission?.[0]}
-                            </p>
-                          </div>
-                          <div className="flex gap-1.5 overflow-x-auto pb-0.5 -mx-1 px-1 scrollbar-hide">
-                            {car.variants.map((v, i) => (
-                              <button
-                                key={i}
-                                onClick={() => { setSelectedVariant(i); trackVariantClick(car.slug, v.name); }}
-                                className={`flex-shrink-0 text-[10px] px-3 py-1.5 rounded-full font-semibold transition-all border ${
-                                  selectedVariant === i
-                                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                                    : 'bg-card text-muted-foreground border-border hover:border-primary/50'
-                                }`}
-                              >
-                                {v.name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action Row */}
-                    <div className="border-t border-border/40 grid grid-cols-2 gap-px bg-border/40">
-                      <button
-                        onClick={() => setPricingDrawerOpen(true)}
-                        className="flex items-center justify-center gap-2 py-3.5 text-xs font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all active:scale-[0.98]"
-                      >
-                        <IndianRupee className="h-3.5 w-3.5" />
-                        Get Best Price
-                      </button>
-                      <Link to={`/car/${car.slug}/on-road-price`} className="flex items-center justify-center gap-2 py-3.5 text-xs font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all active:scale-[0.98]">
-                        <FileText className="h-3.5 w-3.5" />
-                        On-Road Breakup
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-
-                {/* About Car + Key Features — FAQ accordion */}
-                {car.specifications?.features && Array.isArray(car.specifications.features) && car.specifications.features.length > 0 && (
-                  <div>
-                    <Accordion type="single" collapsible className="w-full space-y-2">
-                      {/* About Car */}
-                      {car.overview && (
-                        <AccordionItem value="about-car" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
-                            <div className="flex items-center gap-2 flex-1">
-                              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <Sparkles className="h-3.5 w-3.5 text-primary" />
-                              </div>
-                              <span className="text-xs lg:text-sm font-bold uppercase tracking-wide">About {car.name}</span>
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-3 text-xs lg:text-sm text-muted-foreground leading-relaxed">
-                            {car.overview}
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
-
-                      {/* Key Features */}
-                      <AccordionItem value="key-features" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
-                        <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
-                          <div className="flex items-center gap-2 flex-1">
-                            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                              <Check className="h-3.5 w-3.5 text-primary" />
-                            </div>
-                            <span className="text-xs lg:text-sm font-bold uppercase tracking-wide">Key Features</span>
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-border text-foreground">
-                              {car.specifications.features.length}
-                            </Badge>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="divide-y divide-border/30">
-                            {car.specifications.features.slice(0, 8).map((feature, index) => (
-                              <div key={index} className="flex items-center gap-3 px-4 py-2.5">
-                                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                  <Check className="h-3 w-3 text-primary" />
-                                </div>
-                                <div className="min-w-0">
-                                  <span className="font-medium text-xs lg:text-sm block">{feature.label}</span>
-                                  <span className="text-[10px] lg:text-xs text-muted-foreground">{feature.value}</span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  </div>
-                )}
-
-
-              </div>
-
-              {/* Car Info - Right Column */}
-              <div className="space-y-6">
-
-                {/* Quick Specs - 4 columns on mobile, 4 on desktop */}
-                <div className="grid grid-cols-4 gap-2 md:gap-4">
-                  <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
-                    <Fuel className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
-                    <p className="text-[10px] md:text-sm text-muted-foreground">Fuel</p>
-                    <p className="font-semibold text-[10px] md:text-sm">{car.fuelTypes?.join(" / ") || "—"}</p>
-                  </div>
-                  <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
-                    <Cog className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
-                    <p className="text-[10px] md:text-sm text-muted-foreground">Gearbox</p>
-                    <p className="font-semibold text-[10px] md:text-sm">{car.transmission?.join(" / ") || "—"}</p>
-                  </div>
-                  <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
-                    <Clock className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
-                    <p className="text-[10px] md:text-sm text-muted-foreground">Delivery</p>
-                    <p className="font-semibold text-[10px] md:text-sm text-foreground">{car.availability}</p>
-                  </div>
-                  <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
-                    <Shield className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
-                    <p className="text-[10px] md:text-sm text-muted-foreground">Safety</p>
-                    <p className="font-semibold text-[10px] md:text-sm">{(Array.isArray(car.specifications?.performance) ? car.specifications.performance.find(s => s.label?.toLowerCase().includes('safety'))?.value : null) || '5 Star'}</p>
-                  </div>
-                </div>
-
-
-
-                {/* Trust Badges - compact highlighted strip */}
-                <div className="flex items-center gap-3 bg-success/10 border border-success/20 rounded-xl px-3 py-2">
-                  <div className="flex items-center gap-1">
-                    <Shield className="h-3.5 w-3.5 text-foreground" />
-                    <span className="text-[11px] font-semibold text-foreground">Verified Dealer</span>
-                  </div>
-                  <div className="w-px h-4 bg-success/30" />
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3.5 w-3.5 text-foreground fill-success" />
-                    <span className="text-[11px] font-semibold text-foreground">4.8/5</span>
-                  </div>
-                  <div className="w-px h-4 bg-success/30" />
-                  <div className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-foreground" />
-                    <span className="text-[11px] font-semibold text-foreground">15+ Showrooms</span>
-                  </div>
-                </div>
-
-                {/* Full Pricing Configurator - Hidden on mobile, shown on md+ */}
-                <div>
-                  <CarPricingConfigurator
-                    car={car}
-                    colors={displayColors}
-                  />
-                </div>
+                {/* Full Pricing Configurator */}
+                <CarPricingConfigurator
+                  car={car}
+                  colors={displayColors}
+                />
               </div>
             </div>
           </div>
         </section>
 
         {/* Specifications & Details */}
-        <SectionErrorBoundary sectionName="specifications">
-        <section className="py-8 bg-secondary/30">
+        <section className="py-12 bg-secondary/30">
           <div className="container mx-auto px-4">
-            <Tabs defaultValue="specifications" className="space-y-4">
-              <TabsList className="flex flex-wrap h-auto gap-1.5 bg-background p-1.5 rounded-xl">
-                <TabsTrigger value="specifications" className="rounded-lg text-xs px-3 py-1.5 data-[state=active]:bg-success data-[state=active]:text-success-foreground">Specs</TabsTrigger>
-                <TabsTrigger value="variants" className="rounded-lg text-xs px-3 py-1.5 data-[state=active]:bg-success data-[state=active]:text-success-foreground">Variants</TabsTrigger>
-                <TabsTrigger value="emi" className="rounded-lg text-xs px-3 py-1.5 data-[state=active]:bg-success data-[state=active]:text-success-foreground">EMI</TabsTrigger>
-                <TabsTrigger value="dealers" className="rounded-lg text-xs px-3 py-1.5 data-[state=active]:bg-success data-[state=active]:text-success-foreground">Dealers</TabsTrigger>
-                <TabsTrigger value="offers" className="rounded-lg text-xs px-3 py-1.5 data-[state=active]:bg-success data-[state=active]:text-success-foreground">Offers</TabsTrigger>
+            <Tabs defaultValue="overview" className="space-y-8">
+              <TabsList className="flex flex-wrap h-auto gap-2 bg-background p-2 rounded-xl">
+                <TabsTrigger value="overview" className="rounded-lg">Overview</TabsTrigger>
+                <TabsTrigger value="specifications" className="rounded-lg">Specifications</TabsTrigger>
+                <TabsTrigger value="variants" className="rounded-lg">Variants & Price</TabsTrigger>
+                <TabsTrigger value="emi" className="rounded-lg">
+                  <Calculator className="h-4 w-4 mr-1.5" />
+                  EMI Calculator
+                </TabsTrigger>
+                <TabsTrigger value="dealers" className="rounded-lg">
+                  <Building2 className="h-4 w-4 mr-1.5" />
+                  Find Dealers
+                </TabsTrigger>
+                <TabsTrigger value="offers" className="rounded-lg">Dealer Offers</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="specifications" className="space-y-2">
-                <Accordion type="multiple" defaultValue={["engine"]} className="w-full space-y-2">
-                  {/* Engine & Transmission */}
-                  {Array.isArray(car.specifications?.engine) && car.specifications.engine.length > 0 && (
-                  <AccordionItem value="engine" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
-                    <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Cog className="h-3.5 w-3.5 text-primary" />
-                        </div>
-                        <span className="text-sm font-bold">Engine & Transmission</span>
-                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-border">
-                          {car.specifications.engine.length}
-                        </Badge>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="divide-y divide-border/30">
-                        {car.specifications.engine.map((spec, index) => (
-                          <div key={index} className="flex justify-between px-4 py-2.5">
-                            <span className="text-xs text-muted-foreground">{spec.label}</span>
-                            <span className="text-xs font-medium text-right">{spec.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                  )}
+              <TabsContent value="overview" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>About {car.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground leading-relaxed">{car.overview}</p>
+                  </CardContent>
+                </Card>
 
-                  {/* Dimensions & Capacity */}
-                  {Array.isArray(car.specifications?.dimensions) && car.specifications.dimensions.length > 0 && (
-                  <AccordionItem value="dimensions" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
-                    <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Repeat className="h-3.5 w-3.5 text-primary" />
-                        </div>
-                        <span className="text-sm font-bold">Dimensions & Capacity</span>
-                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-border">
-                          {car.specifications.dimensions.length}
-                        </Badge>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="divide-y divide-border/30">
-                        {car.specifications.dimensions.map((spec, index) => (
-                          <div key={index} className="flex justify-between px-4 py-2.5">
-                            <span className="text-xs text-muted-foreground">{spec.label}</span>
-                            <span className="text-xs font-medium text-right">{spec.value}</span>
+                {/* Key Features */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Key Features</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {car.specifications.features.map((feature, index) => (
+                        <div key={index} className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
+                          <Check className="h-5 w-5 text-success flex-shrink-0" />
+                          <div>
+                            <p className="font-medium text-sm">{feature.label}</p>
+                            <p className="text-sm text-muted-foreground">{feature.value}</p>
                           </div>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                  )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="specifications" className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Engine */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Engine & Transmission</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {car.specifications.engine.map((spec, index) => (
+                        <div key={index} className="flex justify-between py-2 border-b border-border last:border-0">
+                          <span className="text-muted-foreground">{spec.label}</span>
+                          <span className="font-medium text-right">{spec.value}</span>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  {/* Dimensions */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Dimensions & Capacity</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {car.specifications.dimensions.map((spec, index) => (
+                        <div key={index} className="flex justify-between py-2 border-b border-border last:border-0">
+                          <span className="text-muted-foreground">{spec.label}</span>
+                          <span className="font-medium text-right">{spec.value}</span>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
 
                   {/* Performance */}
-                  {Array.isArray(car.specifications?.performance) && car.specifications.performance.length > 0 && (
-                  <AccordionItem value="performance" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
-                    <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Fuel className="h-3.5 w-3.5 text-primary" />
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Performance</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {car.specifications.performance.map((spec, index) => (
+                        <div key={index} className="flex justify-between py-2 border-b border-border last:border-0">
+                          <span className="text-muted-foreground">{spec.label}</span>
+                          <span className="font-medium text-right">{spec.value}</span>
                         </div>
-                        <span className="text-sm font-bold">Performance</span>
-                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-border">
-                          {car.specifications.performance.length}
-                        </Badge>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="divide-y divide-border/30">
-                        {car.specifications.performance.map((spec, index) => (
-                          <div key={index} className="flex justify-between px-4 py-2.5">
-                            <span className="text-xs text-muted-foreground">{spec.label}</span>
-                            <span className="text-xs font-medium text-right">{spec.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                  )}
+                      ))}
+                    </CardContent>
+                  </Card>
 
-                  {/* Features & Safety */}
-                  {Array.isArray(car.specifications?.features) && car.specifications.features.length > 0 && (
-                  <AccordionItem value="features" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
-                    <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Shield className="h-3.5 w-3.5 text-primary" />
+                  {/* Features */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Features & Safety</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {car.specifications.features.map((spec, index) => (
+                        <div key={index} className="flex justify-between py-2 border-b border-border last:border-0">
+                          <span className="text-muted-foreground">{spec.label}</span>
+                          <span className="font-medium text-right">{spec.value}</span>
                         </div>
-                        <span className="text-sm font-bold">Features & Safety</span>
-                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-border">
-                          {car.specifications.features.length}
-                        </Badge>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="divide-y divide-border/30">
-                        {car.specifications.features.map((spec, index) => (
-                          <div key={index} className="flex justify-between px-4 py-2.5">
-                            <span className="text-xs text-muted-foreground">{spec.label}</span>
-                            <span className="text-xs font-medium text-right">{spec.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                  )}
-                </Accordion>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
 
               <TabsContent value="variants" className="space-y-8">
@@ -670,11 +539,29 @@ const CarDetail = () => {
                 {/* Selected Variant Details - Only show if variants exist */}
                 {car.variants && car.variants.length > 0 && car.variants[selectedVariant] ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Price Breakup */}
+                    <div className="space-y-4">
+                      {(() => {
+                        const selectedVar = car.variants[selectedVariant];
+                        const priceMatch = selectedVar?.price?.match(/[\d.]+/);
+                        const priceInLakh = priceMatch ? parseFloat(priceMatch[0]) : 0;
+                        const exShowroomPrice = selectedVar?.priceNumeric || priceInLakh * 100000 || car.priceNumeric || 0;
+                        
+                        return (
+                          <PriceBreakup
+                            variantName={selectedVar?.name || 'Base'}
+                            carName={car.name}
+                            exShowroomPrice={exShowroomPrice}
+                          />
+                        );
+                      })()}
+                    </div>
+                    
                     {/* Features for selected variant */}
                     <Card>
                       <CardHeader className="pb-3">
                         <CardTitle className="text-base flex items-center gap-2">
-                          <Check className="h-5 w-5 text-foreground" />
+                          <Check className="h-5 w-5 text-success" />
                           Features - {car.name} {car.variants[selectedVariant]?.name || ''}
                         </CardTitle>
                       </CardHeader>
@@ -682,7 +569,7 @@ const CarDetail = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {(car.variants[selectedVariant]?.features || []).map((feature, fIndex) => (
                             <div key={fIndex} className="flex items-center gap-2 py-1.5 px-2 bg-muted/30 rounded-lg">
-                              <Check className="h-4 w-4 text-foreground flex-shrink-0" />
+                              <Check className="h-4 w-4 text-success flex-shrink-0" />
                               <span className="text-sm">{feature}</span>
                             </div>
                           ))}
@@ -726,7 +613,7 @@ const CarDetail = () => {
                              <div>
                                <p className="text-sm text-muted-foreground font-medium">Calculate EMI for</p>
                                <h3 className="font-bold text-xl mt-1">{car.brand} {car.name}</h3>
-                               <p className="text-sm font-semibold text-foreground mt-0.5">{selectedVar?.name || 'Base Variant'}</p>
+                               <p className="text-sm font-semibold text-primary mt-0.5">{selectedVar?.name || 'Base Variant'}</p>
                                <p className="text-xs text-muted-foreground mt-2">
                                  {selectedVar?.fuelType || car.fuelTypes?.[0] || 'Petrol'} • {selectedVar?.transmission || car.transmission?.[0] || 'Manual'}
                                </p>
@@ -734,7 +621,7 @@ const CarDetail = () => {
                              <div className="flex flex-col items-end gap-3">
                                <div>
                                  <p className="text-sm text-muted-foreground mb-1">Starting On-Road Price</p>
-                                 <p className="text-3xl font-bold text-foreground">
+                                 <p className="text-3xl font-bold text-primary">
                                    ₹{(breakup.onRoadPrice / 100000).toFixed(2)} Lakh
                                  </p>
                                </div>
@@ -767,7 +654,7 @@ const CarDetail = () => {
                       <Card>
                         <CardHeader>
                           <CardTitle className="text-lg flex items-center gap-2">
-                            <Calculator className="h-5 w-5 text-foreground" />
+                            <Calculator className="h-5 w-5 text-primary" />
                             Quick EMI Reference
                           </CardTitle>
                         </CardHeader>
@@ -792,7 +679,7 @@ const CarDetail = () => {
                                   className="bg-secondary/50 rounded-xl p-4 text-center hover:bg-secondary transition-colors"
                                 >
                                   <p className="text-sm text-muted-foreground mb-1">{months / 12} Years</p>
-                                  <p className="text-xl font-bold text-foreground">₹{emi.toLocaleString("en-IN")}</p>
+                                  <p className="text-xl font-bold text-primary">₹{emi.toLocaleString("en-IN")}</p>
                                   <p className="text-xs text-muted-foreground mt-1">@ {rate}% p.a.</p>
                                 </div>
                               );
@@ -814,7 +701,7 @@ const CarDetail = () => {
 
               <TabsContent value="offers" className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(car.offers || []).map((offer) => (
+                  {car.offers.map((offer) => (
                     <Card key={offer.id} className="overflow-hidden">
                       <CardContent className="p-0">
                         <div className="flex">
@@ -827,9 +714,9 @@ const CarDetail = () => {
                           <div className="p-5 flex-1">
                             <div className="flex items-start gap-4">
                               <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                                offer.type === "cashback" ? "bg-success/10 text-foreground" :
-                                offer.type === "exchange" ? "bg-primary/10 text-foreground" :
-                                offer.type === "accessory" ? "bg-accent/10 text-foreground" :
+                                offer.type === "cashback" ? "bg-success/10 text-success" :
+                                offer.type === "exchange" ? "bg-primary/10 text-primary" :
+                                offer.type === "accessory" ? "bg-accent/10 text-accent" :
                                 "bg-blue-500/10 text-blue-500"
                               }`}>
                                 {getOfferIcon(offer.type)}
@@ -838,7 +725,7 @@ const CarDetail = () => {
                                 <h4 className="font-semibold mb-1">{offer.title}</h4>
                                 <p className="text-sm text-muted-foreground mb-2">{offer.description}</p>
                                 <div className="flex items-center justify-between">
-                                  <span className="font-bold text-lg text-foreground">{offer.discount}</span>
+                                  <span className="font-bold text-lg text-primary">{offer.discount}</span>
                                   <span className="text-xs text-muted-foreground">Valid till {offer.validTill}</span>
                                 </div>
                               </div>
@@ -863,12 +750,10 @@ const CarDetail = () => {
             </Tabs>
           </div>
         </section>
-        </SectionErrorBoundary>
 
-        {/* AI Recommendations Section */}
-        <section className="py-6 md:py-10 bg-secondary/30">
-          <div className="container mx-auto px-4 space-y-6">
-            {/* AI Recommendations */}
+        {/* AI Car Recommendations Section */}
+        <section className="py-8 md:py-12 bg-secondary/30">
+          <div className="container mx-auto px-4">
             <AICarRecommendations
               carName={car.name}
               brand={car.brand}
@@ -876,19 +761,22 @@ const CarDetail = () => {
               fuelTypes={car.fuelTypes}
               transmission={car.transmission}
             />
+          </div>
+        </section>
 
-            {/* Cross-Sell */}
+        {/* Cross-Sell Services */}
+        <section className="py-8 md:py-12 bg-muted/30">
+          <div className="container mx-auto px-4">
             <CrossSellWidget 
               context="carDetail" 
               title="Complete Your Purchase" 
-              maxItems={4}
-              layout="compact-grid"
+              maxItems={4} 
             />
           </div>
         </section>
 
         {/* WhatsApp Conversion Section */}
-        <section className="py-8 lg:py-12">
+        <section className="py-8 md:py-12">
           <div className="container mx-auto px-4">
             <div className="max-w-2xl mx-auto">
               <WhatsAppConversionCard
@@ -901,61 +789,9 @@ const CarDetail = () => {
         </section>
 
       </main>
-      {/* Spacer for mobile sticky bottom bar */}
-      <div className="h-20 lg:hidden" />
 
       <Footer />
       <FloatingCTA />
-
-      {/* Mobile Sticky Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-card border-t border-border shadow-[0_-4px_20px_-4px_hsl(var(--foreground)/0.1)]">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div>
-            <p className="text-[10px] text-muted-foreground font-medium">On-Road Price</p>
-            <p className="text-lg font-bold text-foreground">
-              ₹{((car.variants?.[selectedVariant]?.priceNumeric || car.priceNumeric) / 100000).toFixed(2)} L
-            </p>
-          </div>
-          <Button
-            variant="cta"
-            size="lg"
-            className="font-bold px-6 rounded-xl"
-            onClick={() => setPricingDrawerOpen(true)}
-          >
-            <IndianRupee className="h-4 w-4 mr-1" />
-            Get Best Price
-          </Button>
-        </div>
-      </div>
-
-      {/* Mobile Pricing Drawer */}
-      <Drawer open={pricingDrawerOpen} onOpenChange={setPricingDrawerOpen}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader className="pb-2">
-            <DrawerTitle>Configure & Get Best Price</DrawerTitle>
-            <DrawerDescription>Select variant, city & accessories</DrawerDescription>
-          </DrawerHeader>
-          <div className="overflow-y-auto px-4 pb-6">
-            <CarPricingConfigurator
-              car={car}
-              colors={displayColors}
-            />
-          </div>
-        </DrawerContent>
-      </Drawer>
-
-      {/* Mobile Booking Drawer */}
-      <Drawer open={bookingDrawerOpen} onOpenChange={setBookingDrawerOpen}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader className="pb-2">
-            <DrawerTitle>Book Your {car.name}</DrawerTitle>
-            <DrawerDescription>Fill in your details to book this car</DrawerDescription>
-          </DrawerHeader>
-          <div className="overflow-y-auto px-4 pb-6">
-            <BookingForm carName={car.name} carBrand={car.brand} />
-          </div>
-        </DrawerContent>
-      </Drawer>
     </div>
   );
 };

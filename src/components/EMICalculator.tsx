@@ -5,12 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Calculator, IndianRupee, Percent, Calendar, FileText, MessageCircle, TrendingDown, Building2, Download, Share2, Plus, X, User, Phone } from "lucide-react";
+ import { Calculator, IndianRupee, Percent, Calendar, FileText, MessageCircle, TrendingDown, Building2, Download, Share2 } from "lucide-react";
 import { generateEMIPdf, generateEMIWhatsAppMessage, EMIData, OnRoadPriceBreakup } from "@/lib/generateEMIPdf";
-import { generateComparisonPdf } from "@/lib/generateComparisonPdf";
-import { persistLoanQuoteHistory } from "@/lib/loanQuotePersistence";
 import { toast } from "sonner";
 
 interface EMICalculatorProps {
@@ -22,239 +18,154 @@ interface EMICalculatorProps {
   selectedCity?: string;
 }
 
-const BANKS = [
-  "SBI", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak Mahindra",
-  "IDFC First Bank", "Yes Bank", "Bank of Baroda", "PNB", "Canara Bank",
-  "Union Bank", "IndusInd Bank", "Federal Bank", "AU Small Finance",
-  "Bajaj Finance", "Tata Capital", "Mahindra Finance", "Sundaram Finance",
-  "Cholamandalam", "L&T Finance", "Hero FinCorp", "IIFL Finance", "Shriram Finance"
-];
-
-interface BankColumn {
-  id: string;
-  bankName: string;
-  interestRate: number;
-  processingFee: number;
-}
-
 const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selectedColor, selectedCity }: EMICalculatorProps) => {
-  // Editable text fields - allow blank for custom typing
-  const [loanAmountText, setLoanAmountText] = useState("8,00,000");
-  const [downPaymentText, setDownPaymentText] = useState("1,00,000");
-  const [interestRateText, setInterestRateText] = useState("8.5");
-  const [tenureText, setTenureText] = useState("60");
+  const [loanAmount, setLoanAmount] = useState(800000);
+  const [interestRate, setInterestRate] = useState(8.5);
+  const [tenure, setTenure] = useState(60);
+  const [downPayment, setDownPayment] = useState(100000);
 
-  // Parsed numeric values
-  const loanAmount = useMemo(() => {
-    const n = parseInt(loanAmountText.replace(/,/g, ''), 10);
-    return isNaN(n) ? 0 : Math.max(0, Math.min(n, 50000000));
-  }, [loanAmountText]);
-
-  const downPayment = useMemo(() => {
-    const n = parseInt(downPaymentText.replace(/,/g, ''), 10);
-    return isNaN(n) ? 0 : Math.max(0, Math.min(n, loanAmount * 0.9));
-  }, [downPaymentText, loanAmount]);
-
-  const interestRate = useMemo(() => {
-    const n = parseFloat(interestRateText);
-    return isNaN(n) ? 0 : Math.max(0, Math.min(n, 30));
-  }, [interestRateText]);
-
-  const tenure = useMemo(() => {
-    const n = parseInt(tenureText, 10);
-    return isNaN(n) ? 12 : Math.max(6, Math.min(n, 120));
-  }, [tenureText]);
-
-  // Bank comparison columns
-  const [bankColumns, setBankColumns] = useState<BankColumn[]>([
-    { id: "1", bankName: "SBI", interestRate: 8.5, processingFee: 0 },
-    { id: "2", bankName: "HDFC Bank", interestRate: 8.75, processingFee: 3000 },
-    { id: "3", bankName: "ICICI Bank", interestRate: 9.0, processingFee: 2500 },
-  ]);
-  const [showComparison, setShowComparison] = useState(false);
-
-  // Customer capture for lead creation
-  const [showCustomerDialog, setShowCustomerDialog] = useState(false);
-  const [pendingShareMethod, setPendingShareMethod] = useState<"download" | "whatsapp" | "comparison">("download");
-  const [custName, setCustName] = useState("");
-  const [custPhone, setCustPhone] = useState("");
-  const [custEmail, setCustEmail] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-
-  const calcEMI = (principal: number, rate: number, months: number) => {
-    if (principal <= 0 || months <= 0) return { emi: 0, totalPayment: 0, totalInterest: 0 };
-    const r = rate / 12 / 100;
-    if (r === 0) return { emi: Math.round(principal / months), totalPayment: principal, totalInterest: 0 };
-    const emi = Math.round((principal * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1));
-    const totalPayment = emi * months;
-    return { emi, totalPayment, totalInterest: totalPayment - principal };
-  };
-
-  const principal = Math.max(loanAmount - downPayment, 0);
   const emiDetails = useMemo(() => {
-    const result = calcEMI(principal, interestRate, tenure);
+    const principal = loanAmount - downPayment;
+    const monthlyRate = interestRate / 12 / 100;
+    const months = tenure;
+
+    if (monthlyRate === 0 || principal <= 0) {
+      return {
+        emi: principal > 0 ? Math.round(principal / months) : 0,
+        totalPayment: principal,
+        totalInterest: 0,
+        interestPercent: 0,
+        principalPercent: 100,
+        loanPrincipal: principal,
+      };
+    }
+
+    const emi = Math.round(
+      (principal * monthlyRate * Math.pow(1 + monthlyRate, months)) /
+        (Math.pow(1 + monthlyRate, months) - 1)
+    );
+    const totalPayment = emi * months;
+    const totalInterest = totalPayment - principal;
+    const interestPercent = Math.round((totalInterest / totalPayment) * 100);
+    const principalPercent = 100 - interestPercent;
+
     return {
-      ...result,
-      principalPercent: result.totalPayment > 0 ? Math.round((principal / result.totalPayment) * 100) : 100,
-      interestPercent: result.totalPayment > 0 ? Math.round((result.totalInterest / result.totalPayment) * 100) : 0,
+      emi,
+      totalPayment,
+      totalInterest,
+      interestPercent,
+      principalPercent,
       loanPrincipal: principal,
     };
-  }, [principal, interestRate, tenure]);
-
-  // Bank comparison EMIs
-  const bankEMIs = useMemo(() => {
-    return bankColumns.map(bank => {
-      const result = calcEMI(principal, bank.interestRate, tenure);
-      return { ...bank, ...result };
-    });
-  }, [bankColumns, principal, tenure]);
+  }, [loanAmount, interestRate, tenure, downPayment]);
 
   const formatCurrency = (amount: number) => {
-    if (amount >= 10000000) return `Rs. ${(amount / 10000000).toFixed(2)} Cr`;
-    if (amount >= 100000) return `Rs. ${(amount / 100000).toFixed(2)} L`;
-    return `Rs. ${amount.toLocaleString("en-IN")}`;
-  };
-
-  const formatInputCurrency = (value: string) => {
-    const clean = value.replace(/[^0-9]/g, '');
-    if (!clean) return '';
-    return parseInt(clean, 10).toLocaleString('en-IN');
-  };
-
-  const handleSliderLoanAmount = (v: number[]) => {
-    setLoanAmountText(v[0].toLocaleString('en-IN'));
-  };
-  const handleSliderDownPayment = (v: number[]) => {
-    setDownPaymentText(v[0].toLocaleString('en-IN'));
-  };
-  const handleSliderInterest = (v: number[]) => {
-    setInterestRateText(v[0].toString());
-  };
-  const handleSliderTenure = (v: number[]) => {
-    setTenureText(v[0].toString());
-  };
-
-  const updateBankColumn = (id: string, field: keyof BankColumn, value: string | number) => {
-    setBankColumns(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b));
-  };
-
-  const removeBankColumn = (id: string) => {
-    if (bankColumns.length <= 1) return;
-    setBankColumns(prev => prev.filter(b => b.id !== id));
-  };
-
-  const addBankColumn = () => {
-    if (bankColumns.length >= 3) return;
-    const usedBanks = bankColumns.map(b => b.bankName);
-    const nextBank = BANKS.find(b => !usedBanks.includes(b)) || BANKS[0];
-    setBankColumns(prev => [...prev, { id: Date.now().toString(), bankName: nextBank, interestRate: 9.0, processingFee: 0 }]);
-  };
-
-  const openCustomerCapture = (method: "download" | "whatsapp" | "comparison") => {
-    setPendingShareMethod(method);
-    setShowCustomerDialog(true);
-  };
-
-  const handleConfirmShare = async () => {
-    if (!custName.trim() || !custPhone.trim() || custPhone.replace(/\D/g, "").length < 10) {
-      toast.error("Please enter your name and valid phone number");
-      return;
+    if (amount >= 10000000) {
+      return `₹${(amount / 10000000).toFixed(2)} Cr`;
+    } else if (amount >= 100000) {
+      return `₹${(amount / 100000).toFixed(2)} L`;
     }
+    return `₹${amount.toLocaleString("en-IN")}`;
+  };
 
-    setIsSaving(true);
-    try {
-      const data: EMIData = {
-        loanAmount, downPayment, loanPrincipal: principal,
-        interestRate, tenure, emi: emiDetails.emi,
-        totalPayment: emiDetails.totalPayment, totalInterest: emiDetails.totalInterest,
-        carName, variantName, onRoadPrice, selectedColor, selectedCity,
-        customerName: custName, customerPhone: custPhone,
-      };
+  const handleGetQuote = () => {
+    const loanDetails = `Car Loan: ${formatCurrency(loanAmount)} @ ${interestRate}% for ${tenure} months (EMI: ₹${emiDetails.emi.toLocaleString("en-IN")}/month)`;
+    onGetQuote?.(loanDetails);
+  };
 
-      if (pendingShareMethod === "download") {
-        const doc = await generateEMIPdf(data, undefined, true);
-        if (doc) {
-          await persistLoanQuoteHistory({
-            doc, fileName: `EMI_${custName.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
-            shareMethod: "download", customerName: custName, customerPhone: custPhone, customerEmail: custEmail || null,
-            carModel: carName || null, carVariant: variantName || null,
-            loanAmount: principal, downPayment, interestRate, tenureMonths: tenure,
-            emiAmount: emiDetails.emi, totalPayment: emiDetails.totalPayment, totalInterest: emiDetails.totalInterest,
-            source: "website",
-          });
-          doc.save(`EMI_Estimate_${custName.replace(/\s+/g, "_")}.pdf`);
-          toast.success("EMI PDF downloaded & quote saved!");
-        }
-      } else if (pendingShareMethod === "whatsapp") {
-        const doc = await generateEMIPdf(data, undefined, true);
-        if (doc) {
-          await persistLoanQuoteHistory({
-            doc, fileName: `EMI_${custName.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
-            shareMethod: "whatsapp", customerName: custName, customerPhone: custPhone, customerEmail: custEmail || null,
-            carModel: carName || null, carVariant: variantName || null,
-            loanAmount: principal, downPayment, interestRate, tenureMonths: tenure,
-            emiAmount: emiDetails.emi, totalPayment: emiDetails.totalPayment, totalInterest: emiDetails.totalInterest,
-            source: "website",
-          });
-        }
-        const message = generateEMIWhatsAppMessage(data);
-        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
-        toast.success("Quote saved & WhatsApp opened!");
-      } else if (pendingShareMethod === "comparison") {
-        const banks = bankEMIs.map(b => ({
-          bankName: b.bankName, interestRate: b.interestRate, processingFee: b.processingFee,
-          emi: b.emi, totalPayment: b.totalPayment, totalInterest: b.totalInterest,
-        }));
-        const doc = generateComparisonPdf({
-          carName: carName || "Car Loan", variantName, loanAmount, downPayment, principal, tenure, banks,
-          customerName: custName, customerPhone: custPhone,
-        }, true) as import("jspdf").default | undefined;
-        if (doc) {
-          await persistLoanQuoteHistory({
-            doc, fileName: `EMI_Comparison_${custName.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
-            shareMethod: "comparison_pdf", customerName: custName, customerPhone: custPhone, customerEmail: custEmail || null,
-            carModel: carName || null, carVariant: variantName || null,
-            loanAmount: principal, downPayment, interestRate, tenureMonths: tenure,
-            emiAmount: emiDetails.emi, totalPayment: emiDetails.totalPayment, totalInterest: emiDetails.totalInterest,
-            bankComparison: banks, source: "website",
-          });
-          doc.save(`EMI_Comparison_${custName.replace(/\s+/g, "_")}.pdf`);
-          toast.success("Comparison PDF downloaded & quote saved!");
-        }
-      }
-
-      setShowCustomerDialog(false);
-      setCustName(""); setCustPhone(""); setCustEmail("");
-    } catch (err: any) {
-      console.error("Quote share error:", err);
-      toast.error("Quote saved but there was an issue. PDF still downloaded.");
-    } finally {
-      setIsSaving(false);
+  const getEMIData = (): EMIData => ({
+    loanAmount,
+    downPayment,
+    loanPrincipal: emiDetails.loanPrincipal,
+    interestRate,
+    tenure,
+    emi: emiDetails.emi,
+    totalPayment: emiDetails.totalPayment,
+    totalInterest: emiDetails.totalInterest,
+    carName,
+    variantName,
+    onRoadPrice,
+    selectedColor,
+    selectedCity,
+  });
+ 
+   const handleDownloadPdf = () => {
+     try {
+       generateEMIPdf(getEMIData());
+       toast.success("EMI estimate PDF downloaded!");
+     } catch (error) {
+       toast.error("Failed to generate PDF");
+     }
+   };
+ 
+   const handleShareWhatsApp = () => {
+     const message = generateEMIWhatsAppMessage(getEMIData());
+     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+   };
+ 
+  const handleLoanAmountChange = (value: string) => {
+    // Remove commas and parse
+    const cleanValue = value.replace(/,/g, '');
+    const num = parseInt(cleanValue, 10);
+    if (!isNaN(num) && num >= 0) {
+      // Allow minimum 10000 (10K) to maximum 5 Crore
+      setLoanAmount(Math.min(Math.max(num, 10000), 50000000));
+    } else if (cleanValue === '') {
+      setLoanAmount(10000);
     }
   };
 
+  const handleDownPaymentChange = (value: string) => {
+    const cleanValue = value.replace(/,/g, '');
+    const num = parseInt(cleanValue, 10);
+    if (!isNaN(num) && num >= 0) {
+      setDownPayment(Math.min(Math.max(num, 0), loanAmount * 0.9));
+    } else if (cleanValue === '') {
+      setDownPayment(0);
+    }
+  };
+
+  const handleInterestRateChange = (value: string) => {
+    const num = parseFloat(value);
+    if (!isNaN(num) && num >= 0) {
+      setInterestRate(Math.min(Math.max(num, 1), 30));
+    } else if (value === '') {
+      setInterestRate(1);
+    }
+  };
+
+  const handleTenureChange = (value: string) => {
+    const num = parseInt(value, 10);
+    if (!isNaN(num) && num >= 0) {
+      setTenure(Math.min(Math.max(num, 6), 120));
+    } else if (value === '') {
+      setTenure(6);
+    }
+  };
+
+  // Quick EMI reference table
   const quickEmiTable = useMemo(() => {
     const tenures = [12, 24, 36, 48, 60];
+    const principal = loanAmount - downPayment;
+    const monthlyRate = interestRate / 12 / 100;
+    
     return tenures.map(months => {
-      const result = calcEMI(principal, interestRate, months);
-      return { months, emi: result.emi };
+      if (monthlyRate === 0 || principal <= 0) {
+        return { months, emi: principal > 0 ? Math.round(principal / months) : 0 };
+      }
+      const emi = Math.round(
+        (principal * monthlyRate * Math.pow(1 + monthlyRate, months)) /
+          (Math.pow(1 + monthlyRate, months) - 1)
+      );
+      return { months, emi };
     });
-  }, [principal, interestRate]);
-
-  // Find best bank (lowest EMI)
-  const bestBankIdx = useMemo(() => {
-    if (bankEMIs.length === 0) return -1;
-    let minIdx = 0;
-    bankEMIs.forEach((b, i) => { if (b.emi > 0 && b.emi < bankEMIs[minIdx].emi) minIdx = i; });
-    return minIdx;
-  }, [bankEMIs]);
+  }, [loanAmount, downPayment, interestRate]);
 
   return (
-    <>
     <section className="py-12 bg-gradient-to-br from-muted/50 via-background to-muted/30">
       <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
+        <div className="max-w-5xl mx-auto">
+          {/* Section Header */}
           <div className="text-center mb-8">
             <Badge variant="secondary" className="mb-4 py-1.5 px-4">
               <Calculator className="w-4 h-4 mr-2" />
@@ -264,7 +175,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
               EMI Calculator
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Plan your car purchase with our easy EMI calculator. Compare quotes from multiple banks.
+              Plan your car purchase with our easy EMI calculator. Get instant loan quotes from top banks.
             </p>
           </div>
 
@@ -274,77 +185,104 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                 {/* Left: Calculator Inputs */}
                 <div className="p-6 lg:p-8 space-y-6 bg-card">
                   <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    <Calculator className="w-5 h-5 text-foreground" />
+                    <Calculator className="w-5 h-5 text-primary" />
                     Loan Parameters
                   </h3>
 
-                  {/* Car Price */}
+                  {/* Car Price / Loan Amount */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Label className="flex items-center gap-1.5 text-sm font-medium">
-                        <IndianRupee className="w-4 h-4 text-foreground" />
+                        <IndianRupee className="w-4 h-4 text-primary" />
                         Car Price
                       </Label>
                       <div className="flex items-center gap-1">
-                        <span className="text-sm text-muted-foreground">Rs.</span>
+                        <span className="text-sm text-muted-foreground">₹</span>
                         <Input
                           type="text"
-                          value={loanAmountText}
-                          onChange={(e) => setLoanAmountText(formatInputCurrency(e.target.value))}
-                          onFocus={(e) => e.target.select()}
-                          placeholder="Enter amount"
-                          className="w-36 h-9 text-sm text-right font-bold text-foreground px-2 border-primary/30 focus:border-primary"
+                          value={loanAmount.toLocaleString("en-IN")}
+                          onChange={(e) => handleLoanAmountChange(e.target.value)}
+                          className="w-32 h-9 text-sm text-right font-bold text-primary px-2 border-primary/30 focus:border-primary"
                         />
                       </div>
                     </div>
-                    <Slider value={[loanAmount]} onValueChange={handleSliderLoanAmount} min={10000} max={50000000} step={10000} />
-                    <div className="flex justify-between text-xs text-muted-foreground"><span>Rs. 10K</span><span>Rs. 5 Crore</span></div>
+                    <Slider
+                      value={[loanAmount]}
+                      onValueChange={(value) => setLoanAmount(value[0])}
+                      min={10000}
+                      max={50000000}
+                      step={10000}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>₹10K</span>
+                      <span>₹5 Crore</span>
+                    </div>
                   </div>
 
                   {/* Down Payment */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Label className="flex items-center gap-1.5 text-sm font-medium">
-                        <TrendingDown className="w-4 h-4 text-green-600" />
+                        <TrendingDown className="w-4 h-4 text-success" />
                         Down Payment
                       </Label>
                       <div className="flex items-center gap-1">
-                        <span className="text-sm text-muted-foreground">Rs.</span>
+                        <span className="text-sm text-muted-foreground">₹</span>
                         <Input
                           type="text"
-                          value={downPaymentText}
-                          onChange={(e) => setDownPaymentText(formatInputCurrency(e.target.value))}
-                          onFocus={(e) => e.target.select()}
-                          placeholder="Enter amount"
-                          className="w-36 h-9 text-sm text-right font-bold text-green-600 px-2 border-green-600/30 focus:border-green-600"
+                          value={downPayment.toLocaleString("en-IN")}
+                          onChange={(e) => handleDownPaymentChange(e.target.value)}
+                          className="w-32 h-9 text-sm text-right font-bold text-success px-2 border-success/30 focus:border-success"
                         />
                       </div>
                     </div>
-                    <Slider value={[downPayment]} onValueChange={handleSliderDownPayment} min={0} max={Math.max(loanAmount * 0.9, 1)} step={5000} />
-                    <div className="flex justify-between text-xs text-muted-foreground"><span>Rs. 0</span><span>{formatCurrency(loanAmount * 0.9)} (90%)</span></div>
+                    <Slider
+                      value={[downPayment]}
+                      onValueChange={(value) => setDownPayment(value[0])}
+                      min={0}
+                      max={loanAmount * 0.9}
+                      step={5000}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>₹0</span>
+                      <span>{formatCurrency(loanAmount * 0.9)} (90%)</span>
+                    </div>
                   </div>
 
                   {/* Interest Rate */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Label className="flex items-center gap-1.5 text-sm font-medium">
-                        <Percent className="w-4 h-4 text-foreground" />
+                        <Percent className="w-4 h-4 text-accent" />
                         Interest Rate (p.a.)
                       </Label>
                       <div className="flex items-center gap-1">
                         <Input
-                          type="text"
-                          value={interestRateText}
-                          onChange={(e) => setInterestRateText(e.target.value)}
-                          onFocus={(e) => e.target.select()}
-                          placeholder="8.5"
-                          className="w-20 h-9 text-sm text-right font-bold text-foreground px-2 border-accent/30 focus:border-accent"
+                          type="number"
+                          value={interestRate}
+                          onChange={(e) => handleInterestRateChange(e.target.value)}
+                          step="0.1"
+                          min="6"
+                          max="18"
+                          className="w-20 h-9 text-sm text-right font-bold text-accent px-2 border-accent/30 focus:border-accent"
                         />
                         <span className="text-sm text-muted-foreground">%</span>
                       </div>
                     </div>
-                    <Slider value={[interestRate]} onValueChange={handleSliderInterest} min={1} max={30} step={0.1} />
-                    <div className="flex justify-between text-xs text-muted-foreground"><span>1%</span><span>30%</span></div>
+                    <Slider
+                      value={[interestRate]}
+                      onValueChange={(value) => setInterestRate(value[0])}
+                      min={1}
+                      max={30}
+                      step={0.1}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>1%</span>
+                      <span>30%</span>
+                    </div>
                   </div>
 
                   {/* Tenure */}
@@ -356,27 +294,38 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                       </Label>
                       <div className="flex items-center gap-1">
                         <Input
-                          type="text"
-                          value={tenureText}
-                          onChange={(e) => setTenureText(e.target.value.replace(/[^0-9]/g, ''))}
-                          onFocus={(e) => e.target.select()}
-                          placeholder="60"
+                          type="number"
+                          value={tenure}
+                          onChange={(e) => handleTenureChange(e.target.value)}
+                          min="12"
+                          max="84"
                           className="w-20 h-9 text-sm text-right font-bold text-foreground px-2"
                         />
                         <span className="text-sm text-muted-foreground">months</span>
                       </div>
                     </div>
-                    <Slider value={[tenure]} onValueChange={handleSliderTenure} min={6} max={120} step={1} />
-                    <div className="flex justify-between text-xs text-muted-foreground"><span>6 Months</span><span>10 Years</span></div>
+                    <Slider
+                      value={[tenure]}
+                      onValueChange={(value) => setTenure(value[0])}
+                      min={6}
+                      max={120}
+                      step={1}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>6 Months</span>
+                      <span>10 Years</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Right: Results */}
-                <div className="p-6 lg:p-8 bg-gradient-to-br from-primary/5 via-primary/10 to-green-500/5 flex flex-col">
+                <div className="p-6 lg:p-8 bg-gradient-to-br from-primary/5 via-primary/10 to-success/5 flex flex-col">
+                  {/* EMI Result - Hero Display */}
                   <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-2xl p-6 text-center shadow-lg mb-6">
                     <p className="text-primary-foreground/80 text-sm mb-1 font-medium">Your Monthly EMI</p>
                     <div className="flex items-center justify-center gap-1">
-                      <span className="text-lg font-semibold">Rs.</span>
+                      <IndianRupee className="w-8 h-8" />
                       <span className="text-4xl md:text-5xl font-bold tracking-tight">
                         {emiDetails.emi.toLocaleString("en-IN")}
                       </span>
@@ -386,22 +335,37 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
 
                   {/* Breakdown */}
                   <div className="bg-card rounded-xl p-5 space-y-4 mb-6 border border-border/50">
+                    {/* Visual Bar */}
                     <div className="h-3 rounded-full overflow-hidden flex bg-muted">
-                      <div className="bg-primary transition-all duration-500 rounded-l-full" style={{ width: `${emiDetails.principalPercent}%` }} />
-                      <div className="bg-accent transition-all duration-500 rounded-r-full" style={{ width: `${emiDetails.interestPercent}%` }} />
+                      <div
+                        className="bg-primary transition-all duration-500 rounded-l-full"
+                        style={{ width: `${emiDetails.principalPercent}%` }}
+                      />
+                      <div
+                        className="bg-accent transition-all duration-500 rounded-r-full"
+                        style={{ width: `${emiDetails.interestPercent}%` }}
+                      />
                     </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full bg-primary" />
-                        <div><p className="text-muted-foreground text-xs">Principal</p><p className="font-bold text-lg">{formatCurrency(principal)}</p></div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Principal Amount</p>
+                          <p className="font-bold text-lg">{formatCurrency(emiDetails.loanPrincipal)}</p>
+                        </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full bg-accent" />
-                        <div><p className="text-muted-foreground text-xs">Total Interest</p><p className="font-bold text-lg">{formatCurrency(emiDetails.totalInterest)}</p></div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Total Interest</p>
+                          <p className="font-bold text-lg">{formatCurrency(emiDetails.totalInterest)}</p>
+                        </div>
                       </div>
                     </div>
+
                     <div className="flex items-center justify-between pt-3 border-t border-border">
-                      <span className="text-sm text-muted-foreground font-medium">Total Payable</span>
+                      <span className="text-sm text-muted-foreground font-medium">Total Amount Payable</span>
                       <span className="text-xl font-bold text-foreground">{formatCurrency(emiDetails.totalPayment + downPayment)}</span>
                     </div>
                   </div>
@@ -411,12 +375,13 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                     <p className="text-sm font-medium text-muted-foreground mb-3">Quick EMI Reference</p>
                     <div className="grid grid-cols-5 gap-2 text-center">
                       {quickEmiTable.map(({ months, emi }) => (
-                        <div key={months}
+                        <div 
+                          key={months} 
                           className={`p-2 rounded-lg transition-all cursor-pointer ${tenure === months ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'}`}
-                          onClick={() => setTenureText(months.toString())}
+                          onClick={() => setTenure(months)}
                         >
                           <p className="text-xs opacity-75">{months}M</p>
-                          <p className="text-sm font-bold">Rs.{(emi / 1000).toFixed(1)}K</p>
+                          <p className="text-sm font-bold">₹{(emi / 1000).toFixed(1)}K</p>
                         </div>
                       ))}
                     </div>
@@ -424,225 +389,69 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
 
                   {/* CTA Buttons */}
                   <div className="mt-auto space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button onClick={() => openCustomerCapture("download")} className="h-11 font-semibold bg-gradient-to-r from-primary to-primary/90">
-                        <Download className="w-4 h-4 mr-2" /> Download PDF
+                    <Button 
+                       onClick={handleDownloadPdf}
+                       className="w-full h-12 text-base font-semibold hover:scale-[1.02] transition-transform bg-gradient-to-r from-primary to-primary/90"
+                      size="lg"
+                    >
+                       <Download className="w-5 h-5 mr-2" />
+                       Download EMI PDF
+                    </Button>
+                    
+                     <div className="grid grid-cols-2 gap-2">
+                       <Button 
+                         variant="outline"
+                         onClick={handleShareWhatsApp}
+                         className="h-11 font-semibold hover:scale-[1.02] transition-transform"
+                       >
+                         <Share2 className="w-4 h-4 mr-2" />
+                         Share
+                       </Button>
+                       <a 
+                         href={`https://wa.me/1155578093?text=Hi%20Grabyourcar!%20I%20need%20a%20car%20loan%20of%20${formatCurrency(emiDetails.loanPrincipal)}%20at%20${interestRate}%25%20for%20${tenure}%20months.%20EMI%3A%20₹${emiDetails.emi.toLocaleString("en-IN")}.%20Please%20connect%20me%20with%20banks.`}
+                         target="_blank"
+                         rel="noopener noreferrer"
+                         className="block"
+                       >
+                         <Button 
+                           variant="whatsapp"
+                           className="w-full h-11 font-semibold hover:scale-[1.02] transition-transform"
+                         >
+                           <MessageCircle className="w-4 h-4 mr-2" />
+                           Get Quote
+                         </Button>
+                       </a>
+                     </div>
+                     
+                     {onGetQuote && (
+                      <Button 
+                         variant="outline"
+                         onClick={handleGetQuote}
+                         className="w-full h-10"
+                      >
+                         <FileText className="w-4 h-4 mr-2" />
+                         Request Callback
                       </Button>
-                      <Button variant="outline" onClick={() => setShowComparison(!showComparison)} className="h-11 font-semibold">
-                        <Building2 className="w-4 h-4 mr-2" /> {showComparison ? "Hide" : "Compare Banks"}
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline" onClick={() => openCustomerCapture("whatsapp")} className="h-11 font-semibold">
-                        <Share2 className="w-4 h-4 mr-2" /> Share
-                      </Button>
-                      <a href={`https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%20need%20a%20car%20loan%20of%20${formatCurrency(principal)}%20for%20${tenure}%20months.`} target="_blank" rel="noopener noreferrer">
-                        <Button variant="whatsapp" className="w-full h-11 font-semibold">
-                          <MessageCircle className="w-4 h-4 mr-2" /> Get Quote
-                        </Button>
-                      </a>
-                    </div>
-                    {onGetQuote && (
-                      <Button variant="outline" onClick={() => onGetQuote?.(`Car Loan: ${formatCurrency(loanAmount)} @ ${interestRate}% for ${tenure}m`)} className="w-full h-10">
-                        <FileText className="w-4 h-4 mr-2" /> Request Callback
-                      </Button>
-                    )}
+                     )}
                   </div>
 
+                  {/* Bank Partners */}
                   <div className="text-center mt-4 pt-4 border-t border-border/50">
                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mb-2">
                       <Building2 className="h-4 w-4" />
                       <span>Partnered with leading banks</span>
                     </div>
-                    <p className="text-xs font-medium text-muted-foreground">SBI - HDFC Bank - ICICI Bank - Axis Bank - Kotak - IDFC First</p>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      SBI • HDFC Bank • ICICI Bank • Axis Bank • Kotak • IDFC First
+                    </p>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
-
-          {/* 3-Bank Comparison Section */}
-          {showComparison && (
-            <Card className="mt-6 border-2 border-primary/20 shadow-xl">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-                      <Building2 className="w-5 h-5 text-foreground" />
-                      Bank-wise EMI Comparison
-                    </h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Loan: {formatCurrency(principal)} | Tenure: {tenure} months
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    {bankColumns.length < 3 && (
-                      <Button variant="outline" size="sm" onClick={addBankColumn}>
-                        <Plus className="w-4 h-4 mr-1" /> Add Bank
-                      </Button>
-                    )}
-                    <Button onClick={() => openCustomerCapture("comparison")} size="sm" className="bg-gradient-to-r from-primary to-primary/80">
-                      <Download className="w-4 h-4 mr-1" /> Download Comparison PDF
-                    </Button>
-                  </div>
-                </div>
-
-                <div className={`grid gap-4 ${bankColumns.length === 1 ? 'grid-cols-1' : bankColumns.length === 2 ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
-                  {bankEMIs.map((bank, idx) => {
-                    const isBest = idx === bestBankIdx && bankEMIs.length > 1;
-                    return (
-                      <div key={bank.id} className={`relative rounded-xl border-2 p-5 transition-all ${isBest ? 'border-green-500 bg-green-50/50 dark:bg-green-950/20 shadow-lg' : 'border-border bg-card'}`}>
-                        {isBest && (
-                          <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs">
-                            Best Rate
-                          </Badge>
-                        )}
-                        {bankColumns.length > 1 && (
-                          <button onClick={() => removeBankColumn(bank.id)} className="absolute top-2 right-2 text-muted-foreground hover:text-destructive">
-                            <X className="w-4 h-4" />
-                          </button>
-                        )}
-
-                        {/* Bank Name Select */}
-                        <div className="mb-4">
-                          <Label className="text-xs text-muted-foreground mb-1 block">Bank</Label>
-                          <Select value={bank.bankName} onValueChange={(v) => updateBankColumn(bank.id, 'bankName', v)}>
-                            <SelectTrigger className="h-9 font-semibold"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {BANKS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Interest Rate */}
-                        <div className="mb-4">
-                          <Label className="text-xs text-muted-foreground mb-1 block">Interest Rate (%)</Label>
-                          <Input
-                            type="number" step="0.1" min="1" max="30"
-                            value={bank.interestRate}
-                            onChange={(e) => updateBankColumn(bank.id, 'interestRate', parseFloat(e.target.value) || 0)}
-                            className="h-9 font-semibold"
-                          />
-                        </div>
-
-                        {/* Processing Fee */}
-                        <div className="mb-5">
-                          <Label className="text-xs text-muted-foreground mb-1 block">Processing Fee (Rs.)</Label>
-                          <Input
-                            type="number" min="0"
-                            value={bank.processingFee}
-                            onChange={(e) => updateBankColumn(bank.id, 'processingFee', parseInt(e.target.value) || 0)}
-                            className="h-9 font-semibold"
-                          />
-                        </div>
-
-                        {/* Results */}
-                        <div className={`rounded-xl p-4 text-center ${isBest ? 'bg-green-100 dark:bg-green-900/30' : 'bg-muted/50'}`}>
-                          <p className="text-xs text-muted-foreground mb-1">Monthly EMI</p>
-                          <p className="text-3xl font-extrabold text-foreground">
-                            Rs. {bank.emi.toLocaleString('en-IN')}
-                          </p>
-                        </div>
-
-                        <div className="mt-4 space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Total Interest</span>
-                            <span className="font-semibold text-orange-500">{formatCurrency(bank.totalInterest)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Total Payable</span>
-                            <span className="font-semibold">{formatCurrency(bank.totalPayment)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Processing Fee</span>
-                            <span className="font-semibold">{bank.processingFee === 0 ? 'FREE' : `Rs. ${bank.processingFee.toLocaleString('en-IN')}`}</span>
-                          </div>
-                          <div className="flex justify-between pt-2 border-t border-border">
-                            <span className="text-muted-foreground font-medium">Effective Cost</span>
-                            <span className="font-bold text-foreground">{formatCurrency(bank.totalPayment + bank.processingFee)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Savings summary */}
-                {bankEMIs.length > 1 && bestBankIdx >= 0 && (
-                  <div className="mt-6 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl text-center">
-                    <p className="text-sm text-green-700 dark:text-green-400">
-                      <span className="font-bold">{bankEMIs[bestBankIdx].bankName}</span> saves you{" "}
-                      <span className="font-bold">
-                        {formatCurrency(
-                          Math.max(...bankEMIs.map(b => b.totalPayment + b.processingFee)) -
-                          (bankEMIs[bestBankIdx].totalPayment + bankEMIs[bestBankIdx].processingFee)
-                        )}
-                      </span>{" "}
-                      compared to the most expensive option!
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </section>
-
-    {/* Customer Details Capture Dialog */}
-    <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="w-5 h-5" />
-            Get Your Personalized EMI Quote
-          </DialogTitle>
-          <DialogDescription>
-            Enter your details to receive the EMI estimate. Our team will also reach out with the best loan offers.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div>
-            <Label className="text-sm font-medium">Full Name *</Label>
-            <Input
-              placeholder="e.g. Rahul Sharma"
-              value={custName}
-              onChange={e => setCustName(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label className="text-sm font-medium">Phone Number *</Label>
-            <Input
-              placeholder="e.g. 9876543210"
-              value={custPhone}
-              onChange={e => setCustPhone(e.target.value.replace(/[^0-9+]/g, "").slice(0, 12))}
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label className="text-sm font-medium">Email (optional)</Label>
-            <Input
-              placeholder="e.g. rahul@email.com"
-              value={custEmail}
-              onChange={e => setCustEmail(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-          <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
-            <p>📋 EMI: <span className="font-bold text-foreground">Rs. {emiDetails.emi.toLocaleString("en-IN")}/mo</span> for {tenure} months</p>
-            <p>💰 Loan: <span className="font-bold text-foreground">{formatCurrency(principal)}</span> @ {interestRate}% p.a.</p>
-          </div>
-        </div>
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => setShowCustomerDialog(false)}>Cancel</Button>
-          <Button onClick={handleConfirmShare} disabled={isSaving} className="gap-2">
-            {isSaving ? "Saving..." : pendingShareMethod === "whatsapp" ? "Share via WhatsApp" : "Download PDF"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-    </>
   );
 };
 

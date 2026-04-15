@@ -14,8 +14,6 @@ import logoImage from "@/assets/logo-grabyourcar-main.png";
 import AdminForgotPassword from "@/components/admin/AdminForgotPassword";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { VerticalPasswordDialog, getVerifiedVerticals, markVerticalVerified } from "@/components/admin/VerticalPasswordDialog";
-import { withPreviewParams } from "@/lib/previewRouting";
 
 type LoginStep =
   | "choose-type"
@@ -48,7 +46,7 @@ const AdminAuth = () => {
   // Redirect if already logged in (but not during vertical selection)
   useEffect(() => {
     if (user && !loading && step !== "select-vertical") {
-      navigate(withPreviewParams("/workspace"));
+      navigate("/workspace");
     }
   }, [user, loading, navigate, step]);
 
@@ -161,7 +159,7 @@ const AdminAuth = () => {
     if (userVerticals.length === 1) {
       setActiveVertical(userVerticals[0]);
       toast.success(`Welcome to ${userVerticals[0].name}!`);
-      navigate(withPreviewParams("/crm"));
+      navigate("/crm");
       setIsSubmitting(false);
       return;
     }
@@ -172,40 +170,11 @@ const AdminAuth = () => {
     setIsSubmitting(false);
   };
 
-  // Password gate state for vertical selection
-  const [passwordTarget, setPasswordTarget] = useState<BusinessVertical | null>(null);
-
   // ── STEP 2: Select vertical (after successful auth) ──
-  const handleSelectVertical = async (vertical: BusinessVertical) => {
-    // Check if vertical has a password and user isn't admin
-    const isAdminUser = (await supabase.from("user_roles").select("role").eq("user_id", user?.id || "")).data?.some(
-      (r: any) => r.role === "admin" || r.role === "super_admin"
-    );
-    
-    if (!isAdminUser) {
-      // Check if password exists for this vertical
-      const { data: vData } = await supabase
-        .from("business_verticals")
-        .select("vertical_password")
-        .eq("id", vertical.id)
-        .single();
-      
-      if (vData?.vertical_password && !getVerifiedVerticals().includes(vertical.id)) {
-        setPasswordTarget(vertical);
-        return;
-      }
-    }
-
+  const handleSelectVertical = (vertical: BusinessVertical) => {
     setActiveVertical(vertical);
     toast.success(`Welcome to ${vertical.name}!`);
-    navigate(withPreviewParams("/crm"));
-  };
-
-  const handlePasswordSuccess = (vertical: BusinessVertical) => {
-    setPasswordTarget(null);
-    setActiveVertical(vertical);
-    toast.success(`Welcome to ${vertical.name}!`);
-    navigate(withPreviewParams("/crm"));
+    navigate("/crm");
   };
 
   // ── Super Admin: Send OTP ──
@@ -289,7 +258,7 @@ const AdminAuth = () => {
       }
 
       toast.success("Welcome, Super Admin!");
-      navigate(withPreviewParams("/workspace"));
+      navigate("/workspace");
     } catch (err: any) {
       toast.error(err.message || "Verification failed");
     } finally {
@@ -314,7 +283,7 @@ const AdminAuth = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background">
-        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -364,8 +333,8 @@ const AdminAuth = () => {
               </div>
             </div>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-4">
-              <Shield className="h-4 w-4 text-foreground" />
-              <span className="text-sm font-medium text-foreground">Enterprise CRM</span>
+              <Shield className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-primary">Enterprise CRM</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-heading font-bold text-foreground">
               {stepTitle[step]}
@@ -384,7 +353,7 @@ const AdminAuth = () => {
                   >
                     <CardContent className="p-6 flex items-center gap-4">
                       <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Building2 className="h-7 w-7 text-foreground" />
+                        <Building2 className="h-7 w-7 text-primary" />
                       </div>
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg text-foreground">Team Login</h3>
@@ -496,7 +465,7 @@ const AdminAuth = () => {
                         <button
                           type="button"
                           onClick={() => setStep("forgot-password")}
-                          className="text-sm text-foreground hover:underline"
+                          className="text-sm text-primary hover:underline"
                         >
                           Forgot password?
                         </button>
@@ -523,7 +492,7 @@ const AdminAuth = () => {
                   <CardContent className="p-4 pt-0">
                     {verticalsLoading ? (
                       <div className="flex justify-center py-8">
-                        <Loader2 className="h-6 w-6 animate-spin text-foreground" />
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 gap-2">
@@ -673,19 +642,12 @@ const AdminAuth = () => {
               <span>Grabyourcar Enterprise CRM</span>
             </div>
             <div className="flex items-start gap-3 text-xs text-muted-foreground mt-3 justify-center">
-              <Shield className="h-3.5 w-3.5 text-foreground shrink-0 mt-0.5" />
+              <Shield className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
               <p>Protected area. All login attempts are monitored &amp; logged.</p>
             </div>
           </motion.div>
         </motion.div>
       </div>
-
-      <VerticalPasswordDialog
-        vertical={passwordTarget}
-        open={!!passwordTarget}
-        onClose={() => setPasswordTarget(null)}
-        onSuccess={handlePasswordSuccess}
-      />
     </div>
   );
 };

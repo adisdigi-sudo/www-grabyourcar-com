@@ -75,7 +75,7 @@ export const CorporateWhyChoose = () => {
               <div 
                 className={cn(
                   "w-12 h-12 rounded-xl flex items-center justify-center mb-4",
-                  "bg-primary/10 text-foreground",
+                  "bg-primary/10 text-primary",
                   "transition-all duration-300",
                   "group-hover:bg-primary group-hover:text-primary-foreground"
                 )}

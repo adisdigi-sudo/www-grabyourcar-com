@@ -423,7 +423,7 @@
                      )}
                    >
                      <div className="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center group-hover:bg-success/20 transition-colors">
-                       <Icon className="h-5 w-5 text-foreground" />
+                       <Icon className="h-5 w-5 text-success" />
                      </div>
                      <div className="flex-1">
                        <p className="font-semibold text-sm">{config.label}</p>
@@ -459,15 +459,15 @@
          {/* Trust Indicators */}
          <div className="flex items-center justify-center gap-4 pt-2 border-t border-border text-xs text-muted-foreground">
            <span className="flex items-center gap-1">
-             <Sparkles className="h-3 w-3 text-foreground" />
+             <Sparkles className="h-3 w-3 text-success" />
              Instant Response
            </span>
            <span className="flex items-center gap-1">
-             <Shield className="h-3 w-3 text-foreground" />
+             <Shield className="h-3 w-3 text-success" />
              Verified Dealers
            </span>
            <span className="flex items-center gap-1">
-             <Users className="h-3 w-3 text-foreground" />
+             <Users className="h-3 w-3 text-success" />
              Expert Team
            </span>
          </div>

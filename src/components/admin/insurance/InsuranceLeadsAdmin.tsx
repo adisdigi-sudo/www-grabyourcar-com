@@ -1,15 +1,10 @@
-import { useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
 import { Users, Phone, Car, Clock, TrendingUp } from "lucide-react";
 
 export function InsuranceLeadsAdmin() {
-  const queryClient = useQueryClient();
-
   const { data: leads, isLoading } = useQuery({
     queryKey: ["admin-insurance-leads"],
     queryFn: async () => {
@@ -23,27 +18,6 @@ export function InsuranceLeadsAdmin() {
     },
   });
 
-  useEffect(() => {
-    const channel = supabase
-      .channel("insurance-leads-admin-live")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "insurance_leads" },
-        (payload) => {
-          const lead = payload.new as { customer_name?: string | null; phone?: string | null; source?: string | null };
-          queryClient.invalidateQueries({ queryKey: ["admin-insurance-leads"] });
-          toast.success("New insurance lead received", {
-            description: [lead.customer_name || "Unknown", lead.phone || "", lead.source || "Unknown"].filter(Boolean).join(" • "),
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
-
   const stats = {
     total: leads?.length || 0,
     today: leads?.filter((l) => new Date(l.created_at).toDateString() === new Date().toDateString()).length || 0,
@@ -53,6 +27,7 @@ export function InsuranceLeadsAdmin() {
 
   return (
     <div className="space-y-4">
+      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-4 pb-4 flex items-center gap-3">
@@ -100,6 +75,7 @@ export function InsuranceLeadsAdmin() {
         </Card>
       </div>
 
+      {/* Leads Table */}
       <Card>
         <CardHeader>
           <CardTitle>Insurance Leads</CardTitle>
@@ -116,7 +92,6 @@ export function InsuranceLeadsAdmin() {
                     <th className="text-left py-2 px-3 font-medium">Vehicle</th>
                     <th className="text-left py-2 px-3 font-medium">Policy</th>
                     <th className="text-left py-2 px-3 font-medium">Source</th>
-                    <th className="text-left py-2 px-3 font-medium">Lead Time</th>
                     <th className="text-left py-2 px-3 font-medium">Date</th>
                   </tr>
                 </thead>
@@ -132,9 +107,6 @@ export function InsuranceLeadsAdmin() {
                       </td>
                       <td className="py-2 px-3"><Badge variant="secondary" className="text-xs">{lead.policy_type || "—"}</Badge></td>
                       <td className="py-2 px-3 text-muted-foreground text-xs">{lead.source || "—"}</td>
-                      <td className="py-2 px-3 text-muted-foreground text-xs">
-                        {formatDistanceToNow(new Date(lead.created_at), { addSuffix: true })}
-                      </td>
                       <td className="py-2 px-3 text-muted-foreground text-xs flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {new Date(lead.created_at).toLocaleString()}

@@ -11,8 +11,7 @@ const corsHeaders = {
  * Processes pending cross-vertical triggers and sends WhatsApp messages.
  */
 
-// Fallback messages if DB templates not found
-const JOURNEY_MESSAGES_FALLBACK: Record<string, (name: string) => string> = {
+const JOURNEY_MESSAGES: Record<string, (name: string) => string> = {
   car_to_insurance: (name) =>
     `Hi ${name}! 🚗 Congratulations on your car inquiry with Grabyourcar! Did you know we also offer the best car insurance deals? Protect your new ride with comprehensive coverage at unbeatable rates. Reply YES to get a free quote!`,
   car_to_loan: (name) =>
@@ -26,21 +25,6 @@ const JOURNEY_MESSAGES_FALLBACK: Record<string, (name: string) => string> = {
   loan_to_insurance: (name) =>
     `Hey ${name}! 💳 Since you're exploring car financing, don't forget about insurance! Grabyourcar offers the best insurance deals bundled with your loan. Reply YES for a combined quote!`,
 };
-
-async function getJourneyMessage(supabase: any, triggerType: string, name: string): Promise<string> {
-  const slug = `journey_${triggerType}`;
-  const { data } = await supabase
-    .from("crm_message_templates")
-    .select("body_text")
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .single();
-  if (data?.body_text) {
-    return data.body_text.replace(/\{\{name\}\}/g, name);
-  }
-  const fallback = JOURNEY_MESSAGES_FALLBACK[triggerType];
-  return fallback ? fallback(name) : `Hi ${name}, we have something special for you from Grabyourcar!`;
-}
 
 async function sendViaMeta(
   token: string,
@@ -121,7 +105,8 @@ serve(async (req) => {
       }
 
       const name = customer.customer_name || "there";
-      const messageText = await getJourneyMessage(supabase, trigger.trigger_type, name);
+      const messageGen = JOURNEY_MESSAGES[trigger.trigger_type];
+      const messageText = messageGen ? messageGen(name) : trigger.recommendation;
 
       let sendSuccess = false;
       if (WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID) {

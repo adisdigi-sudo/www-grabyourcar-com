@@ -39,8 +39,6 @@ import {
   LogOut,
   Building2,
   MessageCircle,
-  KeyRound,
-  Trophy,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
@@ -69,9 +67,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   // ── Universal ──
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "ai-cofounder", label: "🤖 AI Co-Founder", icon: Brain, badge: "AI" },
-  { id: "my-hr", label: "📋 My HR", icon: LayoutDashboard },
-  { id: "legacy-leads", label: "📦 Legacy Leads", icon: LayoutDashboard, allowedRoles: ["super_admin", "admin"] },
 
   // ── Sales CRM — sales vertical ──
   { id: "sales-crm", label: "🚗 Sales CRM", icon: Car, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
@@ -88,13 +83,8 @@ const navItems: NavItem[] = [
       { id: "services-api-partners", label: "🔗 API Partners", icon: Globe, verticals: ["rental"], allowedRoles: ["super_admin", "admin"] },
       { id: "services-insurance", label: "🛡️ Insurance CRM", icon: FileText, verticals: ["insurance"], allowedRoles: ["super_admin", "admin", "insurance"] },
       { id: "services-insurance-import", label: "📥 Insurance Import", icon: Database, verticals: ["insurance"], allowedRoles: ["super_admin", "admin", "insurance"] },
-      { id: "services-messaging-channels", label: "📡 Messaging & Channels", icon: Globe, verticals: ["insurance", "sales", "rental", "hsrp", "loans", "accessories"], allowedRoles: ["super_admin", "admin"] },
-      { id: "services-loans-pipeline", label: "💰 Loan Pipeline", icon: CreditCard, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
-      { id: "services-loans-disbursement", label: "📘 Disbursement Book", icon: FileText, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
-      { id: "services-loans-after-sales", label: "🤝 After Sales", icon: Users, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
-      { id: "services-loans-bulk", label: "🧰 Bulk Tools", icon: Database, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
+      { id: "services-loans", label: "💰 Car Loans CRM", icon: CreditCard, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
       { id: "services-emi-pdf", label: "EMI PDF Settings", icon: FileText, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
-      { id: "services-emi-calculator", label: "🧮 EMI Calculator", icon: CreditCard, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
       { id: "services-discounts", label: "Discount Presets", icon: Tags, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
       { id: "services-quote-generator", label: "Manual Quote", icon: FileSignature, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
       { id: "services-pricing", label: "Service Pricing", icon: CreditCard, verticals: ["hsrp", "rental"], allowedRoles: ["super_admin", "admin", "operations"] },
@@ -113,16 +103,8 @@ const navItems: NavItem[] = [
       { id: "ecommerce-accessories", label: "Accessories", icon: Package },
       { id: "ecommerce-orders", label: "Orders", icon: FileText },
       { id: "ecommerce-crosssell", label: "Cross-Sell", icon: Tags },
-      { id: "d2c-rto", label: "🛡️ RTO Suite", icon: Shield },
-      { id: "d2c-returns", label: "↩️ Returns", icon: Package },
-      { id: "d2c-checkout", label: "🛒 1Checkout", icon: CreditCard },
     ]
   },
-
-  // ── Omnichannel Inbox — operational verticals only ──
-  { id: "d2c-inbox", label: "📨 Omni Inbox", icon: MessageSquare, badge: "New",
-    verticals: ["sales", "insurance", "rental", "hsrp", "accessories", "dealer-network", "marketing", "loans"],
-    allowedRoles: ["super_admin", "admin", "sales", "operations"] },
 
   // ── Dealer Network — dedicated vertical ──
   { 
@@ -188,24 +170,12 @@ const navItems: NavItem[] = [
   { id: "automation-center", label: "🤖 Automation Center", icon: Sparkles, badge: "🔥",
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin"] },
-  { id: "auto-pilot", label: "🚀 Auto-Pilot", icon: Sparkles, badge: "AI",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
   { id: "lead-routing", label: "🔀 Lead Routing", icon: Users, badge: "New",
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin"] },
   { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New",
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin", "finance"] },
-  { id: "ad-spend-analytics", label: "📈 Ad Spend & CAC", icon: BarChart3, badge: "New",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "employee-performance", label: "🏆 Employee Performance", icon: BarChart3, badge: "New",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "ai-automation-hub", label: "🤖 AI Automation Hub", icon: Brain, badge: "🔥",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
 
   // ── Car Database — isolated vertical ──
   { 
@@ -215,7 +185,21 @@ const navItems: NavItem[] = [
     verticals: ["car-database"],
     allowedRoles: ["super_admin", "admin"],
     children: [
-      { id: "cars-workspace", label: "📊 Car Data Entry", icon: Car },
+      { id: "cars-list", label: "Cars & Details", icon: Car },
+      { id: "cars-brands", label: "🏭 Brands", icon: Database },
+      { id: "cars-variants", label: "Variants & Specs", icon: Tags },
+      { id: "cars-pricing", label: "Pricing & Breakup", icon: CreditCard },
+      { id: "cars-city-pricing", label: "📍 State/City Pricing", icon: CreditCard },
+      { id: "cars-colors", label: "Colors & Images", icon: Palette },
+      { id: "cars-images", label: "Gallery", icon: Image },
+      { id: "cars-attributes", label: "🏷️ Vehicle Attributes", icon: Tags },
+      { id: "cars-ai-entry", label: "🤖 AI Car Entry", icon: Sparkles, badge: "AI" },
+      { id: "cars-bulk-import", label: "📊 Bulk Import", icon: Database },
+      { id: "cars-quick-import", label: "💬 Quick Text Import", icon: MessageSquare },
+      { id: "cars-image-sync", label: "🤖 AI Image Sync", icon: Sparkles, badge: "AI" },
+      { id: "cars-migration", label: "Data Migration", icon: Database },
+      { id: "cars-ai", label: "AI Enhancement", icon: Brain },
+      { id: "cars-url-scraper", label: "🌐 URL Scraper", icon: Globe },
     ]
   },
 
@@ -276,11 +260,10 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
       { id: "marketing-command", label: "🎯 Command Center", icon: Rocket },
-      { id: "whatsapp-hub", label: "📱 WhatsApp Hub", icon: MessageSquare, badge: "All-in-One" },
-      { id: "holi-share", label: "📣 Bulk Broadcast", icon: MessageSquare, badge: "WA+Email" },
+      { id: "holi-share", label: "📣 Bulk Broadcast", icon: MessageSquare, badge: "New" },
+      { id: "marketing-templates", label: "📱 WhatsApp Templates", icon: MessageSquare },
       { id: "marketing-automation", label: "📧 Email Automation", icon: Mail },
       { id: "marketing-email", label: "Email Campaigns", icon: MessageSquare },
-      { id: "smart-excel", label: "📊 Smart Excel Upload", icon: Database, badge: "New" },
       { id: "marketing-bulk", label: "Bulk Data Manager", icon: Database },
     ]
   },
@@ -294,10 +277,9 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin"],
     children: [
       { id: "integrations-api", label: "API Portal", icon: Database },
-      { id: "open-api-portal", label: "Open API Keys", icon: KeyRound },
+      { id: "integrations-whatsapp", label: "WhatsApp API", icon: MessageSquare },
       { id: "integrations-shipping", label: "Shipping Partners", icon: Package },
       { id: "integrations-payments", label: "Payment Gateway", icon: CreditCard },
-      { id: "integrations-ad-tracking", label: "Ad Tracking", icon: BarChart3 },
     ]
   },
 
@@ -317,12 +299,9 @@ const navItems: NavItem[] = [
     ]
   },
   { id: "roles", label: "👥 User Roles", icon: UserCog, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
-  { id: "team-hierarchy", label: "🏛️ Team Hierarchy", icon: Users, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
-  { id: "my-team", label: "👥 My Team", icon: Users, allowedRoles: ["super_admin", "admin", "team_leader", "manager"] },
-  { id: "data-room", label: "📊 Data Room", icon: BarChart3, verticals: ["marketing"], allowedRoles: ["super_admin"] },
   { id: "settings", label: "⚙️ Site Settings", icon: Settings, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
 
-  // ── Accounts & Finance (Zoho Books style) ──
+  // ── Accounts & Finance — shows in accounts vertical + always for admins ──
   { 
     id: "finance-hub", 
     label: "💰 Accounts & Finance", 
@@ -330,41 +309,29 @@ const navItems: NavItem[] = [
     verticals: ["accounts"],
     allowedRoles: ["super_admin", "admin", "finance"],
     children: [
-      { id: "accounts-dashboard", label: "📊 Dashboard", icon: BarChart3 },
-      { id: "accounts-invoices", label: "📄 Invoices", icon: FileText },
+      { id: "accounts-finance", label: "📊 Finance Overview", icon: BarChart3 },
+      { id: "accounts-revenue", label: "💵 Revenue Entries", icon: CreditCard },
       { id: "accounts-expenses", label: "📤 Expenses", icon: CreditCard },
-      { id: "accounts-bills", label: "🧾 Bills (Payables)", icon: FileText },
-      { id: "accounts-banking", label: "🏦 Banking", icon: CreditCard },
-      { id: "accounts-chart", label: "📒 Chart of Accounts", icon: CreditCard },
-      { id: "accounts-journal", label: "📓 Journal Entries", icon: FileText },
-      { id: "accounts-reports", label: "📊 Reports & P&L", icon: BarChart3 },
-      { id: "accounts-documents", label: "📂 Documents", icon: FileText },
+      { id: "accounts-commissions", label: "🏆 Commissions", icon: CreditCard },
+      { id: "accounts-payouts", label: "💳 Payouts", icon: CreditCard },
     ]
   },
 
-  // ── HR System (10 Sub-Modules) ──
+  // ── HR & Office Culture — shows in hr vertical + always for admins ──
   { 
     id: "hr-hub", 
-    label: "👥 HR Management", 
+    label: "👥 HR & Office", 
     icon: Users,
     verticals: ["hr"],
     allowedRoles: ["super_admin", "admin"],
     children: [
-      { id: "hr-core", label: "🧑‍💼 Core HR", icon: Users },
-      { id: "hr-recruitment", label: "📋 Recruitment", icon: FileText },
-      { id: "hr-workforce", label: "📊 Workforce", icon: BarChart3 },
-      { id: "hr-attendance", label: "⏰ Attendance", icon: CalendarDays },
-      { id: "hr-payroll", label: "💰 Payroll", icon: CreditCard },
-      { id: "hr-expense", label: "🧾 Expense Claims", icon: CreditCard },
-      { id: "hr-performance", label: "⭐ Performance", icon: BarChart3 },
-      { id: "hr-engagement", label: "🎉 Engagement", icon: FileText },
-      { id: "hr-assets", label: "💻 Assets", icon: Package },
-      { id: "hr-helpdesk", label: "🎧 Helpdesk", icon: FileText },
-      { id: "hr-task-escalation", label: "🔺 Task Escalation", icon: FileText },
-      { id: "hr-daily-reports", label: "📊 Daily Reports", icon: BarChart3 },
+      { id: "hr-workspace", label: "📊 HR Overview", icon: BarChart3 },
+      { id: "hr-directory", label: "👥 Team Directory", icon: Users },
+      { id: "hr-attendance", label: "📋 Attendance", icon: CalendarDays },
+      { id: "hr-leaves", label: "🏖️ Leave Management", icon: CalendarDays },
+      { id: "hr-announcements", label: "📢 Announcements", icon: FileText },
     ]
   },
-
 ];
 
 export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => {
@@ -373,7 +340,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
   const { activeVertical, setActiveVertical } = useVerticalAccess();
   const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
-  const [openSections, setOpenSections] = useState<string[]>(["services", "cars", "website"]);
+  const [openSections, setOpenSections] = useState<string[]>(["cars", "website"]);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
@@ -390,6 +357,8 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
     const filterByVertical = (item: NavItem) => {
       // Items without verticals tag show everywhere
       if (!item.verticals) return true;
+      // Finance & HR hubs always visible for admins
+      if ((item.id === "finance-hub" || item.id === "hr-hub") && hasFullAccess) return true;
       // If no vertical is active, hide vertical-specific items
       if (!normalizedActiveSlug) return false;
       // Only show if item belongs to active vertical
@@ -405,16 +374,15 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
       });
     }
 
-    // Insurance workspace should stay focused: keep Dashboard + Insurance CRM tools only
+    // Insurance workspace should stay focused: keep Dashboard + Smart Calling + Insurance CRM tools
     if (normalizedActiveSlug === "insurance") {
       items = items
         .map(item => {
           if (item.id === "dashboard" || item.id === "calling-system") return item;
-          // Remove Accounts & Finance and HR from insurance vertical
-          if (item.id === "finance-hub" || item.id === "hr-hub") return null;
+          if (item.id === "finance-hub" || item.id === "hr-hub") return item;
           if (item.id === "services" && item.children) {
             const allowedInsuranceChildren = item.children.filter(
-              child => child.id === "services-insurance" || child.id === "services-insurance-import" || child.id === "services-messaging-channels"
+              child => child.id === "services-insurance" || child.id === "services-insurance-import"
             );
             return allowedInsuranceChildren.length > 0
               ? { ...item, children: allowedInsuranceChildren }
@@ -675,63 +643,35 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
             "border-t space-y-2",
             collapsed ? "p-2" : "p-3"
           )}>
-          {/* Role Switcher — Super Admin testing only */}
-          {!collapsed && isSuperAdmin() && (
-            <div className="px-1 pb-2">
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider px-1">View as Role</label>
-              <select
-                className="w-full mt-1 text-xs rounded-md border bg-background px-2 py-1.5"
-                defaultValue=""
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val) {
-                    localStorage.setItem("gyc_role_override", val);
-                    window.location.reload();
-                  } else {
-                    localStorage.removeItem("gyc_role_override");
-                    window.location.reload();
-                  }
-                }}
-              >
-                <option value="">Default (My Roles)</option>
-                <option value="super_admin">Super Admin</option>
-                <option value="admin">Admin</option>
-                <option value="sales">Sales</option>
-                <option value="operations">Manager / Ops</option>
-              </select>
+            {/* Logout Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "w-full text-destructive hover:text-destructive hover:bg-destructive/10 touch-manipulation",
+                collapsed ? "justify-center px-2" : "justify-start gap-2"
+              )}
+              onClick={async () => {
+                await signOut();
+                navigate('/crm-auth');
+              }}
+              title={collapsed ? "Sign Out" : undefined}
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              {!collapsed && <span className="text-sm">Sign Out</span>}
+            </Button>
+            
+            <div className={cn(
+              "flex items-center",
+              collapsed ? "justify-center" : "justify-between"
+            )}>
+              {!collapsed && (
+                <p className="text-xs text-muted-foreground">
+                  © 2025 Grabyourcar
+                </p>
+              )}
+              <ThemeToggle />
             </div>
-          )}
-
-          {/* Logout Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "w-full text-destructive hover:text-destructive hover:bg-destructive/10 touch-manipulation",
-              collapsed ? "justify-center px-2" : "justify-start gap-2"
-            )}
-            onClick={async () => {
-              localStorage.removeItem("gyc_role_override");
-              await signOut();
-              navigate('/crm-auth');
-            }}
-            title={collapsed ? "Sign Out" : undefined}
-          >
-            <LogOut className="h-4 w-4 shrink-0" />
-            {!collapsed && <span className="text-sm">Sign Out</span>}
-          </Button>
-          
-          <div className={cn(
-            "flex items-center",
-            collapsed ? "justify-center" : "justify-between"
-          )}>
-            {!collapsed && (
-              <p className="text-xs text-muted-foreground">
-                © 2025 Grabyourcar
-              </p>
-            )}
-            <ThemeToggle />
-          </div>
           </div>
         </div>
       </aside>

@@ -63,7 +63,7 @@ const Blog = () => {
               Car Reviews & Guides
             </Badge>
             <h1 className="text-3xl md:text-5xl font-heading font-bold text-foreground mb-4">
-              Expert Insights for <span className="text-foreground">Smart Car Buyers</span>
+              Expert Insights for <span className="text-primary">Smart Car Buyers</span>
             </h1>
             <p className="text-lg text-muted-foreground mb-8">
               In-depth car reviews, buying guides, and expert tips to help you make the right choice.
@@ -239,7 +239,7 @@ const BlogCard = ({ post }: { post: BlogPost }) => {
               <Clock className="h-3 w-3" />
               {post.readTime}
             </span>
-            <span className="flex items-center gap-1 text-foreground font-medium">
+            <span className="flex items-center gap-1 text-primary font-medium">
               Read More
               <ArrowRight className="h-3 w-3" />
             </span>

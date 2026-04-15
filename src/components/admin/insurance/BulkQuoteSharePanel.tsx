@@ -8,7 +8,6 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { generateInsuranceQuotePdf } from "@/lib/generateInsuranceQuotePdf";
-import { generateBulkQuoteExcel } from "@/lib/generateBulkQuoteExcel";
 import { generateRenewalReminderPdf } from "@/lib/generateRenewalReminderPdf";
 import {
   Users, Download, RefreshCw, MessageCircle, Zap, Loader2,
@@ -222,136 +221,59 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
     onDone?.();
   }, [selectedLeads, onDone]);
 
-  // Bulk WhatsApp with PDF
+  // Bulk WhatsApp via wa.me
   const bulkWhatsApp = useCallback(async () => {
     const target = selectedLeads.filter(l => l.phone && !l.phone.startsWith("IB_"));
     if (target.length === 0) { toast.error("No leads with valid phone numbers"); return; }
     setSending(true); setProgress(0);
-    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-    let sent = 0;
-    for (let i = 0; i < target.length; i++) {
-      const l = target[i];
-      try {
-        const daysLeft = l.policy_expiry_date ? differenceInDays(new Date(l.policy_expiry_date), new Date()) :
-                         l.renewal_date ? differenceInDays(new Date(l.renewal_date), new Date()) : 0;
-        const msg = `Hi ${l.customer_name || ""}! Your insurance renewal is ${daysLeft <= 0 ? "overdue" : `due in ${daysLeft} days`} for ${l.vehicle_make || ""} ${l.vehicle_model || ""} (${l.vehicle_number || ""}).\n\nCurrent Insurer: ${l.current_insurer || "N/A"}\nNCB: ${l.ncb_percentage ?? 0}%\n\nWe have the best renewal offers!\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n— Grabyourcar Insurance`;
-
-        // Generate PDF silently & upload
-        const pdfResult = generateInsuranceQuotePdf({
-          customerName: l.customer_name || "Customer",
-          phone: l.phone || "",
-          vehicleMake: l.vehicle_make || "N/A",
-          vehicleModel: l.vehicle_model || "N/A",
-          vehicleNumber: l.vehicle_number || "N/A",
-          vehicleYear: l.vehicle_year || new Date().getFullYear(),
-          fuelType: "Petrol",
-          insuranceCompany: l.current_insurer || "Best Available",
-          policyType: l.current_policy_type || "Comprehensive",
-          idv: 500000, basicOD: 8000, odDiscount: 1500,
-          ncbDiscount: Math.round((l.ncb_percentage || 0) * 80),
-          thirdParty: 6521, securePremium: 500, addonPremium: 3500,
-          addons: ["Zero Depreciation", "Engine Protection", "RSA"],
-        }, { skipDownload: true });
-
-        const pdfBlob = pdfResult.doc.output("blob");
-        console.log("PDF blob size:", pdfBlob.size, "bytes for", l.customer_name);
-        const storagePath = `shares/${Date.now()}_${pdfResult.fileName}`;
-        const { error: uploadErr } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
-        if (uploadErr) console.error("PDF upload failed:", uploadErr.message, uploadErr);
-        const pdfUrl = !uploadErr ? supabase.storage.from("quote-pdfs").getPublicUrl(storagePath).data?.publicUrl : null;
-        console.log("PDF URL:", pdfUrl ? "OK" : "MISSING", pdfUrl);
-
-        const vehicleLabel = l.vehicle_number || `${l.vehicle_make || ""} ${l.vehicle_model || ""}`.trim() || "Your Vehicle";
-        const premiumStr = `Rs. ${(l.current_premium || l.premium || 0).toLocaleString("en-IN")}`;
-        const expiryStr = l.policy_expiry_date || l.renewal_date || "N/A";
-
-        // Step 1: Send approved Meta template (SAFE — Marketing category, approved)
-        const result = await sendWhatsApp({
-          phone: l.phone || "", message: "", name: l.customer_name || "", logEvent: "bulk_quote", silent: true,
-          templateName: "renewal_reminder",
-          templateVariables: { var_1: l.customer_name || "Valued Customer", var_2: vehicleLabel, var_3: premiumStr + " | Expiry: " + expiryStr },
-          messageType: "template",
-        });
-
-        // Step 2: Send PDF as document (FREE — within 24h window opened by template)
-        if (result.success && pdfUrl) {
-          await new Promise(r => setTimeout(r, 800));
-          console.log("Sending PDF document to", l.phone, "URL:", pdfUrl);
-          const pdfSendResult = await sendWhatsApp({ phone: l.phone || "", message: `📄 ${l.customer_name || "Customer"} - Insurance Quote`, name: l.customer_name || "", messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName, silent: true, logEvent: "bulk_quote_pdf" });
-          console.log("PDF send result:", pdfSendResult);
-        } else {
-          console.warn("Skipping PDF send - template success:", result.success, "pdfUrl:", !!pdfUrl);
-        }
-        if (result.success) sent++;
-      } catch (e) { console.error(e); }
-      setProgress(Math.round(((i + 1) / target.length) * 100));
-      if (i < target.length - 1) await new Promise(r => setTimeout(r, 1500));
+    let count = 0;
+    for (const l of target) {
+      const clean = (l.phone || "").replace(/\D/g, "");
+      const full = clean.startsWith("91") ? clean : `91${clean}`;
+      const daysLeft = l.policy_expiry_date ? differenceInDays(new Date(l.policy_expiry_date), new Date()) :
+                       l.renewal_date ? differenceInDays(new Date(l.renewal_date), new Date()) : 0;
+      const msg = `Hi ${l.customer_name || ""}! Your insurance renewal is ${daysLeft <= 0 ? "overdue" : `due in ${daysLeft} days`} for ${l.vehicle_make || ""} ${l.vehicle_model || ""} (${l.vehicle_number || ""}).\n\nCurrent Insurer: ${l.current_insurer || "N/A"}\nNCB: ${l.ncb_percentage ?? 0}%\n\nWe have the best renewal offers!\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n— Grabyourcar Insurance`;
+      window.open(`https://wa.me/${full}?text=${encodeURIComponent(msg)}`, "_blank");
+      count++;
+      setProgress(Math.round((count / target.length) * 100));
+      await new Promise(r => setTimeout(r, 1500));
     }
     setSending(false);
-    toast.success(`📨 Sent ${sent}/${target.length} quotes with PDFs via WhatsApp`);
-    onDone?.();
-  }, [selectedLeads, onDone]);
+    toast.success(`📱 WhatsApp opened for ${count} clients!`);
+  }, [selectedLeads]);
 
-  // Bulk WhatsApp API with PDF
+  // Bulk WhatsApp API
   const bulkWhatsAppAPI = useCallback(async () => {
     const target = selectedLeads.filter(l => l.phone && !l.phone.startsWith("IB_"));
     if (target.length === 0) { toast.error("No leads with valid phone numbers"); return; }
     setSending(true); setProgress(0);
-    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
     let sent = 0;
-    for (let i = 0; i < target.length; i++) {
-      const l = target[i];
+    for (const l of target) {
+      const clean = (l.phone || "").replace(/\D/g, "");
+      const full = clean.startsWith("91") ? clean : `91${clean}`;
       try {
-        const daysLeft = l.policy_expiry_date ? differenceInDays(new Date(l.policy_expiry_date), new Date()) :
-                         l.renewal_date ? differenceInDays(new Date(l.renewal_date), new Date()) : 0;
-
-        // Generate PDF silently & upload
-        const pdfResult = generateRenewalReminderPdf({
-          customerName: l.customer_name || "Customer",
-          phone: l.phone || "",
-          vehicleMake: l.vehicle_make || "N/A",
-          vehicleModel: l.vehicle_model || "N/A",
-          vehicleNumber: l.vehicle_number || "N/A",
-          vehicleYear: l.vehicle_year || new Date().getFullYear(),
-          currentInsurer: l.current_insurer || "N/A",
-          policyType: l.current_policy_type || "Comprehensive",
-          policyExpiry: l.policy_expiry_date || l.renewal_date || new Date().toISOString(),
-          currentPremium: l.current_premium || l.premium || 0,
-          ncbPercentage: l.ncb_percentage || 0,
-        }, { skipDownload: true });
-
-        const pdfBlob = pdfResult.doc.output("blob");
-        console.log("Renewal PDF blob size:", pdfBlob.size, "bytes for", l.customer_name);
-        const storagePath = `shares/${Date.now()}_${pdfResult.fileName}`;
-        const { error: uploadErr } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
-        if (uploadErr) console.error("Renewal PDF upload failed:", uploadErr.message, uploadErr);
-        const pdfUrl = !uploadErr ? supabase.storage.from("quote-pdfs").getPublicUrl(storagePath).data?.publicUrl : null;
-        console.log("Renewal PDF URL:", pdfUrl ? "OK" : "MISSING");
-
-        const vehicleLabel = l.vehicle_number || `${l.vehicle_make || ""} ${l.vehicle_model || ""}`.trim() || "Your Vehicle";
-        const premiumStr = `Rs. ${(l.current_premium || l.premium || 0).toLocaleString("en-IN")}`;
-        const expiryStr = l.policy_expiry_date || l.renewal_date || "N/A";
-
-        // Step 1: Send approved Meta template (SAFE — Marketing category, approved)
-        const result = await sendWhatsApp({
-          phone: l.phone || "", message: "", name: l.customer_name || "", logEvent: "bulk_renewal_api", silent: true,
-          templateName: "renewal_reminder",
-          templateVariables: { var_1: l.customer_name || "Valued Customer", var_2: vehicleLabel, var_3: premiumStr + " | Expiry: " + expiryStr },
-          messageType: "template",
+        await supabase.functions.invoke("wa-automation-trigger", {
+          body: {
+            event: "insurance_renewal_bulk",
+            phone: full,
+            name: l.customer_name || "Customer",
+            leadId: l.id,
+            data: {
+              vehicle: `${l.vehicle_make || ""} ${l.vehicle_model || ""}`.trim(),
+              vehicle_number: l.vehicle_number || "N/A",
+              insurer: l.current_insurer || "N/A",
+              ncb: `${l.ncb_percentage ?? 0}%`,
+              expiry: l.policy_expiry_date || l.renewal_date || "N/A",
+            },
+          },
         });
-
-        // Step 2: Send PDF as document (FREE — within 24h window opened by template)
-        if (result.success && pdfUrl) {
-          await new Promise(r => setTimeout(r, 800));
-          await sendWhatsApp({ phone: l.phone || "", message: `📄 ${l.customer_name || "Customer"} - Renewal Reminder`, name: l.customer_name || "", messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName, silent: true, logEvent: "bulk_renewal_pdf" });
-        }
-        if (result.success) sent++;
+        sent++;
       } catch { /* continue */ }
-      setProgress(Math.round(((i + 1) / target.length) * 100));
-      if (i < target.length - 1) await new Promise(r => setTimeout(r, 1500));
+      setProgress(Math.round(((sent) / target.length) * 100));
+      await new Promise(r => setTimeout(r, 200));
     }
     setSending(false);
-    toast.success(`🚀 Sent ${sent}/${target.length} renewal reminders with PDFs via WA API!`);
+    toast.success(`🚀 Sent via WhatsApp API to ${sent} clients!`);
     onDone?.();
   }, [selectedLeads, onDone]);
 
@@ -385,27 +307,14 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
 
         <CardContent className="p-5 space-y-4">
           {/* Pre-filled sample downloads */}
-          <div className="grid grid-cols-3 gap-2">
-            <Button
-              variant="outline"
-              className="h-auto py-3 gap-2 flex-col border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-              onClick={async () => {
-                const target = selectedLeads.length > 0 ? selectedLeads : leads;
-                await generateBulkQuoteExcel(target);
-                toast.success(`📊 Excel template with ${target.length} records & auto-calc formulas downloaded!`);
-              }}
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              <span className="text-xs font-bold">⬇️ Excel Template ⚡</span>
-              <span className="text-[10px] text-muted-foreground">Auto-calc formulas • {selectedIds.size > 0 ? selectedIds.size : leads.length} records</span>
-            </Button>
+          <div className="grid grid-cols-2 gap-2">
             <Button
               variant="outline"
               className="h-auto py-3 gap-2 flex-col border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40"
               onClick={downloadPrefilledQuoteCSV}
             >
               <FileSpreadsheet className="h-4 w-4" />
-              <span className="text-xs font-bold">⬇️ Quote CSV</span>
+              <span className="text-xs font-bold">⬇️ Quote Sample CSV</span>
               <span className="text-[10px] text-muted-foreground">Pre-filled with {selectedIds.size > 0 ? selectedIds.size : leads.length} records</span>
             </Button>
             <Button
@@ -414,7 +323,7 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
               onClick={downloadPrefilledRenewalCSV}
             >
               <FileSpreadsheet className="h-4 w-4" />
-              <span className="text-xs font-bold">⬇️ Renewal CSV</span>
+              <span className="text-xs font-bold">⬇️ Renewal Sample CSV</span>
               <span className="text-[10px] text-muted-foreground">Pre-filled with {selectedIds.size > 0 ? selectedIds.size : leads.length} records</span>
             </Button>
           </div>

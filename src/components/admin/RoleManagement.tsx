@@ -35,8 +35,6 @@ const roleColors: Record<AppRole, string> = {
   operations: "bg-indigo-500 text-white",
   executive: "bg-sky-500 text-white",
   vertical_manager: "bg-violet-500 text-white",
-  team_leader: "bg-orange-500 text-white",
-  manager: "bg-teal-500 text-white",
 };
 
 const roleDescriptions: Record<AppRole, string> = {
@@ -51,8 +49,6 @@ const roleDescriptions: Record<AppRole, string> = {
   operations: "Day-to-day operations across verticals",
   executive: "Executive-level access to assigned verticals",
   vertical_manager: "Manages a specific business vertical",
-  team_leader: "Team Leader — manages a group of callers/executives",
-  manager: "Manager — oversees team leaders in a vertical",
 };
 
 export const RoleManagement = () => {

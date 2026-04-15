@@ -43,7 +43,7 @@ export const CarLoanHero = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <Badge className="bg-primary/20 text-foreground border-primary/30 mb-6 text-sm px-4 py-1.5">
+            <Badge className="bg-primary/20 text-primary border-primary/30 mb-6 text-sm px-4 py-1.5">
               <Zap className="w-3.5 h-3.5 mr-1.5" />
               Instant Digital Approval
             </Badge>
@@ -56,7 +56,7 @@ export const CarLoanHero = () => {
             transition={{ duration: 0.6, delay: 0.1 }}
           >
             Car Loan Starting{" "}
-            <span className="text-foreground">8.45% p.a.</span>
+            <span className="text-primary">8.45% p.a.</span>
             <br />
             <span className="text-white/80 text-3xl md:text-4xl lg:text-5xl">
               Approved in 30 Minutes
@@ -88,7 +88,7 @@ export const CarLoanHero = () => {
             ].map((stat, i) => (
               <div key={i} className="text-center group">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-primary/20 transition-colors">
-                  <stat.icon className="w-5 h-5 text-foreground" />
+                  <stat.icon className="w-5 h-5 text-primary" />
                 </div>
                 <p className="text-xl md:text-2xl font-bold text-white">{stat.value}</p>
                 <p className="text-xs text-white/50 uppercase tracking-wider">{stat.label}</p>

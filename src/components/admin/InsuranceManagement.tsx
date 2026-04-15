@@ -2,8 +2,8 @@ import { InsuranceWorkspace } from "./insurance/InsuranceWorkspace";
 
 export function InsuranceManagement() {
   return (
-    <div className="-mx-2 -mt-2 sm:-mx-4">
-      <main className="p-2 sm:p-4">
+    <div className="-mx-4 -mt-2 sm:-mx-6">
+      <main className="p-4 sm:p-6">
         <InsuranceWorkspace />
       </main>
     </div>

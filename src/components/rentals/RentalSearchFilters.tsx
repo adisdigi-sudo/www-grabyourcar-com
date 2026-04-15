@@ -8,7 +8,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, X, SlidersHorizontal } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { captureRentalJourneyStep } from "@/lib/rentalJourney";
 
 export interface RentalFilters {
   search: string;
@@ -40,7 +39,6 @@ export const RentalSearchFilters = ({
   const [isOpen, setIsOpen] = useState(false);
 
   const updateFilter = <K extends keyof RentalFilters>(key: K, value: RentalFilters[K]) => {
-    captureRentalJourneyStep("filters_updated", { [key]: value });
     onFiltersChange({ ...filters, [key]: value });
   };
 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRCLookup } from "@/hooks/useRCLookup";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,13 +18,9 @@ import {
   PhoneCall, MessageSquare, Mail, Clock, Plus, Filter,
   Database, UserCheck, UserX, PhoneOff, CalendarClock, RotateCcw,
   Trophy, XCircle, StickyNote, Eye, Trash2, Upload,
-  TrendingUp, Target, Flame, ChevronLeft, ChevronRight, Loader2, Car, Check, Send
+  TrendingUp, Target, Flame, ChevronLeft, ChevronRight, Loader2, Car
 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { INSURANCE_COMPANIES } from "@/lib/insuranceCompanies";
 import { BulkProspectImportButton } from "./BulkProspectImport";
-import { sendWhatsApp } from "@/lib/sendWhatsApp";
-import { buildInsuranceRetargetMessage } from "@/lib/insuranceRetargetMessage";
 
 const STATUSES = [
   { value: "new", label: "New", icon: Database, color: "bg-blue-500" },
@@ -89,18 +85,10 @@ export function InsuranceProspectPool() {
   const [remarkOpen, setRemarkOpen] = useState<Prospect | null>(null);
   const [remarkText, setRemarkText] = useState("");
   const [wonOpen, setWonOpen] = useState<Prospect | null>(null);
-  const [wonPolicyNumber, setWonPolicyNumber] = useState("");
-  const [wonInsurer, setWonInsurer] = useState("");
-  const [wonPremium, setWonPremium] = useState("");
-  const [wonExpiryDate, setWonExpiryDate] = useState("");
-  const [wonDocFile, setWonDocFile] = useState<File | null>(null);
-  const wonDocRef = useRef<HTMLInputElement>(null);
   const [lostOpen, setLostOpen] = useState<Prospect | null>(null);
   const [lostReason, setLostReason] = useState("");
   const [duplicateAlert, setDuplicateAlert] = useState<{ prospect: any; existingClient: any } | null>(null);
   const [page, setPage] = useState(0);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkSending, setBulkSending] = useState(false);
   const pageSize = 20;
   const rcLookup = useRCLookup({ showToast: false });
   const [form, setForm] = useState({
@@ -224,107 +212,31 @@ export function InsuranceProspectPool() {
     setRemarkOpen(null); setRemarkText("");
   };
 
+  // Won — auto convert to client
   const handleWon = async () => {
     if (!wonOpen) return;
-    if (!wonPolicyNumber.trim() || !wonInsurer.trim() || !wonExpiryDate) {
-      toast.error("Fill policy number, insurer, and expiry date");
-      return;
-    }
-    if (!wonDocFile) {
-      toast.error("Please attach the policy document (PDF/Image)");
-      return;
-    }
     try {
-      // Upload document
-      const fileExt = wonDocFile.name.split(".").pop() || "pdf";
-
       // Insert into insurance_clients
-      const premium = wonPremium ? parseFloat(wonPremium) : null;
       const { data: newClient, error } = await supabase.from("insurance_clients").insert({
         phone: wonOpen.phone, customer_name: wonOpen.customer_name || null, email: wonOpen.email || null,
         vehicle_number: wonOpen.vehicle_number || null, vehicle_make: wonOpen.vehicle_make || null,
         vehicle_model: wonOpen.vehicle_model || null, current_policy_type: wonOpen.policy_type || null,
         lead_source: wonOpen.data_source, notes: wonOpen.notes || null, lead_status: "won",
-        pipeline_stage: "policy_issued",
-        current_policy_number: wonPolicyNumber.trim().toUpperCase(),
-        current_insurer: wonInsurer.trim(),
-        current_premium: premium,
-        policy_expiry_date: wonExpiryDate,
       }).select("id").single();
       if (error) throw error;
-
-      // Upload doc to storage
-      const storagePath = `${newClient.id}/${wonPolicyNumber.trim()}_policy.${fileExt}`;
-      const { error: uploadErr } = await supabase.storage.from("policy-documents").upload(storagePath, wonDocFile, { upsert: true });
-      if (uploadErr) throw new Error("Document upload failed: " + uploadErr.message);
-      const { data: pubUrl } = supabase.storage.from("policy-documents").getPublicUrl(storagePath);
-      const policyDocumentUrl = pubUrl.publicUrl;
-
-      // Create policy record
-      const startDate = format(new Date(), "yyyy-MM-dd");
-      await supabase.from("insurance_policies").insert({
-        client_id: newClient.id,
-        policy_number: wonPolicyNumber.trim().toUpperCase(),
-        insurer: wonInsurer.trim(),
-        premium_amount: premium,
-        start_date: startDate,
-        expiry_date: wonExpiryDate,
-        status: "active",
-        issued_date: startDate,
-        booking_date: startDate,
-        source_label: "Won (Prospect)",
-        policy_document_url: policyDocumentUrl,
-        policy_type: wonOpen.policy_type || "comprehensive",
-      } as any);
 
       // Update prospect as won
       await supabase.from("insurance_prospects").update({
         prospect_status: "won", converted_to_lead_id: newClient.id, converted_at: new Date().toISOString(),
       }).eq("id", wonOpen.id);
 
-      await supabase.from("insurance_prospect_activity").insert({ prospect_id: wonOpen.id, activity_type: "won", title: "🏆 Lead Won!", description: "Converted to active client with policy" });
-      await supabase.from("insurance_activity_log").insert({ client_id: newClient.id, activity_type: "lead_created", title: "Won from Prospect Pool", description: `Policy ${wonPolicyNumber} by ${wonInsurer}`, metadata: { prospect_id: wonOpen.id } });
-
-      // Auto WhatsApp send with document
-      const customerName = wonOpen.customer_name || "Customer";
-      const phone = wonOpen.phone;
-      if (phone && !phone.startsWith("IB_")) {
-        try {
-          const premiumLabel = premium ? `₹${Number(premium).toLocaleString("en-IN")}` : "";
-          const expiryLabel = format(new Date(wonExpiryDate), "dd MMM yyyy");
-          const vehicleNum = wonOpen.vehicle_number || "";
-          const policyMsg = `Hello ${customerName} 🙏\n\nHere is your motor insurance policy document from Grabyourcar Insurance.\n\n📋 Policy No: *${wonPolicyNumber.trim().toUpperCase()}*\n🏢 Insurer: *${wonInsurer.trim()}*\n${vehicleNum ? `🚗 Vehicle: *${vehicleNum}*\n` : ""}${premiumLabel ? `💰 Premium: *${premiumLabel}*\n` : ""}📅 Valid till: *${expiryLabel}*\n\nWe are just a click away — ask and command us anything, anytime! 💚\n\n📞 +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗`;
-
-          const waResult = await sendWhatsApp({
-            phone,
-            message: policyMsg,
-            messageType: "document",
-            mediaUrl: policyDocumentUrl,
-            mediaFileName: `${wonPolicyNumber.trim()}_policy.${fileExt}`,
-            name: customerName,
-            logEvent: "prospect_won_auto_send",
-            silent: true,
-          });
-          if (waResult.success) {
-            toast.success("🏆 Lead Won! Policy document sent on WhatsApp");
-          } else {
-            toast.success("🏆 Lead Won! (WhatsApp send failed — share manually)");
-          }
-        } catch {
-          toast.success("🏆 Lead Won! (WhatsApp send failed — share manually)");
-        }
-      } else {
-        toast.success("🏆 Lead Won! Client created successfully");
-      }
+      await supabase.from("insurance_prospect_activity").insert({ prospect_id: wonOpen.id, activity_type: "won", title: "🏆 Lead Won!", description: "Converted to active client" });
+      await supabase.from("insurance_activity_log").insert({ client_id: newClient.id, activity_type: "lead_created", title: "Won from Prospect Pool", description: `Source: ${wonOpen.data_source}`, metadata: { prospect_id: wonOpen.id } });
 
       qc.invalidateQueries({ queryKey: ["insurance-prospects"] });
       qc.invalidateQueries({ queryKey: ["ins-clients"] });
+      toast.success("🏆 Lead Won! Client created successfully");
       setWonOpen(null);
-      setWonDocFile(null);
-      setWonPolicyNumber("");
-      setWonInsurer("");
-      setWonPremium("");
-      setWonExpiryDate("");
     } catch (e: any) { toast.error(e.message); }
   };
 
@@ -338,60 +250,6 @@ export function InsuranceProspectPool() {
     qc.invalidateQueries({ queryKey: ["insurance-prospects"] });
     toast.info("Lead marked as lost");
     setLostOpen(null); setLostReason("");
-  };
-
-  // ── Bulk WhatsApp Send ──
-  const handleBulkWhatsApp = async () => {
-    const targets = paged.filter(p => selectedIds.has(p.id) && p.phone && !p.phone.startsWith("IB_"));
-    if (targets.length === 0) { toast.error("No valid phone numbers selected"); return; }
-    setBulkSending(true);
-    let sent = 0, failed = 0;
-    const toastId = "bulk-wa-prospect";
-    toast.loading(`Sending... 0/${targets.length}`, { id: toastId });
-
-    for (let i = 0; i < targets.length; i++) {
-      const p = targets[i];
-      const message = buildInsuranceRetargetMessage({
-        customerName: p.customer_name,
-        vehicleNumber: p.vehicle_number,
-        insurer: p.insurer,
-        premium: p.premium_amount,
-      });
-
-      const result = await sendWhatsApp({
-        phone: p.phone,
-        message,
-        name: p.customer_name || undefined,
-        logEvent: "bulk_retarget_send",
-        silent: true,
-      });
-      if (result.success) sent++; else failed++;
-      toast.loading(`Sending... ${i + 1}/${targets.length}`, { id: toastId });
-      if (i < targets.length - 1) await new Promise(r => setTimeout(r, 500));
-    }
-
-    toast.dismiss(toastId);
-    toast.success(`📨 Bulk send complete: ${sent} sent, ${failed} failed`);
-    setSelectedIds(new Set());
-    setBulkSending(false);
-  };
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    const validIds = paged.filter(p => p.phone && !p.phone.startsWith("IB_")).map(p => p.id);
-    const allSelected = validIds.every(id => selectedIds.has(id));
-    if (allSelected) {
-      setSelectedIds(prev => { const next = new Set(prev); validIds.forEach(id => next.delete(id)); return next; });
-    } else {
-      setSelectedIds(prev => { const next = new Set(prev); validIds.forEach(id => next.add(id)); return next; });
-    }
   };
 
   // Delete prospect
@@ -525,30 +383,10 @@ export function InsuranceProspectPool() {
         <CardContent className="p-0">
           {isLoading ? <p className="text-sm text-muted-foreground py-12 text-center">Loading prospects...</p> : (
             <>
-               <div className="overflow-x-auto">
-                {/* Bulk Action Bar */}
-                {selectedIds.size > 0 && (
-                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-2 mx-3 mb-2 flex items-center gap-3">
-                    <Badge variant="secondary" className="text-xs">{selectedIds.size} selected</Badge>
-                    <Button size="sm" className="h-7 text-[10px] gap-1.5 bg-green-600 hover:bg-green-700 text-white"
-                      onClick={handleBulkWhatsApp} disabled={bulkSending}>
-                      {bulkSending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-                      Send Bulk WhatsApp
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setSelectedIds(new Set())}>
-                      Clear
-                    </Button>
-                  </div>
-                )}
+              <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-card z-10 border-b">
                     <tr className="bg-muted/30">
-                      <th className="py-2.5 px-2 w-8">
-                        <Checkbox
-                          checked={paged.filter(p => p.phone && !p.phone.startsWith("IB_")).length > 0 && paged.filter(p => p.phone && !p.phone.startsWith("IB_")).every(p => selectedIds.has(p.id))}
-                          onCheckedChange={toggleSelectAll}
-                        />
-                      </th>
                       <th className="text-left py-2.5 px-3 font-medium text-xs w-8">#</th>
                       <th className="text-left py-2.5 px-3 font-medium text-xs">Phone</th>
                       <th className="text-left py-2.5 px-3 font-medium text-xs">Name</th>
@@ -563,10 +401,7 @@ export function InsuranceProspectPool() {
                   </thead>
                   <tbody>
                     {paged.map((p, i) => (
-                      <tr key={p.id} className={`border-b hover:bg-muted/20 transition-colors ${selectedIds.has(p.id) ? "bg-primary/5" : ""} ${p.prospect_status === "interested" ? "bg-emerald-500/5" : ""} ${p.is_grabyourcar_customer ? "bg-amber-500/5" : ""}`}>
-                        <td className="py-2 px-2">
-                          <Checkbox checked={selectedIds.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} disabled={!p.phone || p.phone.startsWith("IB_")} />
-                        </td>
+                      <tr key={p.id} className={`border-b hover:bg-muted/20 transition-colors ${p.prospect_status === "interested" ? "bg-emerald-500/5" : ""} ${p.is_grabyourcar_customer ? "bg-amber-500/5" : ""}`}>
                         <td className="py-2 px-3 text-xs text-muted-foreground">{page * pageSize + i + 1}</td>
                         <td className="py-2 px-3 font-mono text-xs">
                           <div className="flex items-center gap-1">
@@ -597,22 +432,11 @@ export function InsuranceProspectPool() {
                                 <PhoneCall className="h-3.5 w-3.5 text-green-600" />
                               </Button>
                             </a>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp" onClick={() => {
-                              const name = p.customer_name || "Sir/Madam";
-                              const vehicle = p.vehicle_number ? ` for your vehicle *${p.vehicle_number}*` : "";
-                              const isLostProspect = p.prospect_status === "lost";
-                              const msg = isLostProspect
-                                ? buildInsuranceRetargetMessage({ customerName: p.customer_name, vehicleNumber: p.vehicle_number, insurer: p.insurer, premium: p.premium_amount })
-                                : `🙏 Namaste ${name},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${vehicle}.\n\n✅ We can help you with the best rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`;
-                              void sendWhatsApp({
-                                phone: p.phone,
-                                message: msg,
-                                name: p.customer_name || undefined,
-                                logEvent: isLostProspect ? "lost_retarget_whatsapp" : "prospect_pool_whatsapp",
-                              });
-                            }}>
-                              <MessageSquare className="h-3.5 w-3.5 text-green-600" />
-                            </Button>
+                            <a href={`https://wa.me/91${p.phone}`} target="_blank" rel="noopener noreferrer">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp">
+                                <MessageSquare className="h-3.5 w-3.5 text-green-600" />
+                              </Button>
+                            </a>
 
                             {/* Add Remark */}
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="Add Remark"
@@ -717,11 +541,11 @@ export function InsuranceProspectPool() {
       </Dialog>
 
       {/* ── Won Dialog ── */}
-      <Dialog open={!!wonOpen} onOpenChange={() => { setWonOpen(null); setWonDocFile(null); setWonPolicyNumber(""); setWonInsurer(""); setWonPremium(""); setWonExpiryDate(""); }}>
-        <DialogContent className="max-w-md">
+      <Dialog open={!!wonOpen} onOpenChange={() => setWonOpen(null)}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-green-600" /> Mark as Won 🏆</DialogTitle>
-            <DialogDescription>Create client with policy and auto-send document on WhatsApp.</DialogDescription>
+            <DialogDescription>This will create a new client in Insurance Clients and remove from prospects.</DialogDescription>
           </DialogHeader>
           {wonOpen && (
             <div className="space-y-3">
@@ -729,38 +553,20 @@ export function InsuranceProspectPool() {
                 <p><strong>Name:</strong> {wonOpen.customer_name || "—"}</p>
                 <p><strong>Phone:</strong> {wonOpen.phone}</p>
                 <p><strong>Vehicle:</strong> {wonOpen.vehicle_number || "—"}</p>
+                <p><strong>Source:</strong> {getSourceLabel(wonOpen.data_source)}</p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Policy Number *</Label>
-                  <Input value={wonPolicyNumber} onChange={e => setWonPolicyNumber(e.target.value.toUpperCase())} placeholder="e.g. OG-24-5678" className="h-9 text-sm font-mono" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Insurer *</Label>
-                  <Input value={wonInsurer} onChange={e => setWonInsurer(e.target.value)} className="h-9 text-sm" />
+              <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
+                <Trophy className="h-5 w-5 text-emerald-600 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium">Auto-creates client record</p>
+                  <p className="text-muted-foreground text-xs">Data, remarks & history will transfer to Insurance Clients.</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Premium (₹)</Label>
-                  <Input type="number" value={wonPremium} onChange={e => setWonPremium(e.target.value)} className="h-9 text-sm" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Expiry Date *</Label>
-                  <Input type="date" value={wonExpiryDate} min={format(new Date(), "yyyy-MM-dd")} onChange={e => setWonExpiryDate(e.target.value)} className="h-9 text-sm" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Policy Document (PDF/Image) *</Label>
-                <input ref={wonDocRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={e => setWonDocFile(e.target.files?.[0] || null)} className="block w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />
-                {wonDocFile && <p className="text-[10px] text-emerald-600">📎 {wonDocFile.name}</p>}
-              </div>
-              <p className="text-[10px] text-muted-foreground">📲 Policy document will be auto-sent to customer on WhatsApp</p>
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setWonOpen(null)}>Cancel</Button>
-            <Button className="bg-green-600 hover:bg-green-700" onClick={handleWon} disabled={!wonPolicyNumber.trim() || !wonInsurer.trim() || !wonExpiryDate || !wonDocFile}>🏆 Confirm Won</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleWon}>🏆 Confirm Won</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -873,31 +679,7 @@ export function InsuranceProspectPool() {
                 </div>
                 {rcLookup.error && <p className="text-[10px] text-destructive mt-0.5">{rcLookup.error}</p>}
               </div>
-              <div>
-                <Label className="text-xs">Insurer</Label>
-                {form.insurer && !INSURANCE_COMPANIES.includes(form.insurer) ? (
-                  <div className="flex gap-1 items-center">
-                    <Input value={form.insurer} onChange={e => setForm(f => ({ ...f, insurer: e.target.value }))} className="h-9 text-sm flex-1" placeholder="Type custom insurer name" data-custom-insurer />
-                    <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setForm(f => ({ ...f, insurer: "" }))} title="Clear">
-                      <XCircle className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Select value={form.insurer || ""} onValueChange={v => {
-                    if (v === "__add_custom__") {
-                      setForm(f => ({ ...f, insurer: " " }));
-                    } else {
-                      setForm(f => ({ ...f, insurer: v }));
-                    }
-                  }}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Select insurer" /></SelectTrigger>
-                    <SelectContent className="max-h-[200px]">
-                      {INSURANCE_COMPANIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                      <SelectItem value="__add_custom__">+ Add Custom Company</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
+              <div><Label className="text-xs">Insurer</Label><Input value={form.insurer} onChange={e => setForm(f => ({ ...f, insurer: e.target.value }))} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label className="text-xs">Expiry Date</Label><Input type="date" value={form.expiry_date} onChange={e => setForm(f => ({ ...f, expiry_date: e.target.value }))} /></div>
@@ -983,17 +765,7 @@ export function InsuranceProspectPool() {
               {/* Quick actions */}
               <div className="flex flex-wrap gap-2 py-2 border-y">
                 <a href={`tel:${detailOpen.phone}`}><Button size="sm" className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"><PhoneCall className="h-3.5 w-3.5" /> Call</Button></a>
-                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
-                  const isLostProspect = detailOpen.prospect_status === "lost";
-                  void sendWhatsApp({
-                    phone: detailOpen.phone,
-                    message: isLostProspect
-                      ? buildInsuranceRetargetMessage({ customerName: detailOpen.customer_name, vehicleNumber: detailOpen.vehicle_number, insurer: detailOpen.insurer, premium: detailOpen.premium_amount })
-                      : `🙏 Namaste ${detailOpen.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${detailOpen.vehicle_number ? ` for vehicle *${detailOpen.vehicle_number}*` : ""}.\n\n✅ We can help you with the best rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`,
-                    name: detailOpen.customer_name || undefined,
-                    logEvent: isLostProspect ? "prospect_pool_lost_detail_whatsapp" : "prospect_pool_detail_whatsapp",
-                  });
-                }}><MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp</Button>
+                <a href={`https://wa.me/91${detailOpen.phone}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline" className="gap-1.5"><MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp</Button></a>
                 {detailOpen.email && <a href={`mailto:${detailOpen.email}`}><Button size="sm" variant="outline" className="gap-1.5"><Mail className="h-3.5 w-3.5" /> Email</Button></a>}
                 <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setDetailOpen(null); setRemarkOpen(detailOpen); setRemarkText(""); }}>
                   <StickyNote className="h-3.5 w-3.5 text-amber-500" /> Add Remark
