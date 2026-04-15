@@ -4,6 +4,8 @@ interface SalesOfferParams {
   customerName: string;
   phone: string;
   carModel: string;
+  city?: string;
+  bankName?: string;
   variant?: string;
   color?: string;
   dealValue?: number;
@@ -91,6 +93,7 @@ export function generateSalesOfferPDF(params: SalesOfferParams): { doc: jsPDF; f
   doc.text(`Model: ${params.carModel}`, 15, y); y += 6;
   if (params.variant) { doc.text(`Variant: ${params.variant}`, 15, y); y += 6; }
   if (params.color) { doc.text(`Color: ${params.color}`, 15, y); y += 6; }
+  if (params.city) { doc.text(`City: ${params.city}`, 15, y); y += 6; }
   y += 4;
 
   // ── Price Breakup Table (car components) ──
@@ -197,6 +200,13 @@ export function generateSalesOfferPDF(params: SalesOfferParams): { doc: jsPDF; f
     doc.setTextColor(30, 41, 59);
     doc.text("SECTION B: Bank Loan Breakdown", colLabel, y);
     y += 8;
+
+    if (params.bankName) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(`Bank / NBFC: ${params.bankName}`, colLabel, y);
+      y += 6;
+    }
 
     // Sub-table header
     doc.setFillColor(239, 246, 255);

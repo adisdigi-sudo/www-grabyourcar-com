@@ -59,6 +59,17 @@ const BRANDS = [
   "Honda", "MG", "Skoda", "Volkswagen", "BMW", "Mercedes-Benz", "Audi"
 ];
 
+const DEFAULT_BANK_PARTNERS = [
+  { id: "default_0", name: "State Bank of India (SBI)", interest_rate_min: 8.5, interest_rate_max: 10.5, max_tenure_months: 84 },
+  { id: "default_1", name: "HDFC Bank", interest_rate_min: 8.5, interest_rate_max: 10.75, max_tenure_months: 84 },
+  { id: "default_2", name: "ICICI Bank", interest_rate_min: 8.7, interest_rate_max: 11, max_tenure_months: 84 },
+  { id: "default_3", name: "Axis Bank", interest_rate_min: 8.75, interest_rate_max: 11.25, max_tenure_months: 84 },
+  { id: "default_4", name: "Kotak Mahindra Bank", interest_rate_min: 8.5, interest_rate_max: 10.99, max_tenure_months: 84 },
+  { id: "default_5", name: "IDFC First Bank", interest_rate_min: 8.75, interest_rate_max: 12, max_tenure_months: 84 },
+  { id: "default_6", name: "Bajaj Finance", interest_rate_min: 9, interest_rate_max: 14, max_tenure_months: 84 },
+  { id: "default_7", name: "Tata Capital", interest_rate_min: 9.25, interest_rate_max: 13, max_tenure_months: 84 },
+];
+
 export const ManualQuoteGenerator = () => {
   const { config: pdfConfig } = useEMIPDFSettings();
   
@@ -116,7 +127,12 @@ export const ManualQuoteGenerator = () => {
   // DB-powered selectors
   const [dbCars, setDbCars] = useState<any[]>([]);
   const [dbColors, setDbColors] = useState<any[]>([]);
+  const [dbVariants, setDbVariants] = useState<any[]>([]);
+  const [dbCityPricing, setDbCityPricing] = useState<any[]>([]);
+  const [bankPartners, setBankPartners] = useState<any[]>([]);
   const [selectedCarId, setSelectedCarId] = useState("");
+  const [selectedVariantId, setSelectedVariantId] = useState("");
+  const [selectedBankId, setSelectedBankId] = useState("");
   const [brochureUrl, setBrochureUrl] = useState("");
 
   // Email sending state
@@ -136,21 +152,58 @@ export const ManualQuoteGenerator = () => {
     fetchCars();
   }, []);
 
+  useEffect(() => {
+    const fetchBankPartners = async () => {
+      const { data, error } = await supabase
+        .from("loan_bank_partners")
+        .select("id, name, interest_rate_min, interest_rate_max, max_tenure_months")
+        .eq("is_active", true)
+        .order("sort_order");
+
+      if (error || !data?.length) {
+        setBankPartners(DEFAULT_BANK_PARTNERS);
+        return;
+      }
+
+      setBankPartners(data);
+    };
+
+    fetchBankPartners();
+  }, []);
+
   // Fetch colors when car is selected
   useEffect(() => {
     if (!selectedCarId) {
       setDbColors([]);
+      setDbVariants([]);
+      setDbCityPricing([]);
       return;
     }
-    const fetchColors = async () => {
-      const { data } = await supabase
-        .from("car_colors")
-        .select("id, name, hex_code")
-        .eq("car_id", selectedCarId)
-        .order("sort_order");
-      if (data) setDbColors(data);
+    const fetchCarMeta = async () => {
+      const [colorsRes, variantsRes, cityPricingRes] = await Promise.all([
+        supabase
+          .from("car_colors")
+          .select("id, name, hex_code")
+          .eq("car_id", selectedCarId)
+          .order("sort_order"),
+        supabase
+          .from("car_variants")
+          .select("id, name, fuel_type, transmission, ex_showroom, rto, insurance, tcs, fastag, registration, handling, on_road_price")
+          .eq("car_id", selectedCarId)
+          .order("sort_order"),
+        supabase
+          .from("car_city_pricing")
+          .select("id, city, state, variant_id, ex_showroom, rto, insurance, tcs, fastag, registration, handling, other_charges, on_road_price")
+          .eq("car_id", selectedCarId)
+          .eq("is_active", true)
+          .order("city"),
+      ]);
+
+      if (colorsRes.data) setDbColors(colorsRes.data);
+      if (variantsRes.data) setDbVariants(variantsRes.data);
+      if (cityPricingRes.data) setDbCityPricing(cityPricingRes.data);
     };
-    fetchColors();
+    fetchCarMeta();
     
     // Set brochure URL
     const car = dbCars.find(c => c.id === selectedCarId);
@@ -160,6 +213,11 @@ export const ManualQuoteGenerator = () => {
       setBrand(car.brand);
       setModel(car.name.replace(car.brand, "").trim() || car.name);
     }
+
+    setSelectedVariantId("");
+    setVariant("");
+    setColor("");
+    setCity("");
   }, [selectedCarId, dbCars]);
 
   // Filter cars by brand
@@ -167,6 +225,92 @@ export const ManualQuoteGenerator = () => {
     if (!brand) return dbCars;
     return dbCars.filter(c => c.brand.toLowerCase().includes(brand.toLowerCase()));
   }, [brand, dbCars]);
+
+  const cityOptions = useMemo(() => {
+    const scoped = selectedVariantId
+      ? dbCityPricing.filter((pricing) => !pricing.variant_id || pricing.variant_id === selectedVariantId)
+      : dbCityPricing;
+
+    return Array.from(new Map(scoped.map((pricing) => [pricing.city, pricing])).values());
+  }, [dbCityPricing, selectedVariantId]);
+
+  const applyPricingBreakup = (pricing?: {
+    ex_showroom?: number | null;
+    rto?: number | null;
+    insurance?: number | null;
+    tcs?: number | null;
+    fastag?: number | null;
+    registration?: number | null;
+    handling?: number | null;
+    other_charges?: number | null;
+  } | null) => {
+    if (!pricing) return;
+
+    setExShowroom(Number(pricing.ex_showroom || 0));
+    setRto(Number(pricing.rto || 0));
+    setInsurance(Number(pricing.insurance || 0));
+    setTcs(Number(pricing.tcs || 0));
+    setFastag(Number(pricing.fastag ?? 500));
+    setRegistration(Number(pricing.registration || 0));
+    setHandling(Number(pricing.handling || 0));
+
+    if (typeof pricing.other_charges === "number") {
+      setOtherCharges(Number(pricing.other_charges || 0));
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedVariantId) return;
+
+    const selectedVariant = dbVariants.find((item) => item.id === selectedVariantId);
+    if (!selectedVariant) return;
+
+    setVariant(selectedVariant.name || "");
+
+    const citySpecificPricing = city
+      ? dbCityPricing.find((pricing) => pricing.city === city && (!pricing.variant_id || pricing.variant_id === selectedVariantId))
+      : null;
+
+    applyPricingBreakup(citySpecificPricing || selectedVariant);
+  }, [selectedVariantId, city, dbVariants, dbCityPricing]);
+
+  useEffect(() => {
+    if (!selectedVariantId || !city) return;
+
+    const citySpecificPricing = dbCityPricing.find(
+      (pricing) => pricing.city === city && (!pricing.variant_id || pricing.variant_id === selectedVariantId)
+    );
+
+    if (citySpecificPricing) {
+      applyPricingBreakup(citySpecificPricing);
+    }
+  }, [city, selectedVariantId, dbCityPricing]);
+
+  useEffect(() => {
+    if (!bankName || selectedBankId) return;
+
+    const matchedPartner = bankPartners.find((partner) => partner.name === bankName);
+    if (matchedPartner) {
+      setSelectedBankId(matchedPartner.id);
+    }
+  }, [bankName, selectedBankId, bankPartners]);
+
+  useEffect(() => {
+    if (!selectedBankId || selectedBankId === "__custom__") return;
+
+    const matchedPartner = bankPartners.find((partner) => partner.id === selectedBankId);
+    if (!matchedPartner) return;
+
+    setBankName(matchedPartner.name);
+
+    if (matchedPartner.interest_rate_min) {
+      setInterestRate(Number(matchedPartner.interest_rate_min));
+    }
+
+    if (matchedPartner.max_tenure_months) {
+      setTenure(Number(matchedPartner.max_tenure_months));
+    }
+  }, [selectedBankId, bankPartners]);
 
   // Calculate totals
   const subtotal = exShowroom + rto + insurance + tcs + fastag + registration + handling + accessories + extendedWarranty + otherCharges;
@@ -210,6 +354,8 @@ export const ManualQuoteGenerator = () => {
     customerName: customerName || "Customer",
     phone: customerPhone || "",
     carModel: `${brand} ${model}`.trim() || "Car",
+    city: city || undefined,
+    bankName: bankName || undefined,
     variant: variant || undefined,
     color: color || undefined,
     exShowroomPrice: exShowroom || undefined,
@@ -544,6 +690,8 @@ export const ManualQuoteGenerator = () => {
     setColor("");
     setCity("");
     setSelectedCarId("");
+    setSelectedVariantId("");
+    setSelectedBankId("");
     setBrochureUrl("");
     setCustomerName("");
     setCustomerPhone("");
@@ -666,11 +814,28 @@ export const ManualQuoteGenerator = () => {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Variant</Label>
-                  <Input 
-                    placeholder="e.g., ZXI+ AT"
-                    value={variant}
-                    onChange={(e) => setVariant(e.target.value)}
-                  />
+                  {dbVariants.length > 0 ? (
+                    <Select value={selectedVariantId} onValueChange={setSelectedVariantId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select variant" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dbVariants.map((variantOption) => (
+                          <SelectItem key={variantOption.id} value={variantOption.id}>
+                            {variantOption.name}
+                            {variantOption.transmission ? ` • ${variantOption.transmission}` : ""}
+                            {variantOption.fuel_type ? ` • ${variantOption.fuel_type}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input 
+                      placeholder="e.g., ZXI+ AT"
+                      value={variant}
+                      onChange={(e) => setVariant(e.target.value)}
+                    />
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1">
@@ -709,11 +874,26 @@ export const ManualQuoteGenerator = () => {
                     <MapPin className="h-3 w-3" />
                     City
                   </Label>
-                  <Input 
-                    placeholder="e.g., Delhi NCR"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                  />
+                  {cityOptions.length > 0 ? (
+                    <Select value={city} onValueChange={setCity}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select city pricing" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cityOptions.map((pricing) => (
+                          <SelectItem key={pricing.id} value={pricing.city}>
+                            {pricing.city}{pricing.state ? `, ${pricing.state}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input 
+                      placeholder="e.g., Delhi NCR"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -921,8 +1101,41 @@ export const ManualQuoteGenerator = () => {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Bank / NBFC Name</Label>
-                    <Input placeholder="e.g., HDFC Bank" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                    <Select
+                      value={selectedBankId}
+                      onValueChange={(value) => {
+                        setSelectedBankId(value);
+                        if (value === "__custom__") {
+                          setBankName("");
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose bank partner" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {bankPartners.map((partner) => (
+                          <SelectItem key={partner.id} value={partner.id}>
+                            {partner.name}
+                            {partner.interest_rate_min ? ` (${partner.interest_rate_min}%${partner.interest_rate_max ? `-${partner.interest_rate_max}%` : ""})` : ""}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__custom__">+ Add Custom Bank / NBFC</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+                  {selectedBankId === "__custom__" && (
+                    <div className="space-y-2">
+                      <Label>Custom Bank / NBFC</Label>
+                      <Input placeholder="e.g., HDFC Bank" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                    </div>
+                  )}
+                  {selectedBankId !== "__custom__" && bankName && (
+                    <div className="space-y-2">
+                      <Label>Selected Bank / NBFC</Label>
+                      <Input value={bankName} readOnly className="bg-muted/50" />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>Interest Rate (%)</Label>
                     <Input type="number" step="0.1" placeholder="8.5" value={interestRate || ''} onChange={(e) => setInterestRate(Number(e.target.value))} />
