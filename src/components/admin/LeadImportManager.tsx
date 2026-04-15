@@ -207,7 +207,7 @@ export const LeadImportManager = ({ verticalCategory, verticalId }: LeadImportMa
                               <SelectValue placeholder="Select column" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">-- Skip --</SelectItem>
+                              <SelectItem value="__skip__">-- Skip --</SelectItem>
                               {csvHeaders.map(h => (
                                 <SelectItem key={h} value={h}>{h}</SelectItem>
                               ))}

@@ -441,7 +441,7 @@ export default function StateCityPricingManager() {
                     <SelectValue placeholder="All Cars" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Cars</SelectItem>
+                    <SelectItem value="__all__">All Cars</SelectItem>
                     {cars.map(car => (
                       <SelectItem key={car.id} value={car.id}>
                         {car.brand} {car.name}
@@ -457,7 +457,7 @@ export default function StateCityPricingManager() {
                     <SelectValue placeholder="All States" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All States</SelectItem>
+                    <SelectItem value="__all__">All States</SelectItem>
                     {states.map(state => (
                       <SelectItem key={state.code} value={state.code}>
                         {state.name} ({state.rto_percentage}% RTO)
@@ -473,7 +473,7 @@ export default function StateCityPricingManager() {
                     <SelectValue placeholder={selectedState ? "Select City" : "Select State First"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Cities</SelectItem>
+                    <SelectItem value="__all__">All Cities</SelectItem>
                     {cities.map(city => (
                       <SelectItem key={city.id} value={city.name}>
                         {city.name} {city.is_metro && <Badge variant="secondary" className="ml-1">Metro</Badge>}
