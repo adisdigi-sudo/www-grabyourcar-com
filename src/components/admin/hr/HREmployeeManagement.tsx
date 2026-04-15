@@ -85,6 +85,52 @@ export const HREmployeeManagement = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
+  // Fetch team members for manager selection
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ["team-members-for-mgr"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("team_members").select("*").eq("is_active", true).order("display_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch employee profiles for manager info
+  const { data: empProfiles = [] } = useQuery({
+    queryKey: ["hr-employee-profiles"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("employee_profiles") as any).select("*");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Change Manager mutation
+  const changeManagerMutation = useMutation({
+    mutationFn: async ({ teamMemberId, newMgrUserId, newMgrName }: any) => {
+      const { error: profErr } = await (supabase.from("employee_profiles") as any)
+        .update({ manager_user_id: newMgrUserId, manager_name: newMgrName })
+        .eq("team_member_id", teamMemberId);
+      if (profErr) throw profErr;
+      const mgrTeamMember = teamMembers.find((m: any) => m.user_id === newMgrUserId);
+      if (mgrTeamMember) {
+        const { error: tmErr } = await supabase.from("team_members")
+          .update({ reporting_to: mgrTeamMember.id } as any)
+          .eq("id", teamMemberId);
+        if (tmErr) throw tmErr;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["hr-employees"] });
+      qc.invalidateQueries({ queryKey: ["hr-employee-profiles"] });
+      toast.success("Manager changed successfully ✅");
+      setShowManagerDialog(false);
+      setManagerTarget(null);
+      setNewManagerId("");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const filtered = employees.filter((e: any) => {
     const matchSearch = !search || e.full_name?.toLowerCase().includes(search.toLowerCase()) || e.department?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || 
