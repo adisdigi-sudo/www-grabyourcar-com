@@ -6872,18 +6872,27 @@ export type Database = {
       }
       employee_profiles: {
         Row: {
+          aadhaar_number: string | null
+          bank_account_number: string | null
+          bank_ifsc: string | null
+          bank_name: string | null
           basic_salary: number | null
+          blood_group: string | null
           created_at: string | null
           da: number | null
           department: string | null
           designation: string | null
           email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          employee_code: string | null
           employment_type: string | null
           esi_deduction: number | null
           full_name: string
           grace_minutes: number | null
           hra: number | null
           id: string
+          interview_notes: string | null
           is_active: boolean | null
           joining_date: string | null
           manager_name: string | null
@@ -6891,10 +6900,12 @@ export type Database = {
           monthly_ctc: number | null
           onboarded_at: string | null
           onboarded_by: string | null
+          pan_number: string | null
           pf_deduction: number | null
           phone: string | null
           probation_end_date: string | null
           professional_tax: number | null
+          recruitment_source: string | null
           role: string | null
           shift_end: string | null
           shift_start: string | null
@@ -6908,18 +6919,27 @@ export type Database = {
           working_days_per_month: number | null
         }
         Insert: {
+          aadhaar_number?: string | null
+          bank_account_number?: string | null
+          bank_ifsc?: string | null
+          bank_name?: string | null
           basic_salary?: number | null
+          blood_group?: string | null
           created_at?: string | null
           da?: number | null
           department?: string | null
           designation?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          employee_code?: string | null
           employment_type?: string | null
           esi_deduction?: number | null
           full_name: string
           grace_minutes?: number | null
           hra?: number | null
           id?: string
+          interview_notes?: string | null
           is_active?: boolean | null
           joining_date?: string | null
           manager_name?: string | null
@@ -6927,10 +6947,12 @@ export type Database = {
           monthly_ctc?: number | null
           onboarded_at?: string | null
           onboarded_by?: string | null
+          pan_number?: string | null
           pf_deduction?: number | null
           phone?: string | null
           probation_end_date?: string | null
           professional_tax?: number | null
+          recruitment_source?: string | null
           role?: string | null
           shift_end?: string | null
           shift_start?: string | null
@@ -6944,18 +6966,27 @@ export type Database = {
           working_days_per_month?: number | null
         }
         Update: {
+          aadhaar_number?: string | null
+          bank_account_number?: string | null
+          bank_ifsc?: string | null
+          bank_name?: string | null
           basic_salary?: number | null
+          blood_group?: string | null
           created_at?: string | null
           da?: number | null
           department?: string | null
           designation?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          employee_code?: string | null
           employment_type?: string | null
           esi_deduction?: number | null
           full_name?: string
           grace_minutes?: number | null
           hra?: number | null
           id?: string
+          interview_notes?: string | null
           is_active?: boolean | null
           joining_date?: string | null
           manager_name?: string | null
@@ -6963,10 +6994,12 @@ export type Database = {
           monthly_ctc?: number | null
           onboarded_at?: string | null
           onboarded_by?: string | null
+          pan_number?: string | null
           pf_deduction?: number | null
           phone?: string | null
           probation_end_date?: string | null
           professional_tax?: number | null
+          recruitment_source?: string | null
           role?: string | null
           shift_end?: string | null
           shift_start?: string | null
