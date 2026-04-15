@@ -173,7 +173,43 @@ export const HROnboarding = () => {
   const qc = useQueryClient();
   const [showNew, setShowNew] = useState(false);
   const [step, setStep] = useState(1); // wizard step
-  const [form, setForm] = useState<Record<string, any>>({});
+  const [showComplianceForm, setShowComplianceForm] = useState(false);
+  const [complianceForm, setComplianceForm] = useState<Record<string, string>>({});
+
+  // Fetch company compliance registration IDs
+  const { data: complianceData } = useQuery({
+    queryKey: ["company-compliance-ids"],
+    queryFn: async () => {
+      const { data } = await supabase.from("admin_settings").select("setting_value").eq("setting_key", "company_compliance_ids").single();
+      return (data?.setting_value as any) || {};
+    },
+  });
+
+  const saveComplianceIds = useMutation({
+    mutationFn: async (ids: Record<string, string>) => {
+      const payload = {
+        setting_key: "company_compliance_ids",
+        setting_value: ids as any,
+        description: "PF/ESI/PT Registration Numbers (auto-enforced by HR system)",
+        updated_by: user?.id || null,
+        updated_at: new Date().toISOString(),
+      };
+      const { data: existing } = await supabase.from("admin_settings").select("id").eq("setting_key", "company_compliance_ids").single();
+      if (existing) {
+        const { error } = await supabase.from("admin_settings").update(payload).eq("setting_key", "company_compliance_ids");
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("admin_settings").insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["company-compliance-ids"] });
+      toast.success("Compliance IDs saved! Accounts team will be notified. ✅");
+      setShowComplianceForm(false);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const { data: verticals = [] } = useQuery({
     queryKey: ["business-verticals"],
