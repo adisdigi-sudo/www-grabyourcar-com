@@ -5,6 +5,7 @@ import "./index.css";
 import App from "./App";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { BootstrapRuntime } from "@/components/bootstrap/BootstrapRuntime";
+import { installSensitiveRouteReloadGuard } from "@/lib/devReloadGuard";
 
 const STARTUP_SHELL_ID = "lovable-startup-shell";
 
@@ -43,6 +44,7 @@ const removeStartupShell = () => {
 };
 
 try {
+  installSensitiveRouteReloadGuard();
   ensureStartupShell();
 
   if (window.location.hostname.endsWith(".lovable.app")) {

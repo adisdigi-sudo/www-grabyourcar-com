@@ -1,16 +1,13 @@
 import { useEffect, useState, type ComponentType } from "react";
 import { isChunkLoadRecoveryExhausted, isDynamicImportError, performSafePreviewReload, recoverFromChunkLoadError, resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { isSensitivePreviewRouteWindow, shouldAvoidDevAutoReload } from "@/lib/adminPreviewStability";
+import { clearPendingReloadFlag, DEV_SERVER_LAST_RELOAD_KEY, DEV_SERVER_PENDING_RELOAD_KEY, DEV_SERVER_STATUS_EVENT, markDevServerPendingReload } from "@/lib/devReloadGuard";
 import { withPreviewParams } from "@/lib/previewRouting";
 import { AlertTriangle, RefreshCw, WifiOff } from "lucide-react";
 
-const DEV_SERVER_STATUS_EVENT = "lovable:dev-server-status";
 const CHUNK_RECOVERY_STATUS_EVENT = "lovable:chunk-recovery-status";
 const ROUTE_ACTIVITY_EVENT = "lovable:route-activity";
 const RUNTIME_FATAL_EVENT = "lovable:runtime-fatal";
-const DEV_SERVER_PENDING_RELOAD_KEY = "lovable_dev_server_pending_reload";
-const DEV_SERVER_LAST_RELOAD_KEY = "lovable_dev_server_last_reload";
-const DEV_SERVER_RELOAD_COOLDOWN_MS = 5000;
 
 let hasTriggeredChunkRecovery = false;
 let bootstrapListenersInstalled = false;
@@ -37,14 +34,6 @@ const dispatchChunkRecoveryStatus = (status: "recovering" | "exhausted", source:
       detail: { status, source },
     }),
   );
-};
-
-const clearPendingReloadFlag = () => {
-  try {
-    sessionStorage.removeItem(DEV_SERVER_PENDING_RELOAD_KEY);
-  } catch {
-    // ignore storage failures
-  }
 };
 
 const getRuntimeErrorMessage = (error: unknown) => {
@@ -118,13 +107,15 @@ const installRouteActivityListeners = () => {
 };
 
 const performSafeReload = () => {
+  clearPendingReloadFlag();
+
   try {
-    clearPendingReloadFlag();
     sessionStorage.setItem(DEV_SERVER_LAST_RELOAD_KEY, String(Date.now()));
-    performSafePreviewReload();
   } catch {
-    window.location.reload();
+    // ignore storage failures
   }
+
+  performSafePreviewReload();
 };
 
 const attemptChunkRecovery = (error: unknown, source: string): ChunkRecoveryAttemptResult => {
@@ -158,14 +149,6 @@ const attemptChunkRecovery = (error: unknown, source: string): ChunkRecoveryAtte
   }
 
   return "ignored";
-};
-
-const markDevServerPendingReload = () => {
-  try {
-    sessionStorage.setItem(DEV_SERVER_PENDING_RELOAD_KEY, "1");
-  } catch {
-    // ignore storage failures
-  }
 };
 
 const reloadAfterDevServerRestart = () => {
