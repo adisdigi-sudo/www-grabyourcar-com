@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Users, UserPlus, Search, Edit2, Eye, LogOut, AlertTriangle } from "lucide-react";
+import { Users, UserPlus, Search, Edit2, Eye, LogOut, AlertTriangle, UserCog } from "lucide-react";
 
 const ROLES = ["sales", "manager", "admin", "finance", "insurance", "operations"];
 const VERTICALS = ["car_sales", "insurance", "car_loans", "hsrp", "rental", "accessories"];
