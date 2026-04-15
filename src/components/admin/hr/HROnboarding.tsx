@@ -360,7 +360,7 @@ export const HROnboarding = () => {
                 <Select value={form.designation_key || ""} onValueChange={v => {
                   updateField("designation_key", v);
                   if (v !== "custom") {
-                    const found = DESIGNATIONS.find(d => d.value === v);
+                    const found = ALL_DESIGNATIONS.find(d => d.value === v);
                     updateField("designation", found?.label || v);
                     updateField("custom_designation", "");
                   } else {
@@ -369,7 +369,17 @@ export const HROnboarding = () => {
                 }}>
                   <SelectTrigger><SelectValue placeholder="Select designation" /></SelectTrigger>
                   <SelectContent>
-                    {DESIGNATIONS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
+                    {DESIGNATION_GROUPS.map(group => (
+                      <SelectGroup key={group.category}>
+                        <SelectLabel className="text-xs font-bold text-muted-foreground">{group.category}</SelectLabel>
+                        {group.items.map(d => (
+                          <SelectItem key={d.value} value={d.value}>
+                            <span>{d.label}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">({d.hint})</span>
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
                   </SelectContent>
                 </Select>
                 {form.designation_key === "custom" && (
