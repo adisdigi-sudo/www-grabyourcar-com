@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Users, UserPlus, Search, Edit2, Eye, LogOut, AlertTriangle } from "lucide-react";
+import { Users, UserPlus, Search, Edit2, Eye, LogOut, AlertTriangle, UserCog } from "lucide-react";
 
 const ROLES = ["sales", "manager", "admin", "finance", "insurance", "operations"];
 const VERTICALS = ["car_sales", "insurance", "car_loans", "hsrp", "rental", "accessories"];
@@ -33,6 +33,9 @@ export const HREmployeeManagement = () => {
   const [form, setForm] = useState<Record<string, any>>({});
   const [exitForm, setExitForm] = useState<Record<string, any>>({});
   const [statusFilter, setStatusFilter] = useState("active");
+  const [showManagerDialog, setShowManagerDialog] = useState(false);
+  const [managerTarget, setManagerTarget] = useState<any>(null);
+  const [newManagerId, setNewManagerId] = useState("");
 
   const { data: employees = [] } = useQuery({
     queryKey: ["hr-employees"],
@@ -78,6 +81,52 @@ export const HREmployeeManagement = () => {
       setShowExitDialog(false);
       setExitEmployee(null);
       setExitForm({});
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Fetch team members for manager selection
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ["team-members-for-mgr"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("team_members").select("*").eq("is_active", true).order("display_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch employee profiles for manager info
+  const { data: empProfiles = [] } = useQuery({
+    queryKey: ["hr-employee-profiles"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("employee_profiles") as any).select("*");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Change Manager mutation
+  const changeManagerMutation = useMutation({
+    mutationFn: async ({ teamMemberId, newMgrUserId, newMgrName }: any) => {
+      const { error: profErr } = await (supabase.from("employee_profiles") as any)
+        .update({ manager_user_id: newMgrUserId, manager_name: newMgrName })
+        .eq("team_member_id", teamMemberId);
+      if (profErr) throw profErr;
+      const mgrTeamMember = teamMembers.find((m: any) => m.user_id === newMgrUserId);
+      if (mgrTeamMember) {
+        const { error: tmErr } = await supabase.from("team_members")
+          .update({ reporting_to: mgrTeamMember.id } as any)
+          .eq("id", teamMemberId);
+        if (tmErr) throw tmErr;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["hr-employees"] });
+      qc.invalidateQueries({ queryKey: ["hr-employee-profiles"] });
+      toast.success("Manager changed successfully ✅");
+      setShowManagerDialog(false);
+      setManagerTarget(null);
+      setNewManagerId("");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -128,7 +177,7 @@ export const HREmployeeManagement = () => {
                 <TableHead>Employee</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Department</TableHead>
-                <TableHead>Vertical</TableHead>
+                <TableHead>Manager</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead>Actions</TableHead>
@@ -150,7 +199,12 @@ export const HREmployeeManagement = () => {
                   </TableCell>
                   <TableCell><Badge variant="outline" className="text-xs">{emp.designation || "—"}</Badge></TableCell>
                   <TableCell className="text-sm">{emp.department || "—"}</TableCell>
-                  <TableCell className="text-sm">{emp.vertical_name || "—"}</TableCell>
+                  <TableCell className="text-sm">
+                    {(() => {
+                      const prof = empProfiles.find((p: any) => p.team_member_id === emp.id);
+                      return prof?.manager_name || "—";
+                    })()}
+                  </TableCell>
                   <TableCell>
                     {emp.is_active === false ? (
                       <div>
@@ -175,6 +229,14 @@ export const HREmployeeManagement = () => {
                           setExitForm({ exit_date: new Date().toISOString().split("T")[0] });
                           setShowExitDialog(true);
                         }}><LogOut className="h-4 w-4" /></Button>
+                      )}
+                      {emp.is_active !== false && (
+                        <Button size="icon" variant="ghost" title="Change Manager" onClick={() => {
+                          setManagerTarget(emp);
+                          const prof = empProfiles.find((p: any) => p.team_member_id === emp.id);
+                          setNewManagerId(prof?.manager_user_id || "");
+                          setShowManagerDialog(true);
+                        }}><UserCog className="h-4 w-4" /></Button>
                       )}
                       {emp.is_active === false && emp.exit_reason && (
                         <Button size="icon" variant="ghost" title="View exit reason">
@@ -323,6 +385,57 @@ export const HREmployeeManagement = () => {
               })}
             >
               {exitMutation.isPending ? "Processing..." : "Confirm Separation"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Manager Dialog */}
+      <Dialog open={showManagerDialog} onOpenChange={setShowManagerDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><UserCog className="h-5 w-5" /> Change Manager</DialogTitle>
+          </DialogHeader>
+          {managerTarget && (
+            <div className="space-y-4">
+              <div className="p-3 rounded bg-muted/50">
+                <p className="font-semibold">{managerTarget.full_name}</p>
+                <p className="text-sm text-muted-foreground">{managerTarget.designation} · {managerTarget.department}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Current Manager: {empProfiles.find((p: any) => p.team_member_id === managerTarget.id)?.manager_name || "None assigned"}
+                </p>
+              </div>
+              <div>
+                <Label>New Manager *</Label>
+                <Select value={newManagerId} onValueChange={setNewManagerId}>
+                  <SelectTrigger><SelectValue placeholder="Select new manager" /></SelectTrigger>
+                  <SelectContent>
+                    {teamMembers
+                      .filter((m: any) => m.id !== managerTarget.id)
+                      .map((m: any) => (
+                        <SelectItem key={m.user_id} value={m.user_id}>
+                          {m.display_name} — {m.designation} ({m.department})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowManagerDialog(false)}>Cancel</Button>
+            <Button
+              disabled={!newManagerId || changeManagerMutation.isPending}
+              onClick={() => {
+                const mgr = teamMembers.find((m: any) => m.user_id === newManagerId);
+                changeManagerMutation.mutate({
+                  teamMemberId: managerTarget.id,
+                  newMgrUserId: newManagerId,
+                  newMgrName: mgr?.display_name || "",
+                });
+              }}
+            >
+              {changeManagerMutation.isPending ? "Updating..." : "Change Manager"}
             </Button>
           </DialogFooter>
         </DialogContent>
