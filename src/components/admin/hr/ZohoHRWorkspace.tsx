@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import {
+import { RefreshCw,
   Home, Users, CalendarDays, Clock, Palmtree, BarChart3, FileText,
   Settings, MessageSquare, UserPlus, Search, ChevronRight, CheckCircle2,
   AlertTriangle, Megaphone, Briefcase, GraduationCap, Heart, Award,
@@ -22,24 +22,64 @@ import {
   CalendarCheck, Layers, BookOpen, Plane, ListTodo, Wallet, Building
 } from "lucide-react";
 
-// Lazy-load sub-modules
-import { HRCoreModule } from "./HRCoreModule";
-import { HRRecruitmentModule } from "./HRRecruitmentModule";
-import { HRWorkforceModule } from "./HRWorkforceModule";
-import { HRAttendanceModule } from "./HRAttendanceModule";
-import { HRPayrollModule } from "./HRPayrollModule";
-import { HRExpenseModule } from "./HRExpenseModule";
-import { HRPerformanceModule } from "./HRPerformanceModule";
-import { HREngagementModule } from "./HREngagementModule";
-import { HRAssetModule } from "./HRAssetModule";
-import { HRHelpdeskModule } from "./HRHelpdeskModule";
-import { HROnboarding } from "./HROnboarding";
-import { TicketApprovalCenter } from "./TicketApprovalCenter";
-import { SalaryEngine } from "./SalaryEngine";
-import { EmployeeDocumentHub } from "./EmployeeDocumentHub";
-import { EmployeeProfileView } from "./EmployeeProfileView";
-import { EmployeeTargetDashboard } from "./EmployeeTargetDashboard";
-import { PerformanceEvaluationSystem } from "./PerformanceEvaluationSystem";
+import { Component, ErrorInfo, ReactNode } from "react";
+
+// ── Lazy-load every HR sub-module so a single module failure never kills the whole workspace ──
+const HRCoreModule = lazy(() => import("./HRCoreModule").then(m => ({ default: m.HRCoreModule })));
+const HRRecruitmentModule = lazy(() => import("./HRRecruitmentModule").then(m => ({ default: m.HRRecruitmentModule })));
+const HRWorkforceModule = lazy(() => import("./HRWorkforceModule").then(m => ({ default: m.HRWorkforceModule })));
+const HRAttendanceModule = lazy(() => import("./HRAttendanceModule").then(m => ({ default: m.HRAttendanceModule })));
+const HRPayrollModule = lazy(() => import("./HRPayrollModule").then(m => ({ default: m.HRPayrollModule })));
+const HRExpenseModule = lazy(() => import("./HRExpenseModule").then(m => ({ default: m.HRExpenseModule })));
+const HRPerformanceModule = lazy(() => import("./HRPerformanceModule").then(m => ({ default: m.HRPerformanceModule })));
+const HREngagementModule = lazy(() => import("./HREngagementModule").then(m => ({ default: m.HREngagementModule })));
+const HRAssetModule = lazy(() => import("./HRAssetModule").then(m => ({ default: m.HRAssetModule })));
+const HRHelpdeskModule = lazy(() => import("./HRHelpdeskModule").then(m => ({ default: m.HRHelpdeskModule })));
+const HROnboarding = lazy(() => import("./HROnboarding").then(m => ({ default: m.HROnboarding })));
+const TicketApprovalCenter = lazy(() => import("./TicketApprovalCenter").then(m => ({ default: m.TicketApprovalCenter })));
+const SalaryEngine = lazy(() => import("./SalaryEngine").then(m => ({ default: m.SalaryEngine })));
+const EmployeeDocumentHub = lazy(() => import("./EmployeeDocumentHub").then(m => ({ default: m.EmployeeDocumentHub })));
+const EmployeeProfileView = lazy(() => import("./EmployeeProfileView").then(m => ({ default: m.EmployeeProfileView })));
+const EmployeeTargetDashboard = lazy(() => import("./EmployeeTargetDashboard").then(m => ({ default: m.EmployeeTargetDashboard })));
+const PerformanceEvaluationSystem = lazy(() => import("./PerformanceEvaluationSystem").then(m => ({ default: m.PerformanceEvaluationSystem })));
+
+// ── Inline error boundary so a sub-module crash shows a retry button instead of white page ──
+interface HRModuleBoundaryState { hasError: boolean; errorMsg: string }
+class HRModuleBoundary extends Component<{ children: ReactNode }, HRModuleBoundaryState> {
+  state: HRModuleBoundaryState = { hasError: false, errorMsg: "" };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, errorMsg: error?.message || "Unknown error" };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[HRModuleBoundary] Sub-module crash", { error, info });
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[300px] gap-4 text-center p-6">
+          <AlertTriangle className="h-10 w-10 text-destructive" />
+          <div>
+            <h3 className="text-lg font-semibold">Module failed to load</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-md">{this.state.errorMsg}</p>
+          </div>
+          <button
+            onClick={() => this.setState({ hasError: false, errorMsg: "" })}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
+          >
+            <RefreshCw className="h-4 w-4" /> Retry
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const ModuleLoader = () => (
+  <div className="flex items-center justify-center min-h-[200px]">
+    <div className="h-7 w-7 animate-spin rounded-full border-b-2 border-primary" />
+  </div>
+);
 
 const initials = (name: string) => name?.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "??";
 
@@ -685,9 +725,13 @@ export const ZohoHRWorkspace = () => {
           </div>
         )}
 
-        {/* Main Content */}
+        {/* Main Content — wrapped in boundary + suspense so individual module failures are recoverable */}
         <div className="flex-1 overflow-auto">
-          {renderModuleContent()}
+          <HRModuleBoundary>
+            <Suspense fallback={<ModuleLoader />}>
+              {renderModuleContent()}
+            </Suspense>
+          </HRModuleBoundary>
         </div>
       </div>
     </TooltipProvider>
