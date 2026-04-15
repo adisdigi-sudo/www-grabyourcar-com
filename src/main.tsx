@@ -4,12 +4,14 @@ import { HelmetProvider } from "react-helmet-async";
 import "./index.css";
 import App from "./App";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
+import { isSensitivePreviewRouteWindow } from "@/lib/adminPreviewStability";
 import { BootstrapRuntime } from "@/components/bootstrap/BootstrapRuntime";
 import { performSafePreviewReload } from "@/lib/chunkLoadRecovery";
 import { DEV_SERVER_STATUS_EVENT, installSensitiveRouteReloadGuard } from "@/lib/devReloadGuard";
 
 const STARTUP_SHELL_ID = "lovable-startup-shell";
 const STARTUP_SHELL_RECOVERY_DELAY_MS = 4500;
+const STARTUP_SHELL_HIDE_WAIT_MS = 2200;
 
 let startupShellRecoveryTimer: number | null = null;
 let detachStartupShellListeners: (() => void) | null = null;
@@ -138,12 +140,64 @@ const ensureStartupShell = () => {
   }, STARTUP_SHELL_RECOVERY_DELAY_MS);
 };
 
+const isSensitiveRouteAppReady = () => {
+  if (typeof document === "undefined") return false;
+
+  const root = document.getElementById("root");
+  if (!root || root.childElementCount === 0) return false;
+
+  return Boolean(
+    root.querySelector(
+      "main, aside, button, h1, h2, [aria-live='polite'], [data-sonner-toaster], [class*='animate-spin']",
+    ),
+  );
+};
+
 const removeStartupShell = () => {
-  clearStartupShellRecoveryTimer();
-  detachStartupShellListeners?.();
-  detachStartupShellListeners = null;
-  const shell = typeof document !== "undefined" ? document.getElementById(STARTUP_SHELL_ID) : null;
-  shell?.remove();
+  const cleanupShell = () => {
+    clearStartupShellRecoveryTimer();
+    detachStartupShellListeners?.();
+    detachStartupShellListeners = null;
+    const shell = typeof document !== "undefined" ? document.getElementById(STARTUP_SHELL_ID) : null;
+    shell?.remove();
+  };
+
+  if (typeof document === "undefined") return;
+
+  if (!isSensitivePreviewRouteWindow()) {
+    cleanupShell();
+    return;
+  }
+
+  if (isSensitiveRouteAppReady()) {
+    cleanupShell();
+    return;
+  }
+
+  const root = document.getElementById("root");
+  if (!root) {
+    promoteStartupShellToRecovery("CRM root mount nahi ho paaya. Safe reload try karo.");
+    return;
+  }
+
+  const observer = new MutationObserver(() => {
+    if (!isSensitiveRouteAppReady()) return;
+    observer.disconnect();
+    window.clearTimeout(timeoutId);
+    cleanupShell();
+  });
+
+  observer.observe(root, { childList: true, subtree: true });
+
+  const timeoutId = window.setTimeout(() => {
+    observer.disconnect();
+    if (isSensitiveRouteAppReady()) {
+      cleanupShell();
+      return;
+    }
+
+    promoteStartupShellToRecovery("CRM UI mount confirm nahi hui, isliye white screen avoid karne ke liye recovery panel hold par rakha gaya hai.");
+  }, STARTUP_SHELL_HIDE_WAIT_MS);
 };
 
 try {
