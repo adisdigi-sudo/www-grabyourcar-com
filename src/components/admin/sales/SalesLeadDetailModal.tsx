@@ -74,6 +74,12 @@ export function SalesLeadDetailModal({
 
   // Full INR formatter — never abbreviate
   const fmtINR = (v: number) => `Rs. ${Math.round(v).toLocaleString("en-IN")}`;
+  const calcEMI = (principal: number, ratePA: number, months: number) => {
+    if (principal <= 0 || months <= 0) return 0;
+    const monthlyRate = ratePA / 12 / 100;
+    if (monthlyRate === 0) return Math.round(principal / months);
+    return Math.round((principal * monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1));
+  };
 
   // Unified calculator breakdown
   const totalCarPrice = Number(dealValue || lead.on_road_price || 0);
@@ -87,6 +93,9 @@ export function SalesLeadDetailModal({
     otherCharges: otherExpenses,
   });
   const balancePayable = salesBreakdown.balancePayableByYou;
+  const salesEmi = calcEMI(salesBreakdown.grossLoanAmount, Number(interestRate) || 0, Number(tenureMonths) || 0);
+  const salesTotalPayable = salesEmi * (Number(tenureMonths) || 0);
+  const salesTotalInterest = Math.max(salesTotalPayable - salesBreakdown.grossLoanAmount, 0);
 
   const pendingStage = lead._targetStage;
   const currentStage = pendingStage || lead.pipeline_stage;
@@ -854,9 +863,15 @@ export function SalesLeadDetailModal({
                     onUpdate({ deal_value: Number(v) }, "deal_value_set", `Deal: Rs. ${Number(v).toLocaleString("en-IN")}`);
                   }}
                   grossLoanAmount={grossLoanAmount}
-                  setGrossLoanAmount={setGrossLoanAmount}
+                  setGrossLoanAmount={(v) => {
+                    setGrossLoanAmount(v);
+                    onUpdate({ gross_loan_amount: Number(v) });
+                  }}
                   loanProtectionAmount={loanProtectionAmount}
-                  setLoanProtectionAmount={setLoanProtectionAmount}
+                  setLoanProtectionAmount={(v) => {
+                    setLoanProtectionAmount(v);
+                    onUpdate({ loan_protection_amount: Number(v) });
+                  }}
                   processingFees={processingFees}
                   setProcessingFees={(v) => {
                     setProcessingFees(v);
@@ -868,18 +883,30 @@ export function SalesLeadDetailModal({
                     onUpdate({ other_expenses: Number(v) });
                   }}
                   otherChargesLabel={otherExpensesLabel}
-                  setOtherChargesLabel={setOtherExpensesLabel}
+                  setOtherChargesLabel={(v) => {
+                    setOtherExpensesLabel(v);
+                    onUpdate({ other_expenses_label: v });
+                  }}
                   bookingAmount={bookingAmount}
                   setBookingAmount={(v) => {
                     setBookingAmount(v);
                     onUpdate({ booking_amount: Number(v) });
                   }}
                   advancePaid={advancePaid}
-                  setAdvancePaid={setAdvancePaid}
+                  setAdvancePaid={(v) => {
+                    setAdvancePaid(v);
+                    onUpdate({ advance_paid: Number(v) });
+                  }}
                   interestRate={interestRate}
-                  setInterestRate={setInterestRate}
+                  setInterestRate={(v) => {
+                    setInterestRate(v);
+                    onUpdate({ interest_rate: Number(v) });
+                  }}
                   tenureMonths={tenureMonths}
-                  setTenureMonths={setTenureMonths}
+                  setTenureMonths={(v) => {
+                    setTenureMonths(v);
+                    onUpdate({ tenure_months: Number(v) });
+                  }}
                   breakdown={salesBreakdown}
                 />
 
@@ -930,16 +957,28 @@ export function SalesLeadDetailModal({
           const car = lead.car_model || lead.interested_model || "your dream car";
           let msg = `Hi ${name}! Here is your car deal offer for *${car}*.\n\n`;
           if (totalCarPrice > 0 || salesBreakdown.grossLoanAmount > 0) {
-            msg += `🚗 Total Car Price: ${fmtINR(salesBreakdown.finalCarPrice)}\n`;
-            if (salesBreakdown.grossLoanAmount > 0) msg += `🏦 Gross Loan: ${fmtINR(salesBreakdown.grossLoanAmount)}\n`;
-            if (salesBreakdown.processingFees > 0) msg += `📋 Less Processing: - ${fmtINR(salesBreakdown.processingFees)}\n`;
-            if (salesBreakdown.loanProtectionAmount > 0) msg += `🛡️ Less Loan Suraksha: - ${fmtINR(salesBreakdown.loanProtectionAmount)}\n`;
-            if (salesBreakdown.otherCharges > 0) msg += `📎 Less ${otherExpensesLabel}: - ${fmtINR(salesBreakdown.otherCharges)}\n`;
-            if (salesBreakdown.grossLoanAmount > 0) msg += `💵 Bank Net Disbursal: ${fmtINR(salesBreakdown.bankNetDisbursal)}\n`;
-            msg += `\n📊 Down Payment: ${fmtINR(salesBreakdown.downPaymentNeeded)}\n`;
-            if (salesBreakdown.bookingAmount > 0) msg += `💰 Less Booking: - ${fmtINR(salesBreakdown.bookingAmount)}\n`;
-            if (salesBreakdown.advancePaid > 0) msg += `💰 Less Advance: - ${fmtINR(salesBreakdown.advancePaid)}\n`;
-            msg += `\n✅ *Balance Payable: ${fmtINR(salesBreakdown.balancePayableByYou)}*\n`;
+            msg += `*Section A: Car Price Summary*\n`;
+            msg += `• Total Car Price: ${fmtINR(salesBreakdown.finalCarPrice)}\n`;
+            if (salesBreakdown.grossLoanAmount > 0) {
+              msg += `\n*Section B: Bank Loan Breakdown*\n`;
+              msg += `• Gross Loan Amount: ${fmtINR(salesBreakdown.grossLoanAmount)}\n`;
+              if (salesBreakdown.processingFees > 0) msg += `• Less Processing Fees: - ${fmtINR(salesBreakdown.processingFees)}\n`;
+              if (salesBreakdown.loanProtectionAmount > 0) msg += `• Less Loan Suraksha: - ${fmtINR(salesBreakdown.loanProtectionAmount)}\n`;
+              if (salesBreakdown.otherCharges > 0) msg += `• Less ${otherExpensesLabel}: - ${fmtINR(salesBreakdown.otherCharges)}\n`;
+              msg += `• Bank Net Disbursal: ${fmtINR(salesBreakdown.bankNetDisbursal)}\n`;
+              msg += `\n*Section C: Customer Payment*\n`;
+              msg += `• Down Payment Needed: ${fmtINR(salesBreakdown.downPaymentNeeded)}\n`;
+              if (salesBreakdown.bookingAmount > 0) msg += `• Less Booking: - ${fmtINR(salesBreakdown.bookingAmount)}\n`;
+              if (salesBreakdown.advancePaid > 0) msg += `• Less Advance: - ${fmtINR(salesBreakdown.advancePaid)}\n`;
+              msg += `• *Final Balance Payable: ${fmtINR(salesBreakdown.balancePayableByYou)}*\n`;
+              if (salesEmi > 0) {
+                msg += `\n*Section D: EMI Details*\n`;
+                msg += `• EMI on Gross Loan: ${fmtINR(salesEmi)}/month\n`;
+                msg += `• Rate: ${Number(interestRate) || 0}% p.a. | Tenure: ${Number(tenureMonths) || 0} months\n`;
+                msg += `• Total Payable: ${fmtINR(salesTotalPayable)}\n`;
+                msg += `• Total Interest: ${fmtINR(salesTotalInterest)}\n`;
+              }
+            }
           } else if (lead.deal_value) {
             msg += `Deal Value: ${fmtINR(Number(lead.deal_value))}\n`;
           }
@@ -966,6 +1005,7 @@ export function SalesLeadDetailModal({
           advancePaid: Number(advancePaid) || undefined,
           interestRate: Number(interestRate) || undefined,
           tenureMonths: Number(tenureMonths) || undefined,
+          discountAmount: 0,
         })}
       />
     </Dialog>
