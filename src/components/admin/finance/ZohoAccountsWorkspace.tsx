@@ -71,6 +71,8 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   },
   { id: "reports", label: "Reports", icon: BarChart3 },
   { id: "profit-loss", label: "Profit & Loss", icon: Calculator },
+  { id: "gst-reports", label: "GST Reports", icon: IndianRupee },
+  { id: "eway-bills", label: "E-Way Bills", icon: Truck },
   { id: "documents", label: "Documents", icon: FolderOpen },
 ];
 
