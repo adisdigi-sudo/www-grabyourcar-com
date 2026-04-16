@@ -30,6 +30,7 @@ const HRRecruitmentModule = lazy(() => import("./HRRecruitmentModule").then(m =>
 const HRWorkforceModule = lazy(() => import("./HRWorkforceModule").then(m => ({ default: m.HRWorkforceModule })));
 const HRAttendanceModule = lazy(() => import("./HRAttendanceModule").then(m => ({ default: m.HRAttendanceModule })));
 const HRPayrollModule = lazy(() => import("./HRPayrollModule").then(m => ({ default: m.HRPayrollModule })));
+const HRLeaveManagement = lazy(() => import("./HRLeaveManagement").then(m => ({ default: m.HRLeaveManagement })));
 const HRExpenseModule = lazy(() => import("./HRExpenseModule").then(m => ({ default: m.HRExpenseModule })));
 const HRPerformanceModule = lazy(() => import("./HRPerformanceModule").then(m => ({ default: m.HRPerformanceModule })));
 const HREngagementModule = lazy(() => import("./HREngagementModule").then(m => ({ default: m.HREngagementModule })));
@@ -209,7 +210,7 @@ export const ZohoHRWorkspace = () => {
       case "targets": return <EmployeeTargetDashboard />;
       case "tickets": return <TicketApprovalCenter />;
       case "salary-engine": return <SalaryEngine />;
-      case "leave": return renderLeaveTracker();
+      case "leave": return <HRLeaveManagement />;
       case "attendance": return <HRAttendanceModule />;
       case "time": return <HRAttendanceModule />;
       case "operations": return <HRCoreModule />;
