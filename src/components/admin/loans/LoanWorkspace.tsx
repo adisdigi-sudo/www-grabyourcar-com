@@ -1555,10 +1555,27 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                           <PhoneCall className="h-3 w-3 text-emerald-600" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => {
-                          openWhatsAppChat(application.phone, buildLoanFollowupWhatsAppMessage({
-                            customerName: application.customer_name,
-                            carModel: application.car_model,
-                          }));
+                          if (application.stage === 'disbursed') {
+                            const msg = buildDisbursementThankYouMessage({
+                              customerName: application.customer_name,
+                              carModel: application.car_model,
+                              bankName: application.bank_name || application.lender_name || application.selected_bank,
+                              disbursementAmount: Number(application.disbursement_amount) || Number(application.loan_amount) || 0,
+                            });
+                            void sendCrmWhatsAppMessage({
+                              phone: application.phone,
+                              message: msg,
+                              name: application.customer_name,
+                              logEvent: "loan_disbursement_feedback",
+                              vertical: "loans",
+                              successMessage: `✅ Thank-you + feedback request sent`,
+                            });
+                          } else {
+                            openWhatsAppChat(application.phone, buildLoanFollowupWhatsAppMessage({
+                              customerName: application.customer_name,
+                              carModel: application.car_model,
+                            }));
+                          }
                         }}>
                           <MessageCircle className="h-3 w-3 text-green-600" />
                         </Button>
