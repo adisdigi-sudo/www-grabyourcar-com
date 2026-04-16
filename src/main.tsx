@@ -1,10 +1,10 @@
 import { createRoot } from "react-dom/client";
-import { ThemeProvider } from "next-themes";
 import { HelmetProvider } from "react-helmet-async";
 import "./index.css";
 import App from "./App";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { BootstrapRuntime } from "@/components/bootstrap/BootstrapRuntime";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { installSensitiveRouteReloadGuard } from "@/lib/devReloadGuard";
 import { ensureAppRootElement } from "@/lib/ensureAppRoot";
 import {
