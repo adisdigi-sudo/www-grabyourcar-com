@@ -794,6 +794,20 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
                 return (
                   <div key={app.id} className="border rounded-lg p-4 hover:bg-muted/30 transition-colors">
                     <div className="flex items-start justify-between gap-3">
+                      {app.phone && (
+                        <Checkbox
+                          className="mt-1 shrink-0"
+                          checked={selectedDisbursedIds.has(app.id)}
+                          onCheckedChange={(v) => {
+                            setSelectedDisbursedIds((prev) => {
+                              const next = new Set(prev);
+                              if (v) next.add(app.id); else next.delete(app.id);
+                              return next;
+                            });
+                          }}
+                          aria-label={`Select ${app.customer_name || 'customer'}`}
+                        />
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-semibold text-sm">{app.customer_name || "Unknown"}</span>
