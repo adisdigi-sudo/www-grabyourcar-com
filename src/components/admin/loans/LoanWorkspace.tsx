@@ -871,7 +871,7 @@ const LoanCard = ({ app, stage, onDragStart, onDragEnd, onClick, onWhatsApp, isD
             <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e: React.MouseEvent) => { e.stopPropagation(); window.open(`tel:+91${app.phone.replace(/\D/g, '').slice(-10)}`, '_self'); }}>
               <PhoneCall className="h-3 w-3 text-emerald-600" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onWhatsApp(app.phone, app.customer_name, app.car_model); }}>
+            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onWhatsApp(app.phone, app.customer_name, app.car_model, app); }}>
               <MessageCircle className="h-3 w-3 text-green-600" />
             </Button>
           </div>
