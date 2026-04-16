@@ -1794,7 +1794,7 @@ ${currentPremium && renewalPremium ? `\n📊 *Comparison:*\n💰 Current: ${form
       if (data?.success) {
         toast.success("Reminder sent automatically via WhatsApp API!");
       } else {
-        toast.error(data?.error || "Failed to send via API, try WhatsApp link instead");
+        toast.error(data?.error || "Failed to send via WhatsApp API");
       }
     } catch (err: any) {
       console.error("API send error:", err);
@@ -2009,7 +2009,7 @@ ${currentPremium && renewalPremium ? `\n📊 *Comparison:*\n💰 Current: ${form
             </Button>
           </div>
           <p className="text-[10px] text-center text-muted-foreground">
-            💡 Dono options ab direct WhatsApp API se send karte hain — browser wa.me fallback open nahi hoga.
+            💡 Dono options ab direct WhatsApp API se send karte hain — personal WhatsApp fallback open nahi hoga.
           </p>
         </div>
       </DialogContent>

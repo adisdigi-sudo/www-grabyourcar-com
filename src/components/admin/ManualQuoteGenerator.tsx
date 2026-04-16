@@ -44,6 +44,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { persistCarSalesQuote } from "@/lib/carSalesQuotePersistence";
 import { persistLoanQuoteHistory } from "@/lib/loanQuotePersistence";
 import { sendWhatsApp } from "@/lib/sendWhatsApp";
+import { sendCrmWhatsAppMessage } from "@/lib/crmWhatsApp";
 import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
 import { calculateLoanSalesBreakdown } from "@/components/admin/loans/loanSalesCalculator";
@@ -606,11 +607,17 @@ export const ManualQuoteGenerator = () => {
         if (apiSent) {
           toast.success(`Loan quote shared! Ref: ${result.quoteRef}`);
         } else if (customerPhone) {
-          openWhatsAppChat(customerPhone, message);
-          toast.success(`Loan quote saved and WhatsApp opened! Ref: ${result.quoteRef}`);
+          const sent = await sendCrmWhatsAppMessage({
+            phone: customerPhone,
+            message,
+            name: customerName || undefined,
+            logEvent: "loan_manual_quote_share_retry",
+            vertical: "loans",
+            successMessage: `Loan quote shared! Ref: ${result.quoteRef}`,
+          });
+          if (!sent) toast.error(`Quote saved but WhatsApp API send failed. Ref: ${result.quoteRef}`);
         } else {
-          window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
-          toast.success(`Loan quote saved! Ref: ${result.quoteRef}`);
+          toast.error(`Quote saved but no WhatsApp number found. Ref: ${result.quoteRef}`);
         }
 
         return;

@@ -15,6 +15,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { LOAN_STAGES, STAGE_LABELS, STAGE_COLORS, LEAD_SOURCES, PRIORITY_OPTIONS, ALLOWED_TRANSITIONS, type LoanStage } from "./LoanStageConfig";
 import { LoanStageChangeModal } from "./LoanStageChangeModal";
+import { sendCrmWhatsAppMessage } from "@/lib/crmWhatsApp";
 
 interface LoanApplication {
   id: string;
@@ -196,7 +197,7 @@ export const LoanPipelineBoard = ({ applications }: Props) => {
 
   const handleWhatsApp = (phone: string, name: string) => {
     const msg = `Hi ${name}, this is from GrabYourCar regarding your car loan inquiry. How can I help you today?`;
-    window.open(`https://wa.me/91${phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(msg)}`, '_blank');
+    void sendCrmWhatsAppMessage({ phone, message: msg, name, logEvent: "loan_pipeline_board_send", vertical: "loans" });
   };
 
   const pipelineStages = LOAN_STAGES.filter(s => (s as string) !== 'converted' && s !== 'lost');

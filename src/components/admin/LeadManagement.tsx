@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { sendCrmWhatsAppMessage } from "@/lib/crmWhatsApp";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
@@ -669,7 +670,13 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => window.open(`https://wa.me/91${lead.phone.replace(/\D/g, '')}`)}
+                            onClick={() => void sendCrmWhatsAppMessage({
+                              phone: lead.phone,
+                              message: `Hi ${lead.name || "there"}, this is from GrabYourCar regarding your ${lead.lead_type || "inquiry"}. How can I help you today?`,
+                              name: lead.name,
+                              logEvent: "lead_management_row_send",
+                              vertical: verticalCategory || "crm",
+                            })}
                           >
                             <MessageSquare className="h-4 w-4" />
                           </Button>
@@ -886,7 +893,13 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => window.open(`https://wa.me/91${selectedLead.phone.replace(/\D/g, '')}`)}
+                    onClick={() => void sendCrmWhatsAppMessage({
+                      phone: selectedLead.phone,
+                      message: `Hi ${selectedLead.name || "there"}, this is from GrabYourCar regarding your ${selectedLead.lead_type || "inquiry"}. How can I help you today?`,
+                      name: selectedLead.name,
+                      logEvent: "lead_management_detail_send",
+                      vertical: verticalCategory || "crm",
+                    })}
                   >
                     <MessageSquare className="h-4 w-4 mr-2" />
                     WhatsApp

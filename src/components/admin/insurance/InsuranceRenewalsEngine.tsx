@@ -18,6 +18,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format, differenceInDays } from "date-fns";
 import { InsuranceBulkQuoteImport } from "./InsuranceBulkQuoteImport";
+import { sendCrmWhatsAppMessage } from "@/lib/crmWhatsApp";
 
 // === TEMPLATES ===
 function buildRenewalNotice(p: any): string {
@@ -267,8 +268,15 @@ export function InsuranceRenewalsEngine() {
     const client = p.insurance_clients;
     if (!client?.phone || client.phone.startsWith("IB_")) { toast.error("No phone number"); return; }
     const message = getPreviewMessage(p, type);
-    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-    await sendWhatsApp({ phone: client.phone, message, name: client.customer_name, logEvent: `renewal_${type}` });
+    const sent = await sendCrmWhatsAppMessage({
+      phone: client.phone,
+      message,
+      name: client.customer_name,
+      logEvent: `renewal_${type}_manual`,
+      vertical: "insurance",
+      successMessage: `Renewal ${type} sent via WhatsApp API`,
+    });
+    if (sent) setPreviewPolicy(null);
   };
 
   const sendRenewalEmail = (p: any) => {
@@ -731,7 +739,7 @@ export function InsuranceRenewalsEngine() {
                   onClick={() => sendDirectWhatsApp(previewPolicy, templateType)}
                 >
                   <MessageSquare className="h-4 w-4" />
-                  Open WhatsApp
+                  Send Manual Text
                 </Button>
               </div>
             </div>
