@@ -19,6 +19,7 @@ let detachStartupShellListeners: (() => void) | null = null;
 let rootObserver: MutationObserver | null = null;
 let bodyObserver: MutationObserver | null = null;
 let healthMonitorInstalled = false;
+let globalRecoveryListenersInstalled = false;
 
 const STARTUP_READY_SELECTOR = [
   "button",
@@ -225,6 +226,32 @@ const scheduleStartupShellAutoReload = () => {
   }, STARTUP_SHELL_AUTO_RELOAD_DELAY_MS);
 };
 
+const recoverStartupShell = (reason: string) => {
+  ensureStartupShell();
+  promoteStartupShellToRecovery(reason);
+};
+
+const handleGlobalRuntimeFatal = () => {
+  recoverStartupShell("Runtime issue detect hui hai. Niche diye options se page ko safely recover karo.");
+};
+
+const handleGlobalDevServerStatus = (event: Event) => {
+  const status = (event as CustomEvent<{ status?: string }>).detail?.status;
+  if (status === "update_ready" || status === "disconnected") {
+    recoverStartupShell("Dev connection/update ne startup ko interrupt kiya. Ab yahan se safe reload kar sakte ho.");
+  }
+};
+
+const installGlobalRecoveryListeners = () => {
+  if (typeof window === "undefined" || globalRecoveryListenersInstalled) {
+    return;
+  }
+
+  globalRecoveryListenersInstalled = true;
+  window.addEventListener("lovable:runtime-fatal", handleGlobalRuntimeFatal as EventListener);
+  window.addEventListener(DEV_SERVER_STATUS_EVENT, handleGlobalDevServerStatus as EventListener);
+};
+
 export const isSensitiveRouteAppReady = () => {
   if (typeof document === "undefined") return false;
 
@@ -347,27 +374,12 @@ export const ensureStartupShell = () => {
     );
   };
 
-  const handleRuntimeFatal = () => {
-    promoteStartupShellToRecovery("Runtime issue detect hui hai. Niche diye options se page ko safely recover karo.");
-  };
-
-  const handleDevServerStatus = (event: Event) => {
-    const status = (event as CustomEvent<{ status?: string }>).detail?.status;
-    if (status === "update_ready" || status === "disconnected") {
-      promoteStartupShellToRecovery("Dev connection/update ne startup ko interrupt kiya. Ab yahan se safe reload kar sakte ho.");
-    }
-  };
-
   reloadButton?.addEventListener("click", handleReload);
   signInButton?.addEventListener("click", handleOpenSignIn);
-  window.addEventListener("lovable:runtime-fatal", handleRuntimeFatal as EventListener);
-  window.addEventListener(DEV_SERVER_STATUS_EVENT, handleDevServerStatus as EventListener);
 
   detachStartupShellListeners = () => {
     reloadButton?.removeEventListener("click", handleReload);
     signInButton?.removeEventListener("click", handleOpenSignIn);
-    window.removeEventListener("lovable:runtime-fatal", handleRuntimeFatal as EventListener);
-    window.removeEventListener(DEV_SERVER_STATUS_EVENT, handleDevServerStatus as EventListener);
   };
 
   clearStartupShellRecoveryTimer();
@@ -459,6 +471,7 @@ export const installStartupShellHealthMonitor = () => {
   if (typeof window === "undefined" || typeof document === "undefined" || healthMonitorInstalled) return;
 
   healthMonitorInstalled = true;
+  installGlobalRecoveryListeners();
 
   const evaluateRootHealth = () => {
     if (!shouldStabilizeStartupShellWindow()) {
