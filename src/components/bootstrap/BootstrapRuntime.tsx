@@ -188,6 +188,14 @@ const shouldForceSensitiveRouteRecoveryReload = () => {
   return !isSensitiveRouteAppReady();
 };
 
+const announceSensitiveRouteReloadReady = (reason: "healthy" | "unhealthy") => {
+  window.dispatchEvent(
+    new CustomEvent(DEV_SERVER_STATUS_EVENT, {
+      detail: { status: "update_ready" as const, reason },
+    }),
+  );
+};
+
 const handleSensitiveRouteReconnect = () => {
   window.setTimeout(() => {
     try {
@@ -195,28 +203,18 @@ const handleSensitiveRouteReconnect = () => {
       if (!hasPendingReload) return;
 
       if (shouldForceSensitiveRouteRecoveryReload()) {
-        window.dispatchEvent(
-          new CustomEvent(DEV_SERVER_STATUS_EVENT, {
-            detail: { status: "reloading" as const },
-          }),
-        );
+        announceSensitiveRouteReloadReady("unhealthy");
 
-        console.info("[BootstrapRuntime] Sensitive preview route looks unhealthy after reconnect; auto reloading", {
+        console.info("[BootstrapRuntime] Sensitive preview route still looks unstable after reconnect; keeping manual safe reload", {
           href: window.location.href,
           pathname: window.location.pathname,
         });
-
-        performSafeReload();
         return;
       }
 
-      window.dispatchEvent(
-        new CustomEvent(DEV_SERVER_STATUS_EVENT, {
-          detail: { status: "update_ready" as const },
-        }),
-      );
+      announceSensitiveRouteReloadReady("healthy");
     } catch {
-      performSafeReload();
+      announceSensitiveRouteReloadReady("unhealthy");
     }
   }, SENSITIVE_ROUTE_RECONNECT_HEALTH_DELAY_MS);
 };
@@ -469,7 +467,7 @@ const DevServerStatusOverlay = () => {
           }
         : {
             title: "Update ready",
-            body: "Naya dev bundle ready hai, lekin current screen ko force reload nahi kiya jayega. Kaam complete karke safe reload karo.",
+            body: "Naya dev bundle ready hai. CRM route ko white page se bachane ke liye reload ab sirf aapke manual safe action se hoga.",
             actionLabel: "Reload safely",
           };
 
