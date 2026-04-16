@@ -127,13 +127,12 @@ const attemptChunkRecovery = (error: unknown, source: string): ChunkRecoveryAtte
   }
 
   if (shouldAvoidDevAutoReload()) {
-    dispatchChunkRecoveryStatus("exhausted", source);
     console.warn("[BootstrapRuntime] Skipping automatic chunk recovery on sensitive preview route", {
       source,
       error,
       href: window.location.href,
     });
-    return "exhausted";
+    return "ignored";
   }
 
   const recovered = recoverFromChunkLoadError();
@@ -490,6 +489,10 @@ const ChunkRecoveryOverlay = () => {
   );
 
   useEffect(() => {
+    if (!isSensitivePreviewRouteWindow()) {
+      return;
+    }
+
     const handleStatus = (event: Event) => {
       const detail = (event as CustomEvent<{ status?: "recovering" | "exhausted"; source?: string }>).detail;
 
@@ -507,6 +510,30 @@ const ChunkRecoveryOverlay = () => {
 
     return () => {
       window.removeEventListener(CHUNK_RECOVERY_STATUS_EVENT, handleStatus as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isSensitivePreviewRouteWindow()) {
+      return;
+    }
+
+    const clearRecoveryOverlay = () => {
+      setRecoverySource(null);
+      resetChunkLoadRecovery();
+      resetChunkLoadRecovery("crm_chunk_load_recovery");
+    };
+
+    window.addEventListener("pageshow", clearRecoveryOverlay);
+    window.addEventListener(ROUTE_ACTIVITY_EVENT, clearRecoveryOverlay as EventListener);
+
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+      clearRecoveryOverlay();
+    }
+
+    return () => {
+      window.removeEventListener("pageshow", clearRecoveryOverlay);
+      window.removeEventListener(ROUTE_ACTIVITY_EVENT, clearRecoveryOverlay as EventListener);
     };
   }, []);
 
