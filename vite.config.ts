@@ -49,6 +49,7 @@ export default defineConfig(({ mode }) => ({
       "react-dom",
       "react/jsx-runtime",
       "react/jsx-dev-runtime",
+      "@tanstack/react-query",
       "zod",
       "@radix-ui/react-slot",
       "@radix-ui/react-toast",
