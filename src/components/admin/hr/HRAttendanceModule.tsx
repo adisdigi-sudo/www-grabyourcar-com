@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from "date-fns";
+import { format, startOfMonth, endOfMonth, differenceInMinutes, parseISO } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CalendarDays, Plus, Search, CheckCircle2, XCircle, Clock, AlertTriangle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { CalendarDays, Plus, Search, CheckCircle2, XCircle, Clock, AlertTriangle, Download } from "lucide-react";
 
 const ATTENDANCE_STATUS = ["present", "absent", "half_day", "late", "leave", "holiday", "work_from_home"];
 
@@ -24,12 +26,24 @@ const statusIcon: Record<string, any> = {
   work_from_home: <CheckCircle2 className="h-4 w-4 text-purple-500" />,
 };
 
+const calcWorkHours = (checkIn?: string | null, checkOut?: string | null): string => {
+  if (!checkIn || !checkOut) return "—";
+  try {
+    const mins = differenceInMinutes(parseISO(checkOut), parseISO(checkIn));
+    if (mins <= 0) return "—";
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h}h ${m}m`;
+  } catch { return "—"; }
+};
+
 export const HRAttendanceModule = () => {
   const qc = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [showDialog, setShowDialog] = useState(false);
   const [form, setForm] = useState<Record<string, any>>({});
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState("daily");
 
   const { data: employees = [] } = useQuery({
     queryKey: ["hr-employees-attendance"],
@@ -54,15 +68,30 @@ export const HRAttendanceModule = () => {
 
   const markMutation = useMutation({
     mutationFn: async (rec: any) => {
+      const payload = { ...rec };
+      // Auto-calc work hours
+      if (payload.check_in && payload.check_out) {
+        const ciStr = payload.check_in.includes("T") ? payload.check_in : `${payload.attendance_date}T${payload.check_in}:00`;
+        const coStr = payload.check_out.includes("T") ? payload.check_out : `${payload.attendance_date}T${payload.check_out}:00`;
+        const mins = differenceInMinutes(parseISO(coStr), parseISO(ciStr));
+        payload.work_hours = Math.max(0, Number((mins / 60).toFixed(1)));
+        payload.check_in = ciStr;
+        payload.check_out = coStr;
+      } else {
+        if (payload.check_in && !payload.check_in.includes("T")) payload.check_in = `${payload.attendance_date}T${payload.check_in}:00`;
+        if (payload.check_out && !payload.check_out.includes("T")) payload.check_out = `${payload.attendance_date}T${payload.check_out}:00`;
+      }
+      
       const { error } = await (supabase.from("attendance_records") as any).upsert({
-        team_member_name: rec.team_member_name,
-        team_member_phone: rec.team_member_phone,
-        attendance_date: rec.attendance_date,
-        status: rec.status,
-        check_in: rec.check_in || null,
-        check_out: rec.check_out || null,
-        notes: rec.notes || null,
-        location: rec.location || null,
+        team_member_name: payload.team_member_name,
+        team_member_phone: payload.team_member_phone,
+        attendance_date: payload.attendance_date,
+        status: payload.status,
+        check_in: payload.check_in || null,
+        check_out: payload.check_out || null,
+        work_hours: payload.work_hours || null,
+        notes: payload.notes || null,
+        location: payload.location || null,
       }, { onConflict: "team_member_name,attendance_date", ignoreDuplicates: false });
       if (error) throw error;
     },
@@ -92,15 +121,48 @@ export const HRAttendanceModule = () => {
   const presentCount = todayAttendance.filter((a: any) => a.status === "present" || a.status === "work_from_home").length;
   const absentCount = todayAttendance.filter((a: any) => a.status === "absent").length;
   const leaveCount = todayAttendance.filter((a: any) => a.status === "leave").length;
+  const lateCount = todayAttendance.filter((a: any) => a.status === "late").length;
 
   const filteredEmployees = employees.filter((e: any) => !search || e.full_name.toLowerCase().includes(search.toLowerCase()));
 
+  // Monthly summary per employee
+  const monthlySummary = useMemo(() => {
+    const map = new Map<string, { present: number; absent: number; late: number; halfDay: number; leave: number; wfh: number; totalHours: number }>();
+    employees.forEach(e => map.set(e.full_name, { present: 0, absent: 0, late: 0, halfDay: 0, leave: 0, wfh: 0, totalHours: 0 }));
+    attendance.forEach((a: any) => {
+      const entry = map.get(a.team_member_name);
+      if (!entry) return;
+      if (a.status === "present") entry.present++;
+      else if (a.status === "absent") entry.absent++;
+      else if (a.status === "late") { entry.late++; entry.present++; }
+      else if (a.status === "half_day") entry.halfDay++;
+      else if (a.status === "leave") entry.leave++;
+      else if (a.status === "work_from_home") { entry.wfh++; entry.present++; }
+      entry.totalHours += Number(a.work_hours || 0);
+    });
+    return map;
+  }, [employees, attendance]);
+
+  const exportCSV = () => {
+    const headers = ["Employee", "Department", "Present", "Absent", "Late", "Half Day", "Leave", "WFH", "Total Hours"];
+    const rows = Array.from(monthlySummary.entries()).map(([name, s]) => {
+      const emp = employees.find(e => e.full_name === name);
+      return [name, emp?.department || "", s.present, s.absent, s.late, s.halfDay, s.leave, s.wfh, s.totalHours.toFixed(1)];
+    });
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `attendance-${monthStart}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total Staff</p><p className="text-2xl font-bold">{employees.length}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Present</p><p className="text-2xl font-bold text-green-600">{presentCount}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Absent</p><p className="text-2xl font-bold text-red-600">{absentCount}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Late</p><p className="text-2xl font-bold text-orange-600">{lateCount}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">On Leave</p><p className="text-2xl font-bold text-blue-600">{leaveCount}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Unmarked</p><p className="text-2xl font-bold text-orange-600">{employees.length - todayAttendance.length}</p></CardContent></Card>
       </div>
@@ -111,37 +173,81 @@ export const HRAttendanceModule = () => {
           <div className="relative flex-1 max-w-xs"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" /></div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={exportCSV} className="gap-2"><Download className="h-4 w-4" /> Export</Button>
           <Button variant="outline" onClick={() => bulkMarkMutation.mutate()}>Mark All Present</Button>
           <Button onClick={() => { setForm({ attendance_date: selectedDate, status: "present" }); setShowDialog(true); }} className="gap-2"><Plus className="h-4 w-4" /> Mark Attendance</Button>
         </div>
       </div>
 
-      <Card><CardContent className="p-0">
-        <Table>
-          <TableHeader><TableRow>
-            <TableHead>Employee</TableHead><TableHead>Department</TableHead><TableHead>Status</TableHead><TableHead>Check In</TableHead><TableHead>Check Out</TableHead><TableHead>Hours</TableHead><TableHead>Notes</TableHead>
-          </TableRow></TableHeader>
-          <TableBody>
-            {filteredEmployees.map((emp: any) => {
-              const record = todayAttendance.find((a: any) => a.team_member_name === emp.full_name);
-              return (
-                <TableRow key={emp.id} className="cursor-pointer hover:bg-muted/50" onClick={() => {
-                  setForm({ team_member_name: emp.full_name, team_member_phone: emp.phone, attendance_date: selectedDate, status: record?.status || "present", check_in: record?.check_in ? format(new Date(record.check_in), "HH:mm") : "", check_out: record?.check_out ? format(new Date(record.check_out), "HH:mm") : "", notes: record?.notes || "" });
-                  setShowDialog(true);
-                }}>
-                  <TableCell className="font-medium text-sm">{emp.full_name}</TableCell>
-                  <TableCell><Badge variant="outline" className="text-xs">{emp.department || "—"}</Badge></TableCell>
-                  <TableCell>{record ? <div className="flex items-center gap-1.5">{statusIcon[record.status]}<span className="text-sm capitalize">{record.status?.replace("_", " ")}</span></div> : <span className="text-xs text-muted-foreground">Not marked</span>}</TableCell>
-                  <TableCell className="text-sm">{record?.check_in ? format(new Date(record.check_in), "hh:mm a") : "—"}</TableCell>
-                  <TableCell className="text-sm">{record?.check_out ? format(new Date(record.check_out), "hh:mm a") : "—"}</TableCell>
-                  <TableCell className="text-sm">{record?.work_hours ? `${record.work_hours}h` : "—"}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-[150px] truncate">{record?.notes || ""}</TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </CardContent></Card>
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="daily">Daily View</TabsTrigger>
+          <TabsTrigger value="monthly">Monthly Summary</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="daily" className="mt-4">
+          <Card><CardContent className="p-0">
+            <ScrollArea className="max-h-[500px]">
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>Employee</TableHead><TableHead>Department</TableHead><TableHead>Status</TableHead><TableHead>Check In</TableHead><TableHead>Check Out</TableHead><TableHead>Hours</TableHead><TableHead>Notes</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {filteredEmployees.map((emp: any) => {
+                    const record = todayAttendance.find((a: any) => a.team_member_name === emp.full_name);
+                    const workHrs = record ? calcWorkHours(record.check_in, record.check_out) : "—";
+                    return (
+                      <TableRow key={emp.id} className="cursor-pointer hover:bg-muted/50" onClick={() => {
+                        setForm({ team_member_name: emp.full_name, team_member_phone: emp.phone, attendance_date: selectedDate, status: record?.status || "present", check_in: record?.check_in ? format(new Date(record.check_in), "HH:mm") : "", check_out: record?.check_out ? format(new Date(record.check_out), "HH:mm") : "", notes: record?.notes || "" });
+                        setShowDialog(true);
+                      }}>
+                        <TableCell className="font-medium text-sm">{emp.full_name}</TableCell>
+                        <TableCell><Badge variant="outline" className="text-xs">{emp.department || "—"}</Badge></TableCell>
+                        <TableCell>{record ? <div className="flex items-center gap-1.5">{statusIcon[record.status]}<span className="text-sm capitalize">{record.status?.replace("_", " ")}</span></div> : <span className="text-xs text-muted-foreground">Not marked</span>}</TableCell>
+                        <TableCell className="text-sm">{record?.check_in ? format(new Date(record.check_in), "hh:mm a") : "—"}</TableCell>
+                        <TableCell className="text-sm">{record?.check_out ? format(new Date(record.check_out), "hh:mm a") : "—"}</TableCell>
+                        <TableCell className="text-sm font-medium">{record?.work_hours ? `${record.work_hours}h` : workHrs}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground max-w-[150px] truncate">{record?.notes || ""}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </CardContent></Card>
+        </TabsContent>
+
+        <TabsContent value="monthly" className="mt-4">
+          <Card><CardContent className="p-0">
+            <ScrollArea className="max-h-[500px]">
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>Employee</TableHead><TableHead>Department</TableHead><TableHead>Present</TableHead><TableHead>Absent</TableHead><TableHead>Late</TableHead><TableHead>Half Day</TableHead><TableHead>Leave</TableHead><TableHead>WFH</TableHead><TableHead>Total Hours</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {filteredEmployees.map((emp: any) => {
+                    const s = monthlySummary.get(emp.full_name);
+                    if (!s) return null;
+                    return (
+                      <TableRow key={emp.id}>
+                        <TableCell className="font-medium text-sm">{emp.full_name}</TableCell>
+                        <TableCell><Badge variant="outline" className="text-xs">{emp.department || "—"}</Badge></TableCell>
+                        <TableCell className="text-sm text-green-600 font-medium">{s.present}</TableCell>
+                        <TableCell className="text-sm text-red-600 font-medium">{s.absent}</TableCell>
+                        <TableCell className="text-sm text-orange-600">{s.late}</TableCell>
+                        <TableCell className="text-sm text-yellow-600">{s.halfDay}</TableCell>
+                        <TableCell className="text-sm text-blue-600">{s.leave}</TableCell>
+                        <TableCell className="text-sm text-purple-600">{s.wfh}</TableCell>
+                        <TableCell className="text-sm font-medium">{s.totalHours.toFixed(1)}h</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </CardContent></Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent>
@@ -161,16 +267,21 @@ export const HRAttendanceModule = () => {
               <div><Label>Check In</Label><Input type="time" value={form.check_in || ""} onChange={e => setForm(p => ({ ...p, check_in: e.target.value }))} /></div>
               <div><Label>Check Out</Label><Input type="time" value={form.check_out || ""} onChange={e => setForm(p => ({ ...p, check_out: e.target.value }))} /></div>
             </div>
+            {form.check_in && form.check_out && (
+              <p className="text-sm text-muted-foreground">
+                Calculated: <strong>{(() => {
+                  const ci = new Date(`2000-01-01T${form.check_in}`);
+                  const co = new Date(`2000-01-01T${form.check_out}`);
+                  const mins = (co.getTime() - ci.getTime()) / 60000;
+                  return mins > 0 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : "—";
+                })()}</strong>
+              </p>
+            )}
             <div><Label>Notes</Label><Input value={form.notes || ""} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDialog(false)}>Cancel</Button>
-            <Button onClick={() => {
-              const payload = { ...form };
-              if (payload.check_in && !payload.check_in.includes("T")) payload.check_in = `${payload.attendance_date}T${payload.check_in}:00`;
-              if (payload.check_out && !payload.check_out.includes("T")) payload.check_out = `${payload.attendance_date}T${payload.check_out}:00`;
-              markMutation.mutate(payload);
-            }} disabled={!form.team_member_name}>Save</Button>
+            <Button onClick={() => markMutation.mutate(form)} disabled={!form.team_member_name}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
