@@ -6,10 +6,15 @@ const STARTUP_SHELL_ID = "lovable-startup-shell";
 const STARTUP_SHELL_RECOVERY_DELAY_MS = 4500;
 const STARTUP_SHELL_HIDE_WAIT_MS = 2200;
 const ROOT_BLANK_RECOVERY_DELAY_MS = 900;
+const STARTUP_SHELL_AUTO_RELOAD_DELAY_MS = 1600;
+const STARTUP_SHELL_AUTO_RELOAD_MAX_ATTEMPTS = 2;
+const STARTUP_SHELL_AUTO_RELOAD_WINDOW_MS = 45000;
 const APP_ROOT_ID = "root";
+const STARTUP_SHELL_AUTO_RELOAD_KEY = "lovable_startup_shell_auto_reload";
 
 let startupShellRecoveryTimer: number | null = null;
 let startupShellBlankTimer: number | null = null;
+let startupShellAutoReloadTimer: number | null = null;
 let detachStartupShellListeners: (() => void) | null = null;
 let rootObserver: MutationObserver | null = null;
 let bodyObserver: MutationObserver | null = null;
@@ -48,6 +53,99 @@ const clearBlankRecoveryTimer = () => {
     window.clearTimeout(startupShellBlankTimer);
     startupShellBlankTimer = null;
   }
+};
+
+const clearAutoReloadTimer = () => {
+  if (startupShellAutoReloadTimer) {
+    window.clearTimeout(startupShellAutoReloadTimer);
+    startupShellAutoReloadTimer = null;
+  }
+};
+
+type StartupShellAutoReloadState = {
+  attempts: number;
+  startedAt: number;
+};
+
+const readStartupShellAutoReloadState = (): StartupShellAutoReloadState => {
+  if (typeof window === "undefined") {
+    return { attempts: 0, startedAt: Date.now() };
+  }
+
+  try {
+    const rawState = sessionStorage.getItem(STARTUP_SHELL_AUTO_RELOAD_KEY);
+    if (!rawState) {
+      return { attempts: 0, startedAt: Date.now() };
+    }
+
+    const parsedState = JSON.parse(rawState) as Partial<StartupShellAutoReloadState>;
+    const attempts = Number.isFinite(parsedState.attempts) ? Number(parsedState.attempts) : 0;
+    const startedAt = Number.isFinite(parsedState.startedAt) ? Number(parsedState.startedAt) : Date.now();
+
+    if (Date.now() - startedAt > STARTUP_SHELL_AUTO_RELOAD_WINDOW_MS) {
+      sessionStorage.removeItem(STARTUP_SHELL_AUTO_RELOAD_KEY);
+      return { attempts: 0, startedAt: Date.now() };
+    }
+
+    return { attempts, startedAt };
+  } catch {
+    return { attempts: 0, startedAt: Date.now() };
+  }
+};
+
+const writeStartupShellAutoReloadState = (state: StartupShellAutoReloadState) => {
+  if (typeof window === "undefined") return;
+
+  try {
+    sessionStorage.setItem(STARTUP_SHELL_AUTO_RELOAD_KEY, JSON.stringify(state));
+  } catch {
+    // ignore storage failures
+  }
+};
+
+const resetStartupShellAutoReloadState = () => {
+  if (typeof window === "undefined") return;
+
+  clearAutoReloadTimer();
+
+  try {
+    sessionStorage.removeItem(STARTUP_SHELL_AUTO_RELOAD_KEY);
+  } catch {
+    // ignore storage failures
+  }
+};
+
+const scheduleStartupShellAutoReload = () => {
+  if (typeof window === "undefined" || !shouldStabilizeStartupShellWindow()) {
+    clearAutoReloadTimer();
+    return;
+  }
+
+  const reloadState = readStartupShellAutoReloadState();
+  if (reloadState.attempts >= STARTUP_SHELL_AUTO_RELOAD_MAX_ATTEMPTS) {
+    clearAutoReloadTimer();
+    return;
+  }
+
+  clearAutoReloadTimer();
+  startupShellAutoReloadTimer = window.setTimeout(() => {
+    if (isSensitiveRouteAppReady()) {
+      resetStartupShellAutoReloadState();
+      return;
+    }
+
+    const latestState = readStartupShellAutoReloadState();
+    if (latestState.attempts >= STARTUP_SHELL_AUTO_RELOAD_MAX_ATTEMPTS) {
+      return;
+    }
+
+    writeStartupShellAutoReloadState({
+      attempts: latestState.attempts + 1,
+      startedAt: latestState.startedAt,
+    });
+
+    performSafePreviewReload();
+  }, STARTUP_SHELL_AUTO_RELOAD_DELAY_MS);
 };
 
 export const isSensitiveRouteAppReady = () => {
@@ -104,6 +202,8 @@ export const promoteStartupShellToRecovery = (
   if (actions) {
     actions.style.display = "flex";
   }
+
+  scheduleStartupShellAutoReload();
 };
 
 export const ensureStartupShell = () => {
@@ -149,12 +249,14 @@ export const ensureStartupShell = () => {
   const handleReload = () => {
     clearStartupShellRecoveryTimer();
     clearBlankRecoveryTimer();
+    clearAutoReloadTimer();
     performSafePreviewReload();
   };
 
   const handleOpenSignIn = () => {
     clearStartupShellRecoveryTimer();
     clearBlankRecoveryTimer();
+    clearAutoReloadTimer();
     window.location.replace(
       new URL(isSensitivePreviewRouteWindow() ? "/crm-auth" : "/", window.location.origin).toString(),
     );
@@ -192,6 +294,8 @@ export const ensureStartupShell = () => {
 export const removeStartupShell = () => {
   const cleanupShell = () => {
     clearStartupShellRecoveryTimer();
+    clearBlankRecoveryTimer();
+    resetStartupShellAutoReloadState();
     detachStartupShellListeners?.();
     detachStartupShellListeners = null;
     const shell = typeof document !== "undefined" ? document.getElementById(STARTUP_SHELL_ID) : null;
@@ -279,6 +383,7 @@ export const installStartupShellHealthMonitor = () => {
 
     if (isSensitiveRouteAppReady()) {
       clearBlankRecoveryTimer();
+      resetStartupShellAutoReloadState();
       if (document.getElementById(STARTUP_SHELL_ID)) {
         removeStartupShell();
       }
