@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
@@ -66,6 +65,11 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading, initialized: authInitialized } = useAuth();
   const [activeVertical, setActiveVerticalState] = useState<BusinessVertical | null>(null);
   const [hasResolvedActiveVertical, setHasResolvedActiveVertical] = useState(false);
+  const [allVerticals, setAllVerticals] = useState<BusinessVertical[]>([]);
+  const [userAccessData, setUserAccessData] = useState<Array<{ vertical_id: string; access_level: string | null }>>([]);
+  const [teamMember, setTeamMember] = useState<TeamMember | null>(null);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
+  const [dataLoading, setDataLoading] = useState(false);
   const isAuthReady = authInitialized && !authLoading;
 
   const setActiveVertical = useCallback((vertical: BusinessVertical | null) => {
@@ -73,116 +77,137 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
     setStoredActiveVerticalId(vertical?.id ?? null);
   }, []);
 
-  // Fetch all verticals
-  const { data: allVerticals = [], isLoading: verticalsLoading } = useQuery({
-    queryKey: ['business-verticals'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('business_verticals')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order');
-      if (error) {
-        console.warn("[VerticalProvider] Failed to fetch verticals", error);
-        return [];
-      }
-      return data as BusinessVertical[];
-    },
-    enabled: isAuthReady && !!user?.id,
-    retry: 2,
-    staleTime: 1000 * 60,
-  });
+  useEffect(() => {
+    if (!isAuthReady) {
+      return;
+    }
 
-  // Fetch user's vertical access with access_level
-  const { data: userAccessData = [], isLoading: accessLoading } = useQuery({
-    queryKey: ['user-vertical-access', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
-        .from('user_vertical_access')
-        .select('vertical_id, access_level')
-        .eq('user_id', user.id);
-      if (error) {
-        console.warn("[VerticalProvider] Failed to fetch user access", error);
-        return [];
+    if (!user?.id) {
+      setAllVerticals([]);
+      setUserAccessData([]);
+      setTeamMember(null);
+      setUserRoles([]);
+      setDataLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const fetchVerticalData = async () => {
+      setDataLoading(true);
+
+      const [verticals, access, member, roles] = await Promise.all([
+        (async () => {
+          const { data, error } = await supabase
+            .from('business_verticals')
+            .select('*')
+            .eq('is_active', true)
+            .order('sort_order');
+
+          if (error) {
+            console.warn("[VerticalProvider] Failed to fetch verticals", error);
+            return [] as BusinessVertical[];
+          }
+
+          return data as BusinessVertical[];
+        })(),
+        (async () => {
+          const { data, error } = await supabase
+            .from('user_vertical_access')
+            .select('vertical_id, access_level')
+            .eq('user_id', user.id);
+
+          if (error) {
+            console.warn("[VerticalProvider] Failed to fetch user access", error);
+            return [] as Array<{ vertical_id: string; access_level: string | null }>;
+          }
+
+          return data as Array<{ vertical_id: string; access_level: string | null }>;
+        })(),
+        (async () => {
+          const { data, error } = await supabase
+            .from('team_members')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (error) {
+            console.warn("[VerticalProvider] Failed to fetch team member", error);
+            return null;
+          }
+
+          return data as TeamMember | null;
+        })(),
+        (async () => {
+          try {
+            const { data, error } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', user.id);
+
+            if (error) throw error;
+            if ((data?.length ?? 0) > 0) return data.map((entry) => entry.role);
+
+            const { data: crmUser } = await supabase
+              .from('crm_users')
+              .select('role')
+              .eq('auth_user_id', user.id)
+              .maybeSingle();
+
+            if (crmUser?.role === 'admin') return ['admin'];
+            if (crmUser?.role === 'manager') return ['operations'];
+            if (crmUser?.role === 'executive') return ['sales'];
+            return [];
+          } catch (err) {
+            console.warn("[VerticalProvider] Failed to fetch user roles", err);
+            return [] as string[];
+          }
+        })(),
+      ]);
+
+      if (isCancelled) {
+        return;
       }
-      return data as Array<{ vertical_id: string; access_level: string | null }>;
-    },
-    enabled: isAuthReady && !!user?.id,
-    retry: 2,
-    staleTime: 1000 * 60,
-  });
+
+      setAllVerticals(verticals);
+      setUserAccessData(access);
+      setTeamMember(member);
+      setUserRoles(roles);
+      setDataLoading(false);
+    };
+
+    fetchVerticalData().catch((error) => {
+      if (isCancelled) {
+        return;
+      }
+
+      console.warn("[VerticalProvider] Failed to bootstrap vertical context", error);
+      setAllVerticals([]);
+      setUserAccessData([]);
+      setTeamMember(null);
+      setUserRoles([]);
+      setDataLoading(false);
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isAuthReady, user?.id]);
 
   const userAccess = userAccessData.map(d => d.vertical_id);
-
-  // Fetch team member info
-  const { data: teamMember = null, isLoading: memberLoading } = useQuery({
-    queryKey: ['team-member', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      if (error) {
-        console.warn("[VerticalProvider] Failed to fetch team member", error);
-        return null;
-      }
-      return data as TeamMember | null;
-    },
-    enabled: isAuthReady && !!user?.id,
-    retry: 1,
-  });
-
-  // Check if user is super_admin/admin (they get all verticals)
-  const { data: userRoles = [], isLoading: rolesLoading } = useQuery({
-    queryKey: ['userRoles-vertical', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-
-      try {
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id);
-
-        if (error) throw error;
-        if ((data?.length ?? 0) > 0) return data.map(d => d.role);
-
-        // Fallback to CRM role for legacy/admin accounts
-        const { data: crmUser } = await supabase
-          .from('crm_users')
-          .select('role')
-          .eq('auth_user_id', user.id)
-          .maybeSingle();
-
-        if (crmUser?.role === 'admin') return ['admin'];
-        if (crmUser?.role === 'manager') return ['operations'];
-        if (crmUser?.role === 'executive') return ['sales'];
-        return [];
-      } catch (err) {
-        console.warn("[VerticalProvider] Failed to fetch user roles", err);
-        return [];
-      }
-    },
-    enabled: isAuthReady && !!user?.id,
-    retry: 2,
-    staleTime: 1000 * 60,
-  });
 
   const isAdminUser = userRoles.includes('super_admin') || userRoles.includes('admin');
 
   // Super admins see all verticals, others see only assigned ones
   const availableVerticals = useMemo(() => {
-    if (rolesLoading) {
+    if (dataLoading) {
       return [] as BusinessVertical[];
     }
 
     return isAdminUser
       ? allVerticals
       : allVerticals.filter(v => userAccess.includes(v.id));
-  }, [allVerticals, isAdminUser, rolesLoading, userAccess]);
+  }, [allVerticals, isAdminUser, dataLoading, userAccess]);
 
   useEffect(() => {
     if (!isAuthReady) {
@@ -204,7 +229,7 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    if (verticalsLoading || accessLoading || rolesLoading) {
+    if (dataLoading) {
       return;
     }
 
@@ -235,7 +260,7 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setHasResolvedActiveVertical(true);
-  }, [isAuthReady, user?.id, verticalsLoading, accessLoading, rolesLoading, availableVerticals, activeVertical, setActiveVertical]);
+  }, [isAuthReady, user?.id, dataLoading, availableVerticals, activeVertical, setActiveVertical]);
 
   // Check if user is manager in currently active vertical
   const isManagerInVertical = isAdminUser || (
@@ -249,7 +274,7 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
       activeVertical,
       setActiveVertical,
       availableVerticals,
-      isLoading: !isAuthReady || verticalsLoading || accessLoading || memberLoading || rolesLoading || !hasResolvedActiveVertical,
+      isLoading: !isAuthReady || dataLoading || !hasResolvedActiveVertical,
       teamMember,
       isManagerInVertical,
     }}>
