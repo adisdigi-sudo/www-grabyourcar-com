@@ -11,16 +11,12 @@ import { withPreviewParams } from "@/lib/previewRouting";
 import { Button } from "@/components/ui/button";
 import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBoundary";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
+import { NotificationCenter } from "@/components/admin/NotificationCenter";
 import { CRMAssistant } from "@/components/admin/CRMAssistant";
 import { AICofounderBanner } from "@/components/admin/AICofounderBanner";
 import { Shield } from "lucide-react";
-const AdminDashboard = lazy(() =>
-  import("@/components/admin/AdminDashboard").then((module) => ({ default: module.AdminDashboard })),
-);
-const NotificationCenter = lazy(() =>
-  import("@/components/admin/NotificationCenter").then((module) => ({ default: module.NotificationCenter })),
-);
 const PersonalizedWelcomeBanner = lazy(() =>
   import("@/components/admin/PersonalizedWelcomeBanner").then((module) => ({ default: module.PersonalizedWelcomeBanner })),
 );
@@ -527,10 +523,11 @@ const AdminLayout = () => {
   }, [user, isLoading, verticalAccessLoading, activeVertical, availableVerticals, setActiveVertical]);
 
   useEffect(() => {
-    if (initialized && !isLoading && !verticalAccessLoading && user && activeVertical) {
+    if (initialized && !isLoading && !verticalAccessLoading && user) {
+      resetChunkLoadRecovery();
       resetChunkLoadRecovery("crm_chunk_load_recovery");
     }
-  }, [initialized, isLoading, verticalAccessLoading, user, activeVertical]);
+  }, [initialized, isLoading, verticalAccessLoading, user]);
 
   const isResolvingWorkspace =
     !!user && !isLoading && !verticalAccessLoading && !activeVertical && availableVerticals.length === 1;
