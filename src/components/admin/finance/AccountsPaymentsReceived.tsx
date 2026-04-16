@@ -46,10 +46,32 @@ const AccountsPaymentsReceived = () => {
       }
       const { error } = await (supabase.from("payment_received") as any).upsert(p, { onConflict: "id" });
       if (error) throw error;
+
+      // Auto-update linked invoice status if invoice_number provided
+      if (p.invoice_number) {
+        const { data: inv } = await supabase.from("invoices").select("id, total_amount, amount_paid").eq("invoice_number", p.invoice_number).maybeSingle();
+        if (inv) {
+          const newPaid = Number(inv.amount_paid || 0) + (editing ? 0 : Number(p.amount || 0));
+          const balance = Number(inv.total_amount || 0) - newPaid;
+          await supabase.from("invoices").update({
+            amount_paid: newPaid,
+            balance_due: Math.max(balance, 0),
+            status: balance <= 0 ? "paid" : "partial",
+            paid_at: balance <= 0 ? new Date().toISOString() : null,
+          } as any).eq("id", inv.id);
+        }
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ["payments-received"] });
-      toast.success(editing ? "Updated" : "Payment recorded");
+      qc.invalidateQueries({ queryKey: ["acc-invoices-all"] });
+      const isNew = !editing;
+      toast.success(isNew ? "Payment recorded — receipt ready!" : "Updated");
+      if (isNew && variables) {
+        // Auto-generate receipt for new payments
+        const payData = { ...variables, payment_number: `PAY-${format(new Date(), "yyyyMMdd")}-AUTO` };
+        generateReceipt(payData);
+      }
       setShowDialog(false); setEditing(null); setForm({});
     },
     onError: (e: any) => toast.error(e.message),
