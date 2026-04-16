@@ -391,7 +391,25 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
   }, [applications, quickMoveMutation]);
 
   const handleCardClick = (app: any) => { setSelectedApp(app); setShowStageModal(true); };
-  const handleWhatsApp = (phone: string, name: string, carModel?: string | null) => {
+  const handleWhatsApp = (phone: string, name: string, carModel?: string | null, app?: any) => {
+    // If the lead is already disbursed → send the Thank-You + Feedback message instead of the generic inquiry
+    if (app?.stage === 'disbursed') {
+      const msg = buildDisbursementThankYouMessage({
+        customerName: name,
+        carModel,
+        bankName: app.bank_name || app.lender_name || app.selected_bank,
+        disbursementAmount: Number(app.disbursement_amount) || Number(app.loan_amount) || 0,
+      });
+      void sendCrmWhatsAppMessage({
+        phone,
+        message: msg,
+        name,
+        logEvent: "loan_disbursement_feedback",
+        vertical: "loans",
+        successMessage: `✅ Thank-you + feedback request sent to ${name || 'customer'}`,
+      });
+      return;
+    }
     openWhatsAppChat(phone, buildLoanFollowupWhatsAppMessage({ customerName: name, carModel }));
   };
 
@@ -853,7 +871,7 @@ const LoanCard = ({ app, stage, onDragStart, onDragEnd, onClick, onWhatsApp, isD
             <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e: React.MouseEvent) => { e.stopPropagation(); window.open(`tel:+91${app.phone.replace(/\D/g, '').slice(-10)}`, '_self'); }}>
               <PhoneCall className="h-3 w-3 text-emerald-600" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onWhatsApp(app.phone, app.customer_name, app.car_model); }}>
+            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onWhatsApp(app.phone, app.customer_name, app.car_model, app); }}>
               <MessageCircle className="h-3 w-3 text-green-600" />
             </Button>
           </div>
@@ -1537,10 +1555,27 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                           <PhoneCall className="h-3 w-3 text-emerald-600" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => {
-                          openWhatsAppChat(application.phone, buildLoanFollowupWhatsAppMessage({
-                            customerName: application.customer_name,
-                            carModel: application.car_model,
-                          }));
+                          if (application.stage === 'disbursed') {
+                            const msg = buildDisbursementThankYouMessage({
+                              customerName: application.customer_name,
+                              carModel: application.car_model,
+                              bankName: application.bank_name || application.lender_name || application.selected_bank,
+                              disbursementAmount: Number(application.disbursement_amount) || Number(application.loan_amount) || 0,
+                            });
+                            void sendCrmWhatsAppMessage({
+                              phone: application.phone,
+                              message: msg,
+                              name: application.customer_name,
+                              logEvent: "loan_disbursement_feedback",
+                              vertical: "loans",
+                              successMessage: `✅ Thank-you + feedback request sent`,
+                            });
+                          } else {
+                            openWhatsAppChat(application.phone, buildLoanFollowupWhatsAppMessage({
+                              customerName: application.customer_name,
+                              carModel: application.car_model,
+                            }));
+                          }
                         }}>
                           <MessageCircle className="h-3 w-3 text-green-600" />
                         </Button>
