@@ -44,7 +44,8 @@ import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
 import { sendWhatsApp } from "@/lib/sendWhatsApp";
 import { persistLoanQuoteHistory } from "@/lib/loanQuotePersistence";
 import { generateSalesOfferPDF } from "../sales/SalesOfferPDF";
-import { Download, Share2 } from "lucide-react";
+import { Download, Share2, Send } from "lucide-react";
+import { format } from "date-fns";
 
 // ─── Source color map ───
 const SOURCE_COLORS: Record<string, string> = {
@@ -798,6 +799,16 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   const [sanctionFile, setSanctionFile] = useState<File | null>(null);
   const [disbursementFile, setDisbursementFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [sendingDisbMsg, setSendingDisbMsg] = useState(false);
+  const [disbEditMode, setDisbEditMode] = useState(false);
+  const [editDisbAmount, setEditDisbAmount] = useState(application?.disbursement_amount?.toString() || '');
+  const [editDisbDate, setEditDisbDate] = useState(application?.disbursement_date || '');
+  const [editDisbBank, setEditDisbBank] = useState(application?.lender_name || '');
+  const [editDisbEmi, setEditDisbEmi] = useState(application?.emi_amount?.toString() || '');
+  const [editDisbTenure, setEditDisbTenure] = useState(application?.tenure_months?.toString() || '');
+  const [editDisbInterest, setEditDisbInterest] = useState(application?.interest_rate?.toString() || '');
+  const [editDisbEmiStartDate, setEditDisbEmiStartDate] = useState('');
+  const [editDisbFile, setEditDisbFile] = useState<File | null>(null);
   const [finalCarPrice, setFinalCarPrice] = useState(salesCalculatorDefaults.finalCarPrice ? salesCalculatorDefaults.finalCarPrice.toString() : '');
   const [bookingAmountPaid, setBookingAmountPaid] = useState(salesCalculatorDefaults.bookingAmount ? salesCalculatorDefaults.bookingAmount.toString() : '');
   const [grossLoanAmount, setGrossLoanAmount] = useState(salesCalculatorDefaults.grossLoanAmount ? salesCalculatorDefaults.grossLoanAmount.toString() : '');
@@ -1045,6 +1056,100 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
     toast.success("WhatsApp share opened");
   };
 
+  // ── Reset disb edit fields when application changes ──
+  useEffect(() => {
+    setEditDisbAmount(application?.disbursement_amount?.toString() || '');
+    setEditDisbDate(application?.disbursement_date || '');
+    setEditDisbBank(application?.lender_name || '');
+    setEditDisbEmi(application?.emi_amount?.toString() || '');
+    setEditDisbTenure(application?.tenure_months?.toString() || '');
+    setEditDisbInterest(application?.interest_rate?.toString() || '');
+    setEditDisbEmiStartDate('');
+    setDisbEditMode(false);
+  }, [application?.id]);
+
+  // ── Build disbursement confirmation message ──
+  const buildDisbursementMessage = (app: any, emiStartDate?: string) => {
+    const name = app.customer_name || 'Customer';
+    const bank = app.lender_name || editDisbBank || 'Bank';
+    const amt = Number(app.disbursement_amount || editDisbAmount || 0).toLocaleString('en-IN');
+    const emi = Number(app.emi_amount || editDisbEmi || 0).toLocaleString('en-IN');
+    const tenure = app.tenure_months || editDisbTenure || '—';
+    const emiStart = emiStartDate || 'To be confirmed';
+    return [
+      `Dear ${name},`,
+      ``,
+      `We are pleased to inform you that your car loan has been successfully disbursed 🎉`,
+      ``,
+      `Please find the details below:`,
+      ``,
+      `• Bank Name: ${bank}`,
+      `• Loan Amount: ₹${amt}`,
+      `• EMI: ₹${emi}`,
+      `• Tenure: ${tenure} months`,
+      `• EMI Start Date: ${emiStart}`,
+      ``,
+      `Kindly find the attached supporting documents for your reference.`,
+      ``,
+      `If you need any further assistance, feel free to reach out to us anytime.`,
+      ``,
+      `Grabyourcar 🚗`,
+      `Your trusted car buying partner`,
+    ].join('\n');
+  };
+
+  // ── Send disbursement confirmation via WhatsApp API ──
+  const sendDisbursementConfirmation = async (app: any, docUrl?: string, emiStartDate?: string) => {
+    const cleanPhone = String(app.phone).replace(/\D/g, '').slice(-10);
+    if (cleanPhone.length !== 10) { toast.error("Invalid phone number"); return; }
+    const message = buildDisbursementMessage(app, emiStartDate);
+    setSendingDisbMsg(true);
+    try {
+      const result = await sendWhatsApp({
+        phone: cleanPhone,
+        message,
+        name: app.customer_name || 'Customer',
+        logEvent: 'loan_disbursement_confirmation',
+        messageContext: 'loan_disbursement',
+        vertical: 'loans',
+        silent: true,
+        ...(docUrl ? { mediaUrl: docUrl, messageType: 'document' as const, mediaFileName: 'Disbursement_Letter.pdf' } : {}),
+      });
+      if (result.success) {
+        toast.success("✅ Disbursement confirmation sent via WhatsApp API");
+      } else {
+        toast.error(result.error || "WhatsApp API send failed");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "WhatsApp API send failed");
+    } finally {
+      setSendingDisbMsg(false);
+    }
+  };
+
+  // ── Save disbursement edits (Super Admin only) ──
+  const handleDisbEditSave = async () => {
+    if (!editDisbAmount || !editDisbBank) { toast.error("Amount and Bank required"); return; }
+    const updates: any = {
+      disbursement_amount: Number(editDisbAmount),
+      disbursement_date: editDisbDate || null,
+      lender_name: editDisbBank,
+      emi_amount: editDisbEmi ? Number(editDisbEmi) : null,
+      tenure_months: editDisbTenure ? Number(editDisbTenure) : null,
+      interest_rate: editDisbInterest ? Number(editDisbInterest) : null,
+    };
+    if (editDisbFile) {
+      try {
+        setUploadingFile(true);
+        const url = await uploadDocument(editDisbFile, 'disbursement-proofs');
+        updates.disbursement_letter_url = url;
+      } catch (err: any) { toast.error(`Upload failed: ${err.message}`); return; }
+      finally { setUploadingFile(false); }
+    }
+    updateMutation.mutate(updates);
+    setDisbEditMode(false);
+  };
+
   const handleSmartCallingSave = () => {
     if (!callStatus) { toast.error("Select a call status"); return; }
     if (!callRemarks.trim()) { toast.error("Remarks are mandatory"); return; }
@@ -1178,6 +1283,10 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
     }
 
     updateMutation.mutate(updates);
+
+    // 📱 Send disbursement confirmation via WhatsApp API
+    const docUrl = updates.disbursement_letter_url || application.disbursement_letter_url;
+    sendDisbursementConfirmation({ ...application, disbursement_amount: disbAmount, lender_name: disbBank, disbursement_date: disbDate }, docUrl);
   };
 
   const handleLostSave = () => {
@@ -1532,15 +1641,48 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           )}
 
           {/* DISBURSED — Read-only summary when already disbursed */}
-          {currentStage === 'disbursed' && !application._targetStage && !editMode && (
+          {currentStage === 'disbursed' && !application._targetStage && (
             <div className="space-y-3 p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium"><CheckCircle2 className="h-4 w-4" /> Disbursement Complete</div>
-                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]">{isLocked ? '🔒 Locked' : '🔓 Editable (Super Admin)'}</Badge>
+                <div className="flex items-center gap-2">
+                  {isSuperAdmin() && !disbEditMode && (
+                    <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => setDisbEditMode(true)}>
+                      <Pencil className="h-3 w-3" /> Edit
+                    </Button>
+                  )}
+                  {disbEditMode && (
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setDisbEditMode(false)}>Cancel</Button>
+                      <Button size="sm" className="h-6 text-[10px] gap-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleDisbEditSave} disabled={updateMutation.isPending || uploadingFile}>
+                        <Save className="h-3 w-3" /> {uploadingFile ? "Uploading..." : updateMutation.isPending ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
+                  )}
+                  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]">{isLocked ? '🔒 Locked' : '🔓 Super Admin'}</Badge>
+                </div>
               </div>
               {application.incentive_eligible && (
                 <Badge className="bg-green-500/10 text-green-600 border-green-500/20">✅ Incentive Eligible</Badge>
               )}
+
+              {disbEditMode ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div><Label className="text-[10px]">Disbursed Amount *</Label><Input type="number" value={editDisbAmount} onChange={e => setEditDisbAmount(e.target.value)} className="h-7 text-xs" /></div>
+                    <div><Label className="text-[10px]">Disbursement Date</Label><Input type="date" value={editDisbDate} onChange={e => setEditDisbDate(e.target.value)} className="h-7 text-xs" /></div>
+                    <div><Label className="text-[10px]">Bank / Lender *</Label><Input value={editDisbBank} onChange={e => setEditDisbBank(e.target.value)} className="h-7 text-xs" /></div>
+                    <div><Label className="text-[10px]">EMI Amount</Label><Input type="number" value={editDisbEmi} onChange={e => setEditDisbEmi(e.target.value)} className="h-7 text-xs" /></div>
+                    <div><Label className="text-[10px]">Tenure (months)</Label><Input type="number" value={editDisbTenure} onChange={e => setEditDisbTenure(e.target.value)} className="h-7 text-xs" /></div>
+                    <div><Label className="text-[10px]">Interest Rate %</Label><Input type="number" step="0.1" value={editDisbInterest} onChange={e => setEditDisbInterest(e.target.value)} className="h-7 text-xs" /></div>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] flex items-center gap-1"><Upload className="h-3 w-3" /> Upload / Replace Document</Label>
+                    <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="h-7 text-xs mt-1" onChange={e => setEditDisbFile(e.target.files?.[0] || null)} />
+                  </div>
+                </div>
+              ) : (
+              <>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
                 <div className="p-2.5 rounded-lg bg-background border">
                   <p className="text-[10px] text-muted-foreground mb-0.5">Disbursed Amount</p>
@@ -1579,6 +1721,8 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                   <p className="font-semibold">{application.loan_amount ? `₹${Number(application.loan_amount).toLocaleString('en-IN')}` : '—'}</p>
                 </div>
               </div>
+              </>
+              )}
 
               {/* Documents */}
               <div className="space-y-2">
@@ -1599,6 +1743,33 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                   )}
                 </div>
               </div>
+
+              {/* Send Disbursement Confirmation to Client via WhatsApp API */}
+              {isSuperAdmin() && !disbEditMode && (
+                <div className="pt-2 border-t border-emerald-500/20 space-y-2">
+                  <div>
+                    <Label className="text-[10px]">EMI Start Date (for message)</Label>
+                    <Input type="date" value={editDisbEmiStartDate} onChange={e => setEditDisbEmiStartDate(e.target.value)} className="h-7 text-xs mt-1 w-48" />
+                  </div>
+                  <Button
+                    size="sm"
+                    className="gap-1.5 bg-green-600 hover:bg-green-700 text-white h-8"
+                    disabled={sendingDisbMsg}
+                    onClick={() => {
+                      const docUrl = application.disbursement_letter_url || application.sanction_letter_url;
+                      const emiStart = editDisbEmiStartDate ? format(new Date(editDisbEmiStartDate), 'dd MMM yyyy') : undefined;
+                      sendDisbursementConfirmation(application, docUrl, emiStart);
+                    }}
+                  >
+                    {sendingDisbMsg ? (
+                      <><Clock className="h-3.5 w-3.5 animate-spin" /> Sending…</>
+                    ) : (
+                      <><Send className="h-3.5 w-3.5" /> Send Disbursement Confirmation via API</>
+                    )}
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground">Sends details + attached document to client via WhatsApp API</p>
+                </div>
+              )}
 
               {/* Remarks */}
               {application.remarks && (
