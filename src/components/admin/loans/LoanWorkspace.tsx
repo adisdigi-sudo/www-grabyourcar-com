@@ -1767,12 +1767,28 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                     <Label className="text-[10px]">EMI Start Date (for message)</Label>
                     <Input type="date" value={editDisbEmiStartDate} onChange={e => setEditDisbEmiStartDate(e.target.value)} className="h-7 text-xs mt-1 w-48" />
                   </div>
+                  {/* Document attachment status */}
+                  {(application.disbursement_letter_url || application.sanction_letter_url) ? (
+                    <div className="flex items-center gap-2 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-1">
+                      <FileText className="h-3 w-3" />
+                      <span>PDF attached: <span className="font-medium">{application.disbursement_letter_url ? 'Disbursement Letter' : 'Sanction Letter'}</span></span>
+                      <Button variant="link" size="sm" className="text-[10px] h-4 p-0 ml-auto" onClick={() => window.open(application.disbursement_letter_url || application.sanction_letter_url, '_blank')}>Preview</Button>
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1">
+                      ⚠ No PDF on file for {application.customer_name}. Click "Edit" above to upload the correct disbursement letter — otherwise the WhatsApp will go without an attachment.
+                    </div>
+                  )}
                   <Button
                     size="sm"
                     className="gap-1.5 bg-green-600 hover:bg-green-700 text-white h-8"
                     disabled={sendingDisbMsg}
                     onClick={() => {
                       const docUrl = application.disbursement_letter_url || application.sanction_letter_url;
+                      if (!docUrl) {
+                        const proceed = window.confirm(`No PDF is attached for ${application.customer_name}. Send WhatsApp WITHOUT a document attachment?`);
+                        if (!proceed) return;
+                      }
                       const emiStart = editDisbEmiStartDate ? format(new Date(editDisbEmiStartDate), 'dd MMM yyyy') : undefined;
                       sendDisbursementConfirmation(application, docUrl, emiStart);
                     }}
