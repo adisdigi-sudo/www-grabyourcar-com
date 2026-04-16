@@ -82,6 +82,37 @@ const hasVisibleLayoutSurface = (root: HTMLElement) => {
   return Array.from(candidateSurfaces).some((element) => isElementVisible(element));
 };
 
+const hasMountedApplicationChrome = (root: HTMLElement) => {
+  const meaningfulChildren = Array.from(root.children).filter((child) => (child as HTMLElement).id !== STARTUP_SHELL_ID);
+  if (meaningfulChildren.length === 0) {
+    return false;
+  }
+
+  const appChromeSelectors = [
+    "main",
+    "aside",
+    "nav",
+    "header",
+    "[role='main']",
+    "[role='dialog']",
+    "[data-radix-popper-content-wrapper]",
+    "[data-sonner-toaster]",
+    "[class*='animate-spin']",
+  ].join(", ");
+
+  return meaningfulChildren.some((child) => {
+    if (!(child instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (!isElementVisible(child)) {
+      return false;
+    }
+
+    return child.matches(appChromeSelectors) || !!child.querySelector(appChromeSelectors);
+  });
+};
+
 const clearStartupShellRecoveryTimer = () => {
   if (startupShellRecoveryTimer) {
     window.clearTimeout(startupShellRecoveryTimer);
@@ -199,6 +230,10 @@ export const isSensitiveRouteAppReady = () => {
 
   const root = document.getElementById(APP_ROOT_ID);
   if (!root || root.childElementCount === 0) return false;
+
+  if (hasMountedApplicationChrome(root)) {
+    return true;
+  }
 
   const mainRegion = root.querySelector("main, [role='main']");
   const mainHasVisibleNodes = hasVisibleReadySelector(mainRegion);

@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -48,7 +49,7 @@ function calcEMI(principal: number, ratePA: number, months: number) {
   return Math.round((principal * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1));
 }
 
-export function UnifiedSalesCalculator({
+export const UnifiedSalesCalculator = React.forwardRef<HTMLDivElement, UnifiedSalesCalculatorProps>(function UnifiedSalesCalculator({
   finalCarPrice,
   setFinalCarPrice,
   grossLoanAmount,
@@ -70,7 +71,7 @@ export function UnifiedSalesCalculator({
   tenureMonths,
   setTenureMonths,
   breakdown,
-}: UnifiedSalesCalculatorProps) {
+}, ref) {
   const rate = Number(interestRate) || 0;
   const tenure = Number(tenureMonths) || 0;
   const emi = calcEMI(breakdown.grossLoanAmount, rate, tenure);
@@ -78,7 +79,7 @@ export function UnifiedSalesCalculator({
   const totalInterest = totalPayable - breakdown.grossLoanAmount;
 
   return (
-    <div className="space-y-3">
+    <div ref={ref} className="space-y-3">
       {/* Input Fields */}
       <div className="grid grid-cols-2 gap-3">
         <div><Label className="text-[10px]">Final Car Price (On-Road) *</Label><Input type="number" value={finalCarPrice} onChange={e => setFinalCarPrice(e.target.value)} placeholder="e.g. 1650000" /></div>
@@ -201,4 +202,4 @@ export function UnifiedSalesCalculator({
       )}
     </div>
   );
-}
+});
