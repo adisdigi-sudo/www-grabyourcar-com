@@ -7,7 +7,7 @@ import {
   Clock, Landmark, Calculator, BarChart3, FolderOpen,
   ChevronDown, ChevronRight, BookOpen, RefreshCw,
   Globe, Lock, FileText, CreditCard, ArrowLeftRight,
-  PiggyBank, Search, Plus, Settings
+  PiggyBank, Search, Plus, Settings, Truck, IndianRupee
 } from "lucide-react";
 
 // Lazy load sub-modules
@@ -29,6 +29,8 @@ const AccountsItemsModule = lazy(() => import("./AccountsItemsModule"));
 const AccountsBudgets = lazy(() => import("./AccountsBudgets"));
 const VerticalProfitLoss = lazy(() => import("./VerticalProfitLoss"));
 const AccountsFinancialDocuments = lazy(() => import("./AccountsFinancialDocuments"));
+const AccountsGSTReports = lazy(() => import("./AccountsGSTReports"));
+const AccountsEWayBill = lazy(() => import("./AccountsEWayBill"));
 
 interface SidebarItem {
   id: string;
