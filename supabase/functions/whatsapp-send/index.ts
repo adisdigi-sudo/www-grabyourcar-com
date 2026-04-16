@@ -110,6 +110,17 @@ function buildImplicitFallbackTemplate(params: {
 
   // Loan vertical
   if (vert === "loans" || /loan|emi|disburs/i.test(ctx)) {
+    if (/disburs|feedback/i.test(ctx)) {
+      return {
+        name: "booking_confirmation",
+        variables: {
+          var_1: safeName,
+          var_2: "loan update",
+        },
+        components: undefined,
+      };
+    }
+
     return {
       name: "welcome_new_lead",
       variables: { var_1: `${safeName} - Your loan update is ready. ${linkText}` },
