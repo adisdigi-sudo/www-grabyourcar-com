@@ -32,7 +32,6 @@ export async function shareDocumentViaWhatsApp({
   let cap = caption || "Your document from GrabYourCar";
 
   try {
-    // If no direct URL, try to resolve from storage
     if (!url && documentId) {
       const resolved = await resolveDocumentUrl(documentType, documentId);
       if (resolved) {
@@ -76,12 +75,14 @@ async function resolveDocumentUrl(
       case "invoice": {
         const { data } = await supabase
           .from("invoices")
-          .select("invoice_number, total_amount, vertical_name, pdf_url")
+          .select("invoice_number, total_amount, vertical_name")
           .eq("invoice_number", id)
           .maybeSingle();
-        if (data?.pdf_url) {
+        // Invoices don't have a direct PDF URL column — they are generated on-the-fly
+        // Return null so the caller can generate and share
+        if (data) {
           return {
-            url: data.pdf_url,
+            url: "", // Caller must provide generated PDF URL
             fileName: `Invoice-${data.invoice_number}.pdf`,
             caption: `Invoice ${data.invoice_number} — ₹${data.total_amount?.toLocaleString("en-IN")} (${data.vertical_name || "Service"})`,
           };
@@ -91,7 +92,7 @@ async function resolveDocumentUrl(
       case "quote": {
         const { data } = await supabase
           .from("quote_share_history")
-          .select("pdf_storage_path, car_name, variant_name")
+          .select("pdf_storage_path, vehicle_make, vehicle_model, insurance_company")
           .eq("id", id)
           .maybeSingle();
         if (data?.pdf_storage_path) {
@@ -99,10 +100,11 @@ async function resolveDocumentUrl(
             .from("quote-pdfs")
             .getPublicUrl(data.pdf_storage_path);
           if (urlData?.publicUrl) {
+            const carName = `${data.vehicle_make || ""} ${data.vehicle_model || ""}`.trim() || "Vehicle";
             return {
               url: urlData.publicUrl,
-              fileName: `Quote-${data.car_name}.pdf`,
-              caption: `Price Quote — ${data.car_name} ${data.variant_name || ""}`.trim(),
+              fileName: `Quote-${carName}.pdf`,
+              caption: `Insurance Quote — ${carName} (${data.insurance_company || "Quote"})`,
             };
           }
         }
@@ -127,14 +129,14 @@ async function resolveDocumentUrl(
       case "loan_document": {
         const { data } = await supabase
           .from("loan_applications")
-          .select("id, vehicle_name, document_url")
+          .select("id, customer_name, car_model, disbursement_letter_url")
           .eq("id", id)
           .maybeSingle();
-        if (data?.document_url) {
+        if (data?.disbursement_letter_url) {
           return {
-            url: data.document_url,
-            fileName: `Loan-${data.vehicle_name || "Document"}.pdf`,
-            caption: `Loan document for ${data.vehicle_name || "your vehicle"}`,
+            url: data.disbursement_letter_url,
+            fileName: `Loan-${data.car_model || "Document"}.pdf`,
+            caption: `Loan document for ${data.car_model || "your vehicle"}`,
           };
         }
         break;
