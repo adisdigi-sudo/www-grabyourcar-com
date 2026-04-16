@@ -512,7 +512,14 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
                       {getStatusIcon(msg)}
                     </div>
                     {msg.status === "failed" && msg.error_message && (
-                      <p className="text-[10px] text-red-500 mt-0.5">⚠ {msg.error_message}</p>
+                      <div className="mt-0.5 space-y-0.5">
+                        <p className="text-[10px] text-red-500">⚠ {msg.error_message}</p>
+                        {msg.error_code === "131026" && (
+                          <p className="text-[10px] text-amber-600">
+                            Customer ka WhatsApp currently reachable nahi hai. Number verify karein ya call/SMS try karein.
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

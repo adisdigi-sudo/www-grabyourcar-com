@@ -44,6 +44,7 @@ export interface WaMessage {
   template_variables: Record<string, string> | null;
   wa_message_id: string | null;
   status: string;
+  error_code: string | null;
   error_message: string | null;
   sent_by_name: string | null;
   read_at: string | null;
@@ -157,9 +158,16 @@ export default function WhatsAppBusinessInbox() {
 
     if (error || !data?.success) {
       const errMsg = data?.error || error?.message || "Send failed";
-      toast({ title: "Failed to send", description: errMsg, variant: "destructive" });
       if (data?.window_expired) {
         toast({ title: "24hr Window Expired", description: "Use a template message instead", variant: "destructive" });
+      } else if (String(data?.meta_error_code || "") === "131026") {
+        toast({
+          title: "Recipient WhatsApp par reachable nahi hai",
+          description: "Yeh number abhi WhatsApp par message receive nahi kar paa raha — number verify karen ya customer ko normal call/SMS karein.",
+          variant: "destructive"
+        });
+      } else {
+        toast({ title: "Failed to send", description: errMsg, variant: "destructive" });
       }
       return false;
     }
