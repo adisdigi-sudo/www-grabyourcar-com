@@ -22,6 +22,7 @@ import { STAGE_LABELS, STAGE_COLORS, ALLOWED_TRANSITIONS, LOST_REASONS, REQUIRED
 import { generateEMIPdf, generateEMIWhatsAppMessage, type EMIData } from "@/lib/generateEMIPdf";
 import { persistLoanQuoteHistory } from "@/lib/loanQuotePersistence";
 import { triggerWhatsApp } from "@/lib/whatsappTrigger";
+import { sendWhatsApp } from "@/lib/sendWhatsApp";
 
 type Step = 'call_status' | 'stage_update' | 'emi_share' | 'follow_up';
 type Disposition = 'connected' | 'not_connected' | 'busy' | 'no_answer' | 'callback_requested' | 'wrong_number';
@@ -73,6 +74,7 @@ export const LoanCallDispositionModal = ({ open, onOpenChange, application }: Pr
   const [uploading, setUploading] = useState(false);
   const [uploadedDocs, setUploadedDocs] = useState<{ type: string; name: string; url: string }[]>([]);
   const [selectedDocType, setSelectedDocType] = useState('');
+  const [sendingDisbWA, setSendingDisbWA] = useState(false);
 
   // Follow-up
   const [followUpDate, setFollowUpDate] = useState('');
@@ -508,19 +510,19 @@ export const LoanCallDispositionModal = ({ open, onOpenChange, application }: Pr
                     </div>
                   </div>
 
-                  {/* Personal WhatsApp Send (bypasses API, opens user's WhatsApp) */}
+                  {/* API-First Send (with Personal WhatsApp fallback only on failure) */}
                   <div className="pt-2 border-t border-emerald-500/20 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
                         <p className="text-xs font-medium text-emerald-800 dark:text-emerald-300">Send Disbursement Letter</p>
-                        <p className="text-[10px] text-muted-foreground">Open in your personal WhatsApp (no API)</p>
+                        <p className="text-[10px] text-muted-foreground">API-first via Meta · Personal WhatsApp only as fallback</p>
                       </div>
                       <Button
                         type="button"
                         size="sm"
-                        className="gap-1.5 bg-green-600 hover:bg-green-700 h-8"
-                        disabled={!disbursementAmount || !application?.phone}
-                        onClick={() => {
+                        className="gap-1.5 bg-green-600 hover:bg-green-700 h-8 shrink-0"
+                        disabled={!disbursementAmount || !application?.phone || sendingDisbWA}
+                        onClick={async () => {
                           const cleanPhone = String(application.phone).replace(/\D/g, '').slice(-10);
                           if (cleanPhone.length !== 10) {
                             toast.error("Invalid customer phone number");
@@ -535,7 +537,7 @@ export const LoanCallDispositionModal = ({ open, onOpenChange, application }: Pr
                           const emi = Number(application.emi_amount || 0).toLocaleString('en-IN');
                           const tenure = application.tenure_months || 60;
                           const car = application.car_model || 'your car';
-                          const lines = [
+                          const message = [
                             `Hi ${customerName} 🎉`,
                             ``,
                             `Congratulations! Your car loan has been *successfully disbursed*.`,
@@ -551,22 +553,51 @@ export const LoanCallDispositionModal = ({ open, onOpenChange, application }: Pr
                             pdfLink ? `📎 *Sanction Letter:*\n${pdfLink}` : '_(Sanction letter will be shared shortly)_',
                             ``,
                             `Thank you for choosing GrabYourCar! 🙏`,
-                            `Regards,`,
-                            `*GrabYourCar Loans Team*`,
                           ].filter(Boolean).join('\n');
-                          window.open(
-                            `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(lines)}`,
-                            '_blank'
-                          );
-                          toast.success("Opening WhatsApp with disbursement letter…");
+
+                          setSendingDisbWA(true);
+                          try {
+                            const result = await sendWhatsApp({
+                              phone: cleanPhone,
+                              message,
+                              name: customerName,
+                              logEvent: 'loan_disbursement_letter',
+                              messageContext: 'loan_disbursement',
+                              vertical: 'loans',
+                              silent: true,
+                              ...(pdfLink ? { mediaUrl: pdfLink, messageType: 'document', mediaFileName: 'Sanction_Letter.pdf' } : {}),
+                            });
+                            if (result.success) {
+                              toast.success(`✅ Disbursement letter sent via WhatsApp API to ${customerName}`);
+                            } else {
+                              // Fallback: open personal WhatsApp
+                              toast.warning("API failed — opening Personal WhatsApp as fallback");
+                              window.open(
+                                `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(message)}`,
+                                '_blank'
+                              );
+                            }
+                          } catch (err) {
+                            toast.warning("API error — opening Personal WhatsApp as fallback");
+                            window.open(
+                              `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(message)}`,
+                              '_blank'
+                            );
+                          } finally {
+                            setSendingDisbWA(false);
+                          }
                         }}
                       >
-                        <MessageCircle className="h-3.5 w-3.5" /> Open WhatsApp
+                        {sendingDisbWA ? (
+                          <><Clock className="h-3.5 w-3.5 animate-spin" /> Sending…</>
+                        ) : (
+                          <><MessageCircle className="h-3.5 w-3.5" /> Send via API</>
+                        )}
                       </Button>
                     </div>
                     {!uploadedDocs.find(d => d.type === 'sanction_letter' || d.name?.toLowerCase().includes('sanction')) && (
                       <p className="text-[10px] text-amber-600 dark:text-amber-500 flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3" /> Tip: Upload sanction letter above to auto-include PDF link
+                        <AlertTriangle className="h-3 w-3" /> Tip: Upload sanction letter above to auto-attach PDF
                       </p>
                     )}
                   </div>
