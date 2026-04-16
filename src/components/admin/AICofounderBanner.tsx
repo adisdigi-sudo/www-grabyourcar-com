@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import ReactMarkdown from "react-markdown";
 
 const COFOUNDER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-cofounder`;
 
@@ -144,8 +143,8 @@ export function AICofounderBanner({ activeTab, userRole, userName, userVertical 
                 Scanning your data...
               </div>
             ) : (
-              <div className="text-xs text-foreground/80 prose prose-sm dark:prose-invert max-w-none [&>p]:mb-0 [&>p]:leading-relaxed">
-                <ReactMarkdown>{suggestion}</ReactMarkdown>
+              <div className="text-xs text-foreground/80 max-w-none whitespace-pre-wrap break-words leading-relaxed">
+                {suggestion}
               </div>
             )}
           </div>
