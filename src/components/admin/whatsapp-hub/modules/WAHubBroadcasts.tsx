@@ -268,7 +268,7 @@ function CampaignPhonePreview({ header_type, header_content, body, footer, butto
   };
 
   return (
-    <div className="w-[280px] mx-auto">
+    <div className="w-[300px] mx-auto">
       <div className="bg-gray-900 rounded-[2rem] p-2 shadow-2xl">
         <div className="bg-gray-900 rounded-t-[1.5rem] pt-5 pb-1 px-4">
           <div className="flex items-center gap-2 text-white text-xs">
@@ -279,8 +279,8 @@ function CampaignPhonePreview({ header_type, header_content, body, footer, butto
             </div>
           </div>
         </div>
-        <div className="bg-[#e5ddd5] rounded-b-[1.5rem] p-3 min-h-[340px] flex flex-col justify-end">
-          <div className="bg-white rounded-lg p-2.5 shadow-sm max-w-[92%] ml-auto">
+        <div className="bg-[#e5ddd5] rounded-b-[1.5rem] p-3 pb-4 min-h-[360px] flex flex-col justify-end">
+          <div className="bg-white rounded-lg p-2.5 shadow-sm w-full">
             {/* Header */}
             {header_type === "text" && header_content && (
               <p className="font-bold text-xs mb-1">{renderVars(header_content)}</p>
@@ -327,13 +327,17 @@ function CampaignPhonePreview({ header_type, header_content, body, footer, butto
           </div>
           {/* Buttons */}
           {buttons.length > 0 && (
-            <div className="mt-1.5 w-full space-y-1">
+            <div className="mt-2 w-full space-y-1.5 pb-1">
               {buttons.map((btn, i) => (
-                <div key={i} className="bg-white rounded-lg px-3 py-2 text-center text-[12px] leading-tight text-blue-600 font-medium shadow-sm flex items-center justify-center gap-1.5 whitespace-nowrap overflow-hidden">
-                  {btn.type === "URL" && <Globe className="h-3 w-3 shrink-0" />}
-                  {btn.type === "PHONE_NUMBER" && <PhoneCall className="h-3 w-3 shrink-0" />}
-                  {btn.type === "QUICK_REPLY" && <Reply className="h-3 w-3 shrink-0" />}
-                  <span className="truncate">{btn.text || "Button"}</span>
+                <div
+                  key={i}
+                  className="bg-white rounded-lg px-4 py-2.5 text-center text-[13px] leading-tight text-blue-600 font-medium shadow-sm flex items-center justify-center gap-2 min-h-[36px] w-full"
+                  title={btn.text || "Button"}
+                >
+                  {btn.type === "URL" && <Globe className="h-3.5 w-3.5 shrink-0" />}
+                  {btn.type === "PHONE_NUMBER" && <PhoneCall className="h-3.5 w-3.5 shrink-0" />}
+                  {btn.type === "QUICK_REPLY" && <Reply className="h-3.5 w-3.5 shrink-0" />}
+                  <span className="truncate max-w-[200px]">{btn.text || "Button"}</span>
                 </div>
               ))}
             </div>
@@ -452,60 +456,214 @@ function VariableSampleEditor({ body, samples, onChange }: { body: string; sampl
   );
 }
 
-// ─── One-Shot Broadcast Tab (Meta-Style Full Builder) ───
+// ─── Excel Recipient Uploader ───
+async function parseRecipientExcel(file: File): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
+  const ExcelJS = (await import("exceljs")).default;
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(await file.arrayBuffer());
+  const ws = wb.worksheets[0];
+  if (!ws) throw new Error("No sheet found in Excel");
+  const headerRow = ws.getRow(1);
+  const headers: string[] = [];
+  headerRow.eachCell((cell, col) => { headers[col - 1] = String(cell.value || "").trim(); });
+  const rows: Record<string, string>[] = [];
+  ws.eachRow((row, rowNum) => {
+    if (rowNum === 1) return;
+    const obj: Record<string, string> = {};
+    row.eachCell((cell, col) => {
+      const key = headers[col - 1];
+      if (key) obj[key] = String(cell.value ?? "").trim();
+    });
+    if (obj.phone || obj.Phone || obj.PHONE) rows.push(obj);
+  });
+  return { headers: headers.filter(Boolean), rows };
+}
+
+function RecipientExcelUploader({ requiredVars, onParsed }: {
+  requiredVars: string[];
+  onParsed: (data: { rows: Record<string, string>[]; missing: string[] } | null) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [parsing, setParsing] = useState(false);
+  const [result, setResult] = useState<{ rows: Record<string, string>[]; missing: string[]; headers: string[] } | null>(null);
+
+  const handleFile = async (file: File) => {
+    setParsing(true);
+    try {
+      const { headers, rows } = await parseRecipientExcel(file);
+      const lowerHeaders = headers.map(h => h.toLowerCase());
+      const missing = requiredVars.filter(v => !lowerHeaders.includes(v.toLowerCase()));
+      if (!lowerHeaders.includes("phone")) missing.unshift("phone");
+      const res = { rows, missing, headers };
+      setResult(res);
+      onParsed({ rows, missing });
+      if (missing.length > 0) toast.error(`Missing required columns: ${missing.join(", ")}`);
+      else toast.success(`✅ ${rows.length} recipients loaded with all variables.`);
+    } catch (e) {
+      toast.error("Excel parse failed: " + (e as Error).message);
+      onParsed(null);
+    } finally { setParsing(false); }
+  };
+
+  const downloadTemplate = async () => {
+    const ExcelJS = (await import("exceljs")).default;
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Recipients");
+    const cols = ["phone", ...requiredVars.filter(v => v !== "phone")];
+    ws.addRow(cols);
+    ws.addRow(["9876543210", ...cols.slice(1).map(c => BROADCAST_VARS.find(v => v.key === c)?.sample || "Sample")]);
+    ws.getRow(1).font = { bold: true };
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "broadcast-recipients-template.xlsx"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs font-semibold">📊 Upload Recipients Excel *</Label>
+        <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={downloadTemplate}>
+          <FileText className="h-3 w-3" /> Download Template
+        </Button>
+      </div>
+      <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-2 text-[10px] text-blue-700 dark:text-blue-400">
+        <p className="font-semibold mb-1">Required columns (must exist in Excel):</p>
+        <div className="flex flex-wrap gap-1">
+          <Badge variant="outline" className="text-[9px] font-mono">phone</Badge>
+          {requiredVars.filter(v => v !== "phone").map(v => (
+            <Badge key={v} variant="outline" className="text-[9px] font-mono">{v}</Badge>
+          ))}
+        </div>
+      </div>
+      <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+      <Button type="button" variant="outline" className="w-full h-16 border-dashed gap-2" onClick={() => fileRef.current?.click()} disabled={parsing}>
+        {parsing ? <><RefreshCw className="h-4 w-4 animate-spin" /> Parsing...</> : <><FileUp className="h-4 w-4" /> Click to upload .xlsx</>}
+      </Button>
+      {result && (
+        <div className={`rounded-lg p-2 text-[11px] ${result.missing.length === 0 ? "bg-green-500/10 text-green-700 dark:text-green-400" : "bg-destructive/10 text-destructive"}`}>
+          {result.missing.length === 0 ? (
+            <><Check className="h-3 w-3 inline mr-1" /> {result.rows.length} recipients ready • Columns: {result.headers.join(", ")}</>
+          ) : (
+            <><AlertCircle className="h-3 w-3 inline mr-1" /> Missing: <span className="font-mono font-bold">{result.missing.join(", ")}</span> — Excel me ye columns add karein, tabhi details client tak jayengi</>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── One-Shot Broadcast: 4-Step Wizard ───
+type WizardStep = 1 | 2 | 3 | 4;
+
 function OneShotBroadcast() {
   const qc = useQueryClient();
+  const [step, setStep] = useState<WizardStep>(1);
   const [form, setForm] = useState({
-    name: "",
-    message: "",
-    template_id: "",
-    segment: "all",
-    batch_size: 50,
-    header_type: "none" as string,
-    header_content: "",
-    footer: "",
-    buttons: [] as CampaignButton[],
-    media_url: "",
-    variable_samples: [] as VariableSample[],
-    send_quote: false,
+    name: "", message: "", template_id: "", template_name: "", template_status: "",
+    batch_size: 50, header_type: "none" as string, header_content: "", footer: "",
+    buttons: [] as CampaignButton[], media_url: "", variable_samples: [] as VariableSample[], send_quote: false,
   });
+  const [recipients, setRecipients] = useState<Record<string, string>[] | null>(null);
+  const [excelMissing, setExcelMissing] = useState<string[]>([]);
+  const [testPhone, setTestPhone] = useState("");
+  const [testSent, setTestSent] = useState(false);
 
-  const { data: templates } = useQuery({
-    queryKey: ["broadcast-templates"],
+  const requiredVars = [...new Set((form.message.match(/\{\{(\w+)\}\}/g) || []).map(v => v.replace(/\{\{|\}\}/g, "")))];
+
+  const { data: templates, refetch: refetchTemplates } = useQuery({
+    queryKey: ["broadcast-templates-all"],
     queryFn: async () => {
-      const { data } = await supabase.from("wa_templates").select("id, name, body, status, header_type, header_content, footer, buttons, category").eq("status", "approved").order("name");
+      const { data } = await supabase.from("wa_templates").select("id, name, body, status, header_type, header_content, footer, buttons, category").order("created_at", { ascending: false });
       return data || [];
     },
+    refetchInterval: step === 2 ? 10000 : false,
   });
 
-  const { data: segments } = useQuery({
-    queryKey: ["broadcast-segments"],
-    queryFn: async () => {
-      const { data } = await supabase.from("wa_contact_segments").select("id, name, estimated_count").order("name");
-      return data || [];
-    },
-  });
-
-  const shootMutation = useMutation({
+  const submitTemplateMutation = useMutation({
     mutationFn: async () => {
-      if (!form.name || !form.message) throw new Error("Name and message required");
+      if (!form.name || !form.message) throw new Error("Campaign name and message required");
+      const tplName = form.name.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 60);
+      const { data: tpl, error: insertErr } = await supabase.from("wa_templates").insert({
+        name: tplName, display_name: form.name, category: "marketing", language: "en",
+        body: form.message,
+        header_type: form.header_type === "none" ? null : form.header_type,
+        header_content: form.header_content || form.media_url || null,
+        footer: form.footer || null, buttons: form.buttons as any,
+        variables: requiredVars as any, status: "draft",
+      } as any).select().single();
+      if (insertErr) throw insertErr;
+      const { error: subErr } = await supabase.functions.invoke("meta-templates", {
+        body: { action: "submit_template", template_id: tpl.id },
+      });
+      if (subErr) throw subErr;
+      return tpl;
+    },
+    onSuccess: (tpl) => {
+      setForm(p => ({ ...p, template_id: tpl.id, template_name: tpl.name, template_status: "pending" }));
+      setStep(2);
+      toast.success("📤 Template submitted to Meta. Approval usually takes 1–10 minutes.");
+      refetchTemplates();
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const currentTemplate = templates?.find((t: any) => t.id === form.template_id);
+  if (currentTemplate && currentTemplate.status !== form.template_status) {
+    setTimeout(() => setForm(p => ({ ...p, template_status: currentTemplate.status })), 0);
+  }
+  const isApproved = currentTemplate?.status === "approved";
+
+  const testSendMutation = useMutation({
+    mutationFn: async () => {
+      const clean = testPhone.replace(/\D/g, "").replace(/^91/, "");
+      if (!/^[6-9]\d{9}$/.test(clean)) throw new Error("Invalid Indian mobile (10 digits)");
+      const sampleRow: Record<string, string> = {};
+      requiredVars.forEach(v => {
+        const sample = form.variable_samples.find(s => s.key === v);
+        sampleRow[v] = sample?.value || BROADCAST_VARS.find(b => b.key === v)?.sample || "Test";
+      });
+      let content = form.message;
+      Object.entries(sampleRow).forEach(([k, v]) => { content = content.replace(new RegExp(`\\{\\{${k}\\}\\}`, "g"), v); });
+      const { data, error } = await supabase.functions.invoke("wa-send-inbox", {
+        body: {
+          phone: `91${clean}`,
+          message_type: form.header_type === "none" || form.header_type === "text" ? "text" : form.header_type,
+          content, template_name: form.template_name,
+          media_url: form.media_url || undefined, test_send: true,
+        },
+      });
+      if (error || !data?.success) throw new Error(data?.error || error?.message || "Test send failed");
+      return data;
+    },
+    onSuccess: () => {
+      setTestSent(true);
+      toast.success(`✅ Test message sent to ${testPhone}. Check WhatsApp.`);
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const bulkShootMutation = useMutation({
+    mutationFn: async () => {
+      if (!recipients || recipients.length === 0) throw new Error("Upload Excel first");
+      if (excelMissing.length > 0) throw new Error("Excel has missing columns");
+      const phones = recipients.map(r => {
+        const phone = r.phone || r.Phone || r.PHONE || "";
+        return phone.replace(/\D/g, "").replace(/^91/, "");
+      }).filter(p => /^[6-9]\d{9}$/.test(p));
+
       const { data: campaign, error } = await supabase.from("wa_campaigns").insert({
-        name: form.name,
-        message_content: form.message,
-        template_id: form.template_id || null,
-        batch_size: form.batch_size,
-        status: "draft",
-        campaign_type: "broadcast",
-        channel: "whatsapp",
-        segment_rules: form.segment !== "all" ? [{ field: "segment_id", operator: "eq", value: form.segment }] : [],
+        name: form.name, message_content: form.message, template_id: form.template_id,
+        batch_size: form.batch_size, status: "draft", campaign_type: "broadcast",
+        channel: "whatsapp", meta_category: "marketing",
+        segment_rules: [{ field: "phone", operator: "in", value: phones }],
         metadata: {
-          header_type: form.header_type,
-          header_content: form.header_content,
-          footer: form.footer,
-          buttons: form.buttons,
-          media_url: form.media_url,
-          variable_samples: form.variable_samples,
-          send_quote: form.send_quote,
+          header_type: form.header_type, header_content: form.header_content,
+          footer: form.footer, buttons: form.buttons, media_url: form.media_url,
+          variable_samples: form.variable_samples, send_quote: form.send_quote,
+          excel_recipients: recipients, required_vars: requiredVars,
         },
       } as any).select().single();
       if (error) throw error;
@@ -516,233 +674,280 @@ function OneShotBroadcast() {
       return campaign;
     },
     onSuccess: () => {
-      toast.success("🚀 Broadcast launched!");
+      toast.success("🚀 Broadcast launched to all recipients!");
       qc.invalidateQueries({ queryKey: ["broadcast-pro-stats"] });
       qc.invalidateQueries({ queryKey: ["broadcast-history"] });
-      setForm({ name: "", message: "", template_id: "", segment: "all", batch_size: 50, header_type: "none", header_content: "", footer: "", buttons: [], media_url: "", variable_samples: [], send_quote: false });
+      setForm({ name: "", message: "", template_id: "", template_name: "", template_status: "", batch_size: 50, header_type: "none", header_content: "", footer: "", buttons: [], media_url: "", variable_samples: [], send_quote: false });
+      setRecipients(null); setExcelMissing([]); setTestPhone(""); setTestSent(false); setStep(1);
     },
     onError: (e) => toast.error((e as Error).message),
   });
 
-  const handleTemplateSelect = (id: string) => {
-    const t = templates?.find((t: any) => t.id === id);
-    if (t) {
-      setForm((p) => ({
-        ...p,
-        template_id: id,
-        message: t.body || p.message,
-        header_type: t.header_type || "none",
-        header_content: t.header_content || "",
-        footer: t.footer || "",
-        buttons: (t.buttons as unknown as CampaignButton[]) || [],
-      }));
-    }
-  };
+  const insertVariable = (key: string) => setForm(p => ({ ...p, message: p.message + `{{${key}}}` }));
 
-  const insertVariable = (key: string) => {
-    setForm(p => ({ ...p, message: p.message + `{{${key}}}` }));
-  };
+  const STEPS = [
+    { n: 1, label: "Build Template", icon: Megaphone },
+    { n: 2, label: "Meta Approval", icon: CheckCheck },
+    { n: 3, label: "Upload & Test", icon: FileUp },
+    { n: 4, label: "Bulk Shoot", icon: Rocket },
+  ];
 
   return (
-    <div className="grid grid-cols-5 gap-4">
-      {/* Builder — 3 cols */}
-      <div className="col-span-3 space-y-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Megaphone className="h-4 w-4 text-green-600" /> Meta-Style Campaign Builder
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {/* Row 1: Name + Template */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Campaign Name *</Label>
-                <Input placeholder="e.g., Diwali Offer 2026" value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} className="h-8 text-sm" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Use Approved Template</Label>
-                <Select value={form.template_id} onValueChange={handleTemplateSelect}>
-                  <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Pick template (optional)" /></SelectTrigger>
-                  <SelectContent>
-                    {templates?.map((t: any) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-[8px] h-4">{t.category}</Badge>
-                          {t.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Header Section */}
-            <div className="space-y-1.5 border rounded-lg p-3 bg-muted/20">
-              <Label className="text-xs font-semibold">Header (optional)</Label>
-              <Select value={form.header_type} onValueChange={(v) => setForm(p => ({ ...p, header_type: v, header_content: "", media_url: "" }))}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="text">📝 Text</SelectItem>
-                  <SelectItem value="image">🖼️ Image</SelectItem>
-                  <SelectItem value="video">🎬 Video (up to 1 min)</SelectItem>
-                  <SelectItem value="document">📄 Document (PDF)</SelectItem>
-                </SelectContent>
-              </Select>
-              {form.header_type === "text" && (
-                <Input value={form.header_content} onChange={e => setForm(p => ({ ...p, header_content: e.target.value }))} placeholder="Header text (max 60 chars, 1 variable max)" className="h-8 text-sm" maxLength={60} />
-              )}
-              {(form.header_type === "image" || form.header_type === "video" || form.header_type === "document") && (
-                <MediaUploader
-                  headerType={form.header_type}
-                  mediaUrl={form.media_url}
-                  onUrlChange={(url) => setForm(p => ({ ...p, media_url: url }))}
-                  onFileUploaded={(url) => setForm(p => ({ ...p, media_url: url }))}
-                />
-              )}
-            </div>
-
-            {/* Body / Message */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Message Body *</Label>
-              <Textarea
-                placeholder="Hello {{customer_name}}! 🎉 Your policy for {{vehicle_number}} is expiring on {{expiry_date}}..."
-                value={form.message}
-                onChange={(e) => setForm(p => ({ ...p, message: e.target.value }))}
-                rows={5}
-                className="text-sm"
-              />
-              <div className="flex items-center gap-1 flex-wrap">
-                <span className="text-[10px] text-muted-foreground mr-1">Variables:</span>
-                {BROADCAST_VARS.map((v) => (
-                  <Button key={v.key} variant="outline" size="sm" className="h-5 text-[9px] px-1.5 gap-0.5" onClick={() => insertVariable(v.key)}>
-                    {`{{${v.label}}}`}
-                  </Button>
-                ))}
-              </div>
-              <p className="text-[9px] text-muted-foreground">Max 1024 characters. Use *bold*, _italic_, ~strikethrough~ formatting.</p>
-            </div>
-
-            {/* Sample Values */}
-            <VariableSampleEditor
-              body={form.message}
-              samples={form.variable_samples}
-              onChange={(s) => setForm(p => ({ ...p, variable_samples: s }))}
-            />
-
-            {/* Footer */}
-            <div className="space-y-1 border rounded-lg p-3 bg-muted/20">
-              <Label className="text-xs font-semibold">Footer (optional, max 60 chars)</Label>
-              <Input value={form.footer} onChange={e => setForm(p => ({ ...p, footer: e.target.value }))} placeholder="e.g., Reply STOP to unsubscribe | GrabYourCar.com" className="h-8 text-sm" maxLength={60} />
-              <p className="text-[9px] text-muted-foreground">Appears in lighter text below the message</p>
-            </div>
-
-            {/* Buttons */}
-            <CampaignButtonEditor buttons={form.buttons} onChange={(b) => setForm(p => ({ ...p, buttons: b }))} />
-
-            {/* Quote / Document Attachment */}
-            <div className="border rounded-lg p-3 bg-muted/20 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Quote className="h-4 w-4 text-blue-500" />
-                  <Label className="text-xs font-semibold">Attach Quote PDF</Label>
+    <div className="space-y-3">
+      {/* Stepper */}
+      <Card className="p-3">
+        <div className="flex items-center justify-between gap-2">
+          {STEPS.map((s, i) => {
+            const active = step === s.n;
+            const done = step > s.n;
+            const Icon = s.icon;
+            return (
+              <div key={s.n} className="flex items-center gap-2 flex-1">
+                <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${done ? "bg-green-500 text-white" : active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                  {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                 </div>
-                <Switch
-                  checked={form.send_quote}
-                  onCheckedChange={(v) => setForm(p => ({ ...p, send_quote: v }))}
-                />
+                <div className="flex-1 min-w-0">
+                  <p className={`text-[10px] uppercase font-semibold ${active ? "text-primary" : "text-muted-foreground"}`}>Step {s.n}</p>
+                  <p className={`text-xs font-medium truncate ${active || done ? "" : "text-muted-foreground"}`}>{s.label}</p>
+                </div>
+                {i < STEPS.length - 1 && <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />}
               </div>
-              {form.send_quote && (
-                <div className="bg-blue-500/5 border border-blue-500/20 rounded p-2">
-                  <p className="text-[10px] text-blue-700 dark:text-blue-400">
-                    📋 System will auto-generate & attach the latest quote PDF for each contact based on their lead data (car model, on-road price, EMI, etc). Works with Insurance quotes, Car deals, and Loan offers.
+            );
+          })}
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-5 gap-4">
+        <div className="col-span-3 space-y-3">
+          {step === 1 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2"><Megaphone className="h-4 w-4 text-green-600" /> Step 1: Build Your Template</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Campaign / Template Name *</Label>
+                  <Input placeholder="e.g., Diwali Loan Offer 2026" value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} className="h-8 text-sm" />
+                  <p className="text-[9px] text-muted-foreground">Template name: <span className="font-mono">{form.name.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 60) || "template_name"}</span></p>
+                </div>
+
+                <div className="space-y-1.5 border rounded-lg p-3 bg-muted/20">
+                  <Label className="text-xs font-semibold">Header (optional)</Label>
+                  <Select value={form.header_type} onValueChange={(v) => setForm(p => ({ ...p, header_type: v, header_content: "", media_url: "" }))}>
+                    <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="text">📝 Text</SelectItem>
+                      <SelectItem value="image">🖼️ Image</SelectItem>
+                      <SelectItem value="video">🎬 Video (up to 1 min)</SelectItem>
+                      <SelectItem value="document">📄 Document (PDF)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.header_type === "text" && (
+                    <Input value={form.header_content} onChange={e => setForm(p => ({ ...p, header_content: e.target.value }))} placeholder="Header text (max 60 chars)" className="h-8 text-sm" maxLength={60} />
+                  )}
+                  {(form.header_type === "image" || form.header_type === "video" || form.header_type === "document") && (
+                    <MediaUploader headerType={form.header_type} mediaUrl={form.media_url} onUrlChange={(url) => setForm(p => ({ ...p, media_url: url }))} onFileUploaded={(url) => setForm(p => ({ ...p, media_url: url }))} />
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Message Body *</Label>
+                  <Textarea placeholder="Hello {{customer_name}}! Your {{car_model}} loan is approved..." value={form.message} onChange={(e) => setForm(p => ({ ...p, message: e.target.value }))} rows={5} className="text-sm" />
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-[10px] text-muted-foreground mr-1">Insert variable:</span>
+                    {BROADCAST_VARS.map((v) => (
+                      <Button key={v.key} variant="outline" size="sm" className="h-5 text-[9px] px-1.5" onClick={() => insertVariable(v.key)}>{`{{${v.label}}}`}</Button>
+                    ))}
+                  </div>
+                </div>
+
+                <VariableSampleEditor body={form.message} samples={form.variable_samples} onChange={(s) => setForm(p => ({ ...p, variable_samples: s }))} />
+
+                <div className="space-y-1 border rounded-lg p-3 bg-muted/20">
+                  <Label className="text-xs font-semibold">Footer (optional, max 60 chars)</Label>
+                  <Input value={form.footer} onChange={e => setForm(p => ({ ...p, footer: e.target.value }))} placeholder="e.g., GrabYourCar.com | Reply STOP to opt-out" className="h-8 text-sm" maxLength={60} />
+                </div>
+
+                <CampaignButtonEditor buttons={form.buttons} onChange={(b) => setForm(p => ({ ...p, buttons: b }))} />
+
+                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-2 text-xs text-blue-700 dark:text-blue-400 flex items-start gap-2">
+                  <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <span>Submit kar ke <b>Meta approval</b> ka wait karein. Bulk send <b>only after approval</b> unlock hoga.</span>
+                </div>
+
+                <Button className="w-full gap-2 bg-primary text-primary-foreground h-10" onClick={() => submitTemplateMutation.mutate()} disabled={submitTemplateMutation.isPending || !form.name || !form.message}>
+                  <Send className="h-4 w-4" /> {submitTemplateMutation.isPending ? "Submitting..." : "Submit to Meta for Approval"}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {step === 2 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2"><CheckCheck className="h-4 w-4 text-amber-500" /> Step 2: Waiting for Meta Approval</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className={`rounded-lg p-4 text-center ${isApproved ? "bg-green-500/10" : "bg-amber-500/10"}`}>
+                  <div className={`inline-flex h-14 w-14 rounded-full items-center justify-center mb-2 ${isApproved ? "bg-green-500" : "bg-amber-500"}`}>
+                    {isApproved ? <Check className="h-7 w-7 text-white" /> : <RefreshCw className="h-7 w-7 text-white animate-spin" />}
+                  </div>
+                  <p className="font-semibold text-sm">Template: <span className="font-mono">{form.template_name}</span></p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Status: <Badge variant={isApproved ? "default" : "secondary"} className={isApproved ? "bg-green-500" : ""}>{form.template_status || "pending"}</Badge>
                   </p>
+                  {!isApproved && <p className="text-[11px] text-muted-foreground mt-2">Auto-checking every 10 sec... Usually 1–10 minutes.</p>}
+                  {isApproved && <p className="text-[11px] text-green-700 dark:text-green-400 mt-2 font-medium">✅ Approved! Ab recipients upload aur send kar sakte ho.</p>}
                 </div>
-              )}
-            </div>
 
-            {/* Audience + Batch */}
-            <div className="grid grid-cols-2 gap-3 border-t pt-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Audience Segment</Label>
-                <Select value={form.segment} onValueChange={(v) => setForm(p => ({ ...p, segment: v }))}>
-                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">📋 All Contacts</SelectItem>
-                    {segments?.map((s: any) => (
-                      <SelectItem key={s.id} value={s.id}>{s.name} ({s.estimated_count || 0})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Batch Size</Label>
-                <Select value={String(form.batch_size)} onValueChange={(v) => setForm(p => ({ ...p, batch_size: Number(v) }))}>
-                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>{[25, 50, 100, 200, 500].map(n => <SelectItem key={n} value={String(n)}>{n}/batch</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Meta Approval Notice */}
-            {!form.template_id && (
-              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 rounded-lg p-2 text-xs text-amber-700 flex items-start gap-2">
-                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                <span>Without an approved template, messages will only deliver inside the 24hr window. Select an approved template for guaranteed delivery.</span>
-              </div>
-            )}
-
-            <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white h-10" onClick={() => shootMutation.mutate()} disabled={shootMutation.isPending || !form.name || !form.message}>
-              <Rocket className="h-4 w-4" /> {shootMutation.isPending ? "Launching..." : "🚀 Launch Campaign"}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Side Preview — 2 cols */}
-      <div className="col-span-2">
-        <Card className="sticky top-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2"><Eye className="h-4 w-4 text-blue-500" /> Live Preview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CampaignPhonePreview
-              header_type={form.header_type}
-              header_content={form.header_content}
-              body={form.message}
-              footer={form.footer}
-              buttons={form.buttons}
-              media_url={form.media_url}
-              variableSamples={form.variable_samples}
-            />
-            {/* Quick Stats below preview */}
-            <div className="mt-4 grid grid-cols-2 gap-2 text-center">
-              <div className="bg-muted/50 rounded p-2">
-                <p className="text-[10px] text-muted-foreground">Body Length</p>
-                <p className="text-sm font-bold">{form.message.length}/1024</p>
-              </div>
-              <div className="bg-muted/50 rounded p-2">
-                <p className="text-[10px] text-muted-foreground">Variables</p>
-                <p className="text-sm font-bold">{(form.message.match(/\{\{\w+\}\}/g) || []).length}</p>
-              </div>
-              <div className="bg-muted/50 rounded p-2">
-                <p className="text-[10px] text-muted-foreground">Buttons</p>
-                <p className="text-sm font-bold">{form.buttons.length}/3</p>
-              </div>
-              <div className="bg-muted/50 rounded p-2">
-                <p className="text-[10px] text-muted-foreground">Header</p>
-                <p className="text-sm font-bold capitalize">{form.header_type === "none" ? "—" : form.header_type}</p>
-              </div>
-              {form.send_quote && (
-                <div className="col-span-2 bg-blue-500/10 rounded p-2">
-                  <p className="text-[10px] text-blue-600 font-medium">📋 Quote PDF will be attached</p>
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>← Back to Edit</Button>
+                  <Button variant="outline" className="flex-1 gap-1" onClick={() => refetchTemplates()}>
+                    <RefreshCw className="h-3 w-3" /> Refresh
+                  </Button>
+                  <Button className="flex-1 gap-1" disabled={!isApproved} onClick={() => setStep(3)}>
+                    Next <ArrowRight className="h-3 w-3" />
+                  </Button>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          )}
+
+          {step === 3 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2"><FileUp className="h-4 w-4 text-blue-500" /> Step 3: Upload Recipients & Test Send</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <RecipientExcelUploader
+                  requiredVars={requiredVars}
+                  onParsed={(d) => {
+                    if (d) { setRecipients(d.rows); setExcelMissing(d.missing); }
+                    else { setRecipients(null); setExcelMissing([]); }
+                  }}
+                />
+
+                <div className="border rounded-lg p-3 bg-muted/20 space-y-2">
+                  <Label className="text-xs font-semibold flex items-center gap-1"><PhoneCall className="h-3 w-3" /> Test Send to Your Number First *</Label>
+                  <div className="flex gap-2">
+                    <Input value={testPhone} onChange={e => { setTestPhone(e.target.value); setTestSent(false); }} placeholder="9876543210 (10 digits)" className="h-8 text-sm font-mono flex-1" maxLength={10} />
+                    <Button type="button" onClick={() => testSendMutation.mutate()} disabled={testSendMutation.isPending || !testPhone || testPhone.length !== 10} className="h-8 gap-1">
+                      <Send className="h-3 w-3" /> {testSendMutation.isPending ? "Sending..." : "Send Test"}
+                    </Button>
+                  </div>
+                  {testSent && (
+                    <div className="bg-green-500/10 rounded p-2 text-[11px] text-green-700 dark:text-green-400 flex items-center gap-1">
+                      <Check className="h-3 w-3" /> Test sent to {testPhone}. WhatsApp check karein, agar message theek hai toh bulk shoot karein.
+                    </div>
+                  )}
+                </div>
+
+                <div className="border rounded-lg p-3 bg-muted/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Quote className="h-4 w-4 text-blue-500" />
+                      <Label className="text-xs font-semibold">Attach Quote PDF (auto-generate per lead)</Label>
+                    </div>
+                    <Switch checked={form.send_quote} onCheckedChange={(v) => setForm(p => ({ ...p, send_quote: v }))} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Batch Size</Label>
+                    <Select value={String(form.batch_size)} onValueChange={(v) => setForm(p => ({ ...p, batch_size: Number(v) }))}>
+                      <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>{[25, 50, 100, 200, 500].map(n => <SelectItem key={n} value={String(n)}>{n}/batch</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Recipients Loaded</Label>
+                    <div className="h-8 px-3 rounded-md border bg-background flex items-center text-sm font-bold">{recipients?.length || 0}</div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setStep(2)} className="flex-1">← Back</Button>
+                  <Button className="flex-1 gap-1 bg-green-600 hover:bg-green-700 text-white" disabled={!testSent || !recipients || excelMissing.length > 0} onClick={() => setStep(4)}>
+                    Next: Review & Shoot <ArrowRight className="h-3 w-3" />
+                  </Button>
+                </div>
+                {!testSent && <p className="text-[10px] text-amber-600 text-center">⚠ Test send karna mandatory hai bulk shoot se pehle.</p>}
+              </CardContent>
+            </Card>
+          )}
+
+          {step === 4 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2"><Rocket className="h-4 w-4 text-green-600" /> Step 4: Review & Bulk Shoot</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-muted/50 rounded p-3">
+                    <p className="text-[10px] text-muted-foreground">Recipients</p>
+                    <p className="text-2xl font-bold">{recipients?.length || 0}</p>
+                  </div>
+                  <div className="bg-muted/50 rounded p-3">
+                    <p className="text-[10px] text-muted-foreground">Template</p>
+                    <p className="text-sm font-semibold truncate">{form.template_name}</p>
+                    <Badge className="bg-green-500 text-white text-[9px] mt-1">approved</Badge>
+                  </div>
+                  <div className="bg-muted/50 rounded p-3">
+                    <p className="text-[10px] text-muted-foreground">Variables</p>
+                    <p className="text-sm font-mono truncate">{requiredVars.join(", ") || "—"}</p>
+                  </div>
+                  <div className="bg-muted/50 rounded p-3">
+                    <p className="text-[10px] text-muted-foreground">Batch Size</p>
+                    <p className="text-2xl font-bold">{form.batch_size}/min</p>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 rounded-lg p-2 text-xs text-amber-700 flex items-start gap-2">
+                  <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <span>Click karte hi <b>{recipients?.length || 0}</b> recipients ko personalized variables ke saath messages dispatch hone start ho jayenge.</span>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setStep(3)} className="flex-1">← Back</Button>
+                  <Button className="flex-1 gap-2 bg-green-600 hover:bg-green-700 text-white h-11" onClick={() => bulkShootMutation.mutate()} disabled={bulkShootMutation.isPending}>
+                    <Rocket className="h-4 w-4" /> {bulkShootMutation.isPending ? "Launching..." : `🚀 Shoot to ${recipients?.length || 0}`}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <div className="col-span-2">
+          <Card className="sticky top-4">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2"><Eye className="h-4 w-4 text-blue-500" /> Live Preview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CampaignPhonePreview header_type={form.header_type} header_content={form.header_content} body={form.message} footer={form.footer} buttons={form.buttons} media_url={form.media_url} variableSamples={form.variable_samples} />
+              <div className="mt-4 grid grid-cols-2 gap-2 text-center">
+                <div className="bg-muted/50 rounded p-2">
+                  <p className="text-[10px] text-muted-foreground">Body Length</p>
+                  <p className="text-sm font-bold">{form.message.length}/1024</p>
+                </div>
+                <div className="bg-muted/50 rounded p-2">
+                  <p className="text-[10px] text-muted-foreground">Variables</p>
+                  <p className="text-sm font-bold">{requiredVars.length}</p>
+                </div>
+                <div className="bg-muted/50 rounded p-2">
+                  <p className="text-[10px] text-muted-foreground">Buttons</p>
+                  <p className="text-sm font-bold">{form.buttons.length}/3</p>
+                </div>
+                <div className="bg-muted/50 rounded p-2">
+                  <p className="text-[10px] text-muted-foreground">Header</p>
+                  <p className="text-sm font-bold capitalize">{form.header_type === "none" ? "—" : form.header_type}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
