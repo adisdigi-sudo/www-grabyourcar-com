@@ -13,6 +13,7 @@ import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBounda
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
+import { LoanCRMDashboard } from "@/components/admin/LoanCRMDashboard";
 import { NotificationCenter } from "@/components/admin/NotificationCenter";
 import { CRMAssistant } from "@/components/admin/CRMAssistant";
 import { AICofounderBanner } from "@/components/admin/AICofounderBanner";
@@ -181,9 +182,6 @@ const EmployeePerformanceDashboard = lazy(() =>
 );
 const AIAutomationHub = lazy(() =>
   import("@/components/admin/automation/AIAutomationHub").then((module) => ({ default: module.AIAutomationHub })),
-);
-const LoanCRMDashboard = lazy(() =>
-  import("@/components/admin/LoanCRMDashboard").then((module) => ({ default: module.LoanCRMDashboard })),
 );
 const LeadScoringDashboard = lazy(() =>
   import("@/components/admin/LeadScoringDashboard").then((module) => ({ default: module.LeadScoringDashboard })),
