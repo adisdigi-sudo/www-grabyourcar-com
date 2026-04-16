@@ -11,15 +11,13 @@ import { withPreviewParams } from "@/lib/previewRouting";
 import { Button } from "@/components/ui/button";
 import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBoundary";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
 import { Shield } from "lucide-react";
 const AdminDashboard = lazy(() =>
   import("@/components/admin/AdminDashboard").then((module) => ({ default: module.AdminDashboard })),
 );
 const NotificationCenter = lazy(() =>
   import("@/components/admin/NotificationCenter").then((module) => ({ default: module.NotificationCenter })),
-);
-const InsuranceManagement = lazy(() =>
-  import("@/components/admin/InsuranceManagement").then((module) => ({ default: module.InsuranceManagement })),
 );
 const CRMAssistant = lazy(() =>
   import("@/components/admin/CRMAssistant").then((module) => ({ default: module.CRMAssistant })),
