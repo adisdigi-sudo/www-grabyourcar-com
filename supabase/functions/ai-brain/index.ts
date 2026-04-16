@@ -191,6 +191,38 @@ const TOOLS = [
       },
     },
   },
+  // ====== AI QUALIFICATION & DOCUMENT TOOLS ======
+  {
+    type: "function",
+    function: {
+      name: "qualify_and_set_stage",
+      description: "Analyze conversation and set lead pipeline stage. Use when customer shows clear buying intent (interested), asks to follow up later (followup), confirms booking/payment (won), says not interested/no (lost), or asks for a quote (quoted). AI decides stage based on conversation context.",
+      parameters: {
+        type: "object",
+        properties: {
+          stage: { type: "string", enum: ["new_lead", "interested", "followup", "quoted", "won", "lost"], description: "Pipeline stage to set" },
+          reason: { type: "string", description: "Brief reason for stage change (e.g. 'customer confirmed booking', 'not interested in car')" },
+          vertical: { type: "string", enum: ["sales", "insurance", "loans", "hsrp", "accessories", "rental", "general"], description: "Business vertical" },
+        },
+        required: ["stage", "reason"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_document_to_customer",
+      description: "Send a stored document (PDF invoice, quote, policy, loan document) to the customer via WhatsApp. Use when customer asks for their document, receipt, invoice copy, or policy PDF.",
+      parameters: {
+        type: "object",
+        properties: {
+          document_type: { type: "string", enum: ["invoice", "quote", "policy", "loan_document"], description: "Type of document to send" },
+          reference_id: { type: "string", description: "Invoice number, quote ID, policy number, or loan application ID" },
+        },
+        required: ["document_type"],
+      },
+    },
+  },
 ];
 
 serve(async (req) => {
