@@ -7,7 +7,7 @@ import {
   Clock, Landmark, Calculator, BarChart3, FolderOpen,
   ChevronDown, ChevronRight, BookOpen, RefreshCw,
   Globe, Lock, FileText, CreditCard, ArrowLeftRight,
-  PiggyBank, Search, Plus, Settings
+  PiggyBank, Search, Plus, Settings, Truck, IndianRupee
 } from "lucide-react";
 
 // Lazy load sub-modules
@@ -29,6 +29,8 @@ const AccountsItemsModule = lazy(() => import("./AccountsItemsModule"));
 const AccountsBudgets = lazy(() => import("./AccountsBudgets"));
 const VerticalProfitLoss = lazy(() => import("./VerticalProfitLoss"));
 const AccountsFinancialDocuments = lazy(() => import("./AccountsFinancialDocuments"));
+const AccountsGSTReports = lazy(() => import("./AccountsGSTReports"));
+const AccountsEWayBill = lazy(() => import("./AccountsEWayBill"));
 
 interface SidebarItem {
   id: string;
@@ -69,6 +71,8 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   },
   { id: "reports", label: "Reports", icon: BarChart3 },
   { id: "profit-loss", label: "Profit & Loss", icon: Calculator },
+  { id: "gst-reports", label: "GST Reports", icon: IndianRupee },
+  { id: "eway-bills", label: "E-Way Bills", icon: Truck },
   { id: "documents", label: "Documents", icon: FolderOpen },
 ];
 
@@ -115,6 +119,8 @@ export const ZohoAccountsWorkspace = ({ initialView = "home" }: ZohoAccountsWork
       case "budgets": return <AccountsBudgets />;
       case "reports": return <FinancialIntelligenceDashboard />;
       case "profit-loss": return <VerticalProfitLoss />;
+      case "gst-reports": return <AccountsGSTReports />;
+      case "eway-bills": return <AccountsEWayBill />;
       case "documents": return <AccountsFinancialDocuments />;
       default: return <AccountsDashboard />;
     }
