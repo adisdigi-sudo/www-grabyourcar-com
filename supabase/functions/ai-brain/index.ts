@@ -191,6 +191,38 @@ const TOOLS = [
       },
     },
   },
+  // ====== AI QUALIFICATION & DOCUMENT TOOLS ======
+  {
+    type: "function",
+    function: {
+      name: "qualify_and_set_stage",
+      description: "Analyze conversation and set lead pipeline stage. Use when customer shows clear buying intent (interested), asks to follow up later (followup), confirms booking/payment (won), says not interested/no (lost), or asks for a quote (quoted). AI decides stage based on conversation context.",
+      parameters: {
+        type: "object",
+        properties: {
+          stage: { type: "string", enum: ["new_lead", "interested", "followup", "quoted", "won", "lost"], description: "Pipeline stage to set" },
+          reason: { type: "string", description: "Brief reason for stage change (e.g. 'customer confirmed booking', 'not interested in car')" },
+          vertical: { type: "string", enum: ["sales", "insurance", "loans", "hsrp", "accessories", "rental", "general"], description: "Business vertical" },
+        },
+        required: ["stage", "reason"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_document_to_customer",
+      description: "Send a stored document (PDF invoice, quote, policy, loan document) to the customer via WhatsApp. Use when customer asks for their document, receipt, invoice copy, or policy PDF.",
+      parameters: {
+        type: "object",
+        properties: {
+          document_type: { type: "string", enum: ["invoice", "quote", "policy", "loan_document"], description: "Type of document to send" },
+          reference_id: { type: "string", description: "Invoice number, quote ID, policy number, or loan application ID" },
+        },
+        required: ["document_type"],
+      },
+    },
+  },
 ];
 
 serve(async (req) => {
@@ -264,7 +296,20 @@ SELF-SERVICE CAPABILITIES:
 ${knowledgeContext}
 
 === TOOLS AVAILABLE ===
-You have tools to search our car database, calculate EMIs, find on-road prices, locate dealers, capture leads, AND customer self-service tools (policy lookup, invoice lookup, loan status, HSRP status, payment history, manual payment recording). USE THEM whenever relevant to give accurate, real-time data instead of generic answers.
+You have tools to search our car database, calculate EMIs, find on-road prices, locate dealers, capture leads, customer self-service tools, AND intelligent lead qualification tools. USE THEM whenever relevant to give accurate, real-time data instead of generic answers.
+
+=== AUTO-QUALIFICATION RULES ===
+IMPORTANT: You MUST use qualify_and_set_stage to update lead stages based on conversation:
+- Customer shows buying intent ("I want to buy", "book karo", "interested hai") → stage: "interested"
+- Customer asks to follow up later ("baad mein baat karte hain", "kal call karo") → stage: "followup"  
+- Customer asks for a quote or price ("quote bhejo", "kitna padega") → stage: "quoted"
+- Customer confirms booking/payment ("book kr diya", "payment kr diya", "done") → stage: "won"
+- Customer says not interested ("nahi chahiye", "not interested", "cancel karo") → stage: "lost"
+- New inquiry without clear intent → stage: "new_lead"
+
+=== DOCUMENT SHARING ===
+- When customer asks "meri policy bhejo" / "invoice bhejo" / "quote bhejo" → USE send_document_to_customer
+- When customer asks for any PDF/document → USE send_document_to_customer with appropriate type
 
 === GUIDELINES ===
 - When a customer asks about a specific car, USE search_cars to get real data
@@ -274,9 +319,11 @@ You have tools to search our car database, calculate EMIs, find on-road prices, 
 - For dealer/showroom queries, USE find_dealers
 - For personal data requests (policy/invoice/loan/HSRP/payments), USE the lookup tools — STRICTLY phone-verified
 - For payment confirmations, USE record_manual_payment
+- ALWAYS qualify leads — after meaningful interaction, call qualify_and_set_stage
 - Always be helpful and provide specific, data-backed answers
 - For website channel: use markdown (bold, bullets, links)
 - Link to relevant pages: /car/{slug}, /car-loans, /car-insurance, /compare
+- NEVER send a blank or empty response. If unsure, say "Main aapki madad ke liye yahan hoon! Kya jaanna chahte hain?"
 
 ${page_context ? `User is currently viewing: ${page_context}` : ""}
 ${customer_name ? `Customer name: ${customer_name}` : ""}
@@ -473,6 +520,14 @@ async function executeWithTools(
         case "record_manual_payment":
           result = await toolRecordManualPayment(supabase, customerPhone, customerName, args);
           intent = "payment_recorded";
+          break;
+        case "qualify_and_set_stage":
+          result = await toolQualifyAndSetStage(supabase, customerPhone, customerName, args, channel);
+          intent = args.vertical || "general";
+          break;
+        case "send_document_to_customer":
+          result = await toolSendDocument(supabase, customerPhone, args);
+          intent = "document_share";
           break;
         default:
           result = { error: "Unknown tool" };
@@ -1305,6 +1360,201 @@ async function toolRecordManualPayment(supabase: any, customerPhone?: string, cu
     payment_id: data.id,
     message: `Payment of ₹${args.amount.toLocaleString("en-IN")} recorded successfully! Our team will verify it within 30 minutes. You'll receive a confirmation once verified. 🧾`,
   };
+}
+
+// ===== NEW: LEAD QUALIFICATION TOOL =====
+async function toolQualifyAndSetStage(supabase: any, customerPhone?: string, customerName?: string, args?: any, channel?: string) {
+  if (!customerPhone) return { updated: false, message: "Cannot qualify — no phone number available." };
+
+  const phones = phoneVariants(customerPhone);
+  const stage = args?.stage || "new_lead";
+  const reason = args?.reason || "AI auto-qualification";
+  const vertical = args?.vertical || "general";
+
+  // Map stage to pipeline_stage values used in CRM
+  const stageMap: Record<string, string> = {
+    new_lead: "new_lead",
+    interested: "interested",
+    followup: "followup",
+    quoted: "quoted",
+    won: "won",
+    lost: "lost",
+  };
+  const pipelineStage = stageMap[stage] || "new_lead";
+
+  // Try to find and update lead in the leads table
+  const { data: existingLead } = await supabase
+    .from("leads")
+    .select("id, name, phone, pipeline_stage")
+    .or(phones.map((p: string) => `phone.eq.${p}`).join(","))
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingLead) {
+    await supabase
+      .from("leads")
+      .update({ pipeline_stage: pipelineStage, status: stage === "won" ? "converted" : stage === "lost" ? "lost" : "active" })
+      .eq("id", existingLead.id);
+
+    // Fire WhatsApp automation trigger for the stage change
+    try {
+      const triggerUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/wa-automation-trigger`;
+      await fetch(triggerUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({
+          event: `lead_${stage}`,
+          phone: customerPhone,
+          name: customerName || existingLead.name || "Customer",
+          leadId: existingLead.id,
+          data: { vertical, reason },
+        }),
+      });
+    } catch (e) {
+      console.error("WA trigger for stage change failed:", e);
+    }
+
+    return {
+      updated: true,
+      lead_id: existingLead.id,
+      previous_stage: existingLead.pipeline_stage,
+      new_stage: pipelineStage,
+      message: `Lead stage updated to ${stage}. Reason: ${reason}`,
+    };
+  }
+
+  // If no existing lead, capture as new lead
+  if (customerPhone) {
+    const { data: newLead } = await supabase.from("leads").insert({
+      phone: customerPhone,
+      customer_name: customerName || "WhatsApp Lead",
+      source: channel === "whatsapp" ? "whatsapp_ai_bot" : "website_chatbot",
+      pipeline_stage: pipelineStage,
+      status: "new",
+      service_category: vertical,
+      notes: `AI qualification: ${reason}`,
+    }).select("id").single();
+
+    return {
+      updated: true,
+      lead_id: newLead?.id,
+      new_stage: pipelineStage,
+      message: `New lead created and qualified as ${stage}. Reason: ${reason}`,
+    };
+  }
+
+  return { updated: false, message: "Could not qualify lead — insufficient data." };
+}
+
+// ===== NEW: DOCUMENT SENDING TOOL =====
+async function toolSendDocument(supabase: any, customerPhone?: string, args?: any) {
+  if (!customerPhone) return { sent: false, message: "Cannot send document — no phone number available." };
+
+  const docType = args?.document_type || "invoice";
+  const referenceId = args?.reference_id;
+  const phones = phoneVariants(customerPhone);
+  let documentUrl: string | null = null;
+  let fileName = "document.pdf";
+  let caption = "Your document from GrabYourCar";
+
+  try {
+    if (docType === "invoice") {
+      // Look up invoice by number or by phone
+      let query = supabase.from("invoices").select("invoice_number, total_amount, vertical_name, pdf_url, status");
+      if (referenceId) {
+        query = query.eq("invoice_number", referenceId);
+      } else {
+        query = query.or(phones.map((p: string) => `client_phone.eq.${p}`).join(",")).eq("status", "paid").order("paid_at", { ascending: false });
+      }
+      const { data: invoices } = await query.limit(1);
+      if (invoices?.[0]?.pdf_url) {
+        documentUrl = invoices[0].pdf_url;
+        fileName = `Invoice-${invoices[0].invoice_number}.pdf`;
+        caption = `Invoice ${invoices[0].invoice_number} — ₹${invoices[0].total_amount?.toLocaleString("en-IN")}`;
+      }
+    } else if (docType === "policy") {
+      const { data: clients } = await supabase.from("insurance_clients")
+        .select("id")
+        .or(phones.map((p: string) => `phone.eq.${p}`).join(","))
+        .limit(1);
+
+      if (clients?.[0]) {
+        const { data: policies } = await supabase.from("insurance_policies")
+          .select("policy_number, policy_document_url, document_file_name, insurer")
+          .eq("client_id", clients[0].id)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (policies?.[0]?.policy_document_url) {
+          documentUrl = policies[0].policy_document_url;
+          fileName = policies[0].document_file_name || `Policy-${policies[0].policy_number}.pdf`;
+          caption = `Insurance Policy: ${policies[0].policy_number} (${policies[0].insurer})`;
+        }
+      }
+    } else if (docType === "quote") {
+      const { data: quotes } = await supabase.from("quote_share_history")
+        .select("id, pdf_storage_path, car_name, variant_name")
+        .or(phones.map((p: string) => `customer_phone.eq.${p}`).join(","))
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (quotes?.[0]?.pdf_storage_path) {
+        const { data: urlData } = await supabase.storage.from("quote-pdfs").getPublicUrl(quotes[0].pdf_storage_path);
+        documentUrl = urlData?.publicUrl;
+        fileName = `Quote-${quotes[0].car_name}.pdf`;
+        caption = `Price Quote for ${quotes[0].car_name} ${quotes[0].variant_name || ""}`.trim();
+      }
+    } else if (docType === "loan_document") {
+      const { data: loans } = await supabase.from("loan_applications")
+        .select("id, customer_name, vehicle_name, document_url")
+        .or(phones.map((p: string) => `phone.eq.${p}`).join(","))
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (loans?.[0]?.document_url) {
+        documentUrl = loans[0].document_url;
+        fileName = `Loan-${loans[0].vehicle_name}.pdf`;
+        caption = `Loan document for ${loans[0].vehicle_name}`;
+      }
+    }
+
+    if (!documentUrl) {
+      return { sent: false, message: `No ${docType} document found for your number. Our team will share it manually.` };
+    }
+
+    // Send via whatsapp-send
+    const sendUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`;
+    const sendResp = await fetch(sendUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify({
+        to: customerPhone,
+        message: caption,
+        messageType: "document",
+        mediaUrl: documentUrl,
+        mediaFileName: fileName,
+        logEvent: `bot_send_${docType}`,
+        name: "AI Bot",
+      }),
+    });
+    const sendResult = await sendResp.json();
+
+    if (sendResult?.success) {
+      return { sent: true, document_type: docType, message: `Your ${docType} has been sent! Check your WhatsApp. 📄` };
+    }
+    return { sent: false, message: `Could not send ${docType} right now. Our team will share it with you shortly.` };
+  } catch (e) {
+    console.error("Document send error:", e);
+    return { sent: false, message: "Document sharing failed. Our team will send it manually." };
+  }
 }
 
 const SELF_SERVICE_TOOL_NAMES = new Set([

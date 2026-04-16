@@ -28,42 +28,6 @@ interface SendWhatsAppResult {
   fallback?: boolean;
 }
 
-// Cache the send mode to avoid repeated DB reads
-let cachedSendMode: "api" | "manual" | null = null;
-let cacheTimestamp = 0;
-const CACHE_TTL = 60_000; // 1 minute
-
-/**
- * Get the current WhatsApp send mode from admin_settings.
- */
-async function getSendMode(): Promise<"api" | "manual"> {
-  const now = Date.now();
-  if (cachedSendMode && now - cacheTimestamp < CACHE_TTL) {
-    return cachedSendMode;
-  }
-
-  try {
-    const { data } = await supabase
-      .from("admin_settings")
-      .select("setting_value")
-      .eq("setting_key", "whatsapp_send_mode")
-      .maybeSingle();
-
-    const mode = (data?.setting_value as any) === "manual" ? "manual" : "api";
-    cachedSendMode = mode;
-    cacheTimestamp = now;
-    return mode;
-  } catch {
-    return "api";
-  }
-}
-
-/** Clear the cached send mode (call after toggling). */
-export function clearSendModeCache() {
-  cachedSendMode = null;
-  cacheTimestamp = 0;
-}
-
 /**
  * Normalize Indian phone to 91XXXXXXXXXX format.
  */
@@ -76,7 +40,8 @@ function normalizePhone(phone: string): string {
 
 /**
  * One-click WhatsApp send via backend WhatsApp provider.
- * Checks admin_settings for send mode and stays API-only.
+ * 100% API mode — all messages go through whatsapp-send edge function.
+ * No manual mode, no fallback to web links.
  */
 export async function sendWhatsApp({
   phone,
@@ -97,19 +62,11 @@ export async function sendWhatsApp({
   mediaFileName,
 }: SendWhatsAppParams): Promise<SendWhatsAppResult> {
   const fullPhone = normalizePhone(phone);
-  const sendMode = await getSendMode();
-
-  // Manual mode is blocked in API-only flow
-  if (sendMode === "manual") {
-    if (!silent) toast.error("WhatsApp API manual mode is disabled in this flow");
-    return { success: false, fallback: false, error: "manual_mode" };
-  }
 
   try {
     // Append sender signature to text messages (not templates, not media-only)
     let finalMessage = message;
     if (!templateName && (!messageType || messageType === "text")) {
-      // Only add signature if message doesn't already have one (from getCrmMessage)
       if (!finalMessage.includes("Regards,\n*")) {
         const sig = await getWhatsAppSignature();
         finalMessage += sig;
@@ -142,7 +99,6 @@ export async function sendWhatsApp({
 
     if (data?.success) {
       if (!silent) toast.success(`✅ WhatsApp queued for delivery to ${name || fullPhone}`);
-      // Logging is now handled inside whatsapp-send
       return { success: true, messageId: data.messageId };
     }
 
@@ -164,6 +120,11 @@ export async function sendWhatsApp({
       error: err instanceof Error ? err.message : String(err),
     };
   }
+}
+
+/** @deprecated Manual mode removed. This is a no-op for backward compatibility. */
+export function clearSendModeCache() {
+  // No-op: 100% API mode, no cache needed
 }
 
 /**
