@@ -156,24 +156,13 @@ const reloadAfterDevServerRestart = () => {
     const hasPendingReload = sessionStorage.getItem(DEV_SERVER_PENDING_RELOAD_KEY) === "1";
     if (!hasPendingReload) return;
 
-     if (window.top !== window) {
-       console.info("[BootstrapRuntime] Dev server reconnected inside preview iframe; auto reloading clean bundle", {
-         href: window.location.href,
-       });
-       performSafeReload();
-       return;
-     }
-
-    console.info("[BootstrapRuntime] Dev server reconnected; keeping current CRM shell stable and waiting for manual reload", {
+    console.info("[BootstrapRuntime] Dev server reconnected; auto reloading clean bundle", {
       href: window.location.href,
       sensitive: isSensitivePreviewRouteWindow(),
+      embedded: window.top !== window,
     });
 
-    window.dispatchEvent(
-      new CustomEvent(DEV_SERVER_STATUS_EVENT, {
-        detail: { status: "update_ready" as const },
-      }),
-    );
+    performSafeReload();
   } catch {
     window.dispatchEvent(
       new CustomEvent(DEV_SERVER_STATUS_EVENT, {
