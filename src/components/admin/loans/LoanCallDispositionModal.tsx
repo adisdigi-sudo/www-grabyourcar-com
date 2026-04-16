@@ -507,6 +507,69 @@ export const LoanCallDispositionModal = ({ open, onOpenChange, application }: Pr
                       <Input type="date" value={disbursementDate} onChange={e => setDisbursementDate(e.target.value)} />
                     </div>
                   </div>
+
+                  {/* Personal WhatsApp Send (bypasses API, opens user's WhatsApp) */}
+                  <div className="pt-2 border-t border-emerald-500/20 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-emerald-800 dark:text-emerald-300">Send Disbursement Letter</p>
+                        <p className="text-[10px] text-muted-foreground">Open in your personal WhatsApp (no API)</p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="gap-1.5 bg-green-600 hover:bg-green-700 h-8"
+                        disabled={!disbursementAmount || !application?.phone}
+                        onClick={() => {
+                          const cleanPhone = String(application.phone).replace(/\D/g, '').slice(-10);
+                          if (cleanPhone.length !== 10) {
+                            toast.error("Invalid customer phone number");
+                            return;
+                          }
+                          const sanctionDoc = uploadedDocs.find(d =>
+                            d.type === 'sanction_letter' || d.type === 'disbursement_letter' || d.name?.toLowerCase().includes('sanction')
+                          );
+                          const pdfLink = sanctionDoc?.url || '';
+                          const customerName = application.customer_name || 'Customer';
+                          const amt = Number(disbursementAmount).toLocaleString('en-IN');
+                          const emi = Number(application.emi_amount || 0).toLocaleString('en-IN');
+                          const tenure = application.tenure_months || 60;
+                          const car = application.car_model || 'your car';
+                          const lines = [
+                            `Hi ${customerName} 🎉`,
+                            ``,
+                            `Congratulations! Your car loan has been *successfully disbursed*.`,
+                            ``,
+                            `🚗 *Car:* ${car}`,
+                            `💰 *Disbursed Amount:* ₹${amt}`,
+                            `🏦 *Bank:* ${bankName || 'Lender'}`,
+                            `📅 *Date:* ${format(new Date(disbursementDate), 'dd MMM yyyy')}`,
+                            disbursementRef ? `🔖 *Ref:* ${disbursementRef}` : '',
+                            ``,
+                            `📊 *EMI:* ₹${emi}/month for ${tenure} months`,
+                            ``,
+                            pdfLink ? `📎 *Sanction Letter:*\n${pdfLink}` : '_(Sanction letter will be shared shortly)_',
+                            ``,
+                            `Thank you for choosing GrabYourCar! 🙏`,
+                            `Regards,`,
+                            `*GrabYourCar Loans Team*`,
+                          ].filter(Boolean).join('\n');
+                          window.open(
+                            `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(lines)}`,
+                            '_blank'
+                          );
+                          toast.success("Opening WhatsApp with disbursement letter…");
+                        }}
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" /> Open WhatsApp
+                      </Button>
+                    </div>
+                    {!uploadedDocs.find(d => d.type === 'sanction_letter' || d.name?.toLowerCase().includes('sanction')) && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-500 flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" /> Tip: Upload sanction letter above to auto-include PDF link
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
 
