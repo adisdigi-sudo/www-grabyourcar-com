@@ -7596,6 +7596,84 @@ export type Database = {
         }
         Relationships: []
       }
+      eway_bills: {
+        Row: {
+          created_at: string
+          distance_km: number | null
+          document_date: string | null
+          eway_bill_number: string | null
+          from_place: string | null
+          from_state: string | null
+          goods_value: number | null
+          hsn_code: string | null
+          id: string
+          invoice_id: string | null
+          invoice_number: string | null
+          notes: string | null
+          status: string | null
+          tax_amount: number | null
+          to_place: string | null
+          to_state: string | null
+          total_value: number | null
+          transport_mode: string | null
+          transporter_gstin: string | null
+          transporter_name: string | null
+          updated_at: string
+          validity_date: string | null
+          vehicle_number: string | null
+        }
+        Insert: {
+          created_at?: string
+          distance_km?: number | null
+          document_date?: string | null
+          eway_bill_number?: string | null
+          from_place?: string | null
+          from_state?: string | null
+          goods_value?: number | null
+          hsn_code?: string | null
+          id?: string
+          invoice_id?: string | null
+          invoice_number?: string | null
+          notes?: string | null
+          status?: string | null
+          tax_amount?: number | null
+          to_place?: string | null
+          to_state?: string | null
+          total_value?: number | null
+          transport_mode?: string | null
+          transporter_gstin?: string | null
+          transporter_name?: string | null
+          updated_at?: string
+          validity_date?: string | null
+          vehicle_number?: string | null
+        }
+        Update: {
+          created_at?: string
+          distance_km?: number | null
+          document_date?: string | null
+          eway_bill_number?: string | null
+          from_place?: string | null
+          from_state?: string | null
+          goods_value?: number | null
+          hsn_code?: string | null
+          id?: string
+          invoice_id?: string | null
+          invoice_number?: string | null
+          notes?: string | null
+          status?: string | null
+          tax_amount?: number | null
+          to_place?: string | null
+          to_state?: string | null
+          total_value?: number | null
+          transport_mode?: string | null
+          transporter_gstin?: string | null
+          transporter_name?: string | null
+          updated_at?: string
+          validity_date?: string | null
+          vehicle_number?: string | null
+        }
+        Relationships: []
+      }
       expense_entries: {
         Row: {
           amount: number
@@ -13744,6 +13822,7 @@ export type Database = {
           customer_name: string | null
           id: string
           invoice_id: string | null
+          invoice_number: string | null
           notes: string | null
           payment_date: string | null
           payment_mode: string | null
@@ -13757,6 +13836,7 @@ export type Database = {
           customer_name?: string | null
           id?: string
           invoice_id?: string | null
+          invoice_number?: string | null
           notes?: string | null
           payment_date?: string | null
           payment_mode?: string | null
@@ -13770,6 +13850,7 @@ export type Database = {
           customer_name?: string | null
           id?: string
           invoice_id?: string | null
+          invoice_number?: string | null
           notes?: string | null
           payment_date?: string | null
           payment_mode?: string | null
@@ -13792,6 +13873,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payments_made: {
+        Row: {
+          amount: number
+          bill_number: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          payment_date: string | null
+          payment_mode: string | null
+          payment_number: string
+          reference: string | null
+          updated_at: string
+          vendor_name: string
+        }
+        Insert: {
+          amount?: number
+          bill_number?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_mode?: string | null
+          payment_number: string
+          reference?: string | null
+          updated_at?: string
+          vendor_name: string
+        }
+        Update: {
+          amount?: number
+          bill_number?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_mode?: string | null
+          payment_number?: string
+          reference?: string | null
+          updated_at?: string
+          vendor_name?: string
+        }
+        Relationships: []
       }
       payout_records: {
         Row: {
