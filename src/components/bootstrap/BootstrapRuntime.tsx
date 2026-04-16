@@ -467,7 +467,7 @@ const DevServerStatusOverlay = () => {
           }
         : {
             title: "Update ready",
-            body: "Naya dev bundle ready hai, lekin current screen ko force reload nahi kiya jayega. Kaam complete karke safe reload karo.",
+            body: "Naya dev bundle ready hai. CRM route ko white page se bachane ke liye reload ab sirf aapke manual safe action se hoga.",
             actionLabel: "Reload safely",
           };
 
