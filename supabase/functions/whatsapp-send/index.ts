@@ -89,9 +89,11 @@ function buildImplicitFallbackTemplate(params: {
 
   const safeName = params.name || "Customer";
   const linkText = params.mediaUrl ? `Open here: ${params.mediaUrl}` : "Reply to receive details";
-  const isInsurance = params.vertical === "insurance" || /insurance|renewal|policy/i.test(params.messageContext || "");
+  const ctx = (params.messageContext || "").toLowerCase();
+  const vert = (params.vertical || "").toLowerCase();
 
-  if (isInsurance) {
+  // Insurance vertical
+  if (vert === "insurance" || /insurance|renewal|policy/i.test(ctx)) {
     return {
       name: "renewal_reminder",
       variables: {
@@ -106,6 +108,43 @@ function buildImplicitFallbackTemplate(params: {
     };
   }
 
+  // Loan vertical
+  if (vert === "loans" || /loan|emi|disburs/i.test(ctx)) {
+    return {
+      name: "welcome_new_lead",
+      variables: { var_1: `${safeName} - Your loan update is ready. ${linkText}` },
+      components: undefined,
+    };
+  }
+
+  // Sales / quote vertical
+  if (vert === "sales" || /quote|deal|car_sales/i.test(ctx)) {
+    return {
+      name: "welcome_new_lead",
+      variables: { var_1: `${safeName} - Your car deal details. ${linkText}` },
+      components: undefined,
+    };
+  }
+
+  // HSRP vertical
+  if (vert === "hsrp" || /hsrp|number_plate/i.test(ctx)) {
+    return {
+      name: "welcome_new_lead",
+      variables: { var_1: `${safeName} - HSRP booking update. ${linkText}` },
+      components: undefined,
+    };
+  }
+
+  // Payment/invoice context
+  if (/payment|invoice|receipt/i.test(ctx)) {
+    return {
+      name: "welcome_new_lead",
+      variables: { var_1: `${safeName} - Your payment receipt. ${linkText}` },
+      components: undefined,
+    };
+  }
+
+  // Default fallback for any vertical
   return {
     name: "welcome_new_lead",
     variables: {
