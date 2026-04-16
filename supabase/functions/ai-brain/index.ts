@@ -296,7 +296,20 @@ SELF-SERVICE CAPABILITIES:
 ${knowledgeContext}
 
 === TOOLS AVAILABLE ===
-You have tools to search our car database, calculate EMIs, find on-road prices, locate dealers, capture leads, AND customer self-service tools (policy lookup, invoice lookup, loan status, HSRP status, payment history, manual payment recording). USE THEM whenever relevant to give accurate, real-time data instead of generic answers.
+You have tools to search our car database, calculate EMIs, find on-road prices, locate dealers, capture leads, customer self-service tools, AND intelligent lead qualification tools. USE THEM whenever relevant to give accurate, real-time data instead of generic answers.
+
+=== AUTO-QUALIFICATION RULES ===
+IMPORTANT: You MUST use qualify_and_set_stage to update lead stages based on conversation:
+- Customer shows buying intent ("I want to buy", "book karo", "interested hai") → stage: "interested"
+- Customer asks to follow up later ("baad mein baat karte hain", "kal call karo") → stage: "followup"  
+- Customer asks for a quote or price ("quote bhejo", "kitna padega") → stage: "quoted"
+- Customer confirms booking/payment ("book kr diya", "payment kr diya", "done") → stage: "won"
+- Customer says not interested ("nahi chahiye", "not interested", "cancel karo") → stage: "lost"
+- New inquiry without clear intent → stage: "new_lead"
+
+=== DOCUMENT SHARING ===
+- When customer asks "meri policy bhejo" / "invoice bhejo" / "quote bhejo" → USE send_document_to_customer
+- When customer asks for any PDF/document → USE send_document_to_customer with appropriate type
 
 === GUIDELINES ===
 - When a customer asks about a specific car, USE search_cars to get real data
@@ -306,9 +319,11 @@ You have tools to search our car database, calculate EMIs, find on-road prices, 
 - For dealer/showroom queries, USE find_dealers
 - For personal data requests (policy/invoice/loan/HSRP/payments), USE the lookup tools — STRICTLY phone-verified
 - For payment confirmations, USE record_manual_payment
+- ALWAYS qualify leads — after meaningful interaction, call qualify_and_set_stage
 - Always be helpful and provide specific, data-backed answers
 - For website channel: use markdown (bold, bullets, links)
 - Link to relevant pages: /car/{slug}, /car-loans, /car-insurance, /compare
+- NEVER send a blank or empty response. If unsure, say "Main aapki madad ke liye yahan hoon! Kya jaanna chahte hain?"
 
 ${page_context ? `User is currently viewing: ${page_context}` : ""}
 ${customer_name ? `Customer name: ${customer_name}` : ""}
@@ -505,6 +520,14 @@ async function executeWithTools(
         case "record_manual_payment":
           result = await toolRecordManualPayment(supabase, customerPhone, customerName, args);
           intent = "payment_recorded";
+          break;
+        case "qualify_and_set_stage":
+          result = await toolQualifyAndSetStage(supabase, customerPhone, customerName, args, channel);
+          intent = args.vertical || "general";
+          break;
+        case "send_document_to_customer":
+          result = await toolSendDocument(supabase, customerPhone, args);
+          intent = "document_share";
           break;
         default:
           result = { error: "Unknown tool" };
