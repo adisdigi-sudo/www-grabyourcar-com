@@ -642,46 +642,69 @@ export function WaTemplateManager() {
 
     setIsSavingTemplate(true);
     const cleanName = editItem.name.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+    // Capture buttons before clearing state
+    const buttonsSnapshot = [...editButtons];
     const payload: any = {
       name: cleanName, display_name: editItem.display_name || editItem.name,
       category: editItem.category || "utility", language: editItem.language || "en",
       body: editItem.body, header_type: editItem.header_type || null,
       header_content: editItem.header_content || null, footer: editItem.footer || null,
-      variables: editItem.variables || [], buttons: editButtons.length > 0 ? editButtons : [],
+      variables: editItem.variables || [], buttons: buttonsSnapshot.length > 0 ? buttonsSnapshot : [],
       status: editItem.status || "draft", vertical: editItem.vertical || null,
       ab_variant_of: editItem.ab_variant_of || null,
       ab_variant_label: editItem.ab_variant_label || null,
     };
 
+    // Check if we should auto-submit (new, draft, or rejected templates)
+    const shouldAutoSubmit = !editItem.id || editItem.status === "draft" || editItem.status === "rejected";
+
     try {
       let savedId = editItem.id;
       if (editItem.id) {
+        // For re-submission of rejected templates, reset status to draft
+        if (editItem.status === "rejected") {
+          payload.status = "draft";
+          payload.meta_rejection_reason = null;
+        }
         await supabase.from("wa_templates").update(payload).eq("id", editItem.id);
         toast.success("Template updated");
       } else {
-        const { data: ins } = await supabase.from("wa_templates").insert(payload).select("id").single();
-        savedId = ins?.id;
-        toast.success("Template created as Draft");
+        // Check for duplicate name before inserting
+        const { data: existing } = await supabase.from("wa_templates").select("id").eq("name", cleanName).maybeSingle();
+        if (existing) {
+          await supabase.from("wa_templates").update(payload).eq("id", existing.id);
+          savedId = existing.id;
+          toast.success("Template updated (existing name matched)");
+        } else {
+          const { data: ins } = await supabase.from("wa_templates").insert(payload).select("id").single();
+          savedId = ins?.id;
+          toast.success("Template created as Draft");
+        }
       }
 
       setIsEditing(false); setEditItem(null); setEditButtons([]); await fetchAll();
 
-      if (savedId && (!editItem.id || editItem.status === "draft")) {
-        const savedTemplate = templates.find(t => t.id === savedId) || ({ ...payload, id: savedId } as Template);
-        const templateIssues = validateTemplate(savedTemplate, editButtons);
+      // Auto-submit to Meta for new/draft/rejected templates
+      if (savedId && shouldAutoSubmit) {
+        const templateForValidation = { ...payload, id: savedId } as Partial<Template>;
+        const templateIssues = validateTemplate(templateForValidation, buttonsSnapshot);
         const blockingIssue = templateIssues.find(issue => issue.type === "error");
         if (blockingIssue) {
-          toast.error(`Saved locally. ${blockingIssue.message}`);
+          toast.error(`Saved locally. Fix: ${blockingIssue.message}`);
           return;
         }
 
-        toast.info("Auto-submitting to Meta…");
+        toast.info("📤 Auto-submitting to Meta for approval…");
         setSubmittingTemplateId(savedId);
         try {
           const { data, error } = await supabase.functions.invoke("meta-templates", { body: { action: "submit_template", template_id: savedId } });
           if (error) throw error;
           if (data?.error) throw new Error(data.error);
-          toast.success("Submitted to Meta ✅");
+          if (data?.validation_failed) {
+            toast.error("Meta validation failed: " + data.error);
+          } else {
+            toast.success("✅ Submitted to Meta — tracking approval status automatically");
+          }
           await fetchAll();
         } catch (err: any) {
           toast.error("Saved locally, Meta submission failed: " + (err.message || "Unknown error"));
