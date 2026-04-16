@@ -327,13 +327,17 @@ function CampaignPhonePreview({ header_type, header_content, body, footer, butto
           </div>
           {/* Buttons */}
           {buttons.length > 0 && (
-            <div className="mt-1.5 w-full space-y-1">
+            <div className="mt-2 w-full space-y-1.5 pb-1">
               {buttons.map((btn, i) => (
-                <div key={i} className="bg-white rounded-lg px-3 py-2 text-center text-[12px] leading-tight text-blue-600 font-medium shadow-sm flex items-center justify-center gap-1.5 whitespace-nowrap overflow-hidden">
-                  {btn.type === "URL" && <Globe className="h-3 w-3 shrink-0" />}
-                  {btn.type === "PHONE_NUMBER" && <PhoneCall className="h-3 w-3 shrink-0" />}
-                  {btn.type === "QUICK_REPLY" && <Reply className="h-3 w-3 shrink-0" />}
-                  <span className="truncate">{btn.text || "Button"}</span>
+                <div
+                  key={i}
+                  className="bg-white rounded-lg px-4 py-2.5 text-center text-[13px] leading-tight text-blue-600 font-medium shadow-sm flex items-center justify-center gap-2 min-h-[36px] w-full"
+                  title={btn.text || "Button"}
+                >
+                  {btn.type === "URL" && <Globe className="h-3.5 w-3.5 shrink-0" />}
+                  {btn.type === "PHONE_NUMBER" && <PhoneCall className="h-3.5 w-3.5 shrink-0" />}
+                  {btn.type === "QUICK_REPLY" && <Reply className="h-3.5 w-3.5 shrink-0" />}
+                  <span className="truncate max-w-[200px]">{btn.text || "Button"}</span>
                 </div>
               ))}
             </div>
