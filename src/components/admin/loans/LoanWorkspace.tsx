@@ -1102,9 +1102,25 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   const sendDisbursementConfirmation = async (app: any, docUrl?: string, emiStartDate?: string) => {
     const cleanPhone = String(app.phone).replace(/\D/g, '').slice(-10);
     if (cleanPhone.length !== 10) { toast.error("Invalid phone number"); return; }
+
+    // 🛡️ Safeguard: confirm before sending the attached document.
+    // Prevents sending the wrong customer's PDF (e.g. Akhilesh's quote to Dhruva).
+    if (docUrl) {
+      const confirmed = window.confirm(
+        `⚠️ You are about to send a disbursement document to ${app.customer_name} (${cleanPhone}) via WhatsApp.\n\n` +
+        `Please VERIFY the document belongs to this customer before sending.\n\n` +
+        `Click OK to open the file in a new tab and send,\nor Cancel to abort.`
+      );
+      if (!confirmed) { toast.info("Send cancelled — please re-verify the document"); return; }
+    }
+
     const message = buildDisbursementMessage(app, emiStartDate);
     setSendingDisbMsg(true);
     try {
+      // Customer-specific filename so mismatches are obvious to the recipient
+      const safeName = String(app.customer_name || 'Customer').replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 40);
+      const docFileName = `Disbursement_Letter_${safeName}.pdf`;
+
       const result = await sendWhatsApp({
         phone: cleanPhone,
         message,
@@ -1113,7 +1129,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
         messageContext: 'loan_disbursement',
         vertical: 'loans',
         silent: true,
-        ...(docUrl ? { mediaUrl: docUrl, messageType: 'document' as const, mediaFileName: 'Disbursement_Letter.pdf' } : {}),
+        ...(docUrl ? { mediaUrl: docUrl, messageType: 'document' as const, mediaFileName: docFileName } : {}),
       });
       if (result.success) {
         toast.success("✅ Disbursement confirmation sent via WhatsApp API");
