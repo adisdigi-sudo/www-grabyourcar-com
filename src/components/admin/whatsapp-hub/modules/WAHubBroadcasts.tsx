@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -19,8 +19,34 @@ import {
   CheckCheck, Check, Clock, AlertCircle, Zap, BarChart3,
   Users, MessageSquare, Send, ArrowRight, Timer, Target,
   TrendingUp, Calendar, Layers, GripVertical, RefreshCw,
+  Globe, PhoneCall, Reply, Video, Image, FileText, X,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+
+// ─── Types ───
+interface CampaignButton {
+  type: "URL" | "QUICK_REPLY" | "PHONE_NUMBER";
+  text: string;
+  url?: string;
+  phone_number?: string;
+}
+
+const BROADCAST_VARS = [
+  { key: "customer_name", label: "Name", sample: "Rahul Sharma" },
+  { key: "phone", label: "Phone", sample: "9876543210" },
+  { key: "city", label: "City", sample: "Mumbai" },
+  { key: "car_model", label: "Car Model", sample: "Hyundai Creta" },
+  { key: "vehicle_number", label: "Vehicle No.", sample: "MH02AB1234" },
+  { key: "insurer", label: "Insurer", sample: "HDFC ERGO" },
+  { key: "premium", label: "Premium", sample: "₹12,500" },
+  { key: "expiry_date", label: "Expiry", sample: "15 Apr 2026" },
+  { key: "policy_number", label: "Policy No.", sample: "POL-2024-12345" },
+  { key: "order_id", label: "Order ID", sample: "ORD-789" },
+  { key: "amount", label: "Amount", sample: "₹8,500" },
+  { key: "date", label: "Date", sample: "16 Apr 2026" },
+  { key: "booking_id", label: "Booking ID", sample: "BK-001" },
+  { key: "otp", label: "OTP", sample: "123456" },
+];
 
 // ─── Stats Overview ───
 function BroadcastStats() {
@@ -75,17 +101,180 @@ function BroadcastStats() {
   );
 }
 
-// ─── One-Shot Broadcast Tab ───
+// ─── Campaign Phone Preview ───
+function CampaignPhonePreview({ header_type, header_content, body, footer, buttons }: {
+  header_type: string; header_content: string; body: string; footer: string; buttons: CampaignButton[];
+}) {
+  const renderVars = (text: string) => {
+    return text.replace(/\{\{(\w+)\}\}/g, (_, v) => {
+      const found = BROADCAST_VARS.find(bv => bv.key === v);
+      return found ? found.sample : `[${v}]`;
+    });
+  };
+
+  return (
+    <div className="w-[280px] mx-auto">
+      <div className="bg-gray-900 rounded-[2rem] p-2 shadow-2xl">
+        <div className="bg-gray-900 rounded-t-[1.5rem] pt-5 pb-1 px-4">
+          <div className="flex items-center gap-2 text-white text-xs">
+            <div className="h-8 w-8 rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-bold">G</div>
+            <div>
+              <p className="font-medium text-sm">GrabYourCar</p>
+              <p className="text-[10px] text-gray-400">Business Account</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-[#e5ddd5] rounded-b-[1.5rem] p-3 min-h-[340px] flex flex-col justify-end">
+          <div className="bg-white rounded-lg p-2.5 shadow-sm max-w-[92%] ml-auto">
+            {/* Header */}
+            {header_type === "text" && header_content && (
+              <p className="font-bold text-xs mb-1">{renderVars(header_content)}</p>
+            )}
+            {header_type === "image" && (
+              <div className="bg-gray-200 rounded h-28 flex items-center justify-center mb-2">
+                <Image className="h-6 w-6 text-gray-400" />
+                <span className="text-[10px] text-gray-400 ml-1">Image</span>
+              </div>
+            )}
+            {header_type === "video" && (
+              <div className="bg-gray-800 rounded h-28 flex items-center justify-center mb-2 relative">
+                <Video className="h-6 w-6 text-gray-400" />
+                <span className="text-[10px] text-gray-400 ml-1">Video</span>
+                <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[8px] px-1 rounded">0:60</div>
+              </div>
+            )}
+            {header_type === "document" && (
+              <div className="bg-gray-100 rounded p-2 flex items-center gap-2 mb-2 border">
+                <FileText className="h-5 w-5 text-red-500" />
+                <span className="text-[10px] text-gray-600">Document.pdf</span>
+              </div>
+            )}
+            {/* Body */}
+            <p className="text-[11px] whitespace-pre-wrap leading-relaxed">
+              {body ? renderVars(body) : "Your message preview will appear here..."}
+            </p>
+            {/* Footer */}
+            {footer && (
+              <p className="text-[9px] text-gray-500 mt-1.5 border-t pt-1">{footer}</p>
+            )}
+            <p className="text-[9px] text-gray-400 text-right mt-1">
+              {new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} ✓✓
+            </p>
+          </div>
+          {/* Buttons */}
+          {buttons.length > 0 && (
+            <div className="mt-1 max-w-[92%] ml-auto space-y-0.5">
+              {buttons.map((btn, i) => (
+                <div key={i} className="bg-white rounded-lg py-1.5 text-center text-[11px] text-blue-600 font-medium shadow-sm flex items-center justify-center gap-1">
+                  {btn.type === "URL" && <Globe className="h-3 w-3" />}
+                  {btn.type === "PHONE_NUMBER" && <PhoneCall className="h-3 w-3" />}
+                  {btn.type === "QUICK_REPLY" && <Reply className="h-3 w-3" />}
+                  {btn.text || "Button"}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Campaign Button Editor ───
+function CampaignButtonEditor({ buttons, onChange }: { buttons: CampaignButton[]; onChange: (b: CampaignButton[]) => void }) {
+  const addButton = (type: CampaignButton["type"]) => {
+    if (buttons.length >= 3) { toast.error("Max 3 buttons allowed by Meta"); return; }
+    const quickReplyCount = buttons.filter(b => b.type === "QUICK_REPLY").length;
+    const ctaCount = buttons.filter(b => b.type !== "QUICK_REPLY").length;
+    // Meta rule: can't mix CTA and quick reply
+    if (type === "QUICK_REPLY" && ctaCount > 0) { toast.error("Can't mix Quick Reply with CTA buttons"); return; }
+    if (type !== "QUICK_REPLY" && quickReplyCount > 0) { toast.error("Can't mix CTA with Quick Reply buttons"); return; }
+    onChange([...buttons, {
+      type,
+      text: "",
+      url: type === "URL" ? "https://" : undefined,
+      phone_number: type === "PHONE_NUMBER" ? "+91" : undefined,
+    }]);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs font-semibold">Buttons (max 3)</Label>
+        <div className="flex gap-1">
+          <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => addButton("URL")} disabled={buttons.length >= 3}>
+            <Globe className="h-3 w-3" /> CTA URL
+          </Button>
+          <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => addButton("PHONE_NUMBER")} disabled={buttons.length >= 3}>
+            <PhoneCall className="h-3 w-3" /> CTA Call
+          </Button>
+          <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => addButton("QUICK_REPLY")} disabled={buttons.length >= 3}>
+            <Reply className="h-3 w-3" /> Quick Reply
+          </Button>
+        </div>
+      </div>
+      {buttons.map((btn, idx) => (
+        <div key={idx} className="border rounded-lg p-2.5 space-y-1.5 bg-muted/30">
+          <div className="flex items-center justify-between">
+            <Badge variant="outline" className="text-[9px]">
+              {btn.type === "URL" ? "🔗 CTA URL" : btn.type === "PHONE_NUMBER" ? "📞 CTA Call" : "↩️ Quick Reply"}
+            </Badge>
+            <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => onChange(buttons.filter((_, i) => i !== idx))}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+          <Input
+            value={btn.text}
+            onChange={e => onChange(buttons.map((b, i) => i === idx ? { ...b, text: e.target.value } : b))}
+            placeholder="Button text (max 25 chars)"
+            className="h-7 text-xs"
+            maxLength={25}
+          />
+          {btn.type === "URL" && (
+            <div>
+              <Input
+                value={btn.url || ""}
+                onChange={e => onChange(buttons.map((b, i) => i === idx ? { ...b, url: e.target.value } : b))}
+                placeholder="https://example.com/{{1}}"
+                className="h-7 text-xs font-mono"
+              />
+              <p className="text-[9px] text-muted-foreground mt-0.5">Use {"{{1}}"} for dynamic URL suffix</p>
+            </div>
+          )}
+          {btn.type === "PHONE_NUMBER" && (
+            <Input
+              value={btn.phone_number || ""}
+              onChange={e => onChange(buttons.map((b, i) => i === idx ? { ...b, phone_number: e.target.value } : b))}
+              placeholder="+919577200023"
+              className="h-7 text-xs font-mono"
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── One-Shot Broadcast Tab (Meta-Style Full Builder) ───
 function OneShotBroadcast() {
   const qc = useQueryClient();
   const [form, setForm] = useState({
-    name: "", message: "", template_id: "", segment: "all", batch_size: 50,
+    name: "",
+    message: "",
+    template_id: "",
+    segment: "all",
+    batch_size: 50,
+    header_type: "none" as string,
+    header_content: "",
+    footer: "",
+    buttons: [] as CampaignButton[],
+    media_url: "",
   });
 
   const { data: templates } = useQuery({
     queryKey: ["broadcast-templates"],
     queryFn: async () => {
-      const { data } = await supabase.from("wa_templates").select("id, name, body, status").eq("status", "approved").order("name");
+      const { data } = await supabase.from("wa_templates").select("id, name, body, status, header_type, header_content, footer, buttons, category").eq("status", "approved").order("name");
       return data || [];
     },
   });
@@ -110,6 +299,13 @@ function OneShotBroadcast() {
         campaign_type: "broadcast",
         channel: "whatsapp",
         segment_rules: form.segment !== "all" ? [{ field: "segment_id", operator: "eq", value: form.segment }] : [],
+        metadata: {
+          header_type: form.header_type,
+          header_content: form.header_content,
+          footer: form.footer,
+          buttons: form.buttons,
+          media_url: form.media_url,
+        },
       } as any).select().single();
       if (error) throw error;
       const { error: launchErr } = await supabase.functions.invoke("wa-campaign-launcher", {
@@ -122,96 +318,192 @@ function OneShotBroadcast() {
       toast.success("🚀 Broadcast launched!");
       qc.invalidateQueries({ queryKey: ["broadcast-pro-stats"] });
       qc.invalidateQueries({ queryKey: ["broadcast-history"] });
-      setForm({ name: "", message: "", template_id: "", segment: "all", batch_size: 50 });
+      setForm({ name: "", message: "", template_id: "", segment: "all", batch_size: 50, header_type: "none", header_content: "", footer: "", buttons: [], media_url: "" });
     },
     onError: (e) => toast.error((e as Error).message),
   });
 
   const handleTemplateSelect = (id: string) => {
     const t = templates?.find((t: any) => t.id === id);
-    setForm((p) => ({ ...p, template_id: id, message: t?.body || p.message }));
+    if (t) {
+      setForm((p) => ({
+        ...p,
+        template_id: id,
+        message: t.body || p.message,
+        header_type: t.header_type || "none",
+        header_content: t.header_content || "",
+        footer: t.footer || "",
+        buttons: (t.buttons as unknown as CampaignButton[]) || [],
+      }));
+    }
+  };
+
+  const insertVariable = (key: string) => {
+    setForm(p => ({ ...p, message: p.message + `{{${key}}}` }));
   };
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <div className="space-y-4">
+    <div className="grid grid-cols-5 gap-4">
+      {/* Builder — 3 cols */}
+      <div className="col-span-3 space-y-3">
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2"><Megaphone className="h-4 w-4 text-green-600" /> Quick Broadcast</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Megaphone className="h-4 w-4 text-green-600" /> Meta-Style Campaign Builder
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Input placeholder="Campaign name *" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="h-9 text-sm" />
-
-            <Select onValueChange={handleTemplateSelect}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Pick a template..." /></SelectTrigger>
-              <SelectContent>
-                {templates?.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-
-            <Textarea placeholder="Message content... Use {name}, {phone} for personalization" value={form.message} onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))} rows={5} className="text-sm" />
-
-            <div className="flex flex-wrap gap-1">
-              {["name", "phone", "city", "car_model"].map((v) => (
-                <Button key={v} variant="outline" size="sm" className="h-6 text-xs px-2" onClick={() => setForm((p) => ({ ...p, message: p.message + `{${v}}` }))}>{`{${v}}`}</Button>
-              ))}
+            {/* Row 1: Name + Template */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Campaign Name *</Label>
+                <Input placeholder="e.g., Diwali Offer 2026" value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} className="h-8 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Use Approved Template</Label>
+                <Select value={form.template_id} onValueChange={handleTemplateSelect}>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Pick template (optional)" /></SelectTrigger>
+                  <SelectContent>
+                    {templates?.map((t: any) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-[8px] h-4">{t.category}</Badge>
+                          {t.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <Select value={form.segment} onValueChange={(v) => setForm((p) => ({ ...p, segment: v }))}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Audience segment" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Contacts</SelectItem>
-                {segments?.map((s: any) => (
-                  <SelectItem key={s.id} value={s.id}>{s.name} ({s.estimated_count || 0})</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Batch:</span>
-              <Select value={String(form.batch_size)} onValueChange={(v) => setForm((p) => ({ ...p, batch_size: Number(v) }))}>
-                <SelectTrigger className="h-8 text-sm w-20"><SelectValue /></SelectTrigger>
-                <SelectContent>{[25, 50, 100, 200].map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent>
+            {/* Header Section */}
+            <div className="space-y-1.5 border rounded-lg p-3 bg-muted/20">
+              <Label className="text-xs font-semibold">Header (optional)</Label>
+              <Select value={form.header_type} onValueChange={(v) => setForm(p => ({ ...p, header_type: v, header_content: "" }))}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="text">📝 Text</SelectItem>
+                  <SelectItem value="image">🖼️ Image</SelectItem>
+                  <SelectItem value="video">🎬 Video (up to 1 min)</SelectItem>
+                  <SelectItem value="document">📄 Document (PDF)</SelectItem>
+                </SelectContent>
               </Select>
+              {form.header_type === "text" && (
+                <Input value={form.header_content} onChange={e => setForm(p => ({ ...p, header_content: e.target.value }))} placeholder="Header text (max 60 chars, 1 variable max)" className="h-8 text-sm" maxLength={60} />
+              )}
+              {(form.header_type === "image" || form.header_type === "video" || form.header_type === "document") && (
+                <div className="space-y-1">
+                  <Input value={form.media_url} onChange={e => setForm(p => ({ ...p, media_url: e.target.value }))} placeholder={form.header_type === "video" ? "Video URL (MP4, max 16MB, up to 1 min)" : form.header_type === "image" ? "Image URL (JPG/PNG, max 5MB)" : "Document URL (PDF)"} className="h-8 text-xs font-mono" />
+                  <p className="text-[9px] text-muted-foreground">
+                    {form.header_type === "video" && "Supported: MP4, max 16MB, up to 60 seconds"}
+                    {form.header_type === "image" && "Supported: JPG, PNG, max 5MB"}
+                    {form.header_type === "document" && "Supported: PDF, max 100MB"}
+                  </p>
+                </div>
+              )}
             </div>
 
-            <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white" onClick={() => shootMutation.mutate()} disabled={shootMutation.isPending || !form.name || !form.message}>
-              <Rocket className="h-4 w-4" /> {shootMutation.isPending ? "Launching..." : "🚀 Shoot Now!"}
+            {/* Body / Message */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Message Body *</Label>
+              <Textarea
+                placeholder="Hello {{customer_name}}! 🎉 Your policy for {{vehicle_number}} is expiring on {{expiry_date}}..."
+                value={form.message}
+                onChange={(e) => setForm(p => ({ ...p, message: e.target.value }))}
+                rows={5}
+                className="text-sm"
+              />
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-[10px] text-muted-foreground mr-1">Variables:</span>
+                {BROADCAST_VARS.map((v) => (
+                  <Button key={v.key} variant="outline" size="sm" className="h-5 text-[9px] px-1.5 gap-0.5" onClick={() => insertVariable(v.key)}>
+                    {`{{${v.label}}}`}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-[9px] text-muted-foreground">Max 1024 characters. Use *bold*, _italic_, ~strikethrough~ formatting.</p>
+            </div>
+
+            {/* Footer */}
+            <div className="space-y-1">
+              <Label className="text-xs">Footer (optional, max 60 chars)</Label>
+              <Input value={form.footer} onChange={e => setForm(p => ({ ...p, footer: e.target.value }))} placeholder="e.g., Reply STOP to unsubscribe" className="h-8 text-sm" maxLength={60} />
+            </div>
+
+            {/* Buttons */}
+            <CampaignButtonEditor buttons={form.buttons} onChange={(b) => setForm(p => ({ ...p, buttons: b }))} />
+
+            {/* Audience + Batch */}
+            <div className="grid grid-cols-2 gap-3 border-t pt-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Audience Segment</Label>
+                <Select value={form.segment} onValueChange={(v) => setForm(p => ({ ...p, segment: v }))}>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">📋 All Contacts</SelectItem>
+                    {segments?.map((s: any) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name} ({s.estimated_count || 0})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Batch Size</Label>
+                <Select value={String(form.batch_size)} onValueChange={(v) => setForm(p => ({ ...p, batch_size: Number(v) }))}>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>{[25, 50, 100, 200, 500].map(n => <SelectItem key={n} value={String(n)}>{n}/batch</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Meta Approval Notice */}
+            {!form.template_id && (
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 rounded-lg p-2 text-xs text-amber-700 flex items-start gap-2">
+                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>Without an approved template, messages will only deliver inside the 24hr window. Select an approved template for guaranteed delivery.</span>
+              </div>
+            )}
+
+            <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white h-10" onClick={() => shootMutation.mutate()} disabled={shootMutation.isPending || !form.name || !form.message}>
+              <Rocket className="h-4 w-4" /> {shootMutation.isPending ? "Launching..." : "🚀 Launch Campaign"}
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* Live Preview */}
-      <div>
-        <Card className="h-full">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2"><Eye className="h-4 w-4 text-blue-500" /> Phone Preview</CardTitle>
+      {/* Side Preview — 2 cols */}
+      <div className="col-span-2">
+        <Card className="sticky top-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2"><Eye className="h-4 w-4 text-blue-500" /> Live Preview</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mx-auto w-[280px] bg-gray-900 rounded-[2rem] p-3 shadow-xl">
-              <div className="bg-white dark:bg-gray-800 rounded-[1.5rem] overflow-hidden">
-                <div className="bg-green-600 text-white px-4 py-2 flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-xs font-bold">G</div>
-                  <div>
-                    <p className="text-sm font-semibold">GrabYourCar</p>
-                    <p className="text-[10px] opacity-75">online</p>
-                  </div>
-                </div>
-                <div className="p-3 bg-[#e5ddd5] dark:bg-gray-700 min-h-[300px] flex flex-col justify-end">
-                  {form.message ? (
-                    <div className="bg-[#dcf8c6] dark:bg-green-900/40 rounded-lg p-3 text-sm max-w-[240px] ml-auto shadow-sm">
-                      <p className="text-[12px] whitespace-pre-wrap leading-relaxed">
-                        {form.message.replace(/\{name\}/g, "Rahul Sharma").replace(/\{phone\}/g, "9876543210").replace(/\{city\}/g, "Mumbai").replace(/\{car_model\}/g, "Creta")}
-                      </p>
-                      <span className="text-[9px] text-gray-500 float-right mt-1">
-                        {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ✓✓
-                      </span>
-                    </div>
-                  ) : (
-                    <p className="text-center text-xs text-gray-500 py-12">Type a message to see preview</p>
-                  )}
-                </div>
+            <CampaignPhonePreview
+              header_type={form.header_type}
+              header_content={form.header_content}
+              body={form.message}
+              footer={form.footer}
+              buttons={form.buttons}
+            />
+            {/* Quick Stats below preview */}
+            <div className="mt-4 grid grid-cols-2 gap-2 text-center">
+              <div className="bg-muted/50 rounded p-2">
+                <p className="text-[10px] text-muted-foreground">Body Length</p>
+                <p className="text-sm font-bold">{form.message.length}/1024</p>
+              </div>
+              <div className="bg-muted/50 rounded p-2">
+                <p className="text-[10px] text-muted-foreground">Variables</p>
+                <p className="text-sm font-bold">{(form.message.match(/\{\{\w+\}\}/g) || []).length}</p>
+              </div>
+              <div className="bg-muted/50 rounded p-2">
+                <p className="text-[10px] text-muted-foreground">Buttons</p>
+                <p className="text-sm font-bold">{form.buttons.length}/3</p>
+              </div>
+              <div className="bg-muted/50 rounded p-2">
+                <p className="text-[10px] text-muted-foreground">Header</p>
+                <p className="text-sm font-bold capitalize">{form.header_type === "none" ? "—" : form.header_type}</p>
               </div>
             </div>
           </CardContent>
