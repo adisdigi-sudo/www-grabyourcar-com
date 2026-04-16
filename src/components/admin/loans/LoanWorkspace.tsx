@@ -391,7 +391,25 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
   }, [applications, quickMoveMutation]);
 
   const handleCardClick = (app: any) => { setSelectedApp(app); setShowStageModal(true); };
-  const handleWhatsApp = (phone: string, name: string, carModel?: string | null) => {
+  const handleWhatsApp = (phone: string, name: string, carModel?: string | null, app?: any) => {
+    // If the lead is already disbursed → send the Thank-You + Feedback message instead of the generic inquiry
+    if (app?.stage === 'disbursed') {
+      const msg = buildDisbursementThankYouMessage({
+        customerName: name,
+        carModel,
+        bankName: app.bank_name || app.lender_name || app.selected_bank,
+        disbursementAmount: Number(app.disbursement_amount) || Number(app.loan_amount) || 0,
+      });
+      void sendCrmWhatsAppMessage({
+        phone,
+        message: msg,
+        name,
+        logEvent: "loan_disbursement_feedback",
+        vertical: "loans",
+        successMessage: `✅ Thank-you + feedback request sent to ${name || 'customer'}`,
+      });
+      return;
+    }
     openWhatsAppChat(phone, buildLoanFollowupWhatsAppMessage({ customerName: name, carModel }));
   };
 
