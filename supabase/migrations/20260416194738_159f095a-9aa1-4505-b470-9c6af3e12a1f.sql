@@ -1,0 +1,1 @@
+UPDATE public.loan_applications SET disbursement_letter_url = NULL WHERE id = '536e3298-0569-466d-9abe-f33f4c20a7e5' AND disbursement_letter_url = 'https://ynoiwioypxpurwdbjvyt.supabase.co/storage/v1/object/public/loan-documents/disbursement-proofs/536e3298-0569-466d-9abe-f33f4c20a7e5_1776368468414.pdf';
