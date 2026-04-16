@@ -53,6 +53,7 @@ export default defineConfig(({ mode }) => ({
       "zod",
       "@radix-ui/react-slot",
       "@radix-ui/react-toast",
+      "react-markdown",
     ],
   },
 }));

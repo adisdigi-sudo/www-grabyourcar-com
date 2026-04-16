@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 
 type Message = { role: "user" | "assistant"; content: string };
@@ -417,8 +416,8 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
                     : "bg-muted text-foreground"
                 )}>
                   {msg.role === "assistant" ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-1.5 [&_table]:text-xs [&_th]:px-2 [&_td]:px-2 [&_a]:text-primary [&_li]:my-0.5">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    <div className="max-w-none whitespace-pre-wrap break-words leading-relaxed">
+                      {msg.content}
                     </div>
                   ) : msg.content}
                 </div>
@@ -428,8 +427,8 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
             {isLoading && streamContent && (
               <div className="flex justify-start">
                 <div className="max-w-[90%] bg-muted rounded-xl px-3 py-2 text-sm">
-                  <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-1.5 [&_li]:my-0.5">
-                    <ReactMarkdown>{streamContent}</ReactMarkdown>
+                  <div className="max-w-none whitespace-pre-wrap break-words leading-relaxed">
+                    {streamContent}
                   </div>
                 </div>
               </div>
