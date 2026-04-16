@@ -189,6 +189,8 @@ const shouldForceSensitiveRouteRecoveryReload = () => {
 };
 
 const announceSensitiveRouteReloadReady = (reason: "healthy" | "unhealthy") => {
+  clearPendingReloadFlag();
+
   window.dispatchEvent(
     new CustomEvent(DEV_SERVER_STATUS_EVENT, {
       detail: { status: "update_ready" as const, reason },
@@ -379,13 +381,7 @@ const DevServerStatusOverlay = () => {
       return "idle";
     }
 
-    try {
-      return sessionStorage.getItem(DEV_SERVER_PENDING_RELOAD_KEY) === "1" && isSensitivePreviewRouteWindow()
-        ? "update_ready"
-        : "idle";
-    } catch {
-      return "idle";
-    }
+    return "idle";
   });
 
   useEffect(() => {
@@ -419,14 +415,6 @@ const DevServerStatusOverlay = () => {
         clearPendingReloadFlag();
         setStatus("idle");
         return;
-      }
-
-      try {
-        if (sessionStorage.getItem(DEV_SERVER_PENDING_RELOAD_KEY) === "1") {
-          setStatus("update_ready");
-        }
-      } catch {
-        // ignore storage failures
       }
     };
 

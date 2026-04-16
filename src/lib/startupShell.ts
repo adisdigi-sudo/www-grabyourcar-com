@@ -41,6 +41,47 @@ const STARTUP_READY_SELECTOR = [
   "[data-radix-popper-content-wrapper]",
 ].join(", ");
 
+const isElementVisible = (element: Element | null) => {
+  if (!element || !(element instanceof HTMLElement || element instanceof SVGElement)) {
+    return false;
+  }
+
+  const style = window.getComputedStyle(element);
+  if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
+    return false;
+  }
+
+  return element.getClientRects().length > 0;
+};
+
+const hasVisibleReadySelector = (container: ParentNode | null) => {
+  if (!container || !(container instanceof Element || container instanceof DocumentFragment)) {
+    return false;
+  }
+
+  return Array.from(container.querySelectorAll(STARTUP_READY_SELECTOR)).some((element) => {
+    if ((element as HTMLElement).id === STARTUP_SHELL_ID) {
+      return false;
+    }
+
+    return isElementVisible(element);
+  });
+};
+
+const getMeaningfulTextLength = (container: ParentNode | null) => {
+  if (!container || !(container instanceof Element || container instanceof DocumentFragment)) {
+    return 0;
+  }
+
+  const text = container.textContent?.replace(/\s+/g, " ").trim() ?? "";
+  return text.length;
+};
+
+const hasVisibleLayoutSurface = (root: HTMLElement) => {
+  const candidateSurfaces = root.querySelectorAll("main, [role='main'], aside, nav, header, section");
+  return Array.from(candidateSurfaces).some((element) => isElementVisible(element));
+};
+
 const clearStartupShellRecoveryTimer = () => {
   if (startupShellRecoveryTimer) {
     window.clearTimeout(startupShellRecoveryTimer);
@@ -121,6 +162,11 @@ const scheduleStartupShellAutoReload = () => {
     return;
   }
 
+  if (isSensitivePreviewRouteWindow()) {
+    clearAutoReloadTimer();
+    return;
+  }
+
   const reloadState = readStartupShellAutoReloadState();
   if (reloadState.attempts >= STARTUP_SHELL_AUTO_RELOAD_MAX_ATTEMPTS) {
     clearAutoReloadTimer();
@@ -154,14 +200,18 @@ export const isSensitiveRouteAppReady = () => {
   const root = document.getElementById(APP_ROOT_ID);
   if (!root || root.childElementCount === 0) return false;
 
-  if (root.querySelector(STARTUP_READY_SELECTOR)) {
+  const mainRegion = root.querySelector("main, [role='main']");
+  const mainHasVisibleNodes = hasVisibleReadySelector(mainRegion);
+  const mainTextLength = getMeaningfulTextLength(mainRegion);
+
+  if ((mainHasVisibleNodes && mainTextLength >= 8) || mainTextLength >= 24) {
     return true;
   }
 
-  const mainRegion = root.querySelector("main, [role='main']");
-  const mainText = mainRegion?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+  const rootHasVisibleNodes = hasVisibleReadySelector(root);
+  const rootTextLength = getMeaningfulTextLength(root);
 
-  return mainText.length >= 24;
+  return hasVisibleLayoutSurface(root) && rootHasVisibleNodes && rootTextLength >= 24;
 };
 
 export const promoteStartupShellToRecovery = (
