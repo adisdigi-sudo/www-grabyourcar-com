@@ -333,7 +333,7 @@ function OneShotBroadcast() {
         header_type: t.header_type || "none",
         header_content: t.header_content || "",
         footer: t.footer || "",
-        buttons: (t.buttons as CampaignButton[]) || [],
+        buttons: (t.buttons as unknown as CampaignButton[]) || [],
       }));
     }
   };
