@@ -22,6 +22,7 @@ import { STAGE_LABELS, STAGE_COLORS, ALLOWED_TRANSITIONS, LOST_REASONS, REQUIRED
 import { generateEMIPdf, generateEMIWhatsAppMessage, type EMIData } from "@/lib/generateEMIPdf";
 import { persistLoanQuoteHistory } from "@/lib/loanQuotePersistence";
 import { triggerWhatsApp } from "@/lib/whatsappTrigger";
+import { sendWhatsApp } from "@/lib/sendWhatsApp";
 
 type Step = 'call_status' | 'stage_update' | 'emi_share' | 'follow_up';
 type Disposition = 'connected' | 'not_connected' | 'busy' | 'no_answer' | 'callback_requested' | 'wrong_number';
@@ -73,6 +74,7 @@ export const LoanCallDispositionModal = ({ open, onOpenChange, application }: Pr
   const [uploading, setUploading] = useState(false);
   const [uploadedDocs, setUploadedDocs] = useState<{ type: string; name: string; url: string }[]>([]);
   const [selectedDocType, setSelectedDocType] = useState('');
+  const [sendingDisbWA, setSendingDisbWA] = useState(false);
 
   // Follow-up
   const [followUpDate, setFollowUpDate] = useState('');
