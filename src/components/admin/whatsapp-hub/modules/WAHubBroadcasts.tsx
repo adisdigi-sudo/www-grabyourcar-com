@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import {
   Users, MessageSquare, Send, ArrowRight, Timer, Target,
   TrendingUp, Calendar, Layers, GripVertical, RefreshCw,
   Globe, PhoneCall, Reply, Video, Image, FileText, X,
+  Upload, FileUp, Quote,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -29,6 +30,11 @@ interface CampaignButton {
   text: string;
   url?: string;
   phone_number?: string;
+}
+
+interface VariableSample {
+  key: string;
+  value: string;
 }
 
 const BROADCAST_VARS = [
@@ -101,12 +107,161 @@ function BroadcastStats() {
   );
 }
 
+// ─── Media Upload Component ───
+function MediaUploader({ headerType, mediaUrl, onUrlChange, onFileUploaded }: {
+  headerType: string;
+  mediaUrl: string;
+  onUrlChange: (url: string) => void;
+  onFileUploaded: (url: string) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMode, setUploadMode] = useState<"url" | "upload">("upload");
+
+  const acceptMap: Record<string, string> = {
+    image: "image/jpeg,image/png,image/webp",
+    video: "video/mp4",
+    document: "application/pdf",
+  };
+
+  const maxSizeMap: Record<string, number> = {
+    image: 5 * 1024 * 1024,
+    video: 16 * 1024 * 1024,
+    document: 100 * 1024 * 1024,
+  };
+
+  const handleUpload = async (file: File) => {
+    const maxSize = maxSizeMap[headerType] || 16 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error(`File too large. Max ${Math.round(maxSize / (1024 * 1024))}MB allowed`);
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "bin";
+      const path = `broadcast-media/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      
+      const { error: uploadErr } = await supabase.storage.from("wa-media").upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+
+      if (uploadErr) {
+        // Bucket may not exist, try creating
+        if (uploadErr.message?.includes("not found") || uploadErr.message?.includes("Bucket")) {
+          toast.error("Storage bucket 'wa-media' not found. Please set it up first.");
+        } else {
+          throw uploadErr;
+        }
+        return;
+      }
+
+      const { data: urlData } = supabase.storage.from("wa-media").getPublicUrl(path);
+      onFileUploaded(urlData.publicUrl);
+      toast.success("✅ File uploaded!");
+    } catch (err) {
+      toast.error("Upload failed: " + (err as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Button
+          type="button" size="sm" variant={uploadMode === "upload" ? "default" : "outline"}
+          className="h-6 text-[10px] gap-1"
+          onClick={() => setUploadMode("upload")}
+        >
+          <Upload className="h-3 w-3" /> Upload File
+        </Button>
+        <Button
+          type="button" size="sm" variant={uploadMode === "url" ? "default" : "outline"}
+          className="h-6 text-[10px] gap-1"
+          onClick={() => setUploadMode("url")}
+        >
+          <Globe className="h-3 w-3" /> Paste URL
+        </Button>
+      </div>
+
+      {uploadMode === "upload" ? (
+        <div className="space-y-1.5">
+          <input
+            ref={fileRef}
+            type="file"
+            accept={acceptMap[headerType] || "*"}
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleUpload(f);
+            }}
+          />
+          <Button
+            type="button" variant="outline" className="w-full h-20 border-dashed gap-2 text-sm"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" /> Uploading...
+              </>
+            ) : (
+              <>
+                <FileUp className="h-5 w-5 text-muted-foreground" />
+                <div className="text-left">
+                  <p className="font-medium">Click to upload {headerType}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {headerType === "video" && "MP4, max 16MB, up to 60 sec"}
+                    {headerType === "image" && "JPG/PNG, max 5MB"}
+                    {headerType === "document" && "PDF, max 100MB"}
+                  </p>
+                </div>
+              </>
+            )}
+          </Button>
+          {mediaUrl && (
+            <div className="flex items-center gap-2 bg-green-500/10 rounded-lg p-2">
+              <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />
+              <span className="text-[10px] text-green-700 dark:text-green-400 truncate flex-1">{mediaUrl.split("/").pop()}</span>
+              <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => onUrlChange("")}>
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-1">
+          <Input
+            value={mediaUrl}
+            onChange={e => onUrlChange(e.target.value)}
+            placeholder={
+              headerType === "video" ? "https://example.com/video.mp4" :
+              headerType === "image" ? "https://example.com/image.jpg" :
+              "https://example.com/document.pdf"
+            }
+            className="h-8 text-xs font-mono"
+          />
+          <p className="text-[9px] text-muted-foreground">
+            {headerType === "video" && "Supported: MP4, max 16MB, up to 60 seconds"}
+            {headerType === "image" && "Supported: JPG, PNG, max 5MB"}
+            {headerType === "document" && "Supported: PDF, max 100MB"}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Campaign Phone Preview ───
-function CampaignPhonePreview({ header_type, header_content, body, footer, buttons }: {
-  header_type: string; header_content: string; body: string; footer: string; buttons: CampaignButton[];
+function CampaignPhonePreview({ header_type, header_content, body, footer, buttons, media_url, variableSamples }: {
+  header_type: string; header_content: string; body: string; footer: string; buttons: CampaignButton[]; media_url?: string; variableSamples?: VariableSample[];
 }) {
   const renderVars = (text: string) => {
     return text.replace(/\{\{(\w+)\}\}/g, (_, v) => {
+      const custom = variableSamples?.find(vs => vs.key === v);
+      if (custom?.value) return custom.value;
       const found = BROADCAST_VARS.find(bv => bv.key === v);
       return found ? found.sample : `[${v}]`;
     });
@@ -131,22 +286,31 @@ function CampaignPhonePreview({ header_type, header_content, body, footer, butto
               <p className="font-bold text-xs mb-1">{renderVars(header_content)}</p>
             )}
             {header_type === "image" && (
-              <div className="bg-gray-200 rounded h-28 flex items-center justify-center mb-2">
-                <Image className="h-6 w-6 text-gray-400" />
-                <span className="text-[10px] text-gray-400 ml-1">Image</span>
+              <div className="bg-gray-200 rounded h-28 flex items-center justify-center mb-2 overflow-hidden">
+                {media_url ? (
+                  <img src={media_url} alt="Header" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                ) : (
+                  <><Image className="h-6 w-6 text-gray-400" /><span className="text-[10px] text-gray-400 ml-1">Image</span></>
+                )}
               </div>
             )}
             {header_type === "video" && (
-              <div className="bg-gray-800 rounded h-28 flex items-center justify-center mb-2 relative">
-                <Video className="h-6 w-6 text-gray-400" />
-                <span className="text-[10px] text-gray-400 ml-1">Video</span>
+              <div className="bg-gray-800 rounded h-28 flex items-center justify-center mb-2 relative overflow-hidden">
+                {media_url ? (
+                  <video src={media_url} className="w-full h-full object-cover" muted />
+                ) : null}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="bg-white/80 rounded-full p-2">
+                    <Play className="h-4 w-4 text-gray-800 fill-gray-800" />
+                  </div>
+                </div>
                 <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[8px] px-1 rounded">0:60</div>
               </div>
             )}
             {header_type === "document" && (
               <div className="bg-gray-100 rounded p-2 flex items-center gap-2 mb-2 border">
                 <FileText className="h-5 w-5 text-red-500" />
-                <span className="text-[10px] text-gray-600">Document.pdf</span>
+                <span className="text-[10px] text-gray-600 truncate">{media_url ? media_url.split("/").pop() : "Document.pdf"}</span>
               </div>
             )}
             {/* Body */}
@@ -186,7 +350,6 @@ function CampaignButtonEditor({ buttons, onChange }: { buttons: CampaignButton[]
     if (buttons.length >= 3) { toast.error("Max 3 buttons allowed by Meta"); return; }
     const quickReplyCount = buttons.filter(b => b.type === "QUICK_REPLY").length;
     const ctaCount = buttons.filter(b => b.type !== "QUICK_REPLY").length;
-    // Meta rule: can't mix CTA and quick reply
     if (type === "QUICK_REPLY" && ctaCount > 0) { toast.error("Can't mix Quick Reply with CTA buttons"); return; }
     if (type !== "QUICK_REPLY" && quickReplyCount > 0) { toast.error("Can't mix CTA with Quick Reply buttons"); return; }
     onChange([...buttons, {
@@ -255,6 +418,40 @@ function CampaignButtonEditor({ buttons, onChange }: { buttons: CampaignButton[]
   );
 }
 
+// ─── Variable Sample Editor ───
+function VariableSampleEditor({ body, samples, onChange }: { body: string; samples: VariableSample[]; onChange: (s: VariableSample[]) => void }) {
+  const usedVars = (body.match(/\{\{(\w+)\}\}/g) || []).map(v => v.replace(/\{\{|\}\}/g, ""));
+  const uniqueVars = [...new Set(usedVars)];
+
+  if (uniqueVars.length === 0) return null;
+
+  return (
+    <div className="space-y-1.5 border rounded-lg p-3 bg-muted/20">
+      <Label className="text-xs font-semibold">📋 Sample Values (for preview & Meta approval)</Label>
+      <div className="grid grid-cols-2 gap-2">
+        {uniqueVars.map((v) => {
+          const defaultSample = BROADCAST_VARS.find(bv => bv.key === v)?.sample || "";
+          const current = samples.find(s => s.key === v)?.value || "";
+          return (
+            <div key={v} className="flex items-center gap-1.5">
+              <Badge variant="outline" className="text-[9px] shrink-0 font-mono">{`{{${v}}}`}</Badge>
+              <Input
+                value={current || defaultSample}
+                onChange={e => {
+                  const existing = samples.filter(s => s.key !== v);
+                  onChange([...existing, { key: v, value: e.target.value }]);
+                }}
+                className="h-6 text-[10px]"
+                placeholder={defaultSample}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── One-Shot Broadcast Tab (Meta-Style Full Builder) ───
 function OneShotBroadcast() {
   const qc = useQueryClient();
@@ -269,6 +466,8 @@ function OneShotBroadcast() {
     footer: "",
     buttons: [] as CampaignButton[],
     media_url: "",
+    variable_samples: [] as VariableSample[],
+    send_quote: false,
   });
 
   const { data: templates } = useQuery({
@@ -305,6 +504,8 @@ function OneShotBroadcast() {
           footer: form.footer,
           buttons: form.buttons,
           media_url: form.media_url,
+          variable_samples: form.variable_samples,
+          send_quote: form.send_quote,
         },
       } as any).select().single();
       if (error) throw error;
@@ -318,7 +519,7 @@ function OneShotBroadcast() {
       toast.success("🚀 Broadcast launched!");
       qc.invalidateQueries({ queryKey: ["broadcast-pro-stats"] });
       qc.invalidateQueries({ queryKey: ["broadcast-history"] });
-      setForm({ name: "", message: "", template_id: "", segment: "all", batch_size: 50, header_type: "none", header_content: "", footer: "", buttons: [], media_url: "" });
+      setForm({ name: "", message: "", template_id: "", segment: "all", batch_size: 50, header_type: "none", header_content: "", footer: "", buttons: [], media_url: "", variable_samples: [], send_quote: false });
     },
     onError: (e) => toast.error((e as Error).message),
   });
@@ -380,7 +581,7 @@ function OneShotBroadcast() {
             {/* Header Section */}
             <div className="space-y-1.5 border rounded-lg p-3 bg-muted/20">
               <Label className="text-xs font-semibold">Header (optional)</Label>
-              <Select value={form.header_type} onValueChange={(v) => setForm(p => ({ ...p, header_type: v, header_content: "" }))}>
+              <Select value={form.header_type} onValueChange={(v) => setForm(p => ({ ...p, header_type: v, header_content: "", media_url: "" }))}>
                 <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
@@ -394,14 +595,12 @@ function OneShotBroadcast() {
                 <Input value={form.header_content} onChange={e => setForm(p => ({ ...p, header_content: e.target.value }))} placeholder="Header text (max 60 chars, 1 variable max)" className="h-8 text-sm" maxLength={60} />
               )}
               {(form.header_type === "image" || form.header_type === "video" || form.header_type === "document") && (
-                <div className="space-y-1">
-                  <Input value={form.media_url} onChange={e => setForm(p => ({ ...p, media_url: e.target.value }))} placeholder={form.header_type === "video" ? "Video URL (MP4, max 16MB, up to 1 min)" : form.header_type === "image" ? "Image URL (JPG/PNG, max 5MB)" : "Document URL (PDF)"} className="h-8 text-xs font-mono" />
-                  <p className="text-[9px] text-muted-foreground">
-                    {form.header_type === "video" && "Supported: MP4, max 16MB, up to 60 seconds"}
-                    {form.header_type === "image" && "Supported: JPG, PNG, max 5MB"}
-                    {form.header_type === "document" && "Supported: PDF, max 100MB"}
-                  </p>
-                </div>
+                <MediaUploader
+                  headerType={form.header_type}
+                  mediaUrl={form.media_url}
+                  onUrlChange={(url) => setForm(p => ({ ...p, media_url: url }))}
+                  onFileUploaded={(url) => setForm(p => ({ ...p, media_url: url }))}
+                />
               )}
             </div>
 
@@ -426,14 +625,43 @@ function OneShotBroadcast() {
               <p className="text-[9px] text-muted-foreground">Max 1024 characters. Use *bold*, _italic_, ~strikethrough~ formatting.</p>
             </div>
 
+            {/* Sample Values */}
+            <VariableSampleEditor
+              body={form.message}
+              samples={form.variable_samples}
+              onChange={(s) => setForm(p => ({ ...p, variable_samples: s }))}
+            />
+
             {/* Footer */}
-            <div className="space-y-1">
-              <Label className="text-xs">Footer (optional, max 60 chars)</Label>
-              <Input value={form.footer} onChange={e => setForm(p => ({ ...p, footer: e.target.value }))} placeholder="e.g., Reply STOP to unsubscribe" className="h-8 text-sm" maxLength={60} />
+            <div className="space-y-1 border rounded-lg p-3 bg-muted/20">
+              <Label className="text-xs font-semibold">Footer (optional, max 60 chars)</Label>
+              <Input value={form.footer} onChange={e => setForm(p => ({ ...p, footer: e.target.value }))} placeholder="e.g., Reply STOP to unsubscribe | GrabYourCar.com" className="h-8 text-sm" maxLength={60} />
+              <p className="text-[9px] text-muted-foreground">Appears in lighter text below the message</p>
             </div>
 
             {/* Buttons */}
             <CampaignButtonEditor buttons={form.buttons} onChange={(b) => setForm(p => ({ ...p, buttons: b }))} />
+
+            {/* Quote / Document Attachment */}
+            <div className="border rounded-lg p-3 bg-muted/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Quote className="h-4 w-4 text-blue-500" />
+                  <Label className="text-xs font-semibold">Attach Quote PDF</Label>
+                </div>
+                <Switch
+                  checked={form.send_quote}
+                  onCheckedChange={(v) => setForm(p => ({ ...p, send_quote: v }))}
+                />
+              </div>
+              {form.send_quote && (
+                <div className="bg-blue-500/5 border border-blue-500/20 rounded p-2">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400">
+                    📋 System will auto-generate & attach the latest quote PDF for each contact based on their lead data (car model, on-road price, EMI, etc). Works with Insurance quotes, Car deals, and Loan offers.
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* Audience + Batch */}
             <div className="grid grid-cols-2 gap-3 border-t pt-3">
@@ -486,6 +714,8 @@ function OneShotBroadcast() {
               body={form.message}
               footer={form.footer}
               buttons={form.buttons}
+              media_url={form.media_url}
+              variableSamples={form.variable_samples}
             />
             {/* Quick Stats below preview */}
             <div className="mt-4 grid grid-cols-2 gap-2 text-center">
@@ -505,6 +735,11 @@ function OneShotBroadcast() {
                 <p className="text-[10px] text-muted-foreground">Header</p>
                 <p className="text-sm font-bold capitalize">{form.header_type === "none" ? "—" : form.header_type}</p>
               </div>
+              {form.send_quote && (
+                <div className="col-span-2 bg-blue-500/10 rounded p-2">
+                  <p className="text-[10px] text-blue-600 font-medium">📋 Quote PDF will be attached</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
