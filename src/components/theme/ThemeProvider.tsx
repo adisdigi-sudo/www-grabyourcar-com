@@ -1,10 +1,10 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 export type Theme = "light" | "dark" | "system";
 type ResolvedTheme = Exclude<Theme, "system">;
 
 interface ThemeProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
   attribute?: "class" | "data-theme";
   defaultTheme?: Theme;
   enableSystem?: boolean;
