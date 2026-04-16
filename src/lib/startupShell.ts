@@ -15,6 +15,27 @@ let rootObserver: MutationObserver | null = null;
 let bodyObserver: MutationObserver | null = null;
 let healthMonitorInstalled = false;
 
+const STARTUP_READY_SELECTOR = [
+  "button",
+  "a[href]",
+  "input",
+  "select",
+  "textarea",
+  "h1",
+  "h2",
+  "h3",
+  "img",
+  "table",
+  "canvas",
+  "svg",
+  "[aria-live='polite']",
+  "[data-sonner-toaster]",
+  "[class*='animate-spin']",
+  "[role='progressbar']",
+  "[role='dialog']",
+  "[data-radix-popper-content-wrapper]",
+].join(", ");
+
 const clearStartupShellRecoveryTimer = () => {
   if (startupShellRecoveryTimer) {
     window.clearTimeout(startupShellRecoveryTimer);
@@ -35,11 +56,14 @@ export const isSensitiveRouteAppReady = () => {
   const root = document.getElementById(APP_ROOT_ID);
   if (!root || root.childElementCount === 0) return false;
 
-  return Boolean(
-    root.querySelector(
-      "header, nav, main, footer, section, aside, button, h1, h2, img, [aria-live='polite'], [data-sonner-toaster], [class*='animate-spin']",
-    ),
-  );
+  if (root.querySelector(STARTUP_READY_SELECTOR)) {
+    return true;
+  }
+
+  const mainRegion = root.querySelector("main, [role='main']");
+  const mainText = mainRegion?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+
+  return mainText.length >= 24;
 };
 
 export const promoteStartupShellToRecovery = (
