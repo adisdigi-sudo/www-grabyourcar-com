@@ -700,66 +700,87 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
             </DialogTitle>
           </DialogHeader>
 
-          {/* Bulk feedback send */}
-          {dateFilteredApps.filter((a: any) => a.stage === 'disbursed' && a.phone).length > 0 && (
-            <div className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-emerald-50 dark:bg-emerald-500/5">
-              <div className="text-xs">
-                <p className="font-semibold text-emerald-700 dark:text-emerald-400">
-                  ⭐ Send Thank-You + Feedback Request
-                </p>
-                <p className="text-muted-foreground mt-0.5">
-                  Sends disbursement confirmation + 5-star rating links to all disbursed customers via WhatsApp API.
-                </p>
-              </div>
-              <Button
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
-                onClick={async () => {
-                  const list = dateFilteredApps.filter(
-                    (a: any) => a.stage === 'disbursed' && a.phone?.trim()
-                  );
-                  if (!list.length) {
-                    toast.error("No disbursed customers with phone numbers found");
-                    return;
-                  }
-                  const ok = window.confirm(
-                    `Send thank-you + feedback request to ${list.length} disbursed customer(s) via WhatsApp?`
-                  );
-                  if (!ok) return;
+          {/* Bulk feedback send with select-all + selection */}
+          {dateFilteredApps.filter((a: any) => a.stage === 'disbursed' && a.phone).length > 0 && (() => {
+            const eligible = dateFilteredApps.filter((a: any) => a.stage === 'disbursed' && a.phone?.trim());
+            const eligibleIds = eligible.map((a: any) => a.id);
+            const selectedCount = eligibleIds.filter((id: string) => selectedDisbursedIds.has(id)).length;
+            const allSelected = eligible.length > 0 && selectedCount === eligible.length;
+            const someSelected = selectedCount > 0 && !allSelected;
 
-                  toast.loading(`Sending to ${list.length} customers...`, { id: "bulk-feedback" });
-                  let sent = 0;
-                  let failed = 0;
-                  for (const app of list) {
-                    const msg = buildDisbursementThankYouMessage({
-                      customerName: app.customer_name,
-                      carModel: app.car_model || app.car_variant,
-                      bankName: app.bank_name || app.lender_name || app.selected_bank,
-                      disbursementAmount: Number(app.disbursement_amount) || Number(app.loan_amount) || 0,
-                    });
-                    const success = await sendCrmWhatsAppMessage({
-                      phone: app.phone,
-                      message: msg,
-                      name: app.customer_name,
-                      logEvent: "loan_disbursement_feedback_bulk",
-                      vertical: "loans",
-                      silent: true,
-                    });
-                    if (success) sent++;
-                    else failed++;
-                    // Tiny delay to avoid rate-limit hammering
-                    await new Promise((r) => setTimeout(r, 250));
-                  }
-                  toast.dismiss("bulk-feedback");
-                  if (sent > 0) toast.success(`✅ Sent to ${sent} customer(s)${failed ? ` · ${failed} failed` : ""}`);
-                  else toast.error(`Failed to send to all ${failed} customers`);
-                }}
-              >
-                <Send className="h-3.5 w-3.5 mr-1.5" />
-                Send to All
-              </Button>
-            </div>
-          )}
+            const sendBulk = async (targets: any[], label: string) => {
+              if (!targets.length) {
+                toast.error("No customers selected");
+                return;
+              }
+              const ok = window.confirm(
+                `Send thank-you + feedback request to ${targets.length} ${label} customer(s) via WhatsApp?`
+              );
+              if (!ok) return;
+              toast.loading(`Sending to ${targets.length} customers...`, { id: "bulk-feedback" });
+              let sent = 0; let failed = 0;
+              for (const app of targets) {
+                const msg = buildDisbursementThankYouMessage({
+                  customerName: app.customer_name,
+                  carModel: app.car_model || app.car_variant,
+                  bankName: app.bank_name || app.lender_name || app.selected_bank,
+                  disbursementAmount: Number(app.disbursement_amount) || Number(app.loan_amount) || 0,
+                });
+                const success = await sendCrmWhatsAppMessage({
+                  phone: app.phone, message: msg, name: app.customer_name,
+                  logEvent: "loan_disbursement_feedback_bulk", vertical: "loans", silent: true,
+                });
+                if (success) sent++; else failed++;
+                await new Promise((r) => setTimeout(r, 250));
+              }
+              toast.dismiss("bulk-feedback");
+              if (sent > 0) toast.success(`✅ Sent to ${sent} customer(s)${failed ? ` · ${failed} failed` : ""}`);
+              else toast.error(`Failed to send to all ${failed} customers`);
+            };
+
+            return (
+              <div className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-emerald-50 dark:bg-emerald-500/5">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Checkbox
+                    checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                    onCheckedChange={(v) => {
+                      if (v) setSelectedDisbursedIds(new Set(eligibleIds));
+                      else setSelectedDisbursedIds(new Set());
+                    }}
+                    aria-label="Select all disbursed"
+                  />
+                  <div className="text-xs min-w-0">
+                    <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+                      ⭐ Thank-You + Feedback ({selectedCount} selected / {eligible.length} total)
+                    </p>
+                    <p className="text-muted-foreground mt-0.5 truncate">
+                      Tick rows to pick specific customers, or use "Send to All".
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                    disabled={selectedCount === 0}
+                    onClick={() => sendBulk(eligible.filter((a: any) => selectedDisbursedIds.has(a.id)), "selected")}
+                  >
+                    <Send className="h-3.5 w-3.5 mr-1.5" />
+                    Send to Selected ({selectedCount})
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    onClick={() => sendBulk(eligible, "disbursed")}
+                  >
+                    <Send className="h-3.5 w-3.5 mr-1.5" />
+                    Send to All
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="flex-1 overflow-y-auto space-y-2 pr-1">
             {dateFilteredApps.filter((a: any) => a.stage === 'disbursed').length === 0 && (
