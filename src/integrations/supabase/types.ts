@@ -1956,6 +1956,42 @@ export type Database = {
           },
         ]
       }
+      budgets: {
+        Row: {
+          actual_amount: number | null
+          budgeted_amount: number | null
+          category: string
+          created_at: string
+          id: string
+          notes: string | null
+          period: string
+          updated_at: string
+          vertical_name: string | null
+        }
+        Insert: {
+          actual_amount?: number | null
+          budgeted_amount?: number | null
+          category: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          period: string
+          updated_at?: string
+          vertical_name?: string | null
+        }
+        Update: {
+          actual_amount?: number | null
+          budgeted_amount?: number | null
+          category?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          period?: string
+          updated_at?: string
+          vertical_name?: string | null
+        }
+        Relationships: []
+      }
       bulk_renewal_quotes: {
         Row: {
           addon_premium: number
@@ -3701,6 +3737,48 @@ export type Database = {
           logo_url?: string
           sort_order?: number | null
           website_url?: string | null
+        }
+        Relationships: []
+      }
+      credit_notes: {
+        Row: {
+          amount: number | null
+          created_at: string
+          credit_note_number: string
+          customer_name: string
+          date: string | null
+          id: string
+          invoice_number: string | null
+          notes: string | null
+          reason: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          credit_note_number: string
+          customer_name: string
+          date?: string | null
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          reason?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          credit_note_number?: string
+          customer_name?: string
+          date?: string | null
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          reason?: string | null
+          status?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -7455,6 +7533,66 @@ export type Database = {
           ticket_number?: string
           ticket_type?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      estimates: {
+        Row: {
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          discount_amount: number | null
+          estimate_date: string | null
+          estimate_number: string
+          expiry_date: string | null
+          id: string
+          items: Json | null
+          notes: string | null
+          status: string | null
+          subtotal: number | null
+          tax_amount: number | null
+          total_amount: number | null
+          updated_at: string
+          vertical_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          discount_amount?: number | null
+          estimate_date?: string | null
+          estimate_number: string
+          expiry_date?: string | null
+          id?: string
+          items?: Json | null
+          notes?: string | null
+          status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          total_amount?: number | null
+          updated_at?: string
+          vertical_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          discount_amount?: number | null
+          estimate_date?: string | null
+          estimate_number?: string
+          expiry_date?: string | null
+          id?: string
+          items?: Json | null
+          notes?: string | null
+          status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          total_amount?: number | null
+          updated_at?: string
+          vertical_name?: string | null
         }
         Relationships: []
       }

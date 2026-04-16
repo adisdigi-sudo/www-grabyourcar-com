@@ -32,11 +32,17 @@ export const AccountsDashboard = () => {
     queryFn: async () => { const { data } = await supabase.from("payroll_records").select("*"); return data || []; },
   });
 
+  const { data: paymentsReceived = [] } = useQuery({
+    queryKey: ["acc-payments-received-dash"],
+    queryFn: async () => { const { data } = await (supabase.from("payment_received") as any).select("*").order("payment_date", { ascending: false }); return data || []; },
+  });
+
   const totalReceivable = invoices.filter((i: any) => i.status !== "paid").reduce((s: number, i: any) => s + Number(i.balance_due || i.total_amount || 0), 0);
   const totalPayable = bills.filter((b: any) => b.status !== "paid").reduce((s: number, b: any) => s + Number(b.balance_due || b.total_amount || 0), 0);
   const totalRevenue = invoices.filter((i: any) => i.status === "paid").reduce((s: number, i: any) => s + Number(i.total_amount || 0), 0);
   const totalExpenses = expenses.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
   const totalPayroll = payrolls.reduce((s: number, p: any) => s + Number(p.net_salary || 0), 0);
+  const totalPaymentsIn = paymentsReceived.reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
   const netProfit = totalRevenue - totalExpenses - totalPayroll;
 
   // Monthly data for charts
@@ -111,10 +117,10 @@ export const AccountsDashboard = () => {
           <span className="text-xs text-muted-foreground">{bills.filter((b: any) => b.status !== "paid").length} unpaid</span>
         </CardContent></Card>
 
-        <Card className="border-l-4 border-l-yellow-500"><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground mb-1">Overdue</p>
-          <p className="text-xl font-bold text-yellow-700">{overdueInvoices.length + overdueBills.length}</p>
-          <span className="text-xs text-muted-foreground">{overdueInvoices.length} inv / {overdueBills.length} bills</span>
+        <Card className="border-l-4 border-l-teal-500"><CardContent className="p-4">
+          <p className="text-xs text-muted-foreground mb-1">Payments In</p>
+          <p className="text-xl font-bold text-teal-700">{fmt(totalPaymentsIn)}</p>
+          <span className="text-xs text-muted-foreground">{paymentsReceived.length} payments</span>
         </CardContent></Card>
       </div>
 
