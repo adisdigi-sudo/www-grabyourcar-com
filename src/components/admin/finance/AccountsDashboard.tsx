@@ -117,10 +117,10 @@ export const AccountsDashboard = () => {
           <span className="text-xs text-muted-foreground">{bills.filter((b: any) => b.status !== "paid").length} unpaid</span>
         </CardContent></Card>
 
-        <Card className="border-l-4 border-l-yellow-500"><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground mb-1">Overdue</p>
-          <p className="text-xl font-bold text-yellow-700">{overdueInvoices.length + overdueBills.length}</p>
-          <span className="text-xs text-muted-foreground">{overdueInvoices.length} inv / {overdueBills.length} bills</span>
+        <Card className="border-l-4 border-l-teal-500"><CardContent className="p-4">
+          <p className="text-xs text-muted-foreground mb-1">Payments In</p>
+          <p className="text-xl font-bold text-teal-700">{fmt(totalPaymentsIn)}</p>
+          <span className="text-xs text-muted-foreground">{paymentsReceived.length} payments</span>
         </CardContent></Card>
       </div>
 
