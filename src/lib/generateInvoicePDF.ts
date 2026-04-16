@@ -9,6 +9,16 @@ interface InvoiceItem {
   hsn_code?: string;
 }
 
+type InvoiceItemLike = Partial<InvoiceItem> & {
+  name?: string;
+  title?: string;
+  rate?: number | string;
+  price?: number | string;
+  quantity?: number | string;
+  amount?: number | string;
+  hsn?: string;
+};
+
 interface InvoiceData {
   invoice_number: string;
   invoice_date: string;
@@ -65,6 +75,28 @@ export const generateInvoicePDF = (inv: InvoiceData) => {
 
   const fmt = (v: number) => `Rs. ${Math.round(v).toLocaleString("en-IN")}`;
 
+  const toNumber = (value: unknown, fallback = 0) => {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  };
+
+  const normalizeItem = (item: InvoiceItemLike, index: number): InvoiceItem => {
+    const quantity = toNumber(item.quantity, 1);
+    const rate = toNumber(item.rate ?? item.price, 0);
+    const amount = toNumber(item.amount, quantity * rate);
+    const description = String(
+      item.description ?? item.name ?? item.title ?? inv.description ?? `Item ${index + 1}`,
+    ).trim();
+
+    return {
+      description: description || `Item ${index + 1}`,
+      quantity,
+      rate,
+      amount,
+      hsn_code: item.hsn_code ?? item.hsn,
+    };
+  };
+
   // Header
   doc.setFillColor(...red);
   doc.rect(0, 0, pw, 45, "F");
@@ -111,7 +143,7 @@ export const generateInvoicePDF = (inv: InvoiceData) => {
 
   // Items Table or Description
   const items: InvoiceItem[] = inv.items && Array.isArray(inv.items) && inv.items.length > 0
-    ? inv.items
+    ? inv.items.map((item, index) => normalizeItem(item as InvoiceItemLike, index))
     : [{ description: inv.description || "Service", quantity: 1, rate: inv.subtotal, amount: inv.subtotal }];
 
   // Table Header
