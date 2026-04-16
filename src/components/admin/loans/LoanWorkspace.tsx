@@ -85,6 +85,57 @@ Regards,
 *GrabYourCar Finance Team*`;
 };
 
+const buildDisbursementThankYouMessage = ({
+  customerName,
+  carModel,
+  bankName,
+  disbursementAmount,
+}: {
+  customerName?: string | null;
+  carModel?: string | null;
+  bankName?: string | null;
+  disbursementAmount?: number | null;
+}) => {
+  const safeName = customerName?.trim() || "Sir/Madam";
+  const carLine = carModel ? `\n🚗 Car: *${carModel}*` : "";
+  const bankLine = bankName ? `\n🏦 Lender: *${bankName}*` : "";
+  const amtLine = disbursementAmount
+    ? `\n💰 Amount: *₹${Number(disbursementAmount).toLocaleString("en-IN")}*`
+    : "";
+
+  // Pre-filled WhatsApp feedback links (each opens a chat to GYC with rating text)
+  const fbBase = "https://wa.me/919577200023?text=";
+  const star = (n: number) => {
+    const stars = "⭐".repeat(n) + "☆".repeat(5 - n);
+    const txt = encodeURIComponent(
+      `Hi GrabYourCar Team, my feedback for car loan service:\n${stars}  (${n}/5)\nName: ${safeName}`
+    );
+    return `${fbBase}${txt}`;
+  };
+
+  return `Hi ${safeName}, 🎉
+
+🏦 *Congratulations!* Your car loan has been *successfully disbursed*.${carLine}${bankLine}${amtLine}
+
+Thank you for choosing *GrabYourCar Finance* — it was our pleasure serving you.
+
+⭐ *We'd love your feedback!*
+Please rate your experience (1–5 stars):
+
+5 ⭐⭐⭐⭐⭐  Excellent → ${star(5)}
+4 ⭐⭐⭐⭐☆  Very Good → ${star(4)}
+3 ⭐⭐⭐☆☆  Good → ${star(3)}
+2 ⭐⭐☆☆☆  Average → ${star(2)}
+1 ⭐☆☆☆☆  Poor → ${star(1)}
+
+Tap any link above to share your rating in one click.
+
+For any future car needs — loans, insurance, accessories, or your next car — we're just a message away! 📞 9577200023
+
+Warm regards,
+*GrabYourCar Finance Team*`;
+};
+
 // ─── Main Workspace ───
 type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator" | "performance";
 type DateFilter = DateFilterValue;
@@ -243,8 +294,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
 
   const formatAmount = (amt: number | null) => {
     if (!amt) return '-';
-    if (amt >= 100000) return `₹${(amt / 100000).toFixed(1)}L`;
-    return `₹${(amt / 1000).toFixed(0)}K`;
+    return `₹${Number(amt).toLocaleString("en-IN")}`;
   };
 
   const handleKpiClick = (filter: StageFilter) => {
@@ -629,6 +679,68 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
               Won / Disbursed Cases ({dateFilteredApps.filter((a: any) => a.stage === 'disbursed').length})
             </DialogTitle>
           </DialogHeader>
+
+          {/* Bulk feedback send */}
+          {dateFilteredApps.filter((a: any) => a.stage === 'disbursed' && a.phone).length > 0 && (
+            <div className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-emerald-50 dark:bg-emerald-500/5">
+              <div className="text-xs">
+                <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+                  ⭐ Send Thank-You + Feedback Request
+                </p>
+                <p className="text-muted-foreground mt-0.5">
+                  Sends disbursement confirmation + 5-star rating links to all disbursed customers via WhatsApp API.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+                onClick={async () => {
+                  const list = dateFilteredApps.filter(
+                    (a: any) => a.stage === 'disbursed' && a.phone?.trim()
+                  );
+                  if (!list.length) {
+                    toast.error("No disbursed customers with phone numbers found");
+                    return;
+                  }
+                  const ok = window.confirm(
+                    `Send thank-you + feedback request to ${list.length} disbursed customer(s) via WhatsApp?`
+                  );
+                  if (!ok) return;
+
+                  toast.loading(`Sending to ${list.length} customers...`, { id: "bulk-feedback" });
+                  let sent = 0;
+                  let failed = 0;
+                  for (const app of list) {
+                    const msg = buildDisbursementThankYouMessage({
+                      customerName: app.customer_name,
+                      carModel: app.car_model || app.car_variant,
+                      bankName: app.bank_name || app.lender_name || app.selected_bank,
+                      disbursementAmount: Number(app.disbursement_amount) || Number(app.loan_amount) || 0,
+                    });
+                    const success = await sendCrmWhatsAppMessage({
+                      phone: app.phone,
+                      message: msg,
+                      name: app.customer_name,
+                      logEvent: "loan_disbursement_feedback_bulk",
+                      vertical: "loans",
+                      silent: true,
+                    });
+                    if (success) sent++;
+                    else failed++;
+                    // Tiny delay to avoid rate-limit hammering
+                    await new Promise((r) => setTimeout(r, 250));
+                  }
+                  toast.dismiss("bulk-feedback");
+                  if (sent > 0) toast.success(`✅ Sent to ${sent} customer(s)${failed ? ` · ${failed} failed` : ""}`);
+                  else toast.error(`Failed to send to all ${failed} customers`);
+                }}
+              >
+                <Send className="h-3.5 w-3.5 mr-1.5" />
+                Send to All
+              </Button>
+            </div>
+          )}
+
           <div className="flex-1 overflow-y-auto space-y-2 pr-1">
             {dateFilteredApps.filter((a: any) => a.stage === 'disbursed').length === 0 && (
               <div className="text-center py-12 text-sm text-muted-foreground">No disbursed cases found for this period</div>
@@ -666,7 +778,29 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
                               <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => window.open(`tel:${app.phone}`)}>
                                 <PhoneCall className="h-3 w-3" />
                               </Button>
-                              <Button size="icon" variant="outline" className="h-7 w-7 text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => handleWhatsApp(app.phone, app.customer_name || 'Customer', app.car_model)}>                                <MessageCircle className="h-3 w-3" />
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-7 w-7 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                                title="Send Thank-You + Feedback Request"
+                                onClick={async () => {
+                                  const msg = buildDisbursementThankYouMessage({
+                                    customerName: app.customer_name,
+                                    carModel: app.car_model || app.car_variant,
+                                    bankName: app.bank_name || app.lender_name || app.selected_bank,
+                                    disbursementAmount: Number(app.disbursement_amount) || Number(app.loan_amount) || 0,
+                                  });
+                                  await sendCrmWhatsAppMessage({
+                                    phone: app.phone,
+                                    message: msg,
+                                    name: app.customer_name,
+                                    logEvent: "loan_disbursement_feedback",
+                                    vertical: "loans",
+                                    successMessage: `✅ Thank-you + feedback request sent to ${app.customer_name || 'customer'}`,
+                                  });
+                                }}
+                              >
+                                <MessageCircle className="h-3 w-3" />
                               </Button>
                             </>
                           )}
