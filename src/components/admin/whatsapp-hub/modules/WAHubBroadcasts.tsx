@@ -268,7 +268,7 @@ function CampaignPhonePreview({ header_type, header_content, body, footer, butto
   };
 
   return (
-    <div className="w-[280px] mx-auto">
+    <div className="w-[300px] mx-auto">
       <div className="bg-gray-900 rounded-[2rem] p-2 shadow-2xl">
         <div className="bg-gray-900 rounded-t-[1.5rem] pt-5 pb-1 px-4">
           <div className="flex items-center gap-2 text-white text-xs">
@@ -279,8 +279,8 @@ function CampaignPhonePreview({ header_type, header_content, body, footer, butto
             </div>
           </div>
         </div>
-        <div className="bg-[#e5ddd5] rounded-b-[1.5rem] p-3 min-h-[340px] flex flex-col justify-end">
-          <div className="bg-white rounded-lg p-2.5 shadow-sm max-w-[92%] ml-auto">
+        <div className="bg-[#e5ddd5] rounded-b-[1.5rem] p-3 pb-4 min-h-[360px] flex flex-col justify-end">
+          <div className="bg-white rounded-lg p-2.5 shadow-sm w-full">
             {/* Header */}
             {header_type === "text" && header_content && (
               <p className="font-bold text-xs mb-1">{renderVars(header_content)}</p>
