@@ -3,11 +3,14 @@ import { isChunkLoadRecoveryExhausted, isDynamicImportError, performSafePreviewR
 import { isSensitivePreviewRouteWindow, shouldAvoidDevAutoReload } from "@/lib/adminPreviewStability";
 import { clearPendingReloadFlag, DEV_SERVER_LAST_RELOAD_KEY, DEV_SERVER_PENDING_RELOAD_KEY, DEV_SERVER_STATUS_EVENT, markDevServerPendingReload } from "@/lib/devReloadGuard";
 import { withPreviewParams } from "@/lib/previewRouting";
+import { isSensitiveRouteAppReady } from "@/lib/startupShell";
 import { AlertTriangle, RefreshCw, WifiOff } from "lucide-react";
 
 const CHUNK_RECOVERY_STATUS_EVENT = "lovable:chunk-recovery-status";
 const ROUTE_ACTIVITY_EVENT = "lovable:route-activity";
 const RUNTIME_FATAL_EVENT = "lovable:runtime-fatal";
+const STARTUP_SHELL_ID = "lovable-startup-shell";
+const SENSITIVE_ROUTE_RECONNECT_HEALTH_DELAY_MS = 420;
 
 let hasTriggeredChunkRecovery = false;
 let bootstrapListenersInstalled = false;
@@ -172,6 +175,52 @@ const reloadAfterDevServerRestart = () => {
   }
 };
 
+const shouldForceSensitiveRouteRecoveryReload = () => {
+  if (typeof document === "undefined") {
+    return true;
+  }
+
+  const startupShellState = document.getElementById(STARTUP_SHELL_ID)?.getAttribute("data-state");
+  if (startupShellState === "loading" || startupShellState === "recovery") {
+    return true;
+  }
+
+  return !isSensitiveRouteAppReady();
+};
+
+const handleSensitiveRouteReconnect = () => {
+  window.setTimeout(() => {
+    try {
+      const hasPendingReload = sessionStorage.getItem(DEV_SERVER_PENDING_RELOAD_KEY) === "1";
+      if (!hasPendingReload) return;
+
+      if (shouldForceSensitiveRouteRecoveryReload()) {
+        window.dispatchEvent(
+          new CustomEvent(DEV_SERVER_STATUS_EVENT, {
+            detail: { status: "reloading" as const },
+          }),
+        );
+
+        console.info("[BootstrapRuntime] Sensitive preview route looks unhealthy after reconnect; auto reloading", {
+          href: window.location.href,
+          pathname: window.location.pathname,
+        });
+
+        performSafeReload();
+        return;
+      }
+
+      window.dispatchEvent(
+        new CustomEvent(DEV_SERVER_STATUS_EVENT, {
+          detail: { status: "update_ready" as const },
+        }),
+      );
+    } catch {
+      performSafeReload();
+    }
+  }, SENSITIVE_ROUTE_RECONNECT_HEALTH_DELAY_MS);
+};
+
 const installBootstrapRuntime = () => {
   if (typeof window === "undefined" || bootstrapListenersInstalled) return;
 
@@ -243,18 +292,9 @@ const installBootstrapRuntime = () => {
         }),
       );
 
-      // On sensitive routes, never auto-reload — just show "Update ready" banner
       window.setTimeout(() => {
         if (isSensitivePreviewRouteWindow()) {
-          try {
-            if (sessionStorage.getItem(DEV_SERVER_PENDING_RELOAD_KEY) === "1") {
-              window.dispatchEvent(
-                new CustomEvent(DEV_SERVER_STATUS_EVENT, {
-                  detail: { status: "update_ready" as const },
-                }),
-              );
-            }
-          } catch { /* ignore */ }
+          handleSensitiveRouteReconnect();
           return;
         }
         reloadAfterDevServerRestart();
