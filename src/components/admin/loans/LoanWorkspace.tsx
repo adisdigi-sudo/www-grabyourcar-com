@@ -39,6 +39,7 @@ import { LoanAfterSales } from "./LoanAfterSales";
 import { calculateLoanSalesBreakdown, getLoanSalesCalculatorDefaults } from "./loanSalesCalculator";
 import { cn } from "@/lib/utils";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { sendCrmWhatsAppMessage } from "@/lib/crmWhatsApp";
 import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
 import { sendWhatsApp } from "@/lib/sendWhatsApp";
 import { persistLoanQuoteHistory } from "@/lib/loanQuotePersistence";
@@ -1459,8 +1460,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                           } else if (application.phone) {
                             autoShareOfferWhatsApp(bankNameForPdf, interestRate, tenureMonths, emiAmount, pdfUrl);
                           } else {
-                            window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-                            toast.success(`Offer saved! Ref: ${quoteRef}`);
+                            toast.error(`Offer saved but no WhatsApp number found. Ref: ${quoteRef}`);
                           }
                         } catch (err: any) {
                           toast.error(`Share failed: ${err.message}`);

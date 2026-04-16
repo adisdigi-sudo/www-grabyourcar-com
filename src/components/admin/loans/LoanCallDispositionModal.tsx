@@ -23,6 +23,7 @@ import { generateEMIPdf, generateEMIWhatsAppMessage, type EMIData } from "@/lib/
 import { persistLoanQuoteHistory } from "@/lib/loanQuotePersistence";
 import { triggerWhatsApp } from "@/lib/whatsappTrigger";
 import { sendWhatsApp } from "@/lib/sendWhatsApp";
+import { sendCrmWhatsAppMessage } from "@/lib/crmWhatsApp";
 
 type Step = 'call_status' | 'stage_update' | 'emi_share' | 'follow_up';
 type Disposition = 'connected' | 'not_connected' | 'busy' | 'no_answer' | 'callback_requested' | 'wrong_number';
@@ -570,19 +571,10 @@ export const LoanCallDispositionModal = ({ open, onOpenChange, application }: Pr
                             if (result.success) {
                               toast.success(`✅ Disbursement letter sent via WhatsApp API to ${customerName}`);
                             } else {
-                              // Fallback: open personal WhatsApp
-                              toast.warning("API failed — opening Personal WhatsApp as fallback");
-                              window.open(
-                                `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(message)}`,
-                                '_blank'
-                              );
+                              toast.error(result.error || "WhatsApp API send failed for disbursement letter");
                             }
                           } catch (err) {
-                            toast.warning("API error — opening Personal WhatsApp as fallback");
-                            window.open(
-                              `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(message)}`,
-                              '_blank'
-                            );
+                            toast.error(err instanceof Error ? err.message : "WhatsApp API send failed for disbursement letter");
                           } finally {
                             setSendingDisbWA(false);
                           }
@@ -687,8 +679,13 @@ export const LoanCallDispositionModal = ({ open, onOpenChange, application }: Pr
                       className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
                       onClick={() => {
                         const msg = generateEMIWhatsAppMessage(getEMIData());
-                        const phone = application.phone.replace(/\D/g, '').slice(-10);
-                        window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+                        void sendCrmWhatsAppMessage({
+                          phone: application.phone,
+                          message: msg,
+                          name: application.customer_name,
+                          logEvent: "loan_disposition_emi_share",
+                          vertical: "loans",
+                        });
                       }}
                     >
                       <MessageCircle className="h-4 w-4" /> Share on WhatsApp
