@@ -37,7 +37,6 @@ export default defineConfig(({ mode }) => ({
       "react/jsx-runtime",
       "react/jsx-dev-runtime",
       "@tanstack/react-query",
-      "@tanstack/react-query",
       "next-themes",
       "react-leaflet",
       "leaflet",
