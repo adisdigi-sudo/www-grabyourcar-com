@@ -294,8 +294,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
 
   const formatAmount = (amt: number | null) => {
     if (!amt) return '-';
-    if (amt >= 100000) return `₹${(amt / 100000).toFixed(1)}L`;
-    return `₹${(amt / 1000).toFixed(0)}K`;
+    return `₹${Number(amt).toLocaleString("en-IN")}`;
   };
 
   const handleKpiClick = (filter: StageFilter) => {
