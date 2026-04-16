@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
@@ -12,13 +12,10 @@ import {
   PerformanceMetrics,
   DashboardDateFilter,
   DashboardExportButton,
-  TeamPerformanceComparison,
-  ScheduledReportsManager,
   type DateRange
 } from "./dashboard";
 import { CRMCommandWidget } from "./CRMCommandWidget";
-import { TaskEscalationView } from "./TaskEscalationView";
-import { EmployeeDailyReportsDashboard } from "./EmployeeDailyReportsDashboard";
+import { AdminDashboardDeferredSections } from "./AdminDashboardDeferredSections";
 
 interface DashboardStats {
   totalLeads: number;
@@ -430,17 +427,7 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Team Performance Comparison */}
-      <TeamPerformanceComparison dateRange={dateRange} />
-
-      {/* Task Escalation Overview */}
-      <TaskEscalationView />
-
-      {/* Employee Daily Reports */}
-      <EmployeeDailyReportsDashboard />
-
-      {/* Scheduled Email Reports */}
-      <ScheduledReportsManager />
+      <AdminDashboardDeferredSections dateRange={dateRange} />
     </div>
   );
 };
