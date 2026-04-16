@@ -1102,9 +1102,25 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   const sendDisbursementConfirmation = async (app: any, docUrl?: string, emiStartDate?: string) => {
     const cleanPhone = String(app.phone).replace(/\D/g, '').slice(-10);
     if (cleanPhone.length !== 10) { toast.error("Invalid phone number"); return; }
+
+    // 🛡️ Safeguard: confirm before sending the attached document.
+    // Prevents sending the wrong customer's PDF (e.g. Akhilesh's quote to Dhruva).
+    if (docUrl) {
+      const confirmed = window.confirm(
+        `⚠️ You are about to send a disbursement document to ${app.customer_name} (${cleanPhone}) via WhatsApp.\n\n` +
+        `Please VERIFY the document belongs to this customer before sending.\n\n` +
+        `Click OK to open the file in a new tab and send,\nor Cancel to abort.`
+      );
+      if (!confirmed) { toast.info("Send cancelled — please re-verify the document"); return; }
+    }
+
     const message = buildDisbursementMessage(app, emiStartDate);
     setSendingDisbMsg(true);
     try {
+      // Customer-specific filename so mismatches are obvious to the recipient
+      const safeName = String(app.customer_name || 'Customer').replace(/[^a-zA-Z0-9]+/g, '_').slice(0, 40);
+      const docFileName = `Disbursement_Letter_${safeName}.pdf`;
+
       const result = await sendWhatsApp({
         phone: cleanPhone,
         message,
@@ -1113,7 +1129,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
         messageContext: 'loan_disbursement',
         vertical: 'loans',
         silent: true,
-        ...(docUrl ? { mediaUrl: docUrl, messageType: 'document' as const, mediaFileName: 'Disbursement_Letter.pdf' } : {}),
+        ...(docUrl ? { mediaUrl: docUrl, messageType: 'document' as const, mediaFileName: docFileName } : {}),
       });
       if (result.success) {
         toast.success("✅ Disbursement confirmation sent via WhatsApp API");
@@ -1801,13 +1817,20 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                 {application.disbursement_letter_url ? (
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">✅ Already uploaded</Badge>
-                    <Button variant="link" size="sm" className="text-[10px] h-5 p-0" onClick={() => window.open(application.disbursement_letter_url, '_blank')}>View</Button>
+                    <Button variant="link" size="sm" className="text-[10px] h-5 p-0" onClick={() => window.open(application.disbursement_letter_url, '_blank')}>Preview file</Button>
+                    <Button variant="link" size="sm" className="text-[10px] h-5 p-0 text-red-600" onClick={() => setDisbursementFile(null)}>Replace</Button>
                   </div>
                 ) : null}
                 <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="mt-1" onChange={e => setDisbursementFile(e.target.files?.[0] || null)} />
+                {disbursementFile && (
+                  <p className="text-[10px] text-emerald-700 mt-1">📄 New file selected: <span className="font-medium">{disbursementFile.name}</span> ({(disbursementFile.size / 1024).toFixed(1)} KB)</p>
+                )}
                 {!disbursementFile && !application.disbursement_letter_url && (
                   <p className="text-[10px] text-red-500 mt-1">⚠ Upload disbursement proof to proceed</p>
                 )}
+                <p className="text-[10px] text-amber-600 mt-1.5 leading-snug">
+                  ⚠ Please verify the document belongs to <span className="font-semibold">{application.customer_name}</span> before saving — wrong files will be sent to the customer via WhatsApp.
+                </p>
               </div>
               <div><Label>Remarks</Label><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} rows={2} /></div>
               <Button onClick={handleDisbursedSave} disabled={updateMutation.isPending || uploadingFile || (!disbursementFile && !application.disbursement_letter_url)} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
