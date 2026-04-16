@@ -1362,6 +1362,201 @@ async function toolRecordManualPayment(supabase: any, customerPhone?: string, cu
   };
 }
 
+// ===== NEW: LEAD QUALIFICATION TOOL =====
+async function toolQualifyAndSetStage(supabase: any, customerPhone?: string, customerName?: string, args?: any, channel?: string) {
+  if (!customerPhone) return { updated: false, message: "Cannot qualify — no phone number available." };
+
+  const phones = phoneVariants(customerPhone);
+  const stage = args?.stage || "new_lead";
+  const reason = args?.reason || "AI auto-qualification";
+  const vertical = args?.vertical || "general";
+
+  // Map stage to pipeline_stage values used in CRM
+  const stageMap: Record<string, string> = {
+    new_lead: "new_lead",
+    interested: "interested",
+    followup: "followup",
+    quoted: "quoted",
+    won: "won",
+    lost: "lost",
+  };
+  const pipelineStage = stageMap[stage] || "new_lead";
+
+  // Try to find and update lead in the leads table
+  const { data: existingLead } = await supabase
+    .from("leads")
+    .select("id, name, phone, pipeline_stage")
+    .or(phones.map((p: string) => `phone.eq.${p}`).join(","))
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingLead) {
+    await supabase
+      .from("leads")
+      .update({ pipeline_stage: pipelineStage, status: stage === "won" ? "converted" : stage === "lost" ? "lost" : "active" })
+      .eq("id", existingLead.id);
+
+    // Fire WhatsApp automation trigger for the stage change
+    try {
+      const triggerUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/wa-automation-trigger`;
+      await fetch(triggerUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({
+          event: `lead_${stage}`,
+          phone: customerPhone,
+          name: customerName || existingLead.name || "Customer",
+          leadId: existingLead.id,
+          data: { vertical, reason },
+        }),
+      });
+    } catch (e) {
+      console.error("WA trigger for stage change failed:", e);
+    }
+
+    return {
+      updated: true,
+      lead_id: existingLead.id,
+      previous_stage: existingLead.pipeline_stage,
+      new_stage: pipelineStage,
+      message: `Lead stage updated to ${stage}. Reason: ${reason}`,
+    };
+  }
+
+  // If no existing lead, capture as new lead
+  if (customerPhone) {
+    const { data: newLead } = await supabase.from("leads").insert({
+      phone: customerPhone,
+      customer_name: customerName || "WhatsApp Lead",
+      source: channel === "whatsapp" ? "whatsapp_ai_bot" : "website_chatbot",
+      pipeline_stage: pipelineStage,
+      status: "new",
+      service_category: vertical,
+      notes: `AI qualification: ${reason}`,
+    }).select("id").single();
+
+    return {
+      updated: true,
+      lead_id: newLead?.id,
+      new_stage: pipelineStage,
+      message: `New lead created and qualified as ${stage}. Reason: ${reason}`,
+    };
+  }
+
+  return { updated: false, message: "Could not qualify lead — insufficient data." };
+}
+
+// ===== NEW: DOCUMENT SENDING TOOL =====
+async function toolSendDocument(supabase: any, customerPhone?: string, args?: any) {
+  if (!customerPhone) return { sent: false, message: "Cannot send document — no phone number available." };
+
+  const docType = args?.document_type || "invoice";
+  const referenceId = args?.reference_id;
+  const phones = phoneVariants(customerPhone);
+  let documentUrl: string | null = null;
+  let fileName = "document.pdf";
+  let caption = "Your document from GrabYourCar";
+
+  try {
+    if (docType === "invoice") {
+      // Look up invoice by number or by phone
+      let query = supabase.from("invoices").select("invoice_number, total_amount, vertical_name, pdf_url, status");
+      if (referenceId) {
+        query = query.eq("invoice_number", referenceId);
+      } else {
+        query = query.or(phones.map((p: string) => `client_phone.eq.${p}`).join(",")).eq("status", "paid").order("paid_at", { ascending: false });
+      }
+      const { data: invoices } = await query.limit(1);
+      if (invoices?.[0]?.pdf_url) {
+        documentUrl = invoices[0].pdf_url;
+        fileName = `Invoice-${invoices[0].invoice_number}.pdf`;
+        caption = `Invoice ${invoices[0].invoice_number} — ₹${invoices[0].total_amount?.toLocaleString("en-IN")}`;
+      }
+    } else if (docType === "policy") {
+      const { data: clients } = await supabase.from("insurance_clients")
+        .select("id")
+        .or(phones.map((p: string) => `phone.eq.${p}`).join(","))
+        .limit(1);
+
+      if (clients?.[0]) {
+        const { data: policies } = await supabase.from("insurance_policies")
+          .select("policy_number, policy_document_url, document_file_name, insurer")
+          .eq("client_id", clients[0].id)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (policies?.[0]?.policy_document_url) {
+          documentUrl = policies[0].policy_document_url;
+          fileName = policies[0].document_file_name || `Policy-${policies[0].policy_number}.pdf`;
+          caption = `Insurance Policy: ${policies[0].policy_number} (${policies[0].insurer})`;
+        }
+      }
+    } else if (docType === "quote") {
+      const { data: quotes } = await supabase.from("quote_share_history")
+        .select("id, pdf_storage_path, car_name, variant_name")
+        .or(phones.map((p: string) => `customer_phone.eq.${p}`).join(","))
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (quotes?.[0]?.pdf_storage_path) {
+        const { data: urlData } = await supabase.storage.from("quote-pdfs").getPublicUrl(quotes[0].pdf_storage_path);
+        documentUrl = urlData?.publicUrl;
+        fileName = `Quote-${quotes[0].car_name}.pdf`;
+        caption = `Price Quote for ${quotes[0].car_name} ${quotes[0].variant_name || ""}`.trim();
+      }
+    } else if (docType === "loan_document") {
+      const { data: loans } = await supabase.from("loan_applications")
+        .select("id, customer_name, vehicle_name, document_url")
+        .or(phones.map((p: string) => `phone.eq.${p}`).join(","))
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (loans?.[0]?.document_url) {
+        documentUrl = loans[0].document_url;
+        fileName = `Loan-${loans[0].vehicle_name}.pdf`;
+        caption = `Loan document for ${loans[0].vehicle_name}`;
+      }
+    }
+
+    if (!documentUrl) {
+      return { sent: false, message: `No ${docType} document found for your number. Our team will share it manually.` };
+    }
+
+    // Send via whatsapp-send
+    const sendUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`;
+    const sendResp = await fetch(sendUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify({
+        to: customerPhone,
+        message: caption,
+        messageType: "document",
+        mediaUrl: documentUrl,
+        mediaFileName: fileName,
+        logEvent: `bot_send_${docType}`,
+        name: "AI Bot",
+      }),
+    });
+    const sendResult = await sendResp.json();
+
+    if (sendResult?.success) {
+      return { sent: true, document_type: docType, message: `Your ${docType} has been sent! Check your WhatsApp. 📄` };
+    }
+    return { sent: false, message: `Could not send ${docType} right now. Our team will share it with you shortly.` };
+  } catch (e) {
+    console.error("Document send error:", e);
+    return { sent: false, message: "Document sharing failed. Our team will send it manually." };
+  }
+}
+
 const SELF_SERVICE_TOOL_NAMES = new Set([
   "lookup_my_policy",
   "lookup_my_invoices",
