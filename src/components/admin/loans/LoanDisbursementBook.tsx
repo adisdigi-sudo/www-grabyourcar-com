@@ -93,7 +93,7 @@ export function LoanDisbursementBook({ applications }: LoanDisbursementBookProps
         </CardContent></Card>
         <Card><CardContent className="p-3 flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><IndianRupee className="h-4 w-4 text-primary" /></div>
-          <div><p className="text-lg font-bold">{formatAmount(totalDisbursed)}</p><p className="text-[10px] text-muted-foreground">Total Value</p></div>
+          <div><p className="text-lg font-bold">{formatFullAmount(totalDisbursed)}</p><p className="text-[10px] text-muted-foreground">Total Value</p></div>
         </CardContent></Card>
         <Card><CardContent className="p-3 flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-violet-500/10 flex items-center justify-center"><Clock className="h-4 w-4 text-violet-600" /></div>
