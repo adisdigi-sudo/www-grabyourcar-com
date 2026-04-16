@@ -157,6 +157,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
   const [showWonDialog, setShowWonDialog] = useState(false);
+  const [selectedDisbursedIds, setSelectedDisbursedIds] = useState<Set<string>>(new Set());
   const [newApp, setNewApp] = useState({
     customer_name: '', phone: '', email: '', loan_amount: '', car_model: '',
     down_payment: '', employment_type: '', monthly_income: '', city: '',
