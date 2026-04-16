@@ -167,26 +167,36 @@ function MediaUploader({ headerType, mediaUrl, onUrlChange, onFileUploaded }: {
     }
   };
 
+  // Force direct upload only for video (Meta requires hosted media; URL mode hides for video)
+  const effectiveMode = headerType === "video" ? "upload" : uploadMode;
+
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Button
-          type="button" size="sm" variant={uploadMode === "upload" ? "default" : "outline"}
-          className="h-6 text-[10px] gap-1"
-          onClick={() => setUploadMode("upload")}
-        >
-          <Upload className="h-3 w-3" /> Upload File
-        </Button>
-        <Button
-          type="button" size="sm" variant={uploadMode === "url" ? "default" : "outline"}
-          className="h-6 text-[10px] gap-1"
-          onClick={() => setUploadMode("url")}
-        >
-          <Globe className="h-3 w-3" /> Paste URL
-        </Button>
-      </div>
+      {headerType !== "video" && (
+        <div className="flex items-center gap-2">
+          <Button
+            type="button" size="sm" variant={uploadMode === "upload" ? "default" : "outline"}
+            className="h-6 text-[10px] gap-1"
+            onClick={() => setUploadMode("upload")}
+          >
+            <Upload className="h-3 w-3" /> Upload File
+          </Button>
+          <Button
+            type="button" size="sm" variant={uploadMode === "url" ? "default" : "outline"}
+            className="h-6 text-[10px] gap-1"
+            onClick={() => setUploadMode("url")}
+          >
+            <Globe className="h-3 w-3" /> Paste URL
+          </Button>
+        </div>
+      )}
+      {headerType === "video" && (
+        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+          <Upload className="h-3 w-3" /> Video must be uploaded directly (URL not allowed by Meta)
+        </p>
+      )}
 
-      {uploadMode === "upload" ? (
+      {effectiveMode === "upload" ? (
         <div className="space-y-1.5">
           <input
             ref={fileRef}
