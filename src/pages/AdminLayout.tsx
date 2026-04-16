@@ -12,18 +12,14 @@ import { Button } from "@/components/ui/button";
 import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBoundary";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
+import { CRMAssistant } from "@/components/admin/CRMAssistant";
+import { AICofounderBanner } from "@/components/admin/AICofounderBanner";
 import { Shield } from "lucide-react";
 const AdminDashboard = lazy(() =>
   import("@/components/admin/AdminDashboard").then((module) => ({ default: module.AdminDashboard })),
 );
 const NotificationCenter = lazy(() =>
   import("@/components/admin/NotificationCenter").then((module) => ({ default: module.NotificationCenter })),
-);
-const CRMAssistant = lazy(() =>
-  import("@/components/admin/CRMAssistant").then((module) => ({ default: module.CRMAssistant })),
-);
-const AICofounderBanner = lazy(() =>
-  import("@/components/admin/AICofounderBanner").then((module) => ({ default: module.AICofounderBanner })),
 );
 const PersonalizedWelcomeBanner = lazy(() =>
   import("@/components/admin/PersonalizedWelcomeBanner").then((module) => ({ default: module.PersonalizedWelcomeBanner })),
