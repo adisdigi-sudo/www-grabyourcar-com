@@ -1,4 +1,13 @@
-const SENSITIVE_PREVIEW_ROUTE_PREFIXES = ["/crm", "/admin", "/workspace", "/document-viewer"];
+const SENSITIVE_PREVIEW_ROUTE_PREFIXES = [
+  "/crm",
+  "/crm-auth",
+  "/crm-reset-password",
+  "/admin",
+  "/admin-auth",
+  "/admin-reset-password",
+  "/workspace",
+  "/document-viewer",
+];
 
 export const isSensitivePreviewRoutePath = (pathname: string) =>
   SENSITIVE_PREVIEW_ROUTE_PREFIXES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
