@@ -85,6 +85,57 @@ Regards,
 *GrabYourCar Finance Team*`;
 };
 
+const buildDisbursementThankYouMessage = ({
+  customerName,
+  carModel,
+  bankName,
+  disbursementAmount,
+}: {
+  customerName?: string | null;
+  carModel?: string | null;
+  bankName?: string | null;
+  disbursementAmount?: number | null;
+}) => {
+  const safeName = customerName?.trim() || "Sir/Madam";
+  const carLine = carModel ? `\n🚗 Car: *${carModel}*` : "";
+  const bankLine = bankName ? `\n🏦 Lender: *${bankName}*` : "";
+  const amtLine = disbursementAmount
+    ? `\n💰 Amount: *₹${Number(disbursementAmount).toLocaleString("en-IN")}*`
+    : "";
+
+  // Pre-filled WhatsApp feedback links (each opens a chat to GYC with rating text)
+  const fbBase = "https://wa.me/919577200023?text=";
+  const star = (n: number) => {
+    const stars = "⭐".repeat(n) + "☆".repeat(5 - n);
+    const txt = encodeURIComponent(
+      `Hi GrabYourCar Team, my feedback for car loan service:\n${stars}  (${n}/5)\nName: ${safeName}`
+    );
+    return `${fbBase}${txt}`;
+  };
+
+  return `Hi ${safeName}, 🎉
+
+🏦 *Congratulations!* Your car loan has been *successfully disbursed*.${carLine}${bankLine}${amtLine}
+
+Thank you for choosing *GrabYourCar Finance* — it was our pleasure serving you.
+
+⭐ *We'd love your feedback!*
+Please rate your experience (1–5 stars):
+
+5 ⭐⭐⭐⭐⭐  Excellent → ${star(5)}
+4 ⭐⭐⭐⭐☆  Very Good → ${star(4)}
+3 ⭐⭐⭐☆☆  Good → ${star(3)}
+2 ⭐⭐☆☆☆  Average → ${star(2)}
+1 ⭐☆☆☆☆  Poor → ${star(1)}
+
+Tap any link above to share your rating in one click.
+
+For any future car needs — loans, insurance, accessories, or your next car — we're just a message away! 📞 9577200023
+
+Warm regards,
+*GrabYourCar Finance Team*`;
+};
+
 // ─── Main Workspace ───
 type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator" | "performance";
 type DateFilter = DateFilterValue;
