@@ -243,7 +243,20 @@ const installBootstrapRuntime = () => {
         }),
       );
 
+      // On sensitive routes, never auto-reload — just show "Update ready" banner
       window.setTimeout(() => {
+        if (isSensitivePreviewRouteWindow()) {
+          try {
+            if (sessionStorage.getItem(DEV_SERVER_PENDING_RELOAD_KEY) === "1") {
+              window.dispatchEvent(
+                new CustomEvent(DEV_SERVER_STATUS_EVENT, {
+                  detail: { status: "update_ready" as const },
+                }),
+              );
+            }
+          } catch { /* ignore */ }
+          return;
+        }
         reloadAfterDevServerRestart();
       }, 150);
     });
