@@ -54,10 +54,10 @@ export const isSensitivePreviewRouteWindow = () => {
   return hostname.startsWith("admin.") || isSensitivePreviewRoutePath(pathname);
 };
 
-// Embedded editor previews must "fail open" — the global startup shell would otherwise
-// trap the iframe behind a white overlay. Only stabilize for true top-level sensitive routes.
-export const shouldStabilizeStartupShellWindow = () =>
-  isSensitivePreviewRouteWindow() && !isEmbeddedPreviewWindow() && !isLovableEditorPreviewHost();
+// Sensitive CRM routes need the same startup shell inside preview hosts as well,
+// otherwise a Vite reconnect/full reload can leave the iframe root blank until the
+// next successful mount. The shell auto-removes once the route is render-ready.
+export const shouldStabilizeStartupShellWindow = () => isSensitivePreviewRouteWindow();
 
-export const shouldAvoidDevAutoReload = () =>
-  import.meta.env.DEV && isSensitivePreviewRouteWindow() && !isEmbeddedPreviewWindow() && !isLovableEditorPreviewHost();
+// Avoid force-reload loops for any sensitive route during dev, including editor previews.
+export const shouldAvoidDevAutoReload = () => import.meta.env.DEV && isSensitivePreviewRouteWindow();
