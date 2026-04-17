@@ -109,10 +109,39 @@ export function WAHubBulkQuotes() {
       return;
     }
     try {
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type: "array" });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
+      const ExcelJS = (await import("exceljs")).default;
+      const wb = new ExcelJS.Workbook();
+      const isCsv = /\.csv$/i.test(file.name);
+      if (isCsv) {
+        const text = await file.text();
+        const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+        const headers = (lines[0] || "").split(",").map((h) => h.replace(/^"|"$/g, "").trim());
+        var json: Record<string, any>[] = lines.slice(1).map((line) => {
+          // simple CSV split (no embedded commas in quoted fields handled minimally)
+          const cells = line.match(/("([^"]|"")*"|[^,]*)(,|$)/g) || [];
+          const obj: Record<string, any> = {};
+          headers.forEach((h, i) => {
+            let cell = (cells[i] || "").replace(/,$/, "").trim();
+            if (cell.startsWith('"') && cell.endsWith('"')) cell = cell.slice(1, -1).replace(/""/g, '"');
+            obj[h] = cell;
+          });
+          return obj;
+        });
+      } else {
+        await wb.xlsx.load(await file.arrayBuffer());
+        const ws = wb.worksheets[0];
+        if (!ws) throw new Error("No sheet found in Excel");
+        const headerRow = ws.getRow(1);
+        const headers: string[] = [];
+        headerRow.eachCell((cell, col) => { headers[col - 1] = String(cell.value || "").trim(); });
+        var json: Record<string, any>[] = [];
+        ws.eachRow((row, rowNum) => {
+          if (rowNum === 1) return;
+          const obj: Record<string, any> = {};
+          row.eachCell((cell, col) => { obj[headers[col - 1]] = String(cell.value ?? "").trim(); });
+          json.push(obj);
+        });
+      }
       if (json.length === 0) {
         toast.error("No rows found in the file");
         return;
