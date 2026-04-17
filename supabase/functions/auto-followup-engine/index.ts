@@ -87,7 +87,7 @@ const VERTICALS: VerticalConfig[] = [
   {
     vertical: "rental",
     table: "rental_bookings",
-    selectCols: "id,customer_name,phone,email,car_name,pickup_date,follow_up_date,follow_up_time",
+    selectCols: "id,customer_name,phone,email,vehicle_name,pickup_date,follow_up_date,follow_up_time",
     mapRow: (r) => ({
       phone: r.phone,
       email: r.email,
@@ -96,7 +96,7 @@ const VERTICALS: VerticalConfig[] = [
       vars: {
         customer_name: r.customer_name || "Customer",
         agent_name: "Anshdeep",
-        car_name: r.car_name || "the car",
+        car_name: r.vehicle_name || "the car",
         pickup_date: r.pickup_date || "your scheduled date",
       },
     }),
