@@ -566,6 +566,59 @@ function RecipientExcelUploader({ requiredVars, onParsed }: {
   );
 }
 
+// ─── Auto-detect Excel template downloader ───
+// Generates a CSV with `phone, name, var_1, var_2…` columns matching the
+// template's required variables, plus one sample row, so users can fill it
+// in and re-upload directly.
+function ExcelTemplateDownloader({ templateName, requiredVars }: {
+  templateName: string;
+  requiredVars: string[];
+}) {
+  const handleDownload = () => {
+    const headers = ["phone", "name", ...requiredVars];
+    const sampleRow: Record<string, string> = {
+      phone: "9876543210",
+      name: "Rahul Sharma",
+    };
+    requiredVars.forEach((v, idx) => {
+      sampleRow[v] = BROADCAST_VARS.find((b) => b.key === v)?.sample || `Sample ${idx + 1}`;
+    });
+    const csvLine = (cells: string[]) =>
+      cells.map((c) => {
+        const safe = String(c ?? "").replace(/"/g, '""');
+        return /[",\n]/.test(safe) ? `"${safe}"` : safe;
+      }).join(",");
+    const csv = [csvLine(headers), csvLine(headers.map((h) => sampleRow[h] || ""))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${templateName || "broadcast"}_recipients_template.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("📥 Excel template downloaded — fill it and re-upload");
+  };
+
+  return (
+    <div className="border rounded-lg p-2.5 bg-muted/30 flex items-center justify-between gap-3">
+      <div className="flex items-start gap-2 min-w-0">
+        <FileText className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+        <div className="min-w-0">
+          <p className="text-xs font-semibold">Need a starter Excel?</p>
+          <p className="text-[10px] text-muted-foreground truncate">
+            Auto-built for this template: phone, name{requiredVars.length > 0 ? `, ${requiredVars.join(", ")}` : ""}
+          </p>
+        </div>
+      </div>
+      <Button type="button" size="sm" variant="outline" className="h-7 gap-1 shrink-0" onClick={handleDownload}>
+        <Upload className="h-3 w-3 rotate-180" /> Download
+      </Button>
+    </div>
+  );
+}
+
 // ─── One-Shot Broadcast: 4-Step Wizard ───
 type WizardStep = 1 | 2 | 3 | 4;
 
