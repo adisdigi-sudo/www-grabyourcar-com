@@ -236,18 +236,43 @@ serve(async (req) => {
       // Build Meta template components
       const components: any[] = [];
 
-      if (template.header_type && template.header_content) {
-        if (template.header_type === "text") {
+      if (template.header_type && template.header_type !== "none") {
+        if (template.header_type === "text" && template.header_content) {
           // Strip emojis, newlines, asterisks from header (Meta requirement)
           const cleanHeader = (template.header_content as string)
             .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{200D}\u{20E3}\u{2702}-\u{27B0}]/gu, "")
             .replace(/[*\n\r]/g, "")
             .trim();
           if (cleanHeader) {
-            components.push({ type: "HEADER", format: "TEXT", text: cleanHeader });
+            const headerComp: any = { type: "HEADER", format: "TEXT", text: cleanHeader };
+            // If header has variables like {{1}}, Meta requires example.header_text
+            const headerVars = cleanHeader.match(/\{\{(\d+)\}\}/g) || [];
+            if (headerVars.length > 0) {
+              headerComp.example = { header_text: headerVars.map((_, i) => `Sample${i + 1}`) };
+            }
+            components.push(headerComp);
           }
         } else if (["image", "video", "document"].includes(template.header_type)) {
-          components.push({ type: "HEADER", format: template.header_type.toUpperCase() });
+          // Meta REQUIRES example.header_handle (public URL) for media headers
+          const mediaUrl = template.header_content as string | null;
+          if (!mediaUrl) {
+            const fmt = template.header_type.toUpperCase();
+            await supabase.from("wa_templates").update({
+              status: "rejected",
+              meta_rejection_reason: `${fmt} header needs a sample file URL. Upload a sample ${template.header_type} (≤16 MB) and resubmit.`,
+            }).eq("id", template_id);
+            return new Response(JSON.stringify({
+              success: false,
+              error: `${fmt} header missing sample file. Upload a sample ${template.header_type} in the template editor, then resubmit.`,
+              fix_hint: `Use the upload button next to the ${template.header_type} header field to attach a small sample.`,
+              validation_failed: true,
+            }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+          components.push({
+            type: "HEADER",
+            format: template.header_type.toUpperCase(),
+            example: { header_handle: [mediaUrl] },
+          });
         }
       }
 
