@@ -26,8 +26,10 @@ import { template as dealClosed } from './deal-closed.tsx'
 import { template as loanDisbursed } from './loan-disbursed.tsx'
 import { template as hsrpCompleted } from './hsrp-completed.tsx'
 import { template as rentalConfirmed } from './rental-confirmed.tsx'
+import { template as rawHtml } from './raw-html.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
+  'raw-html': rawHtml,
   'booking-confirmation': bookingConfirmation,
   'welcome-email': welcomeEmail,
   'lead-confirmation': leadConfirmation,
