@@ -34,12 +34,10 @@ const STARTUP_READY_SELECTOR = [
   "table",
   "canvas",
   "svg",
-  "[aria-live='polite']",
-  "[data-sonner-toaster]",
-  "[class*='animate-spin']",
-  "[role='progressbar']",
-  "[role='dialog']",
-  "[data-radix-popper-content-wrapper]",
+  "form",
+  "section",
+  "article",
+  "[role='main']",
 ].join(", ");
 
 const isElementVisible = (element: Element | null) => {
@@ -79,38 +77,29 @@ const getMeaningfulTextLength = (container: ParentNode | null) => {
 };
 
 const hasVisibleLayoutSurface = (root: HTMLElement) => {
-  const candidateSurfaces = root.querySelectorAll("main, [role='main'], aside, nav, header, section");
+  const candidateSurfaces = root.querySelectorAll("main, [role='main'], aside, nav, header, section, article, form");
   return Array.from(candidateSurfaces).some((element) => isElementVisible(element));
 };
 
-const hasMountedApplicationChrome = (root: HTMLElement) => {
-  const meaningfulChildren = Array.from(root.children).filter((child) => (child as HTMLElement).id !== STARTUP_SHELL_ID);
-  if (meaningfulChildren.length === 0) {
+const hasRenderableAppFrame = (root: HTMLElement) => {
+  const candidateSurfaces = Array.from(
+    root.querySelectorAll("main, [role='main'], aside, nav, header, section, article, form"),
+  );
+
+  if (candidateSurfaces.length === 0) {
     return false;
   }
 
-  const appChromeSelectors = [
-    "main",
-    "aside",
-    "nav",
-    "header",
-    "[role='main']",
-    "[role='dialog']",
-    "[data-radix-popper-content-wrapper]",
-    "[data-sonner-toaster]",
-    "[class*='animate-spin']",
-  ].join(", ");
-
-  return meaningfulChildren.some((child) => {
-    if (!(child instanceof HTMLElement)) {
+  return candidateSurfaces.some((surface) => {
+    if (!(surface instanceof HTMLElement)) {
       return false;
     }
 
-    if (!isElementVisible(child)) {
+    if (!isElementVisible(surface)) {
       return false;
     }
 
-    return child.matches(appChromeSelectors) || !!child.querySelector(appChromeSelectors);
+    return hasVisibleReadySelector(surface) || getMeaningfulTextLength(surface) >= 24;
   });
 };
 
@@ -258,11 +247,11 @@ export const isSensitiveRouteAppReady = () => {
   const root = document.getElementById(APP_ROOT_ID);
   if (!root || root.childElementCount === 0) return false;
 
-  if (hasMountedApplicationChrome(root)) {
+  if (hasRenderableAppFrame(root)) {
     return true;
   }
 
-  const mainRegion = root.querySelector("main, [role='main']");
+  const mainRegion = root.querySelector("main, [role='main'], section, article, form");
   const mainHasVisibleNodes = hasVisibleReadySelector(mainRegion);
   const mainTextLength = getMeaningfulTextLength(mainRegion);
 
@@ -273,7 +262,31 @@ export const isSensitiveRouteAppReady = () => {
   const rootHasVisibleNodes = hasVisibleReadySelector(root);
   const rootTextLength = getMeaningfulTextLength(root);
 
-  return hasVisibleLayoutSurface(root) && rootHasVisibleNodes && rootTextLength >= 24;
+  const hasRenderableDirectChild = Array.from(root.children).some((child) => {
+    if (!(child instanceof HTMLElement) || child.id === STARTUP_SHELL_ID) {
+      return false;
+    }
+
+    if (!isElementVisible(child)) {
+      return false;
+    }
+
+    return (
+      child.matches("main, [role='main'], aside, nav, header, section, article, form") ||
+      getMeaningfulTextLength(child) >= 24 ||
+      hasVisibleReadySelector(child)
+    );
+  });
+
+  if (hasRenderableDirectChild) {
+    return true;
+  }
+
+  if (hasVisibleLayoutSurface(root) && rootHasVisibleNodes && rootTextLength >= 24) {
+    return true;
+  }
+
+  return rootHasVisibleNodes && rootTextLength >= 80;
 };
 
 export const promoteStartupShellToRecovery = (
