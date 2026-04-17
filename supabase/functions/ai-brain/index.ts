@@ -847,6 +847,45 @@ function wantsPolicyDocumentCopy(text?: string): boolean {
     && deliveryKeywords.some((keyword) => lower.includes(keyword));
 }
 
+function isInvoiceIntent(text?: string): boolean {
+  const lower = (text || "").toLowerCase();
+  if (!lower) return false;
+
+  return ["invoice", "bill", "receipt", "payment receipt", "tax invoice"].some((keyword) => lower.includes(keyword));
+}
+
+function getInsuranceSelfServiceRequestType(text?: string): "policy" | "policy_document" | "invoice" | "other" {
+  if (isInvoiceIntent(text)) return "invoice";
+  if (wantsPolicyDocumentCopy(text)) return "policy_document";
+  if (isProtectedInsuranceIntent(text)) return "policy";
+  return "other";
+}
+
+function isLikelyVerificationReply(text?: string): boolean {
+  if (!text) return false;
+  return Boolean(extractVehicleNumberFromText(text) || extractCustomerNameFromText(text));
+}
+
+function hasUsefulInsuranceIdentity(client: any): boolean {
+  return Boolean(
+    normalizeVehicleNumber(client?.vehicle_number)
+    || String(client?.current_policy_number || "").trim()
+    || String(client?.current_insurer || "").trim()
+    || client?.policy_expiry_date,
+  );
+}
+
+function getPhoneOnlyInsuranceKey(client: any): string {
+  const vehicleKey = normalizeVehicleNumber(client?.vehicle_number);
+  if (vehicleKey) return `vehicle:${vehicleKey}`;
+
+  const policyKey = String(client?.current_policy_number || "").replace(/\s+/g, "").toUpperCase().trim();
+  if (policyKey) return `policy:${policyKey}`;
+
+  const nameKey = normalizePersonName(client?.customer_name);
+  return `client:${nameKey || client?.id || crypto.randomUUID()}`;
+}
+
 function isPositiveConfirmation(text?: string): boolean {
   const lower = (text || "").toLowerCase().trim();
   return ["yes", "haan", "han", "ji", "correct", "right", "yes i renewed", "i renewed", "renewed with you"].some((keyword) => lower === keyword || lower.includes(keyword));
@@ -901,6 +940,8 @@ async function handleStrictInsuranceSelfService(supabase: any, messages: any[], 
   const latestUserMessage = [...messages]
     .reverse()
     .find((message: any) => message?.role === "user" && typeof message?.content === "string")?.content || "";
+  const pendingVerificationPrompt = hasPendingVerificationPrompt(messages);
+  const requestType = getInsuranceSelfServiceRequestType(latestUserMessage);
 
   if (hasPendingManualReviewPrompt(messages) && isPositiveConfirmation(latestUserMessage)) {
     return {
@@ -916,7 +957,7 @@ async function handleStrictInsuranceSelfService(supabase: any, messages: any[], 
   }
 
   const shouldHandleStrictFlow = isProtectedInsuranceIntent(latestUserMessage)
-    || hasPendingVerificationPrompt(messages)
+    || pendingVerificationPrompt
     || hasPendingManualReviewPrompt(messages);
 
   if (!shouldHandleStrictFlow) return null;
@@ -946,7 +987,25 @@ async function handleStrictInsuranceSelfService(supabase: any, messages: any[], 
   // skip the strict Name + Car Number prompt and serve the policy directly.
   // This avoids re-verification for customers who already received their policy
   // via our follow-up template and are simply asking for it again.
-  if (!hasPendingVerificationPrompt(messages)) {
+  const shouldTryPhoneFirst = !pendingVerificationPrompt
+    || requestType === "invoice"
+    || !isLikelyVerificationReply(latestUserMessage);
+
+  if (shouldTryPhoneFirst && requestType === "invoice") {
+    const invoiceLookup = await toolLookupInvoices(supabase, customerPhone, "insurance");
+    if (invoiceLookup?.found) {
+      const deterministicResponse = buildSelfServiceResponse([{ name: "lookup_my_invoices", result: invoiceLookup }]);
+      return {
+        response: deterministicResponse?.response || "I found your insurance invoices on this registered number.",
+        intent: "invoice",
+        suggestedActions: ["Insurance invoices found"],
+        documentShare: deterministicResponse?.documentShare || null,
+        humanHandover: null,
+      };
+    }
+  }
+
+  if (shouldTryPhoneFirst) {
     const phoneOnlyLookup = await toolLookupPolicyByPhone(supabase, customerPhone);
     if (phoneOnlyLookup?.found && phoneOnlyLookup.uniqueClient) {
       const primaryVehicle = Array.isArray(phoneOnlyLookup.vehicles) ? phoneOnlyLookup.vehicles[0] : null;
@@ -975,6 +1034,23 @@ async function handleStrictInsuranceSelfService(supabase: any, messages: any[], 
         ].filter(Boolean).join("\n"),
         intent: "insurance",
         suggestedActions: ["Verified by registered number"],
+        documentShare: null,
+        humanHandover: null,
+      };
+    }
+
+    if (phoneOnlyLookup?.found && Array.isArray(phoneOnlyLookup.candidates) && phoneOnlyLookup.candidates.length > 1) {
+      return {
+        response: [
+          "I found multiple insurance records on this registered mobile number.",
+          "Reply with just your car number and I’ll open the correct policy:",
+          ...phoneOnlyLookup.candidates.map((candidate: any) => `• ${candidate.vehicle_number || "Vehicle not available"}${candidate.policy_number ? ` — ${candidate.policy_number}` : ""}`),
+        ].join("\n"),
+        intent: "insurance",
+        suggestedActions: phoneOnlyLookup.candidates
+          .map((candidate: any) => candidate.vehicle_number)
+          .filter(Boolean)
+          .slice(0, 3),
         documentShare: null,
         humanHandover: null,
       };
@@ -1130,18 +1206,43 @@ async function toolLookupPolicyByPhone(supabase: any, customerPhone?: string) {
   const phones = phoneVariants(customerPhone);
 
   const { data: clients } = await supabase.from("insurance_clients")
-    .select("id, customer_name, phone, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_policy_number, current_policy_type, current_insurer, current_premium, policy_expiry_date, policy_start_date, pipeline_stage, ncb_percentage")
+    .select("id, customer_name, phone, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_policy_number, current_policy_type, current_insurer, current_premium, policy_expiry_date, policy_start_date, pipeline_stage, ncb_percentage, updated_at")
     .or(phones.map(p => `phone.eq.${p}`).join(","))
-    .limit(5);
+    .limit(25);
 
-  if (!clients?.length) return { found: false };
+   if (!clients?.length) return { found: false };
+
+   const filteredClients = clients
+    .filter((client: any) => phones.includes((client.phone || "").replace(/\D/g, "")))
+    .filter((client: any) => hasUsefulInsuranceIdentity(client));
+
+   if (!filteredClients.length) return { found: false };
+
+   const dedupedClients = Array.from(
+    new Map(
+      filteredClients
+        .sort((a: any, b: any) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime())
+        .map((client: any) => [getPhoneOnlyInsuranceKey(client), client]),
+    ).values(),
+   );
 
   // Only auto-verify if the phone uniquely identifies ONE client.
   // Otherwise fall back to strict Name + Car Number verification.
-  const uniqueClient = clients.length === 1;
-  if (!uniqueClient) return { found: false, uniqueClient: false };
+  const uniqueClient = dedupedClients.length === 1;
+  if (!uniqueClient) {
+    return {
+      found: true,
+      uniqueClient: false,
+      candidates: dedupedClients.slice(0, 5).map((client: any) => ({
+        customer_name: client.customer_name,
+        vehicle_number: client.vehicle_number,
+        policy_number: client.current_policy_number,
+        insurer: client.current_insurer,
+      })),
+    };
+  }
 
-  const clientIds = clients.map((c: any) => c.id);
+  const clientIds = dedupedClients.map((c: any) => c.id);
   const { data: policies } = await supabase.from("insurance_policies")
     .select("policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal, policy_document_url, document_file_name")
     .in("client_id", clientIds)
@@ -1160,9 +1261,9 @@ async function toolLookupPolicyByPhone(supabase: any, customerPhone?: string) {
   return {
     found: true,
     uniqueClient: true,
-    customer: clients[0].customer_name,
+    customer: dedupedClients[0].customer_name,
     phone_verified: true,
-    vehicles: clients.map((c: any) => ({
+    vehicles: dedupedClients.map((c: any) => ({
       vehicle: `${c.vehicle_make || ""} ${c.vehicle_model || ""}`.trim() || "N/A",
       vehicle_number: c.vehicle_number,
       year: c.vehicle_year,
