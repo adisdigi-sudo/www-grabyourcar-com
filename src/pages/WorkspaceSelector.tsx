@@ -164,7 +164,12 @@ const WorkspaceSelector = () => {
   if (isBootstrapping) {
     if (bootstrapTimedOut) {
       return (
-        <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background px-4" role="main">
+        <main
+          className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background px-4"
+          role="main"
+          aria-busy="true"
+          data-startup-ready="workspace-bootstrap-timeout"
+        >
           <Card className="w-full max-w-lg p-8 text-center border-border/60 shadow-xl shadow-primary/5">
             <Shield className="h-12 w-12 mx-auto mb-4 text-primary" />
             <h1 className="text-2xl font-semibold text-foreground">Workspace load ruk gaya</h1>
@@ -183,8 +188,14 @@ const WorkspaceSelector = () => {
     }
 
     return (
-      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background" role="main">
+      <main
+        className="min-h-screen flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-background via-muted/30 to-background"
+        role="main"
+        aria-busy="true"
+        data-startup-ready="workspace-bootstrap-loading"
+      >
         <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+        <p className="text-sm text-muted-foreground animate-pulse">Loading workspace...</p>
       </main>
     );
   }
