@@ -33,7 +33,10 @@ export const isSensitivePreviewRouteWindow = () => {
   return hostname.startsWith("admin.") || isSensitivePreviewRoutePath(pathname);
 };
 
+// Embedded editor previews must "fail open" — the global startup shell would otherwise
+// trap the iframe behind a white overlay. Only stabilize for true top-level sensitive routes.
 export const shouldStabilizeStartupShellWindow = () =>
-  isSensitivePreviewRouteWindow() || isEmbeddedPreviewWindow();
+  isSensitivePreviewRouteWindow() && !isEmbeddedPreviewWindow();
 
-export const shouldAvoidDevAutoReload = () => import.meta.env.DEV && isSensitivePreviewRouteWindow();
+export const shouldAvoidDevAutoReload = () =>
+  import.meta.env.DEV && isSensitivePreviewRouteWindow() && !isEmbeddedPreviewWindow();
