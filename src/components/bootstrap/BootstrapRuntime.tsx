@@ -1,6 +1,11 @@
 import { useEffect, useState, type ComponentType } from "react";
 import { isChunkLoadRecoveryExhausted, isDynamicImportError, performSafePreviewReload, recoverFromChunkLoadError, resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
-import { isSensitivePreviewRouteWindow, shouldAvoidDevAutoReload } from "@/lib/adminPreviewStability";
+import {
+  isEmbeddedPreviewWindow,
+  isLovableEditorPreviewHost,
+  isSensitivePreviewRouteWindow,
+  shouldAvoidDevAutoReload,
+} from "@/lib/adminPreviewStability";
 import { clearPendingReloadFlag, DEV_SERVER_LAST_RELOAD_KEY, DEV_SERVER_PENDING_RELOAD_KEY, DEV_SERVER_STATUS_EVENT, markDevServerPendingReload } from "@/lib/devReloadGuard";
 import { withPreviewParams } from "@/lib/previewRouting";
 import { isSensitiveRouteAppReady, removeStartupShell } from "@/lib/startupShell";
@@ -14,6 +19,9 @@ const SENSITIVE_ROUTE_RECONNECT_HEALTH_DELAY_MS = 420;
 
 let hasTriggeredChunkRecovery = false;
 let bootstrapListenersInstalled = false;
+
+const shouldUseSensitiveRouteRecovery = () =>
+  isSensitivePreviewRouteWindow() && !isEmbeddedPreviewWindow() && !isLovableEditorPreviewHost();
 
 type ChunkRecoveryAttemptResult = "recovered" | "exhausted" | "ignored";
 
@@ -56,7 +64,7 @@ const shouldSurfaceRuntimeFailure = (error: unknown) => {
 };
 
 const dispatchRuntimeFatal = (detail: RuntimeFatalDetail) => {
-  if (typeof window === "undefined" || !isSensitivePreviewRouteWindow()) return;
+  if (typeof window === "undefined" || !shouldUseSensitiveRouteRecovery()) return;
 
   window.dispatchEvent(
     new CustomEvent(RUNTIME_FATAL_EVENT, {
@@ -72,7 +80,7 @@ const dispatchRouteActivity = () => {
     new CustomEvent(ROUTE_ACTIVITY_EVENT, {
       detail: {
         pathname: window.location.pathname,
-        sensitive: isSensitivePreviewRouteWindow(),
+        sensitive: shouldUseSensitiveRouteRecovery(),
       },
     }),
   );
@@ -293,7 +301,7 @@ const installBootstrapRuntime = () => {
       );
 
       window.setTimeout(() => {
-        if (isSensitivePreviewRouteWindow()) {
+        if (shouldUseSensitiveRouteRecovery()) {
           handleSensitiveRouteReconnect();
           return;
         }
@@ -329,7 +337,7 @@ const FatalRuntimeOverlay = () => {
     };
   }, []);
 
-  if (!fatalDetail || !isSensitivePreviewRouteWindow()) {
+  if (!fatalDetail || !shouldUseSensitiveRouteRecovery()) {
     return null;
   }
 
@@ -375,7 +383,7 @@ const FatalRuntimeOverlay = () => {
 };
 
 const DevServerStatusOverlay = () => {
-  const [isSensitiveRoute, setIsSensitiveRoute] = useState(() => isSensitivePreviewRouteWindow());
+  const [isSensitiveRoute, setIsSensitiveRoute] = useState(() => shouldUseSensitiveRouteRecovery());
   const [status, setStatus] = useState<DevServerStatus>(() => {
     if (!import.meta.env.DEV || typeof window === "undefined") {
       return "idle";
@@ -408,7 +416,8 @@ const DevServerStatusOverlay = () => {
     };
 
     const handleRouteActivity = (event: Event) => {
-      const sensitive = (event as CustomEvent<{ sensitive?: boolean }>).detail?.sensitive ?? isSensitivePreviewRouteWindow();
+      const sensitive =
+        (event as CustomEvent<{ sensitive?: boolean }>).detail?.sensitive ?? shouldUseSensitiveRouteRecovery();
       setIsSensitiveRoute(sensitive);
 
       if (!sensitive) {
@@ -490,7 +499,7 @@ const ChunkRecoveryOverlay = () => {
   );
 
   useEffect(() => {
-    if (!isSensitivePreviewRouteWindow()) {
+    if (!shouldUseSensitiveRouteRecovery()) {
       return;
     }
 
@@ -538,7 +547,7 @@ const ChunkRecoveryOverlay = () => {
     };
   }, []);
 
-  if (!recoverySource) {
+  if (!recoverySource || !shouldUseSensitiveRouteRecovery()) {
     return null;
   }
 
