@@ -26,6 +26,11 @@ interface OmniChatPanelProps {
   context?: string;
   initialMessage?: string;
   initialName?: string;
+  /** Optional whitelist of phone numbers — when provided, only threads matching these phones are shown.
+   *  Used to scope an Omni Box to a single vertical's contacts. */
+  allowedPhones?: string[];
+  /** Display label e.g. "Insurance" — shown in the panel header when scoped. */
+  scopeLabel?: string;
 }
 
 interface ChatThread {
