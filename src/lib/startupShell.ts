@@ -225,7 +225,16 @@ const handleGlobalRuntimeFatal = () => {
 };
 
 const handleGlobalDevServerStatus = (event: Event) => {
-  const status = (event as CustomEvent<{ status?: string }>).detail?.status;
+  const detail = (event as CustomEvent<{ status?: string; reason?: string }>).detail;
+  const status = detail?.status;
+
+  if (status === "connected" || (status === "update_ready" && detail?.reason === "healthy")) {
+    if (isSensitiveRouteAppReady()) {
+      removeStartupShell();
+    }
+    return;
+  }
+
   if (status === "update_ready" || status === "disconnected") {
     recoverStartupShell("Dev connection/update ne startup ko interrupt kiya. Ab yahan se safe reload kar sakte ho.");
   }

@@ -3,7 +3,7 @@ import { isChunkLoadRecoveryExhausted, isDynamicImportError, performSafePreviewR
 import { isSensitivePreviewRouteWindow, shouldAvoidDevAutoReload } from "@/lib/adminPreviewStability";
 import { clearPendingReloadFlag, DEV_SERVER_LAST_RELOAD_KEY, DEV_SERVER_PENDING_RELOAD_KEY, DEV_SERVER_STATUS_EVENT, markDevServerPendingReload } from "@/lib/devReloadGuard";
 import { withPreviewParams } from "@/lib/previewRouting";
-import { isSensitiveRouteAppReady } from "@/lib/startupShell";
+import { isSensitiveRouteAppReady, removeStartupShell } from "@/lib/startupShell";
 import { AlertTriangle, RefreshCw, WifiOff } from "lucide-react";
 
 const CHUNK_RECOVERY_STATUS_EVENT = "lovable:chunk-recovery-status";
@@ -213,6 +213,7 @@ const handleSensitiveRouteReconnect = () => {
         return;
       }
 
+      removeStartupShell();
       announceSensitiveRouteReloadReady("healthy");
     } catch {
       announceSensitiveRouteReloadReady("unhealthy");
