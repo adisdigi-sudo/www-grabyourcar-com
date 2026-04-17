@@ -2093,6 +2093,7 @@ export type Database = {
           color: string | null
           created_at: string | null
           description: string | null
+          has_vertical_password: boolean
           icon: string | null
           id: string
           is_active: boolean | null
@@ -2106,6 +2107,7 @@ export type Database = {
           color?: string | null
           created_at?: string | null
           description?: string | null
+          has_vertical_password?: boolean
           icon?: string | null
           id?: string
           is_active?: boolean | null
@@ -2119,6 +2121,7 @@ export type Database = {
           color?: string | null
           created_at?: string | null
           description?: string | null
+          has_vertical_password?: boolean
           icon?: string | null
           id?: string
           is_active?: boolean | null
@@ -3836,6 +3839,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           role: string
+          tenant_id: string | null
         }
         Insert: {
           auth_user_id: string
@@ -3845,6 +3849,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           role: string
+          tenant_id?: string | null
         }
         Update: {
           auth_user_id?: string
@@ -3854,8 +3859,17 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           role?: string
+          tenant_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "crm_users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cross_sell_analytics: {
         Row: {
