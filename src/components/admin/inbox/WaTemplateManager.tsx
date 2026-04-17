@@ -281,6 +281,96 @@ function PhonePreview({ template, buttons }: { template: Partial<Template>; butt
   );
 }
 
+// --- Media Header Uploader (Image / Video / Document) ---
+function MediaHeaderUploader({
+  type,
+  value,
+  onChange,
+}: {
+  type: "image" | "video" | "document";
+  value: string | null;
+  onChange: (url: string | null) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const accept =
+    type === "image" ? "image/jpeg,image/png,image/webp" :
+    type === "video" ? "video/mp4,video/3gpp" :
+    "application/pdf";
+  const maxMb = type === "video" ? 16 : type === "document" ? 100 : 5;
+  const hint =
+    type === "image" ? "JPG / PNG / WebP up to 5 MB" :
+    type === "video" ? "MP4 / 3GPP up to 16 MB" :
+    "PDF up to 100 MB (Meta limit)";
+
+  const handleUpload = async (file: File) => {
+    if (file.size > maxMb * 1024 * 1024) {
+      toast.error(`File too large. Max ${maxMb} MB for ${type}.`);
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "bin";
+      const path = `${type}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("wa-template-media").upload(path, file, {
+        upsert: false,
+        contentType: file.type,
+      });
+      if (error) throw error;
+      const { data: pub } = supabase.storage.from("wa-template-media").getPublicUrl(path);
+      onChange(pub.publicUrl);
+      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} uploaded ✅`);
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <label className={cn(
+          "inline-flex items-center gap-1.5 text-xs px-3 h-8 rounded-md border bg-background hover:bg-muted cursor-pointer transition-colors",
+          uploading && "opacity-50 pointer-events-none"
+        )}>
+          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+          {uploading ? "Uploading…" : value ? `Replace ${type}` : `Upload ${type}`}
+          <input
+            type="file"
+            accept={accept}
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleUpload(f);
+              e.currentTarget.value = "";
+            }}
+          />
+        </label>
+        {value && (
+          <Button type="button" size="sm" variant="ghost" className="h-8 text-[10px] text-destructive" onClick={() => onChange(null)}>
+            <X className="h-3 w-3 mr-1" /> Remove
+          </Button>
+        )}
+        <span className="text-[10px] text-muted-foreground">{hint}</span>
+      </div>
+      {value && (
+        <div className="border rounded-md p-1.5 bg-muted/30 inline-block">
+          {type === "image" && <img src={value} alt="header" className="h-20 rounded object-cover" />}
+          {type === "video" && <video src={value} className="h-20 rounded" controls />}
+          {type === "document" && (
+            <a href={value} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline px-2">
+              <FileText className="h-4 w-4" /> View uploaded PDF
+            </a>
+          )}
+        </div>
+      )}
+      <p className="text-[10px] text-muted-foreground">
+        ✅ Saved to template — same {type} will be sent automatically with this template.
+      </p>
+    </div>
+  );
+}
+
 // --- Inline "How to fix" guidance for each common Meta validation message ---
 function getFixHint(field: string, message: string): string | null {
   const m = message.toLowerCase();
