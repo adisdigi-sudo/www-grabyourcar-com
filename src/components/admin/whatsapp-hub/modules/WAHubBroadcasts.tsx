@@ -774,66 +774,135 @@ function OneShotBroadcast() {
           {step === 1 && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2"><Megaphone className="h-4 w-4 text-green-600" /> Step 1: Build Your Template</CardTitle>
+                <CardTitle className="text-sm flex items-center gap-2"><Megaphone className="h-4 w-4 text-green-600" /> Step 1: Choose or Build Template</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Campaign / Template Name *</Label>
-                  <Input placeholder="e.g., Diwali Loan Offer 2026" value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} className="h-8 text-sm" />
-                  <p className="text-[9px] text-muted-foreground">Template name: <span className="font-mono">{form.name.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 60) || "template_name"}</span></p>
+                {/* Mode toggle */}
+                <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setMode("approved")}
+                    className={`text-xs font-semibold py-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${mode === "approved" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" /> Use Approved Template
+                    <Badge variant="secondary" className="text-[9px] ml-1">{approvedTemplates.length}</Badge>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("build")}
+                    className={`text-xs font-semibold py-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${mode === "build" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Build New Template
+                  </button>
                 </div>
 
-                <div className="space-y-1.5 border rounded-lg p-3 bg-muted/20">
-                  <Label className="text-xs font-semibold">Header (optional)</Label>
-                  <Select value={form.header_type} onValueChange={(v) => setForm(p => ({ ...p, header_type: v, header_content: "", media_url: "" }))}>
-                    <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      <SelectItem value="text">📝 Text</SelectItem>
-                      <SelectItem value="image">🖼️ Image</SelectItem>
-                      <SelectItem value="video">🎬 Video (up to 1 min)</SelectItem>
-                      <SelectItem value="document">📄 Document (PDF)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {form.header_type === "text" && (
-                    <Input value={form.header_content} onChange={e => setForm(p => ({ ...p, header_content: e.target.value }))} placeholder="Header text (max 60 chars)" className="h-8 text-sm" maxLength={60} />
-                  )}
-                  {(form.header_type === "image" || form.header_type === "video" || form.header_type === "document") && (
-                    <MediaUploader headerType={form.header_type} mediaUrl={form.media_url} onUrlChange={(url) => setForm(p => ({ ...p, media_url: url }))} onFileUploaded={(url) => setForm(p => ({ ...p, media_url: url }))} />
-                  )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Message Body *</Label>
-                  <Textarea placeholder="Hello {{customer_name}}! Your {{car_model}} loan is approved..." value={form.message} onChange={(e) => setForm(p => ({ ...p, message: e.target.value }))} rows={5} className="text-sm" />
-                  <div className="flex items-center gap-1 flex-wrap">
-                    <span className="text-[10px] text-muted-foreground mr-1">Insert variable:</span>
-                    {BROADCAST_VARS.map((v) => (
-                      <Button key={v.key} variant="outline" size="sm" className="h-5 text-[9px] px-1.5" onClick={() => insertVariable(v.key)}>{`{{${v.label}}}`}</Button>
-                    ))}
+                {mode === "approved" && (
+                  <div className="space-y-2">
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2.5 text-xs text-green-700 dark:text-green-400 flex items-start gap-2">
+                      <Check className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <span>Approved template select karo → seedha <b>recipients upload</b> aur <b>send</b>. Meta approval skip — already approved hai.</span>
+                    </div>
+                    {approvedTemplates.length === 0 ? (
+                      <div className="border border-dashed rounded-lg p-6 text-center text-xs text-muted-foreground">
+                        Koi approved template nahi mila. <button className="underline text-primary" onClick={() => setMode("build")}>Build New Template</button> use karo.
+                      </div>
+                    ) : (
+                      <ScrollArea className="h-[420px] pr-2">
+                        <div className="space-y-1.5">
+                          {approvedTemplates.map((t: any) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => pickApprovedTemplate(t.id)}
+                              className="w-full text-left border rounded-lg p-2.5 hover:bg-muted/50 hover:border-primary transition-all group"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-sm font-semibold truncate">{t.display_name || t.name}</p>
+                                    <Badge className="bg-green-500 text-white text-[9px]">approved</Badge>
+                                    {t.header_type && t.header_type !== "none" && (
+                                      <Badge variant="outline" className="text-[9px] capitalize">
+                                        {t.header_type === "video" ? "🎬" : t.header_type === "image" ? "🖼️" : t.header_type === "document" ? "📄" : "📝"} {t.header_type}
+                                      </Badge>
+                                    )}
+                                    <Badge variant="outline" className="text-[9px] uppercase">{t.language || "en"}</Badge>
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground font-mono truncate mt-0.5">{t.name}</p>
+                                  <p className="text-[11px] text-muted-foreground line-clamp-2 mt-1">{t.body}</p>
+                                </div>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0" />
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
                   </div>
-                </div>
+                )}
 
-                <VariableSampleEditor body={form.message} samples={form.variable_samples} onChange={(s) => setForm(p => ({ ...p, variable_samples: s }))} />
+                {mode === "build" && (
+                  <>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Campaign / Template Name *</Label>
+                      <Input placeholder="e.g., Diwali Loan Offer 2026" value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} className="h-8 text-sm" />
+                      <p className="text-[9px] text-muted-foreground">Template name: <span className="font-mono">{form.name.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 60) || "template_name"}</span></p>
+                    </div>
 
-                <div className="space-y-1 border rounded-lg p-3 bg-muted/20">
-                  <Label className="text-xs font-semibold">Footer (optional, max 60 chars)</Label>
-                  <Input value={form.footer} onChange={e => setForm(p => ({ ...p, footer: e.target.value }))} placeholder="e.g., GrabYourCar.com | Reply STOP to opt-out" className="h-8 text-sm" maxLength={60} />
-                </div>
+                    <div className="space-y-1.5 border rounded-lg p-3 bg-muted/20">
+                      <Label className="text-xs font-semibold">Header (optional)</Label>
+                      <Select value={form.header_type} onValueChange={(v) => setForm(p => ({ ...p, header_type: v, header_content: "", media_url: "" }))}>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="text">📝 Text</SelectItem>
+                          <SelectItem value="image">🖼️ Image</SelectItem>
+                          <SelectItem value="video">🎬 Video (up to 1 min)</SelectItem>
+                          <SelectItem value="document">📄 Document (PDF)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {form.header_type === "text" && (
+                        <Input value={form.header_content} onChange={e => setForm(p => ({ ...p, header_content: e.target.value }))} placeholder="Header text (max 60 chars)" className="h-8 text-sm" maxLength={60} />
+                      )}
+                      {(form.header_type === "image" || form.header_type === "video" || form.header_type === "document") && (
+                        <MediaUploader headerType={form.header_type} mediaUrl={form.media_url} onUrlChange={(url) => setForm(p => ({ ...p, media_url: url }))} onFileUploaded={(url) => setForm(p => ({ ...p, media_url: url }))} />
+                      )}
+                    </div>
 
-                <CampaignButtonEditor buttons={form.buttons} onChange={(b) => setForm(p => ({ ...p, buttons: b }))} />
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Message Body *</Label>
+                      <Textarea placeholder="Hello {{customer_name}}! Your {{car_model}} loan is approved..." value={form.message} onChange={(e) => setForm(p => ({ ...p, message: e.target.value }))} rows={5} className="text-sm" />
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[10px] text-muted-foreground mr-1">Insert variable:</span>
+                        {BROADCAST_VARS.map((v) => (
+                          <Button key={v.key} variant="outline" size="sm" className="h-5 text-[9px] px-1.5" onClick={() => insertVariable(v.key)}>{`{{${v.label}}}`}</Button>
+                        ))}
+                      </div>
+                    </div>
 
-                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-2 text-xs text-blue-700 dark:text-blue-400 flex items-start gap-2">
-                  <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                  <span>Submit kar ke <b>Meta approval</b> ka wait karein. Bulk send <b>only after approval</b> unlock hoga.</span>
-                </div>
+                    <VariableSampleEditor body={form.message} samples={form.variable_samples} onChange={(s) => setForm(p => ({ ...p, variable_samples: s }))} />
 
-                <Button className="w-full gap-2 bg-primary text-primary-foreground h-10" onClick={() => submitTemplateMutation.mutate()} disabled={submitTemplateMutation.isPending || !form.name || !form.message}>
-                  <Send className="h-4 w-4" /> {submitTemplateMutation.isPending ? "Submitting..." : "Submit to Meta for Approval"}
-                </Button>
+                    <div className="space-y-1 border rounded-lg p-3 bg-muted/20">
+                      <Label className="text-xs font-semibold">Footer (optional, max 60 chars)</Label>
+                      <Input value={form.footer} onChange={e => setForm(p => ({ ...p, footer: e.target.value }))} placeholder="e.g., GrabYourCar.com | Reply STOP to opt-out" className="h-8 text-sm" maxLength={60} />
+                    </div>
+
+                    <CampaignButtonEditor buttons={form.buttons} onChange={(b) => setForm(p => ({ ...p, buttons: b }))} />
+
+                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-2 text-xs text-blue-700 dark:text-blue-400 flex items-start gap-2">
+                      <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <span>Submit kar ke <b>Meta approval</b> ka wait karein. Bulk send <b>only after approval</b> unlock hoga.</span>
+                    </div>
+
+                    <Button className="w-full gap-2 bg-primary text-primary-foreground h-10" onClick={() => submitTemplateMutation.mutate()} disabled={submitTemplateMutation.isPending || !form.name || !form.message}>
+                      <Send className="h-4 w-4" /> {submitTemplateMutation.isPending ? "Submitting..." : "Submit to Meta for Approval"}
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}
+
 
           {step === 2 && (
             <Card>
