@@ -15557,6 +15557,7 @@ export type Database = {
           assigned_to: string | null
           booking_remarks: string | null
           booking_status: string | null
+          budget: string | null
           buying_intent: string | null
           call_attempts: number | null
           call_remarks: string | null
@@ -15564,6 +15565,7 @@ export type Database = {
           car_brand: string | null
           car_model: string | null
           car_variant: string | null
+          car_year: string | null
           city: string | null
           client_id: string | null
           created_at: string | null
@@ -15581,6 +15583,8 @@ export type Database = {
           id: string
           incentive_eligible: boolean | null
           inquiry_remarks: string | null
+          is_abandoned: boolean | null
+          is_hot: boolean | null
           is_legacy: boolean | null
           last_activity_at: string | null
           loan_status: string | null
@@ -15591,16 +15595,21 @@ export type Database = {
           quote_history: Json | null
           remarks_history: Json | null
           source: string | null
+          status_outcome: string | null
+          timeline: string | null
           updated_at: string | null
           utm_campaign: string | null
           utm_medium: string | null
           utm_source: string | null
+          vehicle_type: string | null
+          website_journey: Json | null
         }
         Insert: {
           ad_platform?: string | null
           assigned_to?: string | null
           booking_remarks?: string | null
           booking_status?: string | null
+          budget?: string | null
           buying_intent?: string | null
           call_attempts?: number | null
           call_remarks?: string | null
@@ -15608,6 +15617,7 @@ export type Database = {
           car_brand?: string | null
           car_model?: string | null
           car_variant?: string | null
+          car_year?: string | null
           city?: string | null
           client_id?: string | null
           created_at?: string | null
@@ -15625,6 +15635,8 @@ export type Database = {
           id?: string
           incentive_eligible?: boolean | null
           inquiry_remarks?: string | null
+          is_abandoned?: boolean | null
+          is_hot?: boolean | null
           is_legacy?: boolean | null
           last_activity_at?: string | null
           loan_status?: string | null
@@ -15635,16 +15647,21 @@ export type Database = {
           quote_history?: Json | null
           remarks_history?: Json | null
           source?: string | null
+          status_outcome?: string | null
+          timeline?: string | null
           updated_at?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          vehicle_type?: string | null
+          website_journey?: Json | null
         }
         Update: {
           ad_platform?: string | null
           assigned_to?: string | null
           booking_remarks?: string | null
           booking_status?: string | null
+          budget?: string | null
           buying_intent?: string | null
           call_attempts?: number | null
           call_remarks?: string | null
@@ -15652,6 +15669,7 @@ export type Database = {
           car_brand?: string | null
           car_model?: string | null
           car_variant?: string | null
+          car_year?: string | null
           city?: string | null
           client_id?: string | null
           created_at?: string | null
@@ -15669,6 +15687,8 @@ export type Database = {
           id?: string
           incentive_eligible?: boolean | null
           inquiry_remarks?: string | null
+          is_abandoned?: boolean | null
+          is_hot?: boolean | null
           is_legacy?: boolean | null
           last_activity_at?: string | null
           loan_status?: string | null
@@ -15679,10 +15699,14 @@ export type Database = {
           quote_history?: Json | null
           remarks_history?: Json | null
           source?: string | null
+          status_outcome?: string | null
+          timeline?: string | null
           updated_at?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          vehicle_type?: string | null
+          website_journey?: Json | null
         }
         Relationships: []
       }
