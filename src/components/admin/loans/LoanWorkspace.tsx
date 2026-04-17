@@ -972,6 +972,10 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   const queryClient = useQueryClient();
   const salesCalculatorDefaults = useMemo(() => getLoanSalesCalculatorDefaults(application), [application]);
   const [targetStage, setTargetStage] = useState<string>(application?._targetStage || '');
+  // Quick-Move pills set local `targetStage`. Treat both the drag-injected `_targetStage`
+  // and the locally-set `targetStage` as the active "moving to" intent so the inline
+  // forms (Loan Application / Disbursed / Lost) actually render.
+  const effectiveTargetStage = application?._targetStage || targetStage || '';
   const [remarks, setRemarks] = useState('');
   const [callStatus, setCallStatus] = useState(application?.call_status || '');
   const [callRemarks, setCallRemarks] = useState('');
