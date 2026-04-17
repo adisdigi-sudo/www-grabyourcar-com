@@ -35,6 +35,25 @@ interface VerticalContextType {
 
 const VerticalContext = createContext<VerticalContextType | undefined>(undefined);
 const ACTIVE_VERTICAL_STORAGE_KEY = "gyc_active_vertical_id";
+const VERTICAL_QUERY_TIMEOUT_MS = 8000;
+
+const withQueryTimeout = async <T,>(promise: PromiseLike<T>, label: string): Promise<T> => {
+  let timeoutId: number | null = null;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => {
+      reject(new Error(`${label} timed out`));
+    }, VERTICAL_QUERY_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([Promise.resolve(promise), timeoutPromise]) as T;
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
+  }
+};
 
 const getStoredActiveVerticalId = () => {
   if (typeof window === "undefined") return null;
@@ -98,11 +117,14 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
 
       const [verticals, access, member, roles] = await Promise.all([
         (async () => {
-          const { data, error } = await supabase
-            .from('business_verticals')
-            .select('*')
-            .eq('is_active', true)
-            .order('sort_order');
+          const { data, error } = await withQueryTimeout(
+            supabase
+              .from('business_verticals')
+              .select('*')
+              .eq('is_active', true)
+              .order('sort_order'),
+            'business_verticals lookup',
+          );
 
           if (error) {
             console.warn("[VerticalProvider] Failed to fetch verticals", error);
@@ -112,10 +134,13 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
           return data as BusinessVertical[];
         })(),
         (async () => {
-          const { data, error } = await supabase
-            .from('user_vertical_access')
-            .select('vertical_id, access_level')
-            .eq('user_id', user.id);
+          const { data, error } = await withQueryTimeout(
+            supabase
+              .from('user_vertical_access')
+              .select('vertical_id, access_level')
+              .eq('user_id', user.id),
+            'user_vertical_access lookup',
+          );
 
           if (error) {
             console.warn("[VerticalProvider] Failed to fetch user access", error);
@@ -125,11 +150,14 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
           return data as Array<{ vertical_id: string; access_level: string | null }>;
         })(),
         (async () => {
-          const { data, error } = await supabase
-            .from('team_members')
-            .select('*')
-            .eq('user_id', user.id)
-            .maybeSingle();
+          const { data, error } = await withQueryTimeout(
+            supabase
+              .from('team_members')
+              .select('*')
+              .eq('user_id', user.id)
+              .maybeSingle(),
+            'team_members lookup',
+          );
 
           if (error) {
             console.warn("[VerticalProvider] Failed to fetch team member", error);
@@ -140,19 +168,25 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
         })(),
         (async () => {
           try {
-            const { data, error } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', user.id);
+            const { data, error } = await withQueryTimeout(
+              supabase
+                .from('user_roles')
+                .select('role')
+                .eq('user_id', user.id),
+              'user_roles lookup',
+            );
 
             if (error) throw error;
             if ((data?.length ?? 0) > 0) return data.map((entry) => entry.role);
 
-            const { data: crmUser } = await supabase
-              .from('crm_users')
-              .select('role')
-              .eq('auth_user_id', user.id)
-              .maybeSingle();
+            const { data: crmUser } = await withQueryTimeout(
+              supabase
+                .from('crm_users')
+                .select('role')
+                .eq('auth_user_id', user.id)
+                .maybeSingle(),
+              'crm_users role lookup',
+            );
 
             if (crmUser?.role === 'admin') return ['admin'];
             if (crmUser?.role === 'manager') return ['operations'];
