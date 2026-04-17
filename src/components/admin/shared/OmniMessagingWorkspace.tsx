@@ -17,11 +17,16 @@ interface OmniMessagingWorkspaceProps {
   phone?: string;
   email?: string;
   showSettings?: boolean;
+  /** When provided, scopes the Chat panel to these phone numbers only (vertical filtering). */
+  allowedPhones?: string[];
+  /** Label shown in the chat header e.g. "Insurance" */
+  scopeLabel?: string;
 }
 
 /**
  * Combined side-by-side messaging workspace.
  * Drop this into any vertical for Campaign + Chat + Settings.
+ * Pass `allowedPhones` + `scopeLabel` to scope the Chat to a single vertical's contacts.
  */
 export function OmniMessagingWorkspace({
   recipients = [],
@@ -29,6 +34,8 @@ export function OmniMessagingWorkspace({
   phone,
   email,
   showSettings = false,
+  allowedPhones,
+  scopeLabel,
 }: OmniMessagingWorkspaceProps) {
   const [tab, setTab] = useState("campaign");
 
@@ -52,12 +59,12 @@ export function OmniMessagingWorkspace({
         <TabsContent value="campaign">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <OmniSendPanel recipients={recipients} context={context} />
-            <OmniChatPanel phone={phone} email={email} context={context} />
+            <OmniChatPanel phone={phone} email={email} context={context} allowedPhones={allowedPhones} scopeLabel={scopeLabel} />
           </div>
         </TabsContent>
 
         <TabsContent value="chat">
-          <OmniChatPanel phone={phone} email={email} context={context} />
+          <OmniChatPanel phone={phone} email={email} context={context} allowedPhones={allowedPhones} scopeLabel={scopeLabel} />
         </TabsContent>
 
         {showSettings && (

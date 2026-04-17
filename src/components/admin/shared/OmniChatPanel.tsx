@@ -26,6 +26,11 @@ interface OmniChatPanelProps {
   context?: string;
   initialMessage?: string;
   initialName?: string;
+  /** Optional whitelist of phone numbers — when provided, only threads matching these phones are shown.
+   *  Used to scope an Omni Box to a single vertical's contacts. */
+  allowedPhones?: string[];
+  /** Display label e.g. "Insurance" — shown in the panel header when scoped. */
+  scopeLabel?: string;
 }
 
 interface ChatThread {
@@ -84,7 +89,7 @@ function mapInboxStatus(message: {
   return message.status || "received";
 }
 
-export function OmniChatPanel({ phone, email, context, initialMessage, initialName }: OmniChatPanelProps) {
+export function OmniChatPanel({ phone, email, context, initialMessage, initialName, allowedPhones, scopeLabel }: OmniChatPanelProps) {
   const { toast } = useToast();
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [selectedThread, setSelectedThread] = useState<ChatThread | null>(null);
@@ -289,7 +294,13 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
     }
   }
 
+  // Normalize allowed phones (last 10 digits) for vertical scoping
+  const allowedKeys = (allowedPhones && allowedPhones.length)
+    ? new Set(allowedPhones.map((p) => normalizePhone(p).slice(-10)).filter(Boolean))
+    : null;
+
   const filteredThreads = threads.filter((t) => {
+    if (allowedKeys && !allowedKeys.has(normalizePhone(t.phone).slice(-10))) return false;
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -312,7 +323,12 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
           <CardTitle className="flex items-center gap-2 text-base">
             <MessageSquare className="h-4 w-4 text-primary" />
             Conversations
-            {context && (
+            {scopeLabel && (
+              <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px]">
+                {scopeLabel} only
+              </Badge>
+            )}
+            {context && !scopeLabel && (
               <Badge variant="outline" className="text-[10px]">
                 {context}
               </Badge>

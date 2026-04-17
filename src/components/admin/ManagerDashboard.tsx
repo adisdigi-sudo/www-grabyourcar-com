@@ -19,6 +19,7 @@ import {
 } from "recharts";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
 import { motion } from "framer-motion";
+import TeamEngagement from "./TeamEngagement";
 
 const CHART_COLORS = [
   "hsl(var(--primary))",
@@ -428,11 +429,12 @@ export function ManagerDashboard() {
 
       {/* TABS */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="bg-muted/50">
+        <TabsList className="bg-muted/50 flex-wrap h-auto gap-1">
           <TabsTrigger value="overview" className="gap-1.5"><TrendingUp className="h-3.5 w-3.5" /> Overview</TabsTrigger>
           <TabsTrigger value="marketing" className="gap-1.5"><Megaphone className="h-3.5 w-3.5" /> Marketing</TabsTrigger>
           <TabsTrigger value="pipeline" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> Pipeline</TabsTrigger>
           <TabsTrigger value="team" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Team</TabsTrigger>
+          <TabsTrigger value="engagement" className="gap-1.5"><Trophy className="h-3.5 w-3.5" /> Live Engagement</TabsTrigger>
         </TabsList>
 
         {/* OVERVIEW */}
@@ -693,6 +695,11 @@ export function ManagerDashboard() {
               <p className="text-xs text-muted-foreground">Avg Calls/Agent</p>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* LIVE ENGAGEMENT */}
+        <TabsContent value="engagement" className="space-y-4">
+          <TeamEngagement />
         </TabsContent>
       </Tabs>
     </div>
