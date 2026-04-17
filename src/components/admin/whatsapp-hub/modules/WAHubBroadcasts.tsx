@@ -1465,14 +1465,130 @@ function EventTriggers() {
   );
 }
 
+// ─── Campaign Detail Drawer (per-recipient live Meta status) ───
+function CampaignDetailDrawer({ campaignId, onClose }: { campaignId: string | null; onClose: () => void }) {
+  const open = !!campaignId;
+  const { data: campaign, refetch: refetchCampaign, isFetching: fetchingC } = useQuery({
+    queryKey: ["broadcast-detail", campaignId],
+    queryFn: async () => {
+      if (!campaignId) return null;
+      const { data } = await supabase.from("wa_campaigns").select("*").eq("id", campaignId).single();
+      return data;
+    },
+    enabled: open,
+    refetchInterval: open ? 8000 : false,
+  });
+
+  const { data: logs, refetch: refetchLogs, isFetching: fetchingL } = useQuery({
+    queryKey: ["broadcast-detail-logs", campaignId],
+    queryFn: async () => {
+      if (!campaignId) return [];
+      const { data } = await supabase
+        .from("wa_message_logs")
+        .select("id, phone, status, error_message, created_at, delivered_at, read_at, message_id")
+        .eq("campaign_id", campaignId)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      return data || [];
+    },
+    enabled: open,
+    refetchInterval: open ? 8000 : false,
+  });
+
+  const counts = {
+    sent: (logs || []).filter((l: any) => ["sent", "delivered", "read"].includes(l.status)).length,
+    delivered: (logs || []).filter((l: any) => ["delivered", "read"].includes(l.status)).length,
+    read: (logs || []).filter((l: any) => l.status === "read").length,
+    failed: (logs || []).filter((l: any) => l.status === "failed").length,
+  };
+
+  const statusColor = (s: string) => {
+    if (s === "read") return "bg-blue-500/15 text-blue-600";
+    if (s === "delivered") return "bg-green-500/15 text-green-600";
+    if (s === "sent") return "bg-amber-500/15 text-amber-600";
+    if (s === "failed") return "bg-destructive/15 text-destructive";
+    return "bg-muted text-muted-foreground";
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="flex items-center justify-between gap-2 pr-6">
+            <span className="truncate">{campaign?.name || "Campaign"}</span>
+            <Button size="sm" variant="outline" className="gap-1 h-7" onClick={() => { refetchCampaign(); refetchLogs(); }}>
+              <RefreshCw className={`h-3 w-3 ${fetchingC || fetchingL ? "animate-spin" : ""}`} /> Live Refresh
+            </Button>
+          </SheetTitle>
+        </SheetHeader>
+
+        <div className="space-y-3 mt-4">
+          {/* Live counts pulled from Meta-synced logs */}
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: "Sent", value: counts.sent, color: "text-amber-600" },
+              { label: "Delivered", value: counts.delivered, color: "text-green-600" },
+              { label: "Read", value: counts.read, color: "text-blue-600" },
+              { label: "Failed", value: counts.failed, color: "text-destructive" },
+            ].map((s) => (
+              <Card key={s.label} className="p-2 text-center">
+                <p className="text-[10px] text-muted-foreground">{s.label}</p>
+                <p className={`text-lg font-bold ${s.color}`}>{s.value.toLocaleString()}</p>
+              </Card>
+            ))}
+          </div>
+
+          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <RefreshCw className="h-3 w-3" /> Auto-refreshing every 8s — Meta webhook updates land here in real time.
+          </div>
+
+          {/* Per-recipient table */}
+          <Card>
+            <CardContent className="p-0">
+              <ScrollArea className="h-[55vh]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Phone</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-xs">Delivered</TableHead>
+                      <TableHead className="text-xs">Read</TableHead>
+                      <TableHead className="text-xs">Error</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(logs || []).length === 0 ? (
+                      <TableRow><TableCell colSpan={5} className="text-center py-8 text-xs text-muted-foreground">No per-recipient logs yet</TableCell></TableRow>
+                    ) : (logs || []).map((l: any) => (
+                      <TableRow key={l.id}>
+                        <TableCell className="font-mono text-[11px]">{l.phone}</TableCell>
+                        <TableCell><Badge className={`text-[9px] ${statusColor(l.status)}`}>{l.status || "queued"}</Badge></TableCell>
+                        <TableCell className="text-[10px] text-muted-foreground">{l.delivered_at ? formatDistanceToNow(new Date(l.delivered_at), { addSuffix: true }) : "—"}</TableCell>
+                        <TableCell className="text-[10px] text-muted-foreground">{l.read_at ? formatDistanceToNow(new Date(l.read_at), { addSuffix: true }) : "—"}</TableCell>
+                        <TableCell className="text-[10px] text-destructive line-clamp-1 max-w-[180px]">{l.error_message || ""}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 // ─── Campaign History Tab ───
 function CampaignHistory() {
-  const { data: campaigns } = useQuery({
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const { data: campaigns, refetch, isFetching } = useQuery({
     queryKey: ["broadcast-history"],
     queryFn: async () => {
       const { data } = await supabase.from("wa_campaigns").select("*").eq("channel", "whatsapp").order("created_at", { ascending: false }).limit(50);
       return data || [];
     },
+    refetchInterval: 15000,
   });
 
   const getStatusBadge = (status: string) => {
@@ -1489,54 +1605,72 @@ function CampaignHistory() {
   };
 
   return (
-    <Card>
-      <CardContent className="p-0">
-        <ScrollArea className="h-[60vh]">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Campaign</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Sent</TableHead>
-                <TableHead className="text-right">Delivered</TableHead>
-                <TableHead className="text-right">Read</TableHead>
-                <TableHead className="text-right">Failed</TableHead>
-                <TableHead>Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(campaigns || []).length === 0 ? (
+    <>
+      <Card>
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-sm flex items-center gap-2"><HistoryIcon className="h-4 w-4 text-violet-500" /> Campaign History — Live Meta Analytics</CardTitle>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Per-row click karein full per-recipient delivery log dekhne ke liye.</p>
+          </div>
+          <Button size="sm" variant="outline" className="gap-1 h-7" onClick={() => refetch()}>
+            <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} /> Refresh
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ScrollArea className="h-[60vh]">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">No campaigns yet</TableCell>
+                  <TableHead>Campaign</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Sent</TableHead>
+                  <TableHead className="text-right">Delivered</TableHead>
+                  <TableHead className="text-right">Read</TableHead>
+                  <TableHead className="text-right">Failed</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
-              ) : (campaigns || []).map((c: any) => {
-                const total = (c.total_sent || 0) + (c.total_failed || 0) || 1;
-                const delRate = Math.round(((c.total_delivered || 0) / total) * 100);
-                return (
-                  <TableRow key={c.id}>
-                    <TableCell>
-                      <p className="font-medium text-sm">{c.name}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-1">{c.message_content?.slice(0, 50)}</p>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(c.status)}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">{(c.total_sent || 0).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">
-                      <span className="font-mono text-sm">{(c.total_delivered || 0).toLocaleString()}</span>
-                      <span className="text-[10px] text-muted-foreground ml-1">({delRate}%)</span>
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-sm">{(c.total_read || 0).toLocaleString()}</TableCell>
-                    <TableCell className="text-right font-mono text-sm text-destructive">{(c.total_failed || 0).toLocaleString()}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {c.created_at ? formatDistanceToNow(new Date(c.created_at), { addSuffix: true }) : "-"}
-                    </TableCell>
+              </TableHeader>
+              <TableBody>
+                {(campaigns || []).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">No campaigns yet</TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+                ) : (campaigns || []).map((c: any) => {
+                  const total = (c.total_sent || 0) + (c.total_failed || 0) || 1;
+                  const delRate = Math.round(((c.total_delivered || 0) / total) * 100);
+                  return (
+                    <TableRow key={c.id} className="cursor-pointer hover:bg-muted/40" onClick={() => setDetailId(c.id)}>
+                      <TableCell>
+                        <p className="font-medium text-sm">{c.name}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1">{c.message_content?.slice(0, 50)}</p>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(c.status)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">{(c.total_sent || 0).toLocaleString()}</TableCell>
+                      <TableCell className="text-right">
+                        <span className="font-mono text-sm">{(c.total_delivered || 0).toLocaleString()}</span>
+                        <span className="text-[10px] text-muted-foreground ml-1">({delRate}%)</span>
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">{(c.total_read || 0).toLocaleString()}</TableCell>
+                      <TableCell className="text-right font-mono text-sm text-destructive">{(c.total_failed || 0).toLocaleString()}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {c.created_at ? formatDistanceToNow(new Date(c.created_at), { addSuffix: true }) : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Button size="sm" variant="ghost" className="h-7 gap-1 text-[11px]" onClick={(e) => { e.stopPropagation(); setDetailId(c.id); }}>
+                          <Eye className="h-3 w-3" /> Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+      <CampaignDetailDrawer campaignId={detailId} onClose={() => setDetailId(null)} />
+    </>
   );
 }
 
