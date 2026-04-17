@@ -89,7 +89,7 @@ function mapInboxStatus(message: {
   return message.status || "received";
 }
 
-export function OmniChatPanel({ phone, email, context, initialMessage, initialName }: OmniChatPanelProps) {
+export function OmniChatPanel({ phone, email, context, initialMessage, initialName, allowedPhones, scopeLabel }: OmniChatPanelProps) {
   const { toast } = useToast();
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [selectedThread, setSelectedThread] = useState<ChatThread | null>(null);
