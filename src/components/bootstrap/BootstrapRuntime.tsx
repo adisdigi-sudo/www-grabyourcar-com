@@ -150,7 +150,7 @@ const ensureDevPreviewReconnectOverlay = (status: Exclude<DevServerStatus, "idle
     overlay.style.padding = "24px";
     overlay.style.background = "hsl(var(--background) / 0.96)";
     overlay.style.backdropFilter = "blur(10px)";
-    overlay.style.webkitBackdropFilter = "blur(10px)";
+    overlay.style.setProperty("-webkit-backdrop-filter", "blur(10px)");
     overlay.innerHTML = `
       <style>
         @keyframes lovable-dev-preview-spin {
