@@ -410,28 +410,57 @@ serve(async (req) => {
         components.push({ type: "BUTTONS", buttons: template.buttons });
       }
 
-      const metaPayload = {
-        name: template.name,
-        language: template.language || "en",
-        category: (template.category || "UTILITY").toUpperCase(),
-        components,
+      // Strip internal markers before sending to Meta (only used for fallback logic)
+      const stripMarkers = (comps: any[]) => comps.map((c) => {
+        const { __mediaUrl, __mediaType, ...rest } = c || {};
+        return rest;
+      });
+
+      const mediaHeader = components.find((c) => c?.__mediaUrl);
+
+      const submitToMeta = async (comps: any[]) => {
+        const payload = {
+          name: template.name,
+          language: template.language || "en",
+          category: (template.category || "UTILITY").toUpperCase(),
+          components: stripMarkers(comps),
+        };
+        console.log("Submitting to Meta:", JSON.stringify(payload));
+        const r = await fetch(
+          `https://graph.facebook.com/v25.0/${wabaId}/message_templates`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` },
+            body: JSON.stringify(payload),
+          },
+        );
+        return await r.json();
       };
 
-      console.log("Submitting to Meta:", JSON.stringify(metaPayload));
+      let result = await submitToMeta(components);
 
-      const resp = await fetch(
-        `https://graph.facebook.com/v25.0/${wabaId}/message_templates`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
-          },
-          body: JSON.stringify(metaPayload),
+      // Auto-fallback: if Meta rejects the public URL header, retry with uploaded handle
+      if (result?.error && mediaHeader) {
+        const errMsg: string = result.error.error_user_msg || result.error.message || "";
+        const looksLikeMediaIssue = /sample|example|header|handle|media|video|image|document|format|fetch|download/i.test(errMsg);
+        if (looksLikeMediaIssue) {
+          console.log("Meta rejected URL header, retrying via Resumable Upload...", errMsg);
+          const mimeHint = mediaHeader.__mediaType === "video" ? "video/mp4"
+            : mediaHeader.__mediaType === "image" ? "image/jpeg"
+            : "application/pdf";
+          const { handle, error: upErr } = await uploadMediaToMeta(mediaHeader.__mediaUrl, mimeHint);
+          if (handle) {
+            const retryComps = components.map((c) =>
+              c?.__mediaUrl
+                ? { type: "HEADER", format: String(mediaHeader.__mediaType).toUpperCase(), example: { header_handle: [handle] } }
+                : c,
+            );
+            result = await submitToMeta(retryComps);
+          } else {
+            console.log("Resumable upload also failed:", upErr);
+          }
         }
-      );
-
-      const result = await resp.json();
+      }
 
       if (result.error) {
         const metaErrMsg = result.error.error_user_msg || result.error.message || "Meta rejected this template";
