@@ -701,16 +701,16 @@ function VerticalPasswordManager({ verticals }: { verticals: BusinessVertical[] 
   const [saving, setSaving] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch current passwords
+  // Fetch current passwords via admin-only edge function
+  // (vertical_password column is server-side only; not readable by client SDK).
   const { data: verticalData = [], isLoading } = useQuery({
     queryKey: ["vertical-passwords-admin"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("business_verticals")
-        .select("id, name, slug, vertical_password")
-        .eq("is_active", true)
-        .order("sort_order");
-      return data || [];
+      const { data, error } = await supabase.functions.invoke("admin-vertical-password", {
+        body: { action: "list" },
+      });
+      if (error) throw error;
+      return (data?.verticals || []) as any[];
     },
   });
 
@@ -725,10 +725,9 @@ function VerticalPasswordManager({ verticals }: { verticals: BusinessVertical[] 
   const handleSave = async (verticalId: string) => {
     setSaving(verticalId);
     const pw = passwords[verticalId]?.trim() || null;
-    const { error } = await supabase
-      .from("business_verticals")
-      .update({ vertical_password: pw })
-      .eq("id", verticalId);
+    const { error } = await supabase.functions.invoke("admin-vertical-password", {
+      body: { action: "set", vertical_id: verticalId, password: pw },
+    });
 
     if (error) {
       toast.error("Failed to update password");
