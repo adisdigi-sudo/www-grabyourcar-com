@@ -193,6 +193,8 @@ const navItems: NavItem[] = [
   { id: "auto-pilot", label: "🚀 Auto-Pilot", icon: Sparkles, badge: "AI",
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin"] },
+  { id: "templates-hub", label: "📝 Templates Hub", icon: MessageCircle, badge: "🔥",
+    allowedRoles: ["super_admin", "admin"] },
   { id: "lead-routing", label: "🔀 Lead Routing", icon: Users, badge: "New",
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin"] },

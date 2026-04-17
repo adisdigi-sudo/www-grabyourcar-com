@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBoundary";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
+import { TemplatesHub } from "@/components/admin/templates-hub/TemplatesHub";
 import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
 import { LoanCRMDashboard } from "@/components/admin/LoanCRMDashboard";
 import { NotificationCenter } from "@/components/admin/NotificationCenter";
@@ -302,7 +303,7 @@ const VALID_ADMIN_TABS = new Set([
   "open-api-portal", "integrations-whatsapp", "marketing-templates", "marketing-automation", "integrations-shipping",
   "integrations-payments", "integrations-ad-tracking", "profile-business", "profile-logo", "profile-users", "profile-contact",
   "profile-otp", "roles", "team-management", "settings", "calling-system", "manager-dashboard", "team-engagement",
-  "error-prevention", "workflow-engine", "automation-center", "auto-pilot", "lead-routing", "dealer-inquiry", "dealer-companies",
+  "error-prevention", "workflow-engine", "automation-center", "auto-pilot", "lead-routing", "templates-hub", "dealer-inquiry", "dealer-companies",
   "dealer-reps", "dealer-inventory", "dealer-broadcast", "accounts-dashboard", "accounts-invoices", "accounts-expenses",
   "accounts-bills", "accounts-banking", "accounts-chart", "accounts-journal", "accounts-reports", "accounts-documents",
   "hr-core", "hr-recruitment", "hr-workforce", "hr-attendance", "hr-payroll", "hr-expense", "hr-performance", "hr-engagement",
@@ -878,6 +879,8 @@ const AdminLayout = () => {
         return <AutoPilotDashboard />;
       case "lead-routing":
         return <LeadRoutingManager />;
+      case "templates-hub":
+        return <TemplatesHub />;
       case "dealer-inquiry":
         return <DealerManagement initialTab="inquiry" />;
       case "dealer-companies":
