@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { performSafePreviewReload } from "@/lib/chunkLoadRecovery";
 import { withPreviewParams } from "@/lib/previewRouting";
+import { removeStartupShell } from "@/lib/startupShell";
 
 const iconMap: Record<string, React.ElementType> = {
   Shield,
@@ -37,6 +38,7 @@ const WorkspaceSelector = () => {
   const [passwordTarget, setPasswordTarget] = useState<BusinessVertical | null>(null);
   const [bootstrapTimedOut, setBootstrapTimedOut] = useState(false);
   const isBootstrapping = !authInitialized || authLoading || verticalLoading;
+  const shouldRevealWorkspaceUi = !isBootstrapping || bootstrapTimedOut;
 
   useEffect(() => {
     if (!isBootstrapping) {
@@ -90,6 +92,20 @@ const WorkspaceSelector = () => {
     }
   }, [user, authLoading, authInitialized, navigate]);
 
+  useEffect(() => {
+    if (!shouldRevealWorkspaceUi) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      removeStartupShell();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [shouldRevealWorkspaceUi, sortedVerticals.length, user?.id]);
+
   // If only 1 vertical available, auto-select it (skip password for single vertical)
   useEffect(() => {
     if (!authLoading && !verticalLoading && user && sortedVerticals.length === 1) {
@@ -130,7 +146,7 @@ const WorkspaceSelector = () => {
   if (isBootstrapping) {
     if (bootstrapTimedOut) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background px-4">
+        <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background px-4" role="main">
           <Card className="w-full max-w-lg p-8 text-center border-border/60 shadow-xl shadow-primary/5">
             <Shield className="h-12 w-12 mx-auto mb-4 text-primary" />
             <h1 className="text-2xl font-semibold text-foreground">Workspace load ruk gaya</h1>
@@ -144,21 +160,21 @@ const WorkspaceSelector = () => {
               </Button>
             </div>
           </Card>
-        </div>
+        </main>
       );
     }
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background">
+      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background" role="main">
         <Loader2 className="h-8 w-8 animate-spin text-foreground" />
-      </div>
+      </main>
     );
   }
 
   const displayName = teamMember?.display_name || user?.email?.split("@")[0] || "Admin";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex flex-col">
+    <main className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex flex-col" role="main">
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
@@ -263,7 +279,7 @@ const WorkspaceSelector = () => {
         onClose={() => setPasswordTarget(null)}
         onSuccess={handlePasswordSuccess}
       />
-    </div>
+    </main>
   );
 };
 
