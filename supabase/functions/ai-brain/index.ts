@@ -1124,6 +1124,69 @@ async function toolLookupPolicy(supabase: any, customerPhone?: string, vehicleNu
   };
 }
 
+async function toolLookupPolicyByPhone(supabase: any, customerPhone?: string) {
+  if (!customerPhone) return { found: false };
+
+  const phones = phoneVariants(customerPhone);
+
+  const { data: clients } = await supabase.from("insurance_clients")
+    .select("id, customer_name, phone, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_policy_number, current_policy_type, current_insurer, current_premium, policy_expiry_date, policy_start_date, pipeline_stage, ncb_percentage")
+    .or(phones.map(p => `phone.eq.${p}`).join(","))
+    .limit(5);
+
+  if (!clients?.length) return { found: false };
+
+  // Only auto-verify if the phone uniquely identifies ONE client.
+  // Otherwise fall back to strict Name + Car Number verification.
+  const uniqueClient = clients.length === 1;
+  if (!uniqueClient) return { found: false, uniqueClient: false };
+
+  const clientIds = clients.map((c: any) => c.id);
+  const { data: policies } = await supabase.from("insurance_policies")
+    .select("policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal, policy_document_url, document_file_name")
+    .in("client_id", clientIds)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(3);
+
+  const policyDocuments = (policies || [])
+    .filter((p: any) => Boolean(p.policy_document_url))
+    .map((p: any) => ({
+      policy_number: p.policy_number,
+      url: p.policy_document_url,
+      file_name: p.document_file_name || `${p.policy_number || "policy"}.pdf`,
+    }));
+
+  return {
+    found: true,
+    uniqueClient: true,
+    customer: clients[0].customer_name,
+    phone_verified: true,
+    vehicles: clients.map((c: any) => ({
+      vehicle: `${c.vehicle_make || ""} ${c.vehicle_model || ""}`.trim() || "N/A",
+      vehicle_number: c.vehicle_number,
+      year: c.vehicle_year,
+      policy_number: c.current_policy_number,
+      policy_type: c.current_policy_type,
+      insurer: c.current_insurer,
+      premium: c.current_premium ? `₹${c.current_premium.toLocaleString("en-IN")}` : "N/A",
+      expiry: c.policy_expiry_date,
+      ncb: c.ncb_percentage ? `${c.ncb_percentage}%` : "N/A",
+      status: c.pipeline_stage,
+    })),
+    active_policies: policies?.map((p: any) => ({
+      policy_number: p.policy_number,
+      type: p.policy_type,
+      insurer: p.insurer,
+      premium: p.premium_amount ? `₹${p.premium_amount.toLocaleString("en-IN")}` : "N/A",
+      valid_from: p.start_date,
+      valid_until: p.expiry_date,
+      renewal: p.is_renewal ? "Yes" : "No",
+    })) || [],
+    policy_documents: policyDocuments,
+  };
+}
+
 async function toolLookupInvoices(supabase: any, customerPhone?: string, invoiceType?: string) {
   if (!customerPhone) return { error: "Phone number not available." };
   
