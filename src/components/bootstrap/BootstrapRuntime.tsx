@@ -15,6 +15,7 @@ const CHUNK_RECOVERY_STATUS_EVENT = "lovable:chunk-recovery-status";
 const ROUTE_ACTIVITY_EVENT = "lovable:route-activity";
 const RUNTIME_FATAL_EVENT = "lovable:runtime-fatal";
 const STARTUP_SHELL_ID = "lovable-startup-shell";
+const DEV_PREVIEW_RECONNECT_OVERLAY_ID = "lovable-dev-preview-reconnect";
 const SENSITIVE_ROUTE_RECONNECT_HEALTH_DELAY_MS = 420;
 
 let hasTriggeredChunkRecovery = false;
@@ -22,6 +23,9 @@ let bootstrapListenersInstalled = false;
 
 const shouldUseSensitiveRouteRecovery = () =>
   isSensitivePreviewRouteWindow() && !isEmbeddedPreviewWindow() && !isLovableEditorPreviewHost();
+
+const shouldUseDevPreviewReconnectOverlay = () =>
+  import.meta.env.DEV && (isLovableEditorPreviewHost() || isEmbeddedPreviewWindow());
 
 type ChunkRecoveryAttemptResult = "recovered" | "exhausted" | "ignored";
 
@@ -129,6 +133,68 @@ const performSafeReload = () => {
   performSafePreviewReload();
 };
 
+const ensureDevPreviewReconnectOverlay = (status: Exclude<DevServerStatus, "idle" | "connected">) => {
+  if (typeof document === "undefined" || !shouldUseDevPreviewReconnectOverlay()) return;
+
+  let overlay = document.getElementById(DEV_PREVIEW_RECONNECT_OVERLAY_ID) as HTMLDivElement | null;
+
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = DEV_PREVIEW_RECONNECT_OVERLAY_ID;
+    overlay.style.position = "fixed";
+    overlay.style.inset = "0";
+    overlay.style.zIndex = "10002";
+    overlay.style.display = "flex";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    overlay.style.padding = "24px";
+    overlay.style.background = "hsl(var(--background) / 0.96)";
+    overlay.style.backdropFilter = "blur(10px)";
+    overlay.style.setProperty("-webkit-backdrop-filter", "blur(10px)");
+    overlay.innerHTML = `
+      <style>
+        @keyframes lovable-dev-preview-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      </style>
+      <div style="width:min(92vw,32rem);border:1px solid hsl(var(--border));border-radius:24px;background:hsl(var(--card));color:hsl(var(--card-foreground));box-shadow:0 24px 80px hsl(var(--foreground) / 0.12);padding:32px 28px;text-align:center;">
+        <div style="margin:0 auto 16px;display:grid;place-items:center;height:52px;width:52px;border-radius:9999px;border:3px solid hsl(var(--border));border-top-color:hsl(var(--primary));animation:lovable-dev-preview-spin 1s linear infinite;"></div>
+        <h2 data-dev-preview-title style="margin:0;font:600 1.125rem/1.4 system-ui,sans-serif;">Refreshing preview…</h2>
+        <p data-dev-preview-body style="margin:10px 0 0;color:hsl(var(--muted-foreground));font:400 0.95rem/1.6 system-ui,sans-serif;">The editor is reconnecting to the latest dev bundle so the preview does not get stuck on a white page.</p>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  }
+
+  const title = overlay.querySelector<HTMLElement>("[data-dev-preview-title]");
+  const body = overlay.querySelector<HTMLElement>("[data-dev-preview-body]");
+
+  const copy =
+    status === "disconnected"
+      ? {
+          title: "Preview reconnecting…",
+          body: "The dev server restarted, so the preview is being held on a stable loading screen instead of going blank.",
+        }
+      : status === "reloading"
+        ? {
+            title: "Applying latest changes…",
+            body: "A fresh bundle is being prepared for the preview.",
+          }
+        : {
+            title: "Reloading preview safely…",
+            body: "The latest bundle is ready, and the preview is refreshing cleanly now.",
+          };
+
+  if (title) title.textContent = copy.title;
+  if (body) body.textContent = copy.body;
+}
+
+const removeDevPreviewReconnectOverlay = () => {
+  if (typeof document === "undefined") return;
+  document.getElementById(DEV_PREVIEW_RECONNECT_OVERLAY_ID)?.remove();
+};
+
 const attemptChunkRecovery = (error: unknown, source: string): ChunkRecoveryAttemptResult => {
   if (hasTriggeredChunkRecovery || !isDynamicImportError(error)) {
     return "ignored";
@@ -165,6 +231,8 @@ const reloadAfterDevServerRestart = () => {
   try {
     const hasPendingReload = sessionStorage.getItem(DEV_SERVER_PENDING_RELOAD_KEY) === "1";
     if (!hasPendingReload) return;
+
+    ensureDevPreviewReconnectOverlay("update_ready");
 
     console.info("[BootstrapRuntime] Dev server reconnected; auto reloading clean bundle", {
       href: window.location.href,
@@ -233,6 +301,7 @@ const installBootstrapRuntime = () => {
   if (typeof window === "undefined" || bootstrapListenersInstalled) return;
 
   bootstrapListenersInstalled = true;
+  removeDevPreviewReconnectOverlay();
   installRouteActivityListeners();
   dispatchRouteActivity();
 
@@ -286,6 +355,7 @@ const installBootstrapRuntime = () => {
   if (import.meta.hot) {
     import.meta.hot.on("vite:ws:disconnect", () => {
       markDevServerPendingReload();
+      ensureDevPreviewReconnectOverlay("disconnected");
       window.dispatchEvent(
         new CustomEvent(DEV_SERVER_STATUS_EVENT, {
           detail: { status: "disconnected" as const },
@@ -294,6 +364,10 @@ const installBootstrapRuntime = () => {
     });
 
     import.meta.hot.on("vite:ws:connect", () => {
+      if (shouldUseDevPreviewReconnectOverlay()) {
+        ensureDevPreviewReconnectOverlay("update_ready");
+      }
+
       window.dispatchEvent(
         new CustomEvent(DEV_SERVER_STATUS_EVENT, {
           detail: { status: "connected" as const },
@@ -311,6 +385,7 @@ const installBootstrapRuntime = () => {
 
     import.meta.hot.on("vite:beforeFullReload", () => {
       markDevServerPendingReload();
+      ensureDevPreviewReconnectOverlay("reloading");
       window.dispatchEvent(
         new CustomEvent(DEV_SERVER_STATUS_EVENT, {
           detail: { status: "update_ready" as const },
@@ -626,6 +701,7 @@ installBootstrapRuntime();
 export const BootstrapRuntime = ({ onReady }: { onReady?: () => void }) => {
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
+      removeDevPreviewReconnectOverlay();
       onReady?.();
     });
 
