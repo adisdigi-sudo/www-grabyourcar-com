@@ -19,6 +19,7 @@ import {
 } from "recharts";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
 import { motion } from "framer-motion";
+import TeamEngagement from "./TeamEngagement";
 
 const CHART_COLORS = [
   "hsl(var(--primary))",
