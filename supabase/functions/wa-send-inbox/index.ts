@@ -409,11 +409,32 @@ serve(async (req) => {
     });
 
     if (success && !costSaved && message_type === "template" && template_name) {
-      await supabase.rpc("increment_counter", { table_name: "wa_templates", column_name: "sent_count", row_id_column: "name", row_id_value: template_name }).catch(() => {
-        supabase.from("wa_templates").select("id, sent_count").eq("name", template_name).single().then(({ data: t }) => {
-          if (t) supabase.from("wa_templates").update({ sent_count: (t.sent_count || 0) + 1, last_sent_at: new Date().toISOString() }).eq("id", t.id);
+      try {
+        const { error: rpcError } = await supabase.rpc("increment_counter", {
+          table_name: "wa_templates",
+          column_name: "sent_count",
+          row_id_column: "name",
+          row_id_value: template_name,
         });
-      });
+        if (rpcError) throw rpcError;
+      } catch (incErr) {
+        console.warn("[wa-send-inbox] increment_counter rpc unavailable, falling back to manual update", incErr);
+        try {
+          const { data: t } = await supabase
+            .from("wa_templates")
+            .select("id, sent_count")
+            .eq("name", template_name)
+            .single();
+          if (t) {
+            await supabase
+              .from("wa_templates")
+              .update({ sent_count: (t.sent_count || 0) + 1, last_sent_at: new Date().toISOString() })
+              .eq("id", t.id);
+          }
+        } catch (fallbackErr) {
+          console.warn("[wa-send-inbox] manual template counter update failed", fallbackErr);
+        }
+      }
     }
 
     return jsonResponse({
