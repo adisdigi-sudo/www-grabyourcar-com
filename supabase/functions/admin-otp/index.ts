@@ -19,6 +19,15 @@ function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+// SHA-256 hex hash — used so plaintext OTPs are never stored in the database
+async function hashOTP(otp: string): Promise<string> {
+  const data = new TextEncoder().encode(otp.trim());
+  const buf = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -86,17 +95,18 @@ serve(async (req) => {
         .delete()
         .eq("user_id", userId);
 
-      // Generate new OTP
+      // Generate new OTP (sent via email in plaintext, stored as hash)
       const newOtp = generateOTP();
+      const newOtpHash = await hashOTP(newOtp);
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-      // Store OTP in database
+      // Store HASHED OTP in database — plaintext is never persisted
       const { error: insertError } = await supabase
         .from("admin_otps")
         .insert({
           user_id: userId,
           email: email,
-          otp_code: newOtp,
+          otp_code: newOtpHash,
           expires_at: expiresAt.toISOString(),
         });
 
@@ -202,8 +212,9 @@ serve(async (req) => {
         );
       }
 
-      // Verify OTP
-      if (storedOtp.otp_code !== otp.trim()) {
+      // Verify OTP using constant-time-ish hash comparison
+      const providedHash = await hashOTP(otp);
+      if (storedOtp.otp_code !== providedHash) {
         // Increment attempts
         await supabase
           .from("admin_otps")
