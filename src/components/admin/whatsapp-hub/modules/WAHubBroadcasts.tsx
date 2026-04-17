@@ -20,9 +20,10 @@ import {
   Users, MessageSquare, Send, ArrowRight, Timer, Target,
   TrendingUp, Calendar, Layers, GripVertical, RefreshCw,
   Globe, PhoneCall, Reply, Video, Image, FileText, X,
-  Upload, FileUp, Quote,
+  Upload, FileUp, Quote, Sparkles, History as HistoryIcon, ChevronRight,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 // ─── Types ───
 interface CampaignButton {
