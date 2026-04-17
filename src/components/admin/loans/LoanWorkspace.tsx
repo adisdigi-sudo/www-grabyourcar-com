@@ -28,6 +28,7 @@ import {
   BookOpen, HeartHandshake, Wrench, BarChart3, Filter, X, MessageSquare
 } from "lucide-react";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
+import { VerticalMessagingTab } from "../shared/VerticalMessagingTab";
 import { UnifiedSalesCalculator } from "../shared/UnifiedSalesCalculator";
 import { StageNotificationBanner, buildLoanNotifications } from "../shared/StageNotificationBanner";
 import {
