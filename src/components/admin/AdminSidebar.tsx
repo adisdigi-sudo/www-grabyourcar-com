@@ -90,7 +90,7 @@ const navItems: NavItem[] = [
       { id: "services-api-partners", label: "🔗 API Partners", icon: Globe, verticals: ["rental"], allowedRoles: ["super_admin", "admin"] },
       { id: "services-insurance", label: "🛡️ Insurance CRM", icon: FileText, verticals: ["insurance"], allowedRoles: ["super_admin", "admin", "insurance"] },
       { id: "services-insurance-import", label: "📥 Insurance Import", icon: Database, verticals: ["insurance"], allowedRoles: ["super_admin", "admin", "insurance"] },
-      { id: "services-messaging-channels", label: "📡 Messaging & Channels", icon: Globe, verticals: ["sales", "rental", "hsrp", "loans", "accessories"], allowedRoles: ["super_admin", "admin"] },
+      { id: "services-messaging-channels", label: "📡 Messaging & Channels", icon: Globe, verticals: [], allowedRoles: ["super_admin", "admin"] },
       { id: "services-loans-pipeline", label: "💰 Loan Pipeline", icon: CreditCard, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
       { id: "services-loans-disbursement", label: "📘 Disbursement Book", icon: FileText, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
       { id: "services-loans-after-sales", label: "🤝 After Sales", icon: Users, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },

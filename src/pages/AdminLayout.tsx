@@ -365,15 +365,14 @@ const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
         "services-emi-calculator",
         "services-emi-pdf",
         "services-quote-generator",
-        "services-messaging-channels",
         "d2c-inbox",
       ].includes(tab);
     case "sales":
-      return ["sales-crm", "services-discounts", "services-quote-generator", "services-messaging-channels", "d2c-inbox"].includes(tab);
+      return ["sales-crm", "services-discounts", "services-quote-generator", "d2c-inbox"].includes(tab);
     case "rental":
-      return ["rental-crm", "services-rentals", "services-driver-bookings", "services-api-partners", "services-messaging-channels", "d2c-inbox"].includes(tab);
+      return ["rental-crm", "services-rentals", "services-driver-bookings", "services-api-partners", "d2c-inbox"].includes(tab);
     case "hsrp":
-      return ["hsrp-crm", "services-hsrp", "services-messaging-channels", "d2c-inbox"].includes(tab);
+      return ["hsrp-crm", "services-hsrp", "d2c-inbox"].includes(tab);
     case "accessories":
       return [
         "ecommerce-accessories",
@@ -383,7 +382,6 @@ const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
         "d2c-returns",
         "d2c-checkout",
         "d2c-inbox",
-        "services-messaging-channels",
       ].includes(tab);
     case "marketing":
       return [
