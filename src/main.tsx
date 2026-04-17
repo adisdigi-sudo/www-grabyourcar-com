@@ -7,6 +7,7 @@ import { BootstrapRuntime } from "@/components/bootstrap/BootstrapRuntime";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { installSensitiveRouteReloadGuard } from "@/lib/devReloadGuard";
 import { ensureAppRootElement } from "@/lib/ensureAppRoot";
+import { shouldStabilizeStartupShellWindow } from "@/lib/adminPreviewStability";
 import {
   ensureStartupShell,
   installStartupShellHealthMonitor,
@@ -15,8 +16,10 @@ import {
 
 try {
   installSensitiveRouteReloadGuard();
-  installStartupShellHealthMonitor();
-  ensureStartupShell();
+  if (shouldStabilizeStartupShellWindow()) {
+    installStartupShellHealthMonitor();
+    ensureStartupShell();
+  }
 
   if (window.location.hostname.endsWith(".lovable.app")) {
     const existingNoindex = document.querySelector('meta[name="robots"]');
