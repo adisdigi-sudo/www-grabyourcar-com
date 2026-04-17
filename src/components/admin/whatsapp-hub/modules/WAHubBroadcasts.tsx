@@ -20,9 +20,10 @@ import {
   Users, MessageSquare, Send, ArrowRight, Timer, Target,
   TrendingUp, Calendar, Layers, GripVertical, RefreshCw,
   Globe, PhoneCall, Reply, Video, Image, FileText, X,
-  Upload, FileUp, Quote,
+  Upload, FileUp, Quote, Sparkles, History as HistoryIcon, ChevronRight,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 // ─── Types ───
 interface CampaignButton {
@@ -571,6 +572,8 @@ type WizardStep = 1 | 2 | 3 | 4;
 function OneShotBroadcast() {
   const qc = useQueryClient();
   const [step, setStep] = useState<WizardStep>(1);
+  // mode: 'approved' = pick existing approved template & skip to Step 3 ; 'build' = build & submit new
+  const [mode, setMode] = useState<"approved" | "build">("approved");
   const [form, setForm] = useState({
     name: "", message: "", template_id: "", template_name: "", template_status: "",
     batch_size: 50, header_type: "none" as string, header_content: "", footer: "",
@@ -586,10 +589,49 @@ function OneShotBroadcast() {
   const { data: templates, refetch: refetchTemplates } = useQuery({
     queryKey: ["broadcast-templates-all"],
     queryFn: async () => {
-      const { data } = await supabase.from("wa_templates").select("id, name, body, status, header_type, header_content, footer, buttons, category").order("created_at", { ascending: false });
+      const { data } = await supabase.from("wa_templates").select("id, name, display_name, body, status, header_type, header_content, footer, buttons, category, language, created_at").order("created_at", { ascending: false });
       return data || [];
     },
     refetchInterval: step === 2 ? 10000 : false,
+  });
+
+  const approvedTemplates = (templates || []).filter((t: any) => t.status === "approved");
+
+  // Pick an approved template → autofill form & jump to Step 3
+  const pickApprovedTemplate = (tplId: string) => {
+    const t: any = (templates || []).find((x: any) => x.id === tplId);
+    if (!t) return;
+    setForm({
+      name: t.display_name || t.name,
+      message: t.body || "",
+      template_id: t.id,
+      template_name: t.name,
+      template_status: t.status,
+      batch_size: 50,
+      header_type: t.header_type || "none",
+      header_content: t.header_type === "text" ? (t.header_content || "") : "",
+      footer: t.footer || "",
+      buttons: Array.isArray(t.buttons) ? t.buttons : [],
+      media_url: t.header_type && t.header_type !== "text" && t.header_type !== "none" ? (t.header_content || "") : "",
+      variable_samples: [],
+      send_quote: false,
+    });
+    setRecipients(null); setExcelMissing([]); setTestPhone(""); setTestSent(false);
+    setStep(3);
+    toast.success(`✅ Template "${t.display_name || t.name}" selected. Ab recipients upload karo.`);
+  };
+
+  // Past recipient lists from previous campaigns (for re-use)
+  const { data: pastLists } = useQuery({
+    queryKey: ["broadcast-past-recipient-lists"],
+    queryFn: async () => {
+      const { data } = await supabase.from("wa_campaigns")
+        .select("id, name, created_at, metadata, total_sent")
+        .eq("channel", "whatsapp")
+        .order("created_at", { ascending: false })
+        .limit(30);
+      return (data || []).filter((c: any) => Array.isArray(c?.metadata?.excel_recipients) && c.metadata.excel_recipients.length > 0);
+    },
   });
 
   const submitTemplateMutation = useMutation({
@@ -732,66 +774,135 @@ function OneShotBroadcast() {
           {step === 1 && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2"><Megaphone className="h-4 w-4 text-green-600" /> Step 1: Build Your Template</CardTitle>
+                <CardTitle className="text-sm flex items-center gap-2"><Megaphone className="h-4 w-4 text-green-600" /> Step 1: Choose or Build Template</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Campaign / Template Name *</Label>
-                  <Input placeholder="e.g., Diwali Loan Offer 2026" value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} className="h-8 text-sm" />
-                  <p className="text-[9px] text-muted-foreground">Template name: <span className="font-mono">{form.name.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 60) || "template_name"}</span></p>
+                {/* Mode toggle */}
+                <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setMode("approved")}
+                    className={`text-xs font-semibold py-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${mode === "approved" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" /> Use Approved Template
+                    <Badge variant="secondary" className="text-[9px] ml-1">{approvedTemplates.length}</Badge>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("build")}
+                    className={`text-xs font-semibold py-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${mode === "build" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Build New Template
+                  </button>
                 </div>
 
-                <div className="space-y-1.5 border rounded-lg p-3 bg-muted/20">
-                  <Label className="text-xs font-semibold">Header (optional)</Label>
-                  <Select value={form.header_type} onValueChange={(v) => setForm(p => ({ ...p, header_type: v, header_content: "", media_url: "" }))}>
-                    <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      <SelectItem value="text">📝 Text</SelectItem>
-                      <SelectItem value="image">🖼️ Image</SelectItem>
-                      <SelectItem value="video">🎬 Video (up to 1 min)</SelectItem>
-                      <SelectItem value="document">📄 Document (PDF)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {form.header_type === "text" && (
-                    <Input value={form.header_content} onChange={e => setForm(p => ({ ...p, header_content: e.target.value }))} placeholder="Header text (max 60 chars)" className="h-8 text-sm" maxLength={60} />
-                  )}
-                  {(form.header_type === "image" || form.header_type === "video" || form.header_type === "document") && (
-                    <MediaUploader headerType={form.header_type} mediaUrl={form.media_url} onUrlChange={(url) => setForm(p => ({ ...p, media_url: url }))} onFileUploaded={(url) => setForm(p => ({ ...p, media_url: url }))} />
-                  )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Message Body *</Label>
-                  <Textarea placeholder="Hello {{customer_name}}! Your {{car_model}} loan is approved..." value={form.message} onChange={(e) => setForm(p => ({ ...p, message: e.target.value }))} rows={5} className="text-sm" />
-                  <div className="flex items-center gap-1 flex-wrap">
-                    <span className="text-[10px] text-muted-foreground mr-1">Insert variable:</span>
-                    {BROADCAST_VARS.map((v) => (
-                      <Button key={v.key} variant="outline" size="sm" className="h-5 text-[9px] px-1.5" onClick={() => insertVariable(v.key)}>{`{{${v.label}}}`}</Button>
-                    ))}
+                {mode === "approved" && (
+                  <div className="space-y-2">
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2.5 text-xs text-green-700 dark:text-green-400 flex items-start gap-2">
+                      <Check className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <span>Approved template select karo → seedha <b>recipients upload</b> aur <b>send</b>. Meta approval skip — already approved hai.</span>
+                    </div>
+                    {approvedTemplates.length === 0 ? (
+                      <div className="border border-dashed rounded-lg p-6 text-center text-xs text-muted-foreground">
+                        Koi approved template nahi mila. <button className="underline text-primary" onClick={() => setMode("build")}>Build New Template</button> use karo.
+                      </div>
+                    ) : (
+                      <ScrollArea className="h-[420px] pr-2">
+                        <div className="space-y-1.5">
+                          {approvedTemplates.map((t: any) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => pickApprovedTemplate(t.id)}
+                              className="w-full text-left border rounded-lg p-2.5 hover:bg-muted/50 hover:border-primary transition-all group"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-sm font-semibold truncate">{t.display_name || t.name}</p>
+                                    <Badge className="bg-green-500 text-white text-[9px]">approved</Badge>
+                                    {t.header_type && t.header_type !== "none" && (
+                                      <Badge variant="outline" className="text-[9px] capitalize">
+                                        {t.header_type === "video" ? "🎬" : t.header_type === "image" ? "🖼️" : t.header_type === "document" ? "📄" : "📝"} {t.header_type}
+                                      </Badge>
+                                    )}
+                                    <Badge variant="outline" className="text-[9px] uppercase">{t.language || "en"}</Badge>
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground font-mono truncate mt-0.5">{t.name}</p>
+                                  <p className="text-[11px] text-muted-foreground line-clamp-2 mt-1">{t.body}</p>
+                                </div>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0" />
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
                   </div>
-                </div>
+                )}
 
-                <VariableSampleEditor body={form.message} samples={form.variable_samples} onChange={(s) => setForm(p => ({ ...p, variable_samples: s }))} />
+                {mode === "build" && (
+                  <>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Campaign / Template Name *</Label>
+                      <Input placeholder="e.g., Diwali Loan Offer 2026" value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} className="h-8 text-sm" />
+                      <p className="text-[9px] text-muted-foreground">Template name: <span className="font-mono">{form.name.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 60) || "template_name"}</span></p>
+                    </div>
 
-                <div className="space-y-1 border rounded-lg p-3 bg-muted/20">
-                  <Label className="text-xs font-semibold">Footer (optional, max 60 chars)</Label>
-                  <Input value={form.footer} onChange={e => setForm(p => ({ ...p, footer: e.target.value }))} placeholder="e.g., GrabYourCar.com | Reply STOP to opt-out" className="h-8 text-sm" maxLength={60} />
-                </div>
+                    <div className="space-y-1.5 border rounded-lg p-3 bg-muted/20">
+                      <Label className="text-xs font-semibold">Header (optional)</Label>
+                      <Select value={form.header_type} onValueChange={(v) => setForm(p => ({ ...p, header_type: v, header_content: "", media_url: "" }))}>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="text">📝 Text</SelectItem>
+                          <SelectItem value="image">🖼️ Image</SelectItem>
+                          <SelectItem value="video">🎬 Video (up to 1 min)</SelectItem>
+                          <SelectItem value="document">📄 Document (PDF)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {form.header_type === "text" && (
+                        <Input value={form.header_content} onChange={e => setForm(p => ({ ...p, header_content: e.target.value }))} placeholder="Header text (max 60 chars)" className="h-8 text-sm" maxLength={60} />
+                      )}
+                      {(form.header_type === "image" || form.header_type === "video" || form.header_type === "document") && (
+                        <MediaUploader headerType={form.header_type} mediaUrl={form.media_url} onUrlChange={(url) => setForm(p => ({ ...p, media_url: url }))} onFileUploaded={(url) => setForm(p => ({ ...p, media_url: url }))} />
+                      )}
+                    </div>
 
-                <CampaignButtonEditor buttons={form.buttons} onChange={(b) => setForm(p => ({ ...p, buttons: b }))} />
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Message Body *</Label>
+                      <Textarea placeholder="Hello {{customer_name}}! Your {{car_model}} loan is approved..." value={form.message} onChange={(e) => setForm(p => ({ ...p, message: e.target.value }))} rows={5} className="text-sm" />
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[10px] text-muted-foreground mr-1">Insert variable:</span>
+                        {BROADCAST_VARS.map((v) => (
+                          <Button key={v.key} variant="outline" size="sm" className="h-5 text-[9px] px-1.5" onClick={() => insertVariable(v.key)}>{`{{${v.label}}}`}</Button>
+                        ))}
+                      </div>
+                    </div>
 
-                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-2 text-xs text-blue-700 dark:text-blue-400 flex items-start gap-2">
-                  <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                  <span>Submit kar ke <b>Meta approval</b> ka wait karein. Bulk send <b>only after approval</b> unlock hoga.</span>
-                </div>
+                    <VariableSampleEditor body={form.message} samples={form.variable_samples} onChange={(s) => setForm(p => ({ ...p, variable_samples: s }))} />
 
-                <Button className="w-full gap-2 bg-primary text-primary-foreground h-10" onClick={() => submitTemplateMutation.mutate()} disabled={submitTemplateMutation.isPending || !form.name || !form.message}>
-                  <Send className="h-4 w-4" /> {submitTemplateMutation.isPending ? "Submitting..." : "Submit to Meta for Approval"}
-                </Button>
+                    <div className="space-y-1 border rounded-lg p-3 bg-muted/20">
+                      <Label className="text-xs font-semibold">Footer (optional, max 60 chars)</Label>
+                      <Input value={form.footer} onChange={e => setForm(p => ({ ...p, footer: e.target.value }))} placeholder="e.g., GrabYourCar.com | Reply STOP to opt-out" className="h-8 text-sm" maxLength={60} />
+                    </div>
+
+                    <CampaignButtonEditor buttons={form.buttons} onChange={(b) => setForm(p => ({ ...p, buttons: b }))} />
+
+                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-2 text-xs text-blue-700 dark:text-blue-400 flex items-start gap-2">
+                      <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <span>Submit kar ke <b>Meta approval</b> ka wait karein. Bulk send <b>only after approval</b> unlock hoga.</span>
+                    </div>
+
+                    <Button className="w-full gap-2 bg-primary text-primary-foreground h-10" onClick={() => submitTemplateMutation.mutate()} disabled={submitTemplateMutation.isPending || !form.name || !form.message}>
+                      <Send className="h-4 w-4" /> {submitTemplateMutation.isPending ? "Submitting..." : "Submit to Meta for Approval"}
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}
+
 
           {step === 2 && (
             <Card>
@@ -830,6 +941,38 @@ function OneShotBroadcast() {
                 <CardTitle className="text-sm flex items-center gap-2"><FileUp className="h-4 w-4 text-blue-500" /> Step 3: Upload Recipients & Test Send</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {/* Saved / past recipient lists picker */}
+                {pastLists && pastLists.length > 0 && (
+                  <div className="border rounded-lg p-2.5 bg-muted/30 space-y-1.5">
+                    <Label className="text-xs font-semibold flex items-center gap-1.5">
+                      <HistoryIcon className="h-3 w-3 text-violet-500" /> Reuse a saved recipient list (last {pastLists.length})
+                    </Label>
+                    <Select onValueChange={(id) => {
+                      const c: any = (pastLists || []).find((x: any) => x.id === id);
+                      const rows = c?.metadata?.excel_recipients;
+                      if (Array.isArray(rows) && rows.length > 0) {
+                        setRecipients(rows);
+                        const lowerHeaders = Object.keys(rows[0] || {}).map(h => h.toLowerCase());
+                        const missing = requiredVars.filter(v => !lowerHeaders.includes(v.toLowerCase()));
+                        if (!lowerHeaders.includes("phone")) missing.unshift("phone");
+                        setExcelMissing(missing);
+                        if (missing.length > 0) toast.warning(`Loaded ${rows.length} but missing columns: ${missing.join(", ")}`);
+                        else toast.success(`✅ Reused ${rows.length} recipients from "${c.name}"`);
+                      }
+                    }}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick a previous campaign's list..." /></SelectTrigger>
+                      <SelectContent>
+                        {pastLists.map((c: any) => (
+                          <SelectItem key={c.id} value={c.id} className="text-xs">
+                            {c.name} • {c.metadata.excel_recipients.length} recipients • {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[10px] text-muted-foreground">Or upload a fresh Excel below ↓</p>
+                  </div>
+                )}
+
                 <RecipientExcelUploader
                   requiredVars={requiredVars}
                   onParsed={(d) => {
@@ -1322,14 +1465,130 @@ function EventTriggers() {
   );
 }
 
+// ─── Campaign Detail Drawer (per-recipient live Meta status) ───
+function CampaignDetailDrawer({ campaignId, onClose }: { campaignId: string | null; onClose: () => void }) {
+  const open = !!campaignId;
+  const { data: campaign, refetch: refetchCampaign, isFetching: fetchingC } = useQuery({
+    queryKey: ["broadcast-detail", campaignId],
+    queryFn: async () => {
+      if (!campaignId) return null;
+      const { data } = await supabase.from("wa_campaigns").select("*").eq("id", campaignId).single();
+      return data;
+    },
+    enabled: open,
+    refetchInterval: open ? 8000 : false,
+  });
+
+  const { data: logs, refetch: refetchLogs, isFetching: fetchingL } = useQuery({
+    queryKey: ["broadcast-detail-logs", campaignId],
+    queryFn: async () => {
+      if (!campaignId) return [];
+      const { data } = await supabase
+        .from("wa_message_logs")
+        .select("id, phone, status, error_message, created_at, delivered_at, read_at, provider_message_id")
+        .eq("campaign_id", campaignId)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      return data || [];
+    },
+    enabled: open,
+    refetchInterval: open ? 8000 : false,
+  });
+
+  const counts = {
+    sent: (logs || []).filter((l: any) => ["sent", "delivered", "read"].includes(l.status)).length,
+    delivered: (logs || []).filter((l: any) => ["delivered", "read"].includes(l.status)).length,
+    read: (logs || []).filter((l: any) => l.status === "read").length,
+    failed: (logs || []).filter((l: any) => l.status === "failed").length,
+  };
+
+  const statusColor = (s: string) => {
+    if (s === "read") return "bg-blue-500/15 text-blue-600";
+    if (s === "delivered") return "bg-green-500/15 text-green-600";
+    if (s === "sent") return "bg-amber-500/15 text-amber-600";
+    if (s === "failed") return "bg-destructive/15 text-destructive";
+    return "bg-muted text-muted-foreground";
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="flex items-center justify-between gap-2 pr-6">
+            <span className="truncate">{campaign?.name || "Campaign"}</span>
+            <Button size="sm" variant="outline" className="gap-1 h-7" onClick={() => { refetchCampaign(); refetchLogs(); }}>
+              <RefreshCw className={`h-3 w-3 ${fetchingC || fetchingL ? "animate-spin" : ""}`} /> Live Refresh
+            </Button>
+          </SheetTitle>
+        </SheetHeader>
+
+        <div className="space-y-3 mt-4">
+          {/* Live counts pulled from Meta-synced logs */}
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: "Sent", value: counts.sent, color: "text-amber-600" },
+              { label: "Delivered", value: counts.delivered, color: "text-green-600" },
+              { label: "Read", value: counts.read, color: "text-blue-600" },
+              { label: "Failed", value: counts.failed, color: "text-destructive" },
+            ].map((s) => (
+              <Card key={s.label} className="p-2 text-center">
+                <p className="text-[10px] text-muted-foreground">{s.label}</p>
+                <p className={`text-lg font-bold ${s.color}`}>{s.value.toLocaleString()}</p>
+              </Card>
+            ))}
+          </div>
+
+          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <RefreshCw className="h-3 w-3" /> Auto-refreshing every 8s — Meta webhook updates land here in real time.
+          </div>
+
+          {/* Per-recipient table */}
+          <Card>
+            <CardContent className="p-0">
+              <ScrollArea className="h-[55vh]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Phone</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-xs">Delivered</TableHead>
+                      <TableHead className="text-xs">Read</TableHead>
+                      <TableHead className="text-xs">Error</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(logs || []).length === 0 ? (
+                      <TableRow><TableCell colSpan={5} className="text-center py-8 text-xs text-muted-foreground">No per-recipient logs yet</TableCell></TableRow>
+                    ) : (logs || []).map((l: any) => (
+                      <TableRow key={l.id}>
+                        <TableCell className="font-mono text-[11px]">{l.phone}</TableCell>
+                        <TableCell><Badge className={`text-[9px] ${statusColor(l.status)}`}>{l.status || "queued"}</Badge></TableCell>
+                        <TableCell className="text-[10px] text-muted-foreground">{l.delivered_at ? formatDistanceToNow(new Date(l.delivered_at), { addSuffix: true }) : "—"}</TableCell>
+                        <TableCell className="text-[10px] text-muted-foreground">{l.read_at ? formatDistanceToNow(new Date(l.read_at), { addSuffix: true }) : "—"}</TableCell>
+                        <TableCell className="text-[10px] text-destructive line-clamp-1 max-w-[180px]">{l.error_message || ""}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 // ─── Campaign History Tab ───
 function CampaignHistory() {
-  const { data: campaigns } = useQuery({
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const { data: campaigns, refetch, isFetching } = useQuery({
     queryKey: ["broadcast-history"],
     queryFn: async () => {
       const { data } = await supabase.from("wa_campaigns").select("*").eq("channel", "whatsapp").order("created_at", { ascending: false }).limit(50);
       return data || [];
     },
+    refetchInterval: 15000,
   });
 
   const getStatusBadge = (status: string) => {
@@ -1346,54 +1605,72 @@ function CampaignHistory() {
   };
 
   return (
-    <Card>
-      <CardContent className="p-0">
-        <ScrollArea className="h-[60vh]">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Campaign</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Sent</TableHead>
-                <TableHead className="text-right">Delivered</TableHead>
-                <TableHead className="text-right">Read</TableHead>
-                <TableHead className="text-right">Failed</TableHead>
-                <TableHead>Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(campaigns || []).length === 0 ? (
+    <>
+      <Card>
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-sm flex items-center gap-2"><HistoryIcon className="h-4 w-4 text-violet-500" /> Campaign History — Live Meta Analytics</CardTitle>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Per-row click karein full per-recipient delivery log dekhne ke liye.</p>
+          </div>
+          <Button size="sm" variant="outline" className="gap-1 h-7" onClick={() => refetch()}>
+            <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} /> Refresh
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ScrollArea className="h-[60vh]">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">No campaigns yet</TableCell>
+                  <TableHead>Campaign</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Sent</TableHead>
+                  <TableHead className="text-right">Delivered</TableHead>
+                  <TableHead className="text-right">Read</TableHead>
+                  <TableHead className="text-right">Failed</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
-              ) : (campaigns || []).map((c: any) => {
-                const total = (c.total_sent || 0) + (c.total_failed || 0) || 1;
-                const delRate = Math.round(((c.total_delivered || 0) / total) * 100);
-                return (
-                  <TableRow key={c.id}>
-                    <TableCell>
-                      <p className="font-medium text-sm">{c.name}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-1">{c.message_content?.slice(0, 50)}</p>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(c.status)}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">{(c.total_sent || 0).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">
-                      <span className="font-mono text-sm">{(c.total_delivered || 0).toLocaleString()}</span>
-                      <span className="text-[10px] text-muted-foreground ml-1">({delRate}%)</span>
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-sm">{(c.total_read || 0).toLocaleString()}</TableCell>
-                    <TableCell className="text-right font-mono text-sm text-destructive">{(c.total_failed || 0).toLocaleString()}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {c.created_at ? formatDistanceToNow(new Date(c.created_at), { addSuffix: true }) : "-"}
-                    </TableCell>
+              </TableHeader>
+              <TableBody>
+                {(campaigns || []).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">No campaigns yet</TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+                ) : (campaigns || []).map((c: any) => {
+                  const total = (c.total_sent || 0) + (c.total_failed || 0) || 1;
+                  const delRate = Math.round(((c.total_delivered || 0) / total) * 100);
+                  return (
+                    <TableRow key={c.id} className="cursor-pointer hover:bg-muted/40" onClick={() => setDetailId(c.id)}>
+                      <TableCell>
+                        <p className="font-medium text-sm">{c.name}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1">{c.message_content?.slice(0, 50)}</p>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(c.status)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">{(c.total_sent || 0).toLocaleString()}</TableCell>
+                      <TableCell className="text-right">
+                        <span className="font-mono text-sm">{(c.total_delivered || 0).toLocaleString()}</span>
+                        <span className="text-[10px] text-muted-foreground ml-1">({delRate}%)</span>
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">{(c.total_read || 0).toLocaleString()}</TableCell>
+                      <TableCell className="text-right font-mono text-sm text-destructive">{(c.total_failed || 0).toLocaleString()}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {c.created_at ? formatDistanceToNow(new Date(c.created_at), { addSuffix: true }) : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Button size="sm" variant="ghost" className="h-7 gap-1 text-[11px]" onClick={(e) => { e.stopPropagation(); setDetailId(c.id); }}>
+                          <Eye className="h-3 w-3" /> Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+      <CampaignDetailDrawer campaignId={detailId} onClose={() => setDetailId(null)} />
+    </>
   );
 }
 
