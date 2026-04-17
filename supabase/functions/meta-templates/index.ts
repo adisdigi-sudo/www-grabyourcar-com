@@ -22,6 +22,53 @@ serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+  // ─── Resumable Upload: convert public media URL to Meta header_handle (h:...) ───
+  // Meta REQUIRES an uploaded handle for VIDEO/IMAGE/DOCUMENT template headers, not a raw URL.
+  const uploadMediaToMeta = async (mediaUrl: string, mimeHint?: string): Promise<{ handle?: string; error?: string }> => {
+    try {
+      // 1) Download the media
+      const mediaResp = await fetch(mediaUrl);
+      if (!mediaResp.ok) return { error: `Could not download media (${mediaResp.status})` };
+      const buf = new Uint8Array(await mediaResp.arrayBuffer());
+      const fileLength = buf.byteLength;
+      const fileType = mimeHint || mediaResp.headers.get("content-type") || "application/octet-stream";
+
+      // 2) Get the App ID that owns the WhatsApp token
+      const appResp = await fetch(
+        `https://graph.facebook.com/v25.0/debug_token?input_token=${WHATSAPP_ACCESS_TOKEN}&access_token=${WHATSAPP_ACCESS_TOKEN}`,
+      );
+      const appJson = await appResp.json();
+      const appId = appJson?.data?.app_id;
+      if (!appId) return { error: "Could not determine Meta App ID for upload" };
+
+      // 3) Create an upload session
+      const sessionResp = await fetch(
+        `https://graph.facebook.com/v25.0/${appId}/uploads?file_length=${fileLength}&file_type=${encodeURIComponent(fileType)}&access_token=${WHATSAPP_ACCESS_TOKEN}`,
+        { method: "POST" },
+      );
+      const sessionJson = await sessionResp.json();
+      const uploadId = sessionJson?.id;
+      if (!uploadId) return { error: `Upload session failed: ${sessionJson?.error?.message || "unknown"}` };
+
+      // 4) Upload the bytes
+      const uploadResp = await fetch(`https://graph.facebook.com/v25.0/${uploadId}`, {
+        method: "POST",
+        headers: {
+          Authorization: `OAuth ${WHATSAPP_ACCESS_TOKEN}`,
+          file_offset: "0",
+          "Content-Type": fileType,
+        },
+        body: buf,
+      });
+      const uploadJson = await uploadResp.json();
+      const handle = uploadJson?.h;
+      if (!handle) return { error: `Upload bytes failed: ${uploadJson?.error?.message || JSON.stringify(uploadJson)}` };
+      return { handle };
+    } catch (e) {
+      return { error: (e as Error).message };
+    }
+  };
+
   try {
     const body = await req.json();
     const action = body.action;
