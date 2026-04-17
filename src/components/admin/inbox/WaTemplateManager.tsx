@@ -1199,7 +1199,7 @@ export function WaTemplateManager() {
                     <Label className="text-xs">Header</Label>
                     <div className="flex gap-1.5 mb-1.5">
                       {["none", "text", "image", "video", "document"].map(ht => (
-                        <Button key={ht} type="button" size="sm" variant={(editItem?.header_type || "none") === ht ? "default" : "outline"} className="h-7 text-[10px]" onClick={() => setEditItem({ ...editItem, header_type: ht === "none" ? null : ht })}>
+                        <Button key={ht} type="button" size="sm" variant={(editItem?.header_type || "none") === ht ? "default" : "outline"} className="h-7 text-[10px]" onClick={() => setEditItem({ ...editItem, header_type: ht === "none" ? null : ht, header_content: null })}>
                           {ht.charAt(0).toUpperCase() + ht.slice(1)}
                         </Button>
                       ))}
@@ -1211,19 +1211,40 @@ export function WaTemplateManager() {
                       </div>
                     )}
                     {editItem?.header_type && editItem.header_type !== "text" && (
-                      <p className="text-[10px] text-muted-foreground">Media header — upload at send time. No URL needed here.</p>
+                      <MediaHeaderUploader
+                        type={editItem.header_type as "image" | "video" | "document"}
+                        value={editItem?.header_content || null}
+                        onChange={(url) => setEditItem({ ...editItem, header_content: url })}
+                      />
                     )}
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <Label className="text-xs">Body * <span className="text-muted-foreground">({(editItem?.body || "").length}/1024)</span></Label>
-                      <div className="flex gap-1 flex-wrap">
-                        {COMMON_VARS.slice(0, 8).map(v => (
-                          <button key={v} onClick={() => insertVariable(v)} className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 font-mono">{`{{${v}}}`}</button>
-                        ))}
-                      </div>
+                      <span className="text-[10px] text-muted-foreground">Click any chip below to insert</span>
                     </div>
-                    <Textarea value={editItem?.body || ""} onChange={e => setEditItem({ ...editItem, body: e.target.value })} rows={5} className="text-sm font-mono" maxLength={1024} />
+                    <Textarea value={editItem?.body || ""} onChange={e => setEditItem({ ...editItem, body: e.target.value })} rows={5} className="text-sm font-mono" maxLength={1024} placeholder="Hi {{customer_name}}, your {{car_model}} document {{document_name}} is ready. View: {{link}}" />
+                    {/* Grouped variable chips */}
+                    <div className="mt-2 border rounded-md p-2 bg-muted/30 space-y-1.5 max-h-44 overflow-auto">
+                      {VAR_GROUPS.map(g => (
+                        <div key={g.label} className="flex items-start gap-2">
+                          <span className="text-[9px] font-semibold uppercase text-muted-foreground w-20 shrink-0 pt-0.5">{g.label}</span>
+                          <div className="flex gap-1 flex-wrap flex-1">
+                            {g.vars.map(v => (
+                              <button
+                                key={v}
+                                type="button"
+                                onClick={() => insertVariable(v)}
+                                title={`Insert {{${v}}} — sample: ${SAMPLE_VALUES[v] || v}`}
+                                className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 font-mono"
+                              >
+                                {`{{${v}}}`}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <div>
                     <Label className="text-xs">Footer <span className="text-muted-foreground">(max 60 chars, no variables)</span></Label>
