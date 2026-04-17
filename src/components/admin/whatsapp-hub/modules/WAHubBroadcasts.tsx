@@ -566,6 +566,59 @@ function RecipientExcelUploader({ requiredVars, onParsed }: {
   );
 }
 
+// ─── Auto-detect Excel template downloader ───
+// Generates a CSV with `phone, name, var_1, var_2…` columns matching the
+// template's required variables, plus one sample row, so users can fill it
+// in and re-upload directly.
+function ExcelTemplateDownloader({ templateName, requiredVars }: {
+  templateName: string;
+  requiredVars: string[];
+}) {
+  const handleDownload = () => {
+    const headers = ["phone", "name", ...requiredVars];
+    const sampleRow: Record<string, string> = {
+      phone: "9876543210",
+      name: "Rahul Sharma",
+    };
+    requiredVars.forEach((v, idx) => {
+      sampleRow[v] = BROADCAST_VARS.find((b) => b.key === v)?.sample || `Sample ${idx + 1}`;
+    });
+    const csvLine = (cells: string[]) =>
+      cells.map((c) => {
+        const safe = String(c ?? "").replace(/"/g, '""');
+        return /[",\n]/.test(safe) ? `"${safe}"` : safe;
+      }).join(",");
+    const csv = [csvLine(headers), csvLine(headers.map((h) => sampleRow[h] || ""))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${templateName || "broadcast"}_recipients_template.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("📥 Excel template downloaded — fill it and re-upload");
+  };
+
+  return (
+    <div className="border rounded-lg p-2.5 bg-muted/30 flex items-center justify-between gap-3">
+      <div className="flex items-start gap-2 min-w-0">
+        <FileText className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+        <div className="min-w-0">
+          <p className="text-xs font-semibold">Need a starter Excel?</p>
+          <p className="text-[10px] text-muted-foreground truncate">
+            Auto-built for this template: phone, name{requiredVars.length > 0 ? `, ${requiredVars.join(", ")}` : ""}
+          </p>
+        </div>
+      </div>
+      <Button type="button" size="sm" variant="outline" className="h-7 gap-1 shrink-0" onClick={handleDownload}>
+        <Upload className="h-3 w-3 rotate-180" /> Download
+      </Button>
+    </div>
+  );
+}
+
 // ─── One-Shot Broadcast: 4-Step Wizard ───
 type WizardStep = 1 | 2 | 3 | 4;
 
@@ -675,18 +728,61 @@ function OneShotBroadcast() {
     mutationFn: async () => {
       const clean = testPhone.replace(/\D/g, "").replace(/^91/, "");
       if (!/^[6-9]\d{9}$/.test(clean)) throw new Error("Invalid Indian mobile (10 digits)");
+      const fullPhone = `91${clean}`;
 
-      // Build template_variables map (same shape edge function expects)
+      // ── Auto-fill from real contact: lookup phone in customers/leads/insurance_clients
+      // so var_1 etc become the actual customer's name (instead of "Test").
+      const phoneVariants = [clean, fullPhone, `+${fullPhone}`];
+      const contactInfo: Record<string, string> = {};
+      try {
+        const customersRes: any = await (supabase as any).from("customers")
+          .select("name, phone, vehicle_number").in("phone", phoneVariants).limit(1).maybeSingle();
+        const leadsRes: any = await (supabase as any).from("leads")
+          .select("name, phone, vertical").in("phone", phoneVariants).limit(1).maybeSingle();
+        const icRes: any = await (supabase as any).from("insurance_clients")
+          .select("customer_name, phone, vehicle_number, vehicle_make, vehicle_model, current_insurer, current_premium, policy_expiry_date")
+          .in("phone", phoneVariants).limit(1).maybeSingle();
+
+        const cust = customersRes?.data || null;
+        const lead = leadsRes?.data || null;
+        const ic = icRes?.data || null;
+
+        const name = ic?.customer_name || cust?.name || lead?.name;
+        const vehicle = ic?.vehicle_number || cust?.vehicle_number;
+        const carModel = ic ? [ic.vehicle_make, ic.vehicle_model].filter(Boolean).join(" ") : undefined;
+        if (name) {
+          contactInfo.customer_name = name;
+          contactInfo.name = name;
+          contactInfo.full_name = name;
+          contactInfo.owner_name = name;
+        }
+        if (vehicle) {
+          contactInfo.vehicle_number = vehicle;
+          contactInfo.registration_number = vehicle;
+        }
+        if (carModel) contactInfo.car_model = carModel;
+        if (ic?.current_insurer) contactInfo.insurer = ic.current_insurer;
+        if (ic?.current_premium) contactInfo.premium = `₹${Number(ic.current_premium).toLocaleString("en-IN")}`;
+        if (ic?.policy_expiry_date) contactInfo.expiry_date = new Date(ic.policy_expiry_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      } catch {
+        /* lookup is best-effort, ignore failures */
+      }
+
+      // Build template_variables map (manual sample > contact lookup > BROADCAST_VARS default)
       const templateVars: Record<string, string> = {};
       requiredVars.forEach((v, idx) => {
         const sample = form.variable_samples.find((s) => s.key === v);
         const value =
-          sample?.value || BROADCAST_VARS.find((b) => b.key === v)?.sample || "Test";
+          sample?.value ||
+          contactInfo[v] ||
+          contactInfo[v.toLowerCase()] ||
+          BROADCAST_VARS.find((b) => b.key === v)?.sample ||
+          contactInfo.customer_name ||
+          "Test";
         templateVars[v] = value;
         templateVars[`var_${idx + 1}`] = value;
       });
-      // Phone helper var (used for some {{phone}} placeholders)
-      templateVars["phone"] = `91${clean}`;
+      templateVars["phone"] = fullPhone;
 
       // Resolve preview content for inbox/log display
       let content = form.message;
@@ -696,7 +792,7 @@ function OneShotBroadcast() {
 
       const { data, error } = await supabase.functions.invoke("wa-send-inbox", {
         body: {
-          phone: `91${clean}`,
+          phone: fullPhone,
           message_type: form.template_name ? "template" : "text",
           content,
           template_name: form.template_name,
@@ -707,11 +803,12 @@ function OneShotBroadcast() {
         },
       });
       if (error || !data?.success) throw new Error(data?.error || error?.message || "Test send failed");
-      return data;
+      return { ...data, autoFilledName: contactInfo.customer_name };
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       setTestSent(true);
-      toast.success(`✅ Test message sent to ${testPhone}. Check WhatsApp.`);
+      const named = data?.autoFilledName ? ` (personalised for ${data.autoFilledName})` : "";
+      toast.success(`✅ Test sent to ${testPhone}${named}. Check WhatsApp.`);
     },
     onError: (e) => toast.error((e as Error).message),
   });
@@ -991,6 +1088,12 @@ function OneShotBroadcast() {
                     <p className="text-[10px] text-muted-foreground">Or upload a fresh Excel below ↓</p>
                   </div>
                 )}
+
+                {/* Auto-detect Excel template downloader */}
+                <ExcelTemplateDownloader
+                  templateName={form.template_name || "broadcast"}
+                  requiredVars={requiredVars}
+                />
 
                 <RecipientExcelUploader
                   requiredVars={requiredVars}
