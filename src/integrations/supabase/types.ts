@@ -389,6 +389,156 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_brain_config: {
+        Row: {
+          ai_model: string | null
+          auto_send_threshold: number | null
+          business_end_hour: number | null
+          business_hours_only: boolean | null
+          business_start_hour: number | null
+          created_at: string
+          enabled_channels: string[] | null
+          enabled_verticals: string[] | null
+          id: string
+          is_enabled: boolean | null
+          last_run_at: string | null
+          last_run_summary: Json | null
+          max_decisions_per_run: number | null
+          scan_interval_minutes: number | null
+          updated_at: string
+        }
+        Insert: {
+          ai_model?: string | null
+          auto_send_threshold?: number | null
+          business_end_hour?: number | null
+          business_hours_only?: boolean | null
+          business_start_hour?: number | null
+          created_at?: string
+          enabled_channels?: string[] | null
+          enabled_verticals?: string[] | null
+          id?: string
+          is_enabled?: boolean | null
+          last_run_at?: string | null
+          last_run_summary?: Json | null
+          max_decisions_per_run?: number | null
+          scan_interval_minutes?: number | null
+          updated_at?: string
+        }
+        Update: {
+          ai_model?: string | null
+          auto_send_threshold?: number | null
+          business_end_hour?: number | null
+          business_hours_only?: boolean | null
+          business_start_hour?: number | null
+          created_at?: string
+          enabled_channels?: string[] | null
+          enabled_verticals?: string[] | null
+          id?: string
+          is_enabled?: boolean | null
+          last_run_at?: string | null
+          last_run_summary?: Json | null
+          max_decisions_per_run?: number | null
+          scan_interval_minutes?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_brain_decisions: {
+        Row: {
+          action_type: string
+          ai_model_used: string | null
+          approved_at: string | null
+          approved_by: string | null
+          auto_send: boolean | null
+          confidence_score: number | null
+          context_snapshot: Json | null
+          created_at: string
+          customer_id: string | null
+          customer_name: string | null
+          customer_phone: string
+          customer_responded: boolean | null
+          customer_response_at: string | null
+          error_message: string | null
+          id: string
+          led_to_conversion: boolean | null
+          message_channel: string | null
+          message_content: string | null
+          message_subject: string | null
+          reasoning: string | null
+          rejected_reason: string | null
+          response_sentiment: string | null
+          scheduled_for: string | null
+          sent_at: string | null
+          source_record_id: string | null
+          source_table: string | null
+          status: string
+          updated_at: string
+          vertical: string
+        }
+        Insert: {
+          action_type: string
+          ai_model_used?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          auto_send?: boolean | null
+          confidence_score?: number | null
+          context_snapshot?: Json | null
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone: string
+          customer_responded?: boolean | null
+          customer_response_at?: string | null
+          error_message?: string | null
+          id?: string
+          led_to_conversion?: boolean | null
+          message_channel?: string | null
+          message_content?: string | null
+          message_subject?: string | null
+          reasoning?: string | null
+          rejected_reason?: string | null
+          response_sentiment?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          source_record_id?: string | null
+          source_table?: string | null
+          status?: string
+          updated_at?: string
+          vertical: string
+        }
+        Update: {
+          action_type?: string
+          ai_model_used?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          auto_send?: boolean | null
+          confidence_score?: number | null
+          context_snapshot?: Json | null
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string
+          customer_responded?: boolean | null
+          customer_response_at?: string | null
+          error_message?: string | null
+          id?: string
+          led_to_conversion?: boolean | null
+          message_channel?: string | null
+          message_content?: string | null
+          message_subject?: string | null
+          reasoning?: string | null
+          rejected_reason?: string | null
+          response_sentiment?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          source_record_id?: string | null
+          source_table?: string | null
+          status?: string
+          updated_at?: string
+          vertical?: string
+        }
+        Relationships: []
+      }
       ai_cofounder_conversations: {
         Row: {
           created_at: string
