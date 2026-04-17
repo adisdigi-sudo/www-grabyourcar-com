@@ -1485,7 +1485,7 @@ function CampaignDetailDrawer({ campaignId, onClose }: { campaignId: string | nu
       if (!campaignId) return [];
       const { data } = await supabase
         .from("wa_message_logs")
-        .select("id, phone, status, error_message, created_at, delivered_at, read_at, message_id")
+        .select("id, phone, status, error_message, created_at, delivered_at, read_at, provider_message_id")
         .eq("campaign_id", campaignId)
         .order("created_at", { ascending: false })
         .limit(500);
