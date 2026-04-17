@@ -56,9 +56,14 @@ serve(async (req) => {
       template_components,
       media_url,
       media_filename,
+      mediaUrl,
+      mediaFileName,
       sent_by,
       sent_by_name,
     } = body;
+
+    const resolvedMediaUrl = media_url || mediaUrl || null;
+    const resolvedMediaFilename = media_filename || mediaFileName || null;
 
     if (!phone) {
       return jsonResponse({ success: false, error: "phone required" });
