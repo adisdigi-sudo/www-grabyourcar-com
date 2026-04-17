@@ -52,17 +52,33 @@ interface MetaButton {
   phone_number?: string;
 }
 
-// Variable library — grouped by purpose. All chips are clickable in the editor.
-const VAR_GROUPS: { label: string; vars: string[] }[] = [
+// Variable library — grouped by purpose AND vertical. Filtered live by selected vertical.
+type VarGroup = { label: string; vars: string[]; verticals?: string[] }; // verticals undefined = show always
+const VAR_GROUPS: VarGroup[] = [
+  // ── Universal (shown for every vertical) ──
   { label: "Customer", vars: ["customer_name", "phone", "email", "city", "agent_name", "dealer_name"] },
-  { label: "Vehicle", vars: ["vehicle_number", "car_model", "brand", "variant", "year", "fuel_type", "registration_number"] },
-  { label: "Insurance", vars: ["insurer", "premium", "policy_number", "expiry_date", "idv", "ncb_percent", "claim_id"] },
-  { label: "Order / Booking", vars: ["order_id", "booking_id", "amount", "discount", "delivery_date", "pickup_date", "drop_date"] },
   { label: "Document / Message", vars: ["document_name", "document_type", "invoice_number", "message", "subject", "reason"] },
   { label: "Time / Link", vars: ["date", "time", "link", "address", "tracking_url", "otp"] },
+
+  // ── Vertical-specific ──
+  { label: "Vehicle", vars: ["vehicle_number", "car_model", "brand", "variant", "year", "fuel_type", "registration_number"], verticals: ["Insurance", "Car Sales", "Self Drive", "HSRP", "Loans", "Accessories"] },
+  { label: "Insurance", vars: ["insurer", "premium", "policy_number", "expiry_date", "idv", "ncb_percent", "claim_id"], verticals: ["Insurance"] },
+  { label: "Loan", vars: ["loan_amount", "emi_amount", "tenure_months", "interest_rate", "bank_name", "loan_id", "disbursal_date"], verticals: ["Loans"] },
+  { label: "HSRP", vars: ["registration_number", "hsrp_order_id", "appointment_date", "appointment_slot", "rto_office", "fitment_status"], verticals: ["HSRP"] },
+  { label: "Sales / Booking", vars: ["order_id", "booking_id", "amount", "discount", "delivery_date", "pickup_date", "drop_date", "showroom_name", "test_drive_date"], verticals: ["Car Sales", "Self Drive", "Accessories", "Loans"] },
+  { label: "Self Drive", vars: ["pickup_location", "drop_location", "rental_days", "security_deposit"], verticals: ["Self Drive"] },
+  { label: "Accessories", vars: ["product_name", "qty", "tracking_number", "courier_name"], verticals: ["Accessories"] },
+  { label: "Marketing", vars: ["offer_title", "offer_code", "valid_till", "campaign_name"], verticals: ["Marketing"] },
 ];
 const COMMON_VARS = Array.from(new Set(VAR_GROUPS.flatMap(g => g.vars)));
 const VERTICALS = ["Insurance", "Car Sales", "Self Drive", "HSRP", "Accessories", "Loans", "Marketing"];
+
+function getGroupsForVertical(vertical?: string | null): VarGroup[] {
+  if (!vertical || vertical === "Global" || vertical === "All") {
+    return VAR_GROUPS; // show everything for global templates
+  }
+  return VAR_GROUPS.filter(g => !g.verticals || g.verticals.includes(vertical));
+}
 
 const SAMPLE_VALUES: Record<string, string> = {
   customer_name: "Rahul Sharma", phone: "9876543210", email: "rahul@example.com", city: "New Delhi",
@@ -77,6 +93,20 @@ const SAMPLE_VALUES: Record<string, string> = {
   message: "your update is ready", subject: "Important Update", reason: "policy renewal",
   date: "11 Apr 2026", time: "11:30 AM", link: "https://grabyourcar.com",
   address: "Sector 18, Noida", tracking_url: "https://gyc.in/t/abc", otp: "482913",
+  // Loans
+  loan_amount: "₹6,50,000", emi_amount: "₹12,400", tenure_months: "60", interest_rate: "9.25%",
+  bank_name: "HDFC Bank", loan_id: "LN-2026-0042", disbursal_date: "22 Apr 2026",
+  // HSRP
+  hsrp_order_id: "HSRP-90213", appointment_date: "19 Apr 2026", appointment_slot: "11:00 AM - 12:00 PM",
+  rto_office: "Sarai Kale Khan RTO", fitment_status: "Scheduled",
+  // Sales
+  showroom_name: "GrabYourCar Noida", test_drive_date: "20 Apr 2026",
+  // Self Drive
+  pickup_location: "IGI T3", drop_location: "Connaught Place", rental_days: "3", security_deposit: "₹5,000",
+  // Accessories
+  product_name: "7D Floor Mat", qty: "1", tracking_number: "DLV98821", courier_name: "Delhivery",
+  // Marketing
+  offer_title: "Summer Sale", offer_code: "GYC25", valid_till: "30 Apr 2026", campaign_name: "April Drive",
 };
 
 // ─── META VALIDATION ENGINE ───
@@ -1314,9 +1344,12 @@ export function WaTemplateManager() {
                       <span className="text-[10px] text-muted-foreground">Click any chip below to insert</span>
                     </div>
                     <Textarea value={editItem?.body || ""} onChange={e => setEditItem({ ...editItem, body: e.target.value })} rows={5} className="text-sm font-mono" maxLength={1024} placeholder="Hi {{customer_name}}, your {{car_model}} document {{document_name}} is ready. View: {{link}}" />
-                    {/* Grouped variable chips */}
+                    {/* Grouped variable chips — filtered by selected vertical */}
                     <div className="mt-2 border rounded-md p-2 bg-muted/30 space-y-1.5 max-h-44 overflow-auto">
-                      {VAR_GROUPS.map(g => (
+                      <div className="text-[9px] text-muted-foreground mb-1">
+                        Showing variables for <span className="font-semibold">{editItem?.vertical || "Global"}</span>. Change vertical above to see more.
+                      </div>
+                      {getGroupsForVertical(editItem?.vertical).map(g => (
                         <div key={g.label} className="flex items-start gap-2">
                           <span className="text-[9px] font-semibold uppercase text-muted-foreground w-20 shrink-0 pt-0.5">{g.label}</span>
                           <div className="flex gap-1 flex-wrap flex-1">
