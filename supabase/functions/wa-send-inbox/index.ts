@@ -53,18 +53,22 @@ serve(async (req) => {
       sent_by_name,
     } = body;
 
-    if (!conversation_id || !phone) {
-      return new Response(JSON.stringify({ error: "conversation_id and phone required" }), {
+    if (!phone) {
+      return new Response(JSON.stringify({ error: "phone required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check 24hr window
-      const { data: convo } = await supabase
-      .from("wa_conversations")
+    // Check 24hr window (only when sending from an existing conversation)
+    let convo: { window_expires_at: string | null; last_customer_message_at: string | null; customer_name: string | null } | null = null;
+    if (conversation_id) {
+      const { data } = await supabase
+        .from("wa_conversations")
         .select("window_expires_at, last_customer_message_at, customer_name")
-      .eq("id", conversation_id)
-      .single();
+        .eq("id", conversation_id)
+        .single();
+      convo = data as typeof convo;
+    }
 
     const windowOpen = convo?.window_expires_at && new Date(convo.window_expires_at) > new Date();
 
@@ -319,30 +323,32 @@ serve(async (req) => {
       displayContent = resolvedContent || `[Template: ${template_name}]`;
     }
 
-    // Insert into wa_inbox_messages
-    await supabase.from("wa_inbox_messages").insert({
-      conversation_id,
-      direction: "outbound",
-      message_type: costSaved ? "text" : message_type,
-      content: displayContent,
-      media_url: media_url || null,
-      media_filename: media_filename || null,
-      template_name: costSaved ? null : (template_name || null),
-      template_variables: costSaved ? null : (template_variables || null),
-      wa_message_id: waMessageId,
-      status: success ? "sent" : "failed",
-      status_updated_at: new Date().toISOString(),
-      error_message: success ? null : (result.error?.message || result.error?.error_user_msg || "Send failed"),
-      error_code: success ? null : (result.error?.code?.toString() || null),
-      sent_by,
-      sent_by_name,
-    });
+    // Insert into wa_inbox_messages (only when tied to an inbox conversation)
+    if (conversation_id) {
+      await supabase.from("wa_inbox_messages").insert({
+        conversation_id,
+        direction: "outbound",
+        message_type: costSaved ? "text" : message_type,
+        content: displayContent,
+        media_url: media_url || null,
+        media_filename: media_filename || null,
+        template_name: costSaved ? null : (template_name || null),
+        template_variables: costSaved ? null : (template_variables || null),
+        wa_message_id: waMessageId,
+        status: success ? "sent" : "failed",
+        status_updated_at: new Date().toISOString(),
+        error_message: success ? null : (result.error?.message || result.error?.error_user_msg || "Send failed"),
+        error_code: success ? null : (result.error?.code?.toString() || null),
+        sent_by,
+        sent_by_name,
+      });
 
-    // Update conversation
-    await supabase.from("wa_conversations").update({
-      last_message: displayContent.slice(0, 200),
-      last_message_at: new Date().toISOString(),
-    }).eq("id", conversation_id);
+      // Update conversation
+      await supabase.from("wa_conversations").update({
+        last_message: displayContent.slice(0, 200),
+        last_message_at: new Date().toISOString(),
+      }).eq("id", conversation_id);
+    }
 
     // Log in legacy wa_message_logs
     await supabase.from("wa_message_logs").insert({
