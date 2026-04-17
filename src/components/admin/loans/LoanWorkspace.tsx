@@ -1829,7 +1829,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           )}
 
           {/* LOAN APPLICATION — only for loan_application stage */}
-          {canEdit && (currentStage === 'loan_application' || application._targetStage === 'loan_application') && (
+          {canEdit && (currentStage === 'loan_application' || effectiveTargetStage === 'loan_application') && (
             <div className="space-y-3 p-4 rounded-lg border border-indigo-500/20 bg-indigo-500/5">
               <div className="flex items-center gap-2 text-indigo-700 text-sm font-medium"><FileText className="h-4 w-4" /> Loan Application Status</div>
               <div>
@@ -1870,7 +1870,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           )}
 
           {/* DISBURSED — Read-only summary when already disbursed */}
-          {currentStage === 'disbursed' && !application._targetStage && (
+          {currentStage === 'disbursed' && !effectiveTargetStage && (
             <div className="space-y-3 p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium"><CheckCircle2 className="h-4 w-4" /> Disbursement Complete</div>
@@ -2027,7 +2027,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           )}
 
           {/* DISBURSED — Entry form when moving TO disbursed */}
-          {canEdit && currentStage !== 'disbursed' && application._targetStage === 'disbursed' && (
+          {canEdit && currentStage !== 'disbursed' && effectiveTargetStage === 'disbursed' && (
             <div className="space-y-3 p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
               <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium"><CheckCircle2 className="h-4 w-4" /> Disbursement Details</div>
               <div className="grid grid-cols-2 gap-3">
@@ -2069,7 +2069,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           )}
 
           {/* LOST */}
-          {canEdit && (application._targetStage === 'lost' || currentStage === 'lost') && currentStage !== 'lost' && (
+          {canEdit && (effectiveTargetStage === 'lost' || currentStage === 'lost') && currentStage !== 'lost' && (
             <div className="space-y-3 p-4 rounded-lg border border-red-500/20 bg-red-500/5">
               <div className="flex items-center gap-2 text-red-600 text-sm font-medium"><AlertTriangle className="h-4 w-4" /> Mark as Lost</div>
               <div>
@@ -2087,7 +2087,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           )}
 
           {/* Quick Move Buttons */}
-          {canEdit && !application._targetStage && currentStage !== 'disbursed' && currentStage !== 'lost' && (
+          {canEdit && !effectiveTargetStage && currentStage !== 'disbursed' && currentStage !== 'lost' && (
             <div className="border-t pt-3">
               <p className="text-[10px] text-muted-foreground mb-2">Quick Move to Stage</p>
               <div className="flex flex-wrap gap-1.5">
