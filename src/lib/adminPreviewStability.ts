@@ -18,10 +18,31 @@ export const isEmbeddedPreviewWindow = () => {
   }
 
   try {
-    return window.top !== window;
+    if (window.self !== window.top) {
+      return true;
+    }
+
+    if (window.frameElement) {
+      return true;
+    }
+
+    return window.location.ancestorOrigins?.length > 0;
   } catch {
+    return true;
+  }
+};
+
+export const isLovableEditorPreviewHost = () => {
+  if (typeof window === "undefined") {
     return false;
   }
+
+  const { hostname, search } = window.location;
+  return (
+    hostname.endsWith(".lovableproject.com") ||
+    hostname.startsWith("id-preview--") ||
+    new URLSearchParams(search).has("__lovable_token")
+  );
 };
 
 export const isSensitivePreviewRouteWindow = () => {
@@ -36,7 +57,7 @@ export const isSensitivePreviewRouteWindow = () => {
 // Embedded editor previews must "fail open" — the global startup shell would otherwise
 // trap the iframe behind a white overlay. Only stabilize for true top-level sensitive routes.
 export const shouldStabilizeStartupShellWindow = () =>
-  isSensitivePreviewRouteWindow() && !isEmbeddedPreviewWindow();
+  isSensitivePreviewRouteWindow() && !isEmbeddedPreviewWindow() && !isLovableEditorPreviewHost();
 
 export const shouldAvoidDevAutoReload = () =>
-  import.meta.env.DEV && isSensitivePreviewRouteWindow() && !isEmbeddedPreviewWindow();
+  import.meta.env.DEV && isSensitivePreviewRouteWindow() && !isEmbeddedPreviewWindow() && !isLovableEditorPreviewHost();
