@@ -19,6 +19,16 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNowStrict, subDays, subHours } from "date-fns";
+import DOMPurify from "dompurify";
+
+// Sanitize externally-sourced HTML (incoming email body) before rendering.
+// Strips <script>, inline event handlers, javascript: URLs, etc.
+const sanitizeEmailHtml = (html: string): string =>
+  DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true },
+    FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input"],
+    FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "onfocus", "onblur"],
+  });
 
 type TimeRange = "24h" | "7d" | "30d" | "all";
 type Folder = "inbox" | "sent" | "drafts" | "spam" | "all";
@@ -885,7 +895,7 @@ export function EmailInboxDashboard() {
                     <div className="p-4">
                       {msgSubject && <p className="text-sm font-semibold mb-2">{msgSubject}</p>}
                       {bodyHtml ? (
-                        <div className="text-sm leading-relaxed prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: bodyHtml }} />
+                        <div className="text-sm leading-relaxed prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(bodyHtml) }} />
                       ) : (
                         <p className="text-sm text-muted-foreground italic">
                           {msg.template_name === "auth_emails" ? "Authentication email" : `Template: ${msg.template_name}`}
