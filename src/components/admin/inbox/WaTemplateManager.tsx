@@ -52,13 +52,31 @@ interface MetaButton {
   phone_number?: string;
 }
 
-const COMMON_VARS = ["customer_name", "phone", "vehicle_number", "insurer", "premium", "expiry_date", "policy_number", "order_id", "amount", "date"];
+// Variable library — grouped by purpose. All chips are clickable in the editor.
+const VAR_GROUPS: { label: string; vars: string[] }[] = [
+  { label: "Customer", vars: ["customer_name", "phone", "email", "city", "agent_name", "dealer_name"] },
+  { label: "Vehicle", vars: ["vehicle_number", "car_model", "brand", "variant", "year", "fuel_type", "registration_number"] },
+  { label: "Insurance", vars: ["insurer", "premium", "policy_number", "expiry_date", "idv", "ncb_percent", "claim_id"] },
+  { label: "Order / Booking", vars: ["order_id", "booking_id", "amount", "discount", "delivery_date", "pickup_date", "drop_date"] },
+  { label: "Document / Message", vars: ["document_name", "document_type", "invoice_number", "message", "subject", "reason"] },
+  { label: "Time / Link", vars: ["date", "time", "link", "address", "tracking_url", "otp"] },
+];
+const COMMON_VARS = Array.from(new Set(VAR_GROUPS.flatMap(g => g.vars)));
 const VERTICALS = ["Insurance", "Car Sales", "Self Drive", "HSRP", "Accessories", "Loans", "Marketing"];
 
 const SAMPLE_VALUES: Record<string, string> = {
-  customer_name: "Rahul Sharma", phone: "9876543210", vehicle_number: "MH02AB1234",
+  customer_name: "Rahul Sharma", phone: "9876543210", email: "rahul@example.com", city: "New Delhi",
+  agent_name: "Anshdeep", dealer_name: "GrabYourCar Delhi",
+  vehicle_number: "MH02AB1234", car_model: "Hyundai Creta SX", brand: "Hyundai", variant: "SX(O)",
+  year: "2023", fuel_type: "Petrol", registration_number: "DL01AB1234",
   insurer: "HDFC ERGO", premium: "₹12,500", expiry_date: "15 Apr 2026",
-  policy_number: "POL-2024-12345", order_id: "ORD-789", amount: "₹8,500", date: "11 Apr 2026",
+  policy_number: "POL-2024-12345", idv: "₹8,50,000", ncb_percent: "25%", claim_id: "CLM-9921",
+  order_id: "ORD-789", booking_id: "BK-12345", amount: "₹8,500", discount: "₹1,200",
+  delivery_date: "20 Apr 2026", pickup_date: "18 Apr 2026", drop_date: "22 Apr 2026",
+  document_name: "RC Copy", document_type: "PDF", invoice_number: "INV-2026-0078",
+  message: "your update is ready", subject: "Important Update", reason: "policy renewal",
+  date: "11 Apr 2026", time: "11:30 AM", link: "https://grabyourcar.com",
+  address: "Sector 18, Noida", tracking_url: "https://gyc.in/t/abc", otp: "482913",
   otp: "123456", car_model: "Hyundai Creta", booking_id: "BK-001",
 };
 
