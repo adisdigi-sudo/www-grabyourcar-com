@@ -334,6 +334,7 @@ const UNIVERSAL_ADMIN_TABS = new Set([
   "my-hr",
   "my-team",
   "calling-system",
+  "templates-hub",
   "lead-scoring",
   "client-management",
   "lead-import",

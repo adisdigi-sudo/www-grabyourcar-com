@@ -6,7 +6,7 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Shield, Banknote, Car, Key, CreditCard, ShoppingBag, Megaphone, LogOut, Crown, Lock } from "lucide-react";
+import { Loader2, Shield, Banknote, Car, Key, CreditCard, ShoppingBag, Megaphone, LogOut, Crown, Lock, MessageSquare } from "lucide-react";
 import { motion } from "framer-motion";
 import logoImage from "@/assets/logo-grabyourcar-main.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -86,6 +86,11 @@ const WorkspaceSelector = () => {
     [availableVerticals],
   );
 
+  const templatesHubVertical = useMemo(
+    () => sortedVerticals.find((vertical) => vertical.slug === "marketing") ?? sortedVerticals[0] ?? null,
+    [sortedVerticals],
+  );
+
   useEffect(() => {
     if (authInitialized && !authLoading && !user) {
       navigate(withPreviewParams("/crm-auth"));
@@ -135,6 +140,19 @@ const WorkspaceSelector = () => {
   const handlePasswordSuccess = (vertical: BusinessVertical) => {
     setPasswordTarget(null);
     setActiveVertical(vertical);
+    navigate(withPreviewParams("/crm"));
+  };
+
+  const handleOpenTemplatesHub = () => {
+    if (!templatesHubVertical || !isAdmin()) return;
+
+    try {
+      window.localStorage.setItem("gyc_admin_active_tab", "templates-hub");
+    } catch {
+      // ignore storage failures
+    }
+
+    setActiveVertical(templatesHubVertical);
     navigate(withPreviewParams("/crm"));
   };
 
@@ -204,6 +222,14 @@ const WorkspaceSelector = () => {
                 <Crown className="h-3 w-3 mr-1" />
                 Super Admin
               </Badge>
+            )}
+            {isAdmin() && templatesHubVertical && (
+              <div className="mt-4">
+                <Button variant="outline" size="sm" className="gap-2" onClick={handleOpenTemplatesHub}>
+                  <MessageSquare className="h-4 w-4" />
+                  Open Templates Hub
+                </Button>
+              </div>
             )}
           </motion.div>
 
