@@ -587,8 +587,8 @@ const AdminLayout = () => {
       );
     }
 
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4" aria-busy="true" data-startup-ready="crm-auth-loading">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
         <p className="text-sm text-muted-foreground animate-pulse">Loading CRM...</p>
       </div>
@@ -640,8 +640,8 @@ const AdminLayout = () => {
       );
     }
 
-    return (
-      <div className="mx-auto flex min-h-[320px] w-full max-w-2xl flex-col items-center justify-center gap-4 px-4 py-8 text-center">
+      return (
+        <div className="mx-auto flex min-h-[320px] w-full max-w-2xl flex-col items-center justify-center gap-4 px-4 py-8 text-center" aria-busy="true" data-startup-ready="crm-workspace-loading">
         <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
         <div>
           <p className="text-base font-medium text-foreground">Restoring CRM workspace…</p>
