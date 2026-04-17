@@ -1,6 +1,11 @@
 import { useEffect, useState, type ComponentType } from "react";
 import { isChunkLoadRecoveryExhausted, isDynamicImportError, performSafePreviewReload, recoverFromChunkLoadError, resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
-import { isEmbeddedPreviewWindow, isSensitivePreviewRouteWindow, shouldAvoidDevAutoReload } from "@/lib/adminPreviewStability";
+import {
+  isEmbeddedPreviewWindow,
+  isLovableEditorPreviewHost,
+  isSensitivePreviewRouteWindow,
+  shouldAvoidDevAutoReload,
+} from "@/lib/adminPreviewStability";
 import { clearPendingReloadFlag, DEV_SERVER_LAST_RELOAD_KEY, DEV_SERVER_PENDING_RELOAD_KEY, DEV_SERVER_STATUS_EVENT, markDevServerPendingReload } from "@/lib/devReloadGuard";
 import { withPreviewParams } from "@/lib/previewRouting";
 import { isSensitiveRouteAppReady, removeStartupShell } from "@/lib/startupShell";
@@ -16,7 +21,7 @@ let hasTriggeredChunkRecovery = false;
 let bootstrapListenersInstalled = false;
 
 const shouldUseSensitiveRouteRecovery = () =>
-  isSensitivePreviewRouteWindow() && !isEmbeddedPreviewWindow();
+  isSensitivePreviewRouteWindow() && !isEmbeddedPreviewWindow() && !isLovableEditorPreviewHost();
 
 type ChunkRecoveryAttemptResult = "recovered" | "exhausted" | "ignored";
 
