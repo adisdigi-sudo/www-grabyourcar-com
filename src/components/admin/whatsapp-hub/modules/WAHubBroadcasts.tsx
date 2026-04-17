@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -595,7 +595,7 @@ function OneShotBroadcast() {
     refetchInterval: step === 2 ? 10000 : false,
   });
 
-  const approvedTemplates = (templates || []).filter((t: any) => t.status === "approved");
+  const approvedTemplates = (templates || []).filter((t: any) => String(t.status || "").toLowerCase() === "approved");
 
   // Pick an approved template → autofill form & jump to Step 3
   const pickApprovedTemplate = (tplId: string) => {
@@ -663,10 +663,13 @@ function OneShotBroadcast() {
   });
 
   const currentTemplate = templates?.find((t: any) => t.id === form.template_id);
-  if (currentTemplate && currentTemplate.status !== form.template_status) {
-    setTimeout(() => setForm(p => ({ ...p, template_status: currentTemplate.status })), 0);
-  }
-  const isApproved = currentTemplate?.status === "approved";
+  useEffect(() => {
+    if (currentTemplate && currentTemplate.status !== form.template_status) {
+      setForm((p) => ({ ...p, template_status: currentTemplate.status }));
+    }
+  }, [currentTemplate, form.template_status]);
+
+  const isApproved = String(currentTemplate?.status || "").toLowerCase() === "approved";
 
   const testSendMutation = useMutation({
     mutationFn: async () => {
@@ -682,9 +685,11 @@ function OneShotBroadcast() {
       const { data, error } = await supabase.functions.invoke("wa-send-inbox", {
         body: {
           phone: `91${clean}`,
-          message_type: form.header_type === "none" || form.header_type === "text" ? "text" : form.header_type,
-          content, template_name: form.template_name,
-          media_url: form.media_url || undefined, test_send: true,
+          message_type: form.template_name ? "template" : (form.header_type === "none" || form.header_type === "text" ? "text" : form.header_type),
+          content,
+          template_name: form.template_name,
+          media_url: form.media_url || undefined,
+          test_send: true,
         },
       });
       if (error || !data?.success) throw new Error(data?.error || error?.message || "Test send failed");

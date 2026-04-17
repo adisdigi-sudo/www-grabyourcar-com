@@ -6,6 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function jsonResponse(payload: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 function resolveTemplateVariables(content: string, variables: Record<string, string>) {
   return content.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_match, rawKey: string) => {
     const key = rawKey.trim();
@@ -31,9 +38,7 @@ serve(async (req) => {
     const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
     if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
-      return new Response(JSON.stringify({ error: "WhatsApp API not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ success: false, error: "WhatsApp API not configured", fallback: true });
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -46,7 +51,7 @@ serve(async (req) => {
       content,
       template_name,
       template_variables,
-      template_components, // explicit components override
+      template_components,
       media_url,
       media_filename,
       sent_by,
@@ -54,12 +59,9 @@ serve(async (req) => {
     } = body;
 
     if (!phone) {
-      return new Response(JSON.stringify({ error: "phone required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ success: false, error: "phone required" });
     }
 
-    // Check 24hr window (only when sending from an existing conversation)
     let convo: { window_expires_at: string | null; last_customer_message_at: string | null; customer_name: string | null } | null = null;
     if (conversation_id) {
       const { data } = await supabase
@@ -72,26 +74,18 @@ serve(async (req) => {
 
     const windowOpen = convo?.window_expires_at && new Date(convo.window_expires_at) > new Date();
 
-    // If window closed and not a template, reject
     if (!windowOpen && message_type === "text") {
-      return new Response(JSON.stringify({
+      return jsonResponse({
+        success: false,
         error: "24-hour window expired. Please use a template message.",
         window_expired: true,
-      }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // ─── STRICT META CATEGORY & COST-SAVING STRATEGY ───
-    // 1. SERVICE (FREE): CRM replies inside 24hr window → free text + opt-out footer
-    // 2. UTILITY: Existing client updates (renewals, bookings) → utility template
-    // 3. MARKETING: New client outreach, promos → marketing template (most expensive)
-    // Rule: Always prefer FREE service messages when window is open
     let effectiveMessageType = message_type;
     let costSaved = false;
-    let metaCategory = "service"; // default for inbox replies
+    let metaCategory = "service";
 
-    // Lookup category rules from DB for this message context
     const messageContext = body.message_context || "inbox_reply";
     const { data: categoryRule } = await supabase
       .from("wa_category_rules")
@@ -104,42 +98,33 @@ serve(async (req) => {
       metaCategory = categoryRule.meta_category;
     }
 
-      const resolvedContent = content && content.trim()
-        ? resolveTemplateVariables(content, {
-            customer_name: convo?.customer_name || sent_by_name || "Customer",
-            name: convo?.customer_name || sent_by_name || "Customer",
-            phone,
-          }).trim()
-        : content;
+    const resolvedContent = content && content.trim()
+      ? resolveTemplateVariables(content, {
+          customer_name: convo?.customer_name || sent_by_name || "Customer",
+          name: convo?.customer_name || sent_by_name || "Customer",
+          phone,
+        }).trim()
+      : content;
 
-      // COST-SAVING: If window IS open, downgrade ANY template to free text
-    // Meta policy: inside 24hr window, free-form text is FREE (service conversation)
-      if (windowOpen && message_type === "template" && template_name && resolvedContent && resolvedContent.trim()) {
+    if (windowOpen && message_type === "template" && template_name && resolvedContent && resolvedContent.trim()) {
       const minutesLeft = Math.round((new Date(convo.window_expires_at).getTime() - Date.now()) / 60000);
       console.log(`💰 Cost-saving: downgrading ${metaCategory} template "${template_name}" to free text (window open, ${minutesLeft}min left)`);
       effectiveMessageType = "text";
       costSaved = true;
-      metaCategory = "service"; // downgraded to free service
+      metaCategory = "service";
     }
 
-    // Add opt-out footer for free CRM messages (Meta compliance)
-    // Key clients get messages with footer so they know they can stop
     let optOutFooter = "";
     if (effectiveMessageType === "text" && metaCategory === "service") {
-      // Only add footer for outbound CRM messages, not direct replies
       if (messageContext !== "inbox_reply") {
         optOutFooter = "\n\n_Reply STOP to unsubscribe_";
       }
     }
 
-    // Build Meta API payload
     const to = phone.startsWith("91") ? phone : `91${phone.replace(/\D/g, "")}`;
     let metaPayload: Record<string, unknown>;
 
     if (effectiveMessageType === "template" && template_name) {
-      // ─── STRICT META-COMPLIANT TEMPLATE BUILDING ───
-      
-      // If explicit components provided (from Fill Template Dialog), use them directly
       if (template_components && Array.isArray(template_components) && template_components.length > 0) {
         metaPayload = {
           type: "template",
@@ -150,20 +135,17 @@ serve(async (req) => {
           },
         };
       } else {
-        // Lookup template from DB for full metadata
         const { data: tplData } = await supabase
           .from("wa_templates")
           .select("body, buttons, category, header_type, header_content, variables, language, status")
           .eq("name", template_name)
           .single();
 
-        // Block sending unapproved templates
-        if (tplData && tplData.status !== "approved") {
-          return new Response(JSON.stringify({ 
+        if (tplData && String(tplData.status || "").toLowerCase() !== "approved") {
+          return jsonResponse({
+            success: false,
             error: `Template "${template_name}" is not approved (status: ${tplData.status}). Only approved templates can be sent.`,
             template_not_approved: true,
-          }), {
-            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
 
@@ -171,11 +153,9 @@ serve(async (req) => {
         const tplBody = tplData?.body || "";
         const tplLang = tplData?.language || "en";
 
-        // 1. HEADER component — if template has header with variables
         if (tplData?.header_type === "text" && tplData.header_content) {
           const headerVarMatches = (tplData.header_content as string).match(/\{\{(\w+)\}\}/g) || [];
           if (headerVarMatches.length > 0) {
-            // Map header variable
             const headerVarName = headerVarMatches[0].replace(/[{}]/g, "");
             const headerValue = template_variables?.[headerVarName] || template_variables?.["header_1"] || template_variables?.["var_1"] || "";
             if (headerValue) {
@@ -187,9 +167,7 @@ serve(async (req) => {
           }
         }
 
-        // 2. BODY component — map named variables to positional {{1}}, {{2}}
         if (template_variables && Object.keys(template_variables).length > 0) {
-          // Extract variable names from template body to maintain order
           const bodyVarMatches = tplBody.match(/\{\{(\w+)\}\}/g) || [];
           const uniqueVars: string[] = [];
           for (const m of bodyVarMatches) {
@@ -197,19 +175,16 @@ serve(async (req) => {
             if (!uniqueVars.includes(varName)) uniqueVars.push(varName);
           }
 
-          // Build parameters in correct positional order
           const bodyParams: Record<string, unknown>[] = [];
 
           if (uniqueVars.length > 0) {
-            // Named variables — map in order they appear in body
             for (const varName of uniqueVars) {
-              const value = template_variables[varName] 
-                || template_variables[`var_${uniqueVars.indexOf(varName) + 1}`] 
+              const value = template_variables[varName]
+                || template_variables[`var_${uniqueVars.indexOf(varName) + 1}`]
                 || "";
               bodyParams.push({ type: "text", text: String(value) });
             }
           } else {
-            // Positional variables (var_1, var_2, etc.)
             const sortedKeys = Object.keys(template_variables)
               .filter(k => /^(var_\d+|\d+)$/.test(k))
               .sort((a, b) => {
@@ -221,7 +196,6 @@ serve(async (req) => {
               bodyParams.push({ type: "text", text: String(template_variables[key]) });
             }
 
-            // If no positional keys, try all entries as sequential params
             if (bodyParams.length === 0) {
               for (const [, value] of Object.entries(template_variables)) {
                 if (value !== null && value !== undefined && String(value).trim()) {
@@ -236,19 +210,16 @@ serve(async (req) => {
           }
         }
 
-        // 3. BUTTON components — build from DB button metadata
         if (tplData?.buttons && Array.isArray(tplData.buttons)) {
           const buttons = tplData.buttons as Array<Record<string, unknown>>;
           buttons.forEach((btn, idx) => {
             const btnType = String(btn.type || "").toUpperCase();
             const btnUrl = String(btn.url || "");
-            const btnPhone = String(btn.phone_number || "");
 
             if (btnType === "URL" && btnUrl.includes("{{")) {
-              // Dynamic URL button — needs parameter
-              const urlVar = template_variables?.["btn_url_" + idx] 
-                || template_variables?.["var_1"] 
-                || template_variables?.[Object.keys(template_variables || {})[0]] 
+              const urlVar = template_variables?.["btn_url_" + idx]
+                || template_variables?.["var_1"]
+                || template_variables?.[Object.keys(template_variables || {})[0]]
                 || "";
               if (urlVar) {
                 components.push({
@@ -259,8 +230,6 @@ serve(async (req) => {
                 });
               }
             }
-            // QUICK_REPLY and static URL buttons don't need parameters
-            // PHONE_NUMBER buttons don't need parameters
           });
         }
 
@@ -275,7 +244,6 @@ serve(async (req) => {
       }
 
       console.log("Template payload:", JSON.stringify(metaPayload));
-
     } else if (effectiveMessageType === "image" && media_url) {
       metaPayload = {
         type: "image",
@@ -287,7 +255,6 @@ serve(async (req) => {
         document: { link: media_url, filename: media_filename || "document", caption: resolvedContent || undefined },
       };
     } else {
-      // Free text message — append opt-out footer if applicable
       const textBody = (resolvedContent || "") + optOutFooter;
       metaPayload = {
         type: "text",
@@ -295,7 +262,6 @@ serve(async (req) => {
       };
     }
 
-    // Send via Meta Cloud API
     const metaUrl = `https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
     const response = await fetch(metaUrl, {
       method: "POST",
@@ -311,19 +277,23 @@ serve(async (req) => {
       }),
     });
 
-    const result = await response.json();
+    const rawResult = await response.text();
+    let result: any = {};
+    try {
+      result = rawResult ? JSON.parse(rawResult) : {};
+    } catch {
+      result = { error: { message: rawResult || `Meta API error (${response.status})` } };
+    }
     console.log("Meta API response:", JSON.stringify(result));
-    
+
     const waMessageId = result.messages?.[0]?.id || null;
     const success = response.ok && !!waMessageId;
 
-    // Build display content for inbox
-      let displayContent = resolvedContent || "";
+    let displayContent = resolvedContent || "";
     if (message_type === "template" && template_name) {
       displayContent = resolvedContent || `[Template: ${template_name}]`;
     }
 
-    // Insert into wa_inbox_messages (only when tied to an inbox conversation)
     if (conversation_id) {
       await supabase.from("wa_inbox_messages").insert({
         conversation_id,
@@ -343,14 +313,12 @@ serve(async (req) => {
         sent_by_name,
       });
 
-      // Update conversation
       await supabase.from("wa_conversations").update({
         last_message: displayContent.slice(0, 200),
         last_message_at: new Date().toISOString(),
       }).eq("id", conversation_id);
     }
 
-    // Log in legacy wa_message_logs
     await supabase.from("wa_message_logs").insert({
       phone: to,
       message_type: costSaved ? "text_downgraded" : message_type,
@@ -362,7 +330,6 @@ serve(async (req) => {
       sent_at: new Date().toISOString(),
     });
 
-    // Update template sent_count only if actually sent as template (not downgraded)
     if (success && !costSaved && message_type === "template" && template_name) {
       await supabase.rpc("increment_counter", { table_name: "wa_templates", column_name: "sent_count", row_id_column: "name", row_id_value: template_name }).catch(() => {
         supabase.from("wa_templates").select("id, sent_count").eq("name", template_name).single().then(({ data: t }) => {
@@ -371,22 +338,21 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       success,
       messageId: waMessageId,
       window_open: windowOpen,
       cost_saved: costSaved,
       sent_as: costSaved ? "free_text" : effectiveMessageType,
+      fallback: !success,
       ...(success ? {} : { error: result.error?.message || result.error?.error_user_msg || "Send failed", meta_error_code: result.error?.code }),
-    }), {
-      status: success ? 200 : 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-
   } catch (error) {
     console.error("wa-send-inbox error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return jsonResponse({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      fallback: true,
     });
   }
 });
