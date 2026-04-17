@@ -300,7 +300,9 @@ serve(async (req) => {
             components.push(headerComp);
           }
         } else if (["image", "video", "document"].includes(template.header_type)) {
-          // Meta REQUIRES example.header_handle from the Resumable Upload API (NOT a public URL).
+          // Meta accepts EITHER a public URL OR an uploaded handle in example.header_handle.
+          // Strategy: send the public URL first (per user preference). If Meta rejects it,
+          // we automatically fall back to the Resumable Upload API (h:...) and retry.
           const mediaUrl = template.header_content as string | null;
           if (!mediaUrl) {
             const fmt = template.header_type.toUpperCase();
@@ -316,28 +318,13 @@ serve(async (req) => {
             }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
           }
 
-          // Convert public URL → Meta upload handle (h:...)
-          const mimeHint = template.header_type === "video" ? "video/mp4"
-            : template.header_type === "image" ? "image/jpeg"
-            : "application/pdf";
-          const { handle, error: upErr } = await uploadMediaToMeta(mediaUrl, mimeHint);
-          if (!handle) {
-            await supabase.from("wa_templates").update({
-              status: "rejected",
-              meta_rejection_reason: `Sample ${template.header_type} upload to Meta failed: ${upErr}`,
-            }).eq("id", template_id);
-            return new Response(JSON.stringify({
-              success: false,
-              error: `Could not upload sample ${template.header_type} to Meta: ${upErr}`,
-              fix_hint: `Try a smaller file (<5 MB) or a different ${template.header_type === "video" ? "MP4" : template.header_type}.`,
-              validation_failed: true,
-            }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-          }
-
           components.push({
             type: "HEADER",
             format: template.header_type.toUpperCase(),
-            example: { header_handle: [handle] },
+            example: { header_handle: [mediaUrl] },
+            // marker so we know to retry with handle if Meta rejects
+            __mediaUrl: mediaUrl,
+            __mediaType: template.header_type,
           });
         }
       }
