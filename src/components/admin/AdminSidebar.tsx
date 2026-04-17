@@ -413,7 +413,13 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
     if (normalizedActiveSlug === "insurance") {
       items = items
         .map(item => {
-          if (item.id === "dashboard" || item.id === "calling-system") return item;
+          if (
+            item.id === "dashboard" ||
+            item.id === "calling-system" ||
+            item.id === "templates-hub" ||
+            item.id === "ai-cofounder" ||
+            item.id === "my-hr"
+          ) return item;
           // Remove Accounts & Finance and HR from insurance vertical
           if (item.id === "finance-hub" || item.id === "hr-hub") return null;
           if (item.id === "services" && item.children) {
