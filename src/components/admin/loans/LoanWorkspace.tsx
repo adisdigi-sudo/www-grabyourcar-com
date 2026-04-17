@@ -25,9 +25,10 @@ import {
   Banknote, Plus, Phone, Car, GripVertical, IndianRupee,
   PhoneCall, MessageCircle, CheckCircle2, XCircle, Building2,
   FileText, AlertTriangle, Clock, TrendingUp, Users, FileSpreadsheet,
-  BookOpen, HeartHandshake, Wrench, BarChart3, Filter, X
+  BookOpen, HeartHandshake, Wrench, BarChart3, Filter, X, MessageSquare
 } from "lucide-react";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
+import { VerticalMessagingTab } from "../shared/VerticalMessagingTab";
 import { UnifiedSalesCalculator } from "../shared/UnifiedSalesCalculator";
 import { StageNotificationBanner, buildLoanNotifications } from "../shared/StageNotificationBanner";
 import {
@@ -138,7 +139,7 @@ Warm regards,
 };
 
 // ─── Main Workspace ───
-type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator" | "performance";
+type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator" | "performance" | "conversations";
 type DateFilter = DateFilterValue;
 type StageFilter = "all" | "in_pipeline" | "disbursed" | "lost";
 interface LoanWorkspaceProps {
@@ -494,6 +495,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
           { key: "after_sales", label: "After Sales", icon: HeartHandshake },
           { key: "performance", label: "Performance", icon: BarChart3 },
           { key: "emi_calculator", label: "EMI Calc", icon: IndianRupee },
+          { key: "conversations", label: "Conversations", icon: MessageSquare },
         ] as { key: LoanWorkspaceView; label: string; icon: any }[]).map(tab => (
           <button
             key={tab.key}
@@ -679,6 +681,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
           </div>
         )}
         {activeView === "emi_calculator" && <EMICalculator />}
+        {activeView === "conversations" && <VerticalMessagingTab scope="loans" />}
       </div>
 
 

@@ -4,12 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, CheckCircle2, ShoppingCart, LayoutDashboard, Search, ClipboardCheck, TrendingUp } from "lucide-react";
+import { Shield, CheckCircle2, ShoppingCart, LayoutDashboard, Search, ClipboardCheck, TrendingUp, MessageSquare } from "lucide-react";
 import { HSRPWorkspace } from "../hsrp/HSRPWorkspace";
 import { HSRPAbandonedCarts } from "../hsrp/HSRPAbandonedCarts";
 import { HSRPOrderTracker } from "@/components/hsrp/HSRPOrderTracker";
 import { HSRPComplianceChecker } from "@/components/hsrp/HSRPComplianceChecker";
 import { HSRPPerformanceDashboard } from "../hsrp/HSRPPerformanceDashboard";
+import { VerticalMessagingTab } from "../shared/VerticalMessagingTab";
 
 import { DateFilterBar, type DateFilterValue } from "../shared/DateFilterBar";
 import { startOfDay, subDays, startOfMonth, isWithinInterval } from "date-fns";
@@ -86,7 +87,7 @@ export function HSRPVerticalWorkspace() {
       </Card>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="w-full grid grid-cols-4">
+        <TabsList className="w-full grid grid-cols-5">
           <TabsTrigger value="pipeline" className="gap-1.5">
             <LayoutDashboard className="h-4 w-4" /> Pipeline
           </TabsTrigger>
@@ -98,6 +99,9 @@ export function HSRPVerticalWorkspace() {
           </TabsTrigger>
           <TabsTrigger value="tools" className="gap-1.5">
             <ClipboardCheck className="h-4 w-4" /> Tools
+          </TabsTrigger>
+          <TabsTrigger value="conversations" className="gap-1.5">
+            <MessageSquare className="h-4 w-4" /> Conversations
           </TabsTrigger>
         </TabsList>
         <TabsContent value="pipeline">
@@ -133,6 +137,9 @@ export function HSRPVerticalWorkspace() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="conversations" className="mt-4">
+          <VerticalMessagingTab scope="hsrp" />
         </TabsContent>
       </Tabs>
     </div>
