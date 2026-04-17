@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { forwardRef, useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -312,15 +312,11 @@ function PhonePreview({ template, buttons }: { template: Partial<Template>; butt
 }
 
 // --- Media Header Uploader (Image / Video / Document) ---
-function MediaHeaderUploader({
-  type,
-  value,
-  onChange,
-}: {
+const MediaHeaderUploader = forwardRef<HTMLDivElement, {
   type: "image" | "video" | "document";
   value: string | null;
   onChange: (url: string | null) => void;
-}) {
+}>(function MediaHeaderUploader({ type, value, onChange }, ref) {
   const [uploading, setUploading] = useState(false);
   const accept =
     type === "image" ? "image/jpeg,image/png,image/webp" :
@@ -337,6 +333,7 @@ function MediaHeaderUploader({
       toast.error(`File too large. Max ${maxMb} MB for ${type}.`);
       return;
     }
+
     setUploading(true);
     try {
       const ext = file.name.split(".").pop() || "bin";
@@ -345,7 +342,9 @@ function MediaHeaderUploader({
         upsert: false,
         contentType: file.type,
       });
+
       if (error) throw error;
+
       const { data: pub } = supabase.storage.from("wa-template-media").getPublicUrl(path);
       onChange(pub.publicUrl);
       toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} uploaded ✅`);
@@ -357,7 +356,7 @@ function MediaHeaderUploader({
   };
 
   return (
-    <div className="space-y-1.5">
+    <div ref={ref} className="space-y-1.5">
       <div className="flex items-center gap-2">
         <label className={cn(
           "inline-flex items-center gap-1.5 text-xs px-3 h-8 rounded-md border bg-background hover:bg-muted cursor-pointer transition-colors",
@@ -399,7 +398,7 @@ function MediaHeaderUploader({
       </p>
     </div>
   );
-}
+});
 
 // --- Inline "How to fix" guidance for each common Meta validation message ---
 function getFixHint(field: string, message: string): string | null {
