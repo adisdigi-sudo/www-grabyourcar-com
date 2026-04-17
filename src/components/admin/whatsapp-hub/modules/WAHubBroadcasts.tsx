@@ -572,6 +572,8 @@ type WizardStep = 1 | 2 | 3 | 4;
 function OneShotBroadcast() {
   const qc = useQueryClient();
   const [step, setStep] = useState<WizardStep>(1);
+  // mode: 'approved' = pick existing approved template & skip to Step 3 ; 'build' = build & submit new
+  const [mode, setMode] = useState<"approved" | "build">("approved");
   const [form, setForm] = useState({
     name: "", message: "", template_id: "", template_name: "", template_status: "",
     batch_size: 50, header_type: "none" as string, header_content: "", footer: "",
@@ -587,10 +589,49 @@ function OneShotBroadcast() {
   const { data: templates, refetch: refetchTemplates } = useQuery({
     queryKey: ["broadcast-templates-all"],
     queryFn: async () => {
-      const { data } = await supabase.from("wa_templates").select("id, name, body, status, header_type, header_content, footer, buttons, category").order("created_at", { ascending: false });
+      const { data } = await supabase.from("wa_templates").select("id, name, display_name, body, status, header_type, header_content, footer, buttons, category, language, created_at").order("created_at", { ascending: false });
       return data || [];
     },
     refetchInterval: step === 2 ? 10000 : false,
+  });
+
+  const approvedTemplates = (templates || []).filter((t: any) => t.status === "approved");
+
+  // Pick an approved template → autofill form & jump to Step 3
+  const pickApprovedTemplate = (tplId: string) => {
+    const t: any = (templates || []).find((x: any) => x.id === tplId);
+    if (!t) return;
+    setForm({
+      name: t.display_name || t.name,
+      message: t.body || "",
+      template_id: t.id,
+      template_name: t.name,
+      template_status: t.status,
+      batch_size: 50,
+      header_type: t.header_type || "none",
+      header_content: t.header_type === "text" ? (t.header_content || "") : "",
+      footer: t.footer || "",
+      buttons: Array.isArray(t.buttons) ? t.buttons : [],
+      media_url: t.header_type && t.header_type !== "text" && t.header_type !== "none" ? (t.header_content || "") : "",
+      variable_samples: [],
+      send_quote: false,
+    });
+    setRecipients(null); setExcelMissing([]); setTestPhone(""); setTestSent(false);
+    setStep(3);
+    toast.success(`✅ Template "${t.display_name || t.name}" selected. Ab recipients upload karo.`);
+  };
+
+  // Past recipient lists from previous campaigns (for re-use)
+  const { data: pastLists } = useQuery({
+    queryKey: ["broadcast-past-recipient-lists"],
+    queryFn: async () => {
+      const { data } = await supabase.from("wa_campaigns")
+        .select("id, name, created_at, metadata, total_sent")
+        .eq("channel", "whatsapp")
+        .order("created_at", { ascending: false })
+        .limit(30);
+      return (data || []).filter((c: any) => Array.isArray(c?.metadata?.excel_recipients) && c.metadata.excel_recipients.length > 0);
+    },
   });
 
   const submitTemplateMutation = useMutation({
