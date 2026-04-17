@@ -322,9 +322,15 @@ const AdminAuth = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background">
+      <main
+        className="min-h-screen flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-background via-muted/30 to-background"
+        role="main"
+        aria-busy="true"
+        data-startup-ready="crm-auth-bootstrap-loading"
+      >
         <Loader2 className="h-8 w-8 animate-spin text-foreground" />
-      </div>
+        <p className="text-sm text-muted-foreground animate-pulse">Loading sign in...</p>
+      </main>
     );
   }
 
