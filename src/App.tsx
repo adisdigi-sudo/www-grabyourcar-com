@@ -58,6 +58,7 @@ const AgreementSignPage = lazy(() => import("./pages/AgreementSignPage"));
 const TrackOrder = lazy(() => import("./pages/TrackOrder"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const IntegrationControlCenter = lazy(() => import("./pages/IntegrationControlCenter"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -78,6 +79,7 @@ const ADMIN_ROUTE_PREFIXES = [
   "/admin",
   "/admin-auth",
   "/admin-reset-password",
+  "/integration-control-center",
 ];
 
 const ADMIN_AUTH_ROUTE_PREFIXES = ["/crm-auth", "/crm-reset-password", "/admin-auth", "/admin-reset-password"];
@@ -216,6 +218,7 @@ const AppRouterShell = () => {
             <Route path="/track-order" element={<TrackOrder />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/integration-control-center" element={<IntegrationControlCenter />} />
             <Route path="*" element={<LegacyRouteHandler />} />
           </Routes>
           <RouteAwareChrome isChromelessExperience={isChromelessExperience} />
