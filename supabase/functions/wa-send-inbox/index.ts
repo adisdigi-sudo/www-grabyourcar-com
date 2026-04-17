@@ -53,18 +53,22 @@ serve(async (req) => {
       sent_by_name,
     } = body;
 
-    if (!conversation_id || !phone) {
-      return new Response(JSON.stringify({ error: "conversation_id and phone required" }), {
+    if (!phone) {
+      return new Response(JSON.stringify({ error: "phone required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check 24hr window
-      const { data: convo } = await supabase
-      .from("wa_conversations")
+    // Check 24hr window (only when sending from an existing conversation)
+    let convo: { window_expires_at: string | null; last_customer_message_at: string | null; customer_name: string | null } | null = null;
+    if (conversation_id) {
+      const { data } = await supabase
+        .from("wa_conversations")
         .select("window_expires_at, last_customer_message_at, customer_name")
-      .eq("id", conversation_id)
-      .single();
+        .eq("id", conversation_id)
+        .single();
+      convo = data as typeof convo;
+    }
 
     const windowOpen = convo?.window_expires_at && new Date(convo.window_expires_at) > new Date();
 
