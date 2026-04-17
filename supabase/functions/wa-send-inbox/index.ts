@@ -248,14 +248,10 @@ serve(async (req) => {
                   parameters: [{ type: "text", text: String(urlVar) }],
                 });
               }
-            } else if (btnType === "QUICK_REPLY") {
-              components.push({
-                type: "button",
-                sub_type: "quick_reply",
-                index: idx,
-                parameters: [{ type: "payload", payload: String(btn.text || `qr_${idx}`) }],
-              });
             }
+            // QUICK_REPLY / PHONE_NUMBER / static URL buttons: Meta does NOT
+            // accept a button component when the button text/url has no
+            // {{var}} placeholder — including one returns error #132018.
           });
         }
 
