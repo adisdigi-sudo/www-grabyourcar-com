@@ -354,7 +354,7 @@ const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
 
   switch (verticalSlug) {
     case "insurance":
-      return ["services-insurance", "services-insurance-import", "services-messaging-channels", "d2c-inbox"].includes(tab);
+      return ["services-insurance", "services-insurance-import", "d2c-inbox"].includes(tab);
     case "loans":
       return [
         "loan-crm",
