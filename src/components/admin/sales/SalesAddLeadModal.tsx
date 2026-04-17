@@ -65,7 +65,12 @@ export function SalesAddLeadModal({ open, onOpenChange, onSubmit, isPending }: S
       toast.error("Name and phone are required");
       return;
     }
-    onSubmit(form);
+    // `budget` is not a column on sales_pipeline — fold it into inquiry_remarks
+    const { budget, inquiry_remarks, ...rest } = form;
+    const mergedRemarks = budget?.trim()
+      ? `${inquiry_remarks ? inquiry_remarks + " | " : ""}Budget: ${budget.trim()}`
+      : inquiry_remarks;
+    onSubmit({ ...rest, inquiry_remarks: mergedRemarks });
     resetForm();
   };
 
