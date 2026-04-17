@@ -15,7 +15,7 @@ import {
   Plus, Edit, Trash2, Copy, Zap, LayoutTemplate, Save, CheckCircle, Clock, XCircle,
   AlertTriangle, Eye, Send, MessageSquare, Shield, Megaphone,
   FileText, Image, Video, Globe, Search, Filter, RefreshCw, BarChart3,
-  GitBranch, TrendingUp, Phone, Link, Reply, PhoneCall, X
+  GitBranch, TrendingUp, Phone, Link, Reply, PhoneCall, X, Upload, Loader2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -52,14 +52,31 @@ interface MetaButton {
   phone_number?: string;
 }
 
-const COMMON_VARS = ["customer_name", "phone", "vehicle_number", "insurer", "premium", "expiry_date", "policy_number", "order_id", "amount", "date"];
+// Variable library — grouped by purpose. All chips are clickable in the editor.
+const VAR_GROUPS: { label: string; vars: string[] }[] = [
+  { label: "Customer", vars: ["customer_name", "phone", "email", "city", "agent_name", "dealer_name"] },
+  { label: "Vehicle", vars: ["vehicle_number", "car_model", "brand", "variant", "year", "fuel_type", "registration_number"] },
+  { label: "Insurance", vars: ["insurer", "premium", "policy_number", "expiry_date", "idv", "ncb_percent", "claim_id"] },
+  { label: "Order / Booking", vars: ["order_id", "booking_id", "amount", "discount", "delivery_date", "pickup_date", "drop_date"] },
+  { label: "Document / Message", vars: ["document_name", "document_type", "invoice_number", "message", "subject", "reason"] },
+  { label: "Time / Link", vars: ["date", "time", "link", "address", "tracking_url", "otp"] },
+];
+const COMMON_VARS = Array.from(new Set(VAR_GROUPS.flatMap(g => g.vars)));
 const VERTICALS = ["Insurance", "Car Sales", "Self Drive", "HSRP", "Accessories", "Loans", "Marketing"];
 
 const SAMPLE_VALUES: Record<string, string> = {
-  customer_name: "Rahul Sharma", phone: "9876543210", vehicle_number: "MH02AB1234",
+  customer_name: "Rahul Sharma", phone: "9876543210", email: "rahul@example.com", city: "New Delhi",
+  agent_name: "Anshdeep", dealer_name: "GrabYourCar Delhi",
+  vehicle_number: "MH02AB1234", car_model: "Hyundai Creta SX", brand: "Hyundai", variant: "SX(O)",
+  year: "2023", fuel_type: "Petrol", registration_number: "DL01AB1234",
   insurer: "HDFC ERGO", premium: "₹12,500", expiry_date: "15 Apr 2026",
-  policy_number: "POL-2024-12345", order_id: "ORD-789", amount: "₹8,500", date: "11 Apr 2026",
-  otp: "123456", car_model: "Hyundai Creta", booking_id: "BK-001",
+  policy_number: "POL-2024-12345", idv: "₹8,50,000", ncb_percent: "25%", claim_id: "CLM-9921",
+  order_id: "ORD-789", booking_id: "BK-12345", amount: "₹8,500", discount: "₹1,200",
+  delivery_date: "20 Apr 2026", pickup_date: "18 Apr 2026", drop_date: "22 Apr 2026",
+  document_name: "RC Copy", document_type: "PDF", invoice_number: "INV-2026-0078",
+  message: "your update is ready", subject: "Important Update", reason: "policy renewal",
+  date: "11 Apr 2026", time: "11:30 AM", link: "https://grabyourcar.com",
+  address: "Sector 18, Noida", tracking_url: "https://gyc.in/t/abc", otp: "482913",
 };
 
 // ─── META VALIDATION ENGINE ───
@@ -264,7 +281,119 @@ function PhonePreview({ template, buttons }: { template: Partial<Template>; butt
   );
 }
 
-// --- Validation Panel ---
+// --- Media Header Uploader (Image / Video / Document) ---
+function MediaHeaderUploader({
+  type,
+  value,
+  onChange,
+}: {
+  type: "image" | "video" | "document";
+  value: string | null;
+  onChange: (url: string | null) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const accept =
+    type === "image" ? "image/jpeg,image/png,image/webp" :
+    type === "video" ? "video/mp4,video/3gpp" :
+    "application/pdf";
+  const maxMb = type === "video" ? 16 : type === "document" ? 100 : 5;
+  const hint =
+    type === "image" ? "JPG / PNG / WebP up to 5 MB" :
+    type === "video" ? "MP4 / 3GPP up to 16 MB" :
+    "PDF up to 100 MB (Meta limit)";
+
+  const handleUpload = async (file: File) => {
+    if (file.size > maxMb * 1024 * 1024) {
+      toast.error(`File too large. Max ${maxMb} MB for ${type}.`);
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "bin";
+      const path = `${type}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("wa-template-media").upload(path, file, {
+        upsert: false,
+        contentType: file.type,
+      });
+      if (error) throw error;
+      const { data: pub } = supabase.storage.from("wa-template-media").getPublicUrl(path);
+      onChange(pub.publicUrl);
+      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} uploaded ✅`);
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <label className={cn(
+          "inline-flex items-center gap-1.5 text-xs px-3 h-8 rounded-md border bg-background hover:bg-muted cursor-pointer transition-colors",
+          uploading && "opacity-50 pointer-events-none"
+        )}>
+          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+          {uploading ? "Uploading…" : value ? `Replace ${type}` : `Upload ${type}`}
+          <input
+            type="file"
+            accept={accept}
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleUpload(f);
+              e.currentTarget.value = "";
+            }}
+          />
+        </label>
+        {value && (
+          <Button type="button" size="sm" variant="ghost" className="h-8 text-[10px] text-destructive" onClick={() => onChange(null)}>
+            <X className="h-3 w-3 mr-1" /> Remove
+          </Button>
+        )}
+        <span className="text-[10px] text-muted-foreground">{hint}</span>
+      </div>
+      {value && (
+        <div className="border rounded-md p-1.5 bg-muted/30 inline-block">
+          {type === "image" && <img src={value} alt="header" className="h-20 rounded object-cover" />}
+          {type === "video" && <video src={value} className="h-20 rounded" controls />}
+          {type === "document" && (
+            <a href={value} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline px-2">
+              <FileText className="h-4 w-4" /> View uploaded PDF
+            </a>
+          )}
+        </div>
+      )}
+      <p className="text-[10px] text-muted-foreground">
+        ✅ Saved to template — same {type} will be sent automatically with this template.
+      </p>
+    </div>
+  );
+}
+
+// --- Inline "How to fix" guidance for each common Meta validation message ---
+function getFixHint(field: string, message: string): string | null {
+  const m = message.toLowerCase();
+  if (field === "name" && m.includes("required")) return "Type a unique name like insurance_followup (lowercase + underscores).";
+  if (field === "name" && m.includes("lowercase")) return "Use only lowercase letters, numbers and _ (no spaces or capitals).";
+  if (field === "body" && m.includes("required")) return "Write the WhatsApp message text. Insert variables by clicking the chips on the right.";
+  if (field === "body" && m.includes("too many variables")) return "Add more plain words around your {{variables}} or remove a variable. Meta needs ~3 real words per variable.";
+  if (field === "body" && m.includes("marketing")) return "Marketing templates need a clear value proposition — add 1–2 sentences of real text, not just variables.";
+  if (field === "header" && m.includes("60 characters")) return "Shorten header to 60 chars or move details into the Body.";
+  if (field === "header" && m.includes("emoji")) return "Remove emojis from the header — they are blocked by Meta.";
+  if (field === "header" && m.includes("asterisk")) return "Remove * characters — Meta does not allow bold formatting in headers.";
+  if (field === "header" && m.includes("newline")) return "Remove line breaks — header must be a single line.";
+  if (field === "header" && m.includes("variable")) return "Header allows max 1 variable. Move extra variables into the Body.";
+  if (field === "buttons" && m.includes("max")) return "Reduce the number of buttons (max 3 total, 2 URL, 1 phone).";
+  if (field === "buttons" && m.includes("25")) return "Shorten the button label to 25 characters or fewer.";
+  if (field === "buttons" && m.includes("url is required")) return "Paste the full URL (https://…) inside the URL button.";
+  if (field === "buttons" && m.includes("phone number")) return "Add the phone number with country code, e.g. +919577200023.";
+  if (field === "buttons" && m.includes("http")) return "URLs must start with https:// (or http://).";
+  if (field === "body" && m.includes("otp")) return "Add the OTP variable, e.g. *{{otp}}* is your verification code.";
+  return null;
+}
+
+// --- Validation Panel with inline fix guidance ---
 function ValidationPanel({ issues }: { issues: ValidationIssue[] }) {
   const errors = issues.filter(i => i.type === "error");
   const warnings = issues.filter(i => i.type === "warning");
@@ -278,18 +407,30 @@ function ValidationPanel({ issues }: { issues: ValidationIssue[] }) {
   }
   return (
     <div className="space-y-1.5">
-      {errors.map((e, i) => (
-        <div key={`e-${i}`} className="bg-red-50 dark:bg-red-950/20 border border-red-200 rounded-lg p-2 text-xs text-red-700 flex items-start gap-2">
-          <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-          <div><span className="font-medium capitalize">{e.field}:</span> {e.message}</div>
-        </div>
-      ))}
-      {warnings.map((w, i) => (
-        <div key={`w-${i}`} className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 rounded-lg p-2 text-xs text-amber-700 flex items-start gap-2">
-          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-          <div><span className="font-medium capitalize">{w.field}:</span> {w.message}</div>
-        </div>
-      ))}
+      {errors.map((e, i) => {
+        const fix = getFixHint(e.field, e.message);
+        return (
+          <div key={`e-${i}`} className="bg-red-50 dark:bg-red-950/20 border border-red-200 rounded-lg p-2 text-xs text-red-700 flex items-start gap-2">
+            <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <div className="space-y-0.5">
+              <div><span className="font-medium capitalize">{e.field}:</span> {e.message}</div>
+              {fix && <div className="text-[10px] text-red-600/80"><span className="font-semibold">Fix:</span> {fix}</div>}
+            </div>
+          </div>
+        );
+      })}
+      {warnings.map((w, i) => {
+        const fix = getFixHint(w.field, w.message);
+        return (
+          <div key={`w-${i}`} className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 rounded-lg p-2 text-xs text-amber-700 flex items-start gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <div className="space-y-0.5">
+              <div><span className="font-medium capitalize">{w.field}:</span> {w.message}</div>
+              {fix && <div className="text-[10px] text-amber-600/80"><span className="font-semibold">Tip:</span> {fix}</div>}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1148,7 +1289,7 @@ export function WaTemplateManager() {
                     <Label className="text-xs">Header</Label>
                     <div className="flex gap-1.5 mb-1.5">
                       {["none", "text", "image", "video", "document"].map(ht => (
-                        <Button key={ht} type="button" size="sm" variant={(editItem?.header_type || "none") === ht ? "default" : "outline"} className="h-7 text-[10px]" onClick={() => setEditItem({ ...editItem, header_type: ht === "none" ? null : ht })}>
+                        <Button key={ht} type="button" size="sm" variant={(editItem?.header_type || "none") === ht ? "default" : "outline"} className="h-7 text-[10px]" onClick={() => setEditItem({ ...editItem, header_type: ht === "none" ? null : ht, header_content: null })}>
                           {ht.charAt(0).toUpperCase() + ht.slice(1)}
                         </Button>
                       ))}
@@ -1160,19 +1301,40 @@ export function WaTemplateManager() {
                       </div>
                     )}
                     {editItem?.header_type && editItem.header_type !== "text" && (
-                      <p className="text-[10px] text-muted-foreground">Media header — upload at send time. No URL needed here.</p>
+                      <MediaHeaderUploader
+                        type={editItem.header_type as "image" | "video" | "document"}
+                        value={editItem?.header_content || null}
+                        onChange={(url) => setEditItem({ ...editItem, header_content: url })}
+                      />
                     )}
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <Label className="text-xs">Body * <span className="text-muted-foreground">({(editItem?.body || "").length}/1024)</span></Label>
-                      <div className="flex gap-1 flex-wrap">
-                        {COMMON_VARS.slice(0, 8).map(v => (
-                          <button key={v} onClick={() => insertVariable(v)} className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 font-mono">{`{{${v}}}`}</button>
-                        ))}
-                      </div>
+                      <span className="text-[10px] text-muted-foreground">Click any chip below to insert</span>
                     </div>
-                    <Textarea value={editItem?.body || ""} onChange={e => setEditItem({ ...editItem, body: e.target.value })} rows={5} className="text-sm font-mono" maxLength={1024} />
+                    <Textarea value={editItem?.body || ""} onChange={e => setEditItem({ ...editItem, body: e.target.value })} rows={5} className="text-sm font-mono" maxLength={1024} placeholder="Hi {{customer_name}}, your {{car_model}} document {{document_name}} is ready. View: {{link}}" />
+                    {/* Grouped variable chips */}
+                    <div className="mt-2 border rounded-md p-2 bg-muted/30 space-y-1.5 max-h-44 overflow-auto">
+                      {VAR_GROUPS.map(g => (
+                        <div key={g.label} className="flex items-start gap-2">
+                          <span className="text-[9px] font-semibold uppercase text-muted-foreground w-20 shrink-0 pt-0.5">{g.label}</span>
+                          <div className="flex gap-1 flex-wrap flex-1">
+                            {g.vars.map(v => (
+                              <button
+                                key={v}
+                                type="button"
+                                onClick={() => insertVariable(v)}
+                                title={`Insert {{${v}}} — sample: ${SAMPLE_VALUES[v] || v}`}
+                                className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 font-mono"
+                              >
+                                {`{{${v}}}`}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <div>
                     <Label className="text-xs">Footer <span className="text-muted-foreground">(max 60 chars, no variables)</span></Label>
