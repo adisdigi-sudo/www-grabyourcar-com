@@ -11051,6 +11051,42 @@ export type Database = {
           },
         ]
       }
+      integration_health_logs: {
+        Row: {
+          created_at: string
+          details: Json | null
+          duration_ms: number | null
+          id: string
+          message: string | null
+          provider: string
+          status: string
+          tested_by: string | null
+          tested_by_email: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          duration_ms?: number | null
+          id?: string
+          message?: string | null
+          provider: string
+          status: string
+          tested_by?: string | null
+          tested_by_email?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          duration_ms?: number | null
+          id?: string
+          message?: string | null
+          provider?: string
+          status?: string
+          tested_by?: string | null
+          tested_by_email?: string | null
+        }
+        Relationships: []
+      }
       integration_providers: {
         Row: {
           category: string
