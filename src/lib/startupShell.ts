@@ -183,11 +183,6 @@ const scheduleStartupShellAutoReload = () => {
     return;
   }
 
-  if (isSensitivePreviewRouteWindow()) {
-    clearAutoReloadTimer();
-    return;
-  }
-
   const reloadState = readStartupShellAutoReloadState();
   if (reloadState.attempts >= STARTUP_SHELL_AUTO_RELOAD_MAX_ATTEMPTS) {
     clearAutoReloadTimer();
