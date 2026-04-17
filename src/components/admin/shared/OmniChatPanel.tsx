@@ -294,7 +294,13 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
     }
   }
 
+  // Normalize allowed phones (last 10 digits) for vertical scoping
+  const allowedKeys = (allowedPhones && allowedPhones.length)
+    ? new Set(allowedPhones.map((p) => normalizePhone(p).slice(-10)).filter(Boolean))
+    : null;
+
   const filteredThreads = threads.filter((t) => {
+    if (allowedKeys && !allowedKeys.has(normalizePhone(t.phone).slice(-10))) return false;
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -317,7 +323,12 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
           <CardTitle className="flex items-center gap-2 text-base">
             <MessageSquare className="h-4 w-4 text-primary" />
             Conversations
-            {context && (
+            {scopeLabel && (
+              <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px]">
+                {scopeLabel} only
+              </Badge>
+            )}
+            {context && !scopeLabel && (
               <Badge variant="outline" className="text-[10px]">
                 {context}
               </Badge>
