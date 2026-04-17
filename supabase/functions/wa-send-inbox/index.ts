@@ -56,9 +56,14 @@ serve(async (req) => {
       template_components,
       media_url,
       media_filename,
+      mediaUrl,
+      mediaFileName,
       sent_by,
       sent_by_name,
     } = body;
+
+    const resolvedMediaUrl = media_url || mediaUrl || null;
+    const resolvedMediaFilename = media_filename || mediaFileName || null;
 
     if (!phone) {
       return jsonResponse({ success: false, error: "phone required" });
@@ -229,18 +234,18 @@ serve(async (req) => {
               }
               // No vars → no header component (Meta uses the static text)
             } else if (format === "IMAGE" || format === "VIDEO" || format === "DOCUMENT") {
-              const headerLink = media_url || dbHeaderFallback;
+              const headerLink = resolvedMediaUrl || dbHeaderFallback;
               if (!headerLink) {
                 return jsonResponse({
                   success: false,
-                  error: `Template "${template_name}" has a ${format} header. Please attach a ${format.toLowerCase()} URL (media_url) before sending.`,
+                  error: `Template "${template_name}" has a ${format} header. Please attach a ${format.toLowerCase()} URL before sending.`,
                   missing_media: true,
                 });
               }
               const fmtKey = format.toLowerCase();
               const mediaParam: Record<string, unknown> = { link: headerLink };
-              if (format === "DOCUMENT" && media_filename) {
-                mediaParam.filename = media_filename;
+              if (format === "DOCUMENT" && resolvedMediaFilename) {
+                mediaParam.filename = resolvedMediaFilename;
               }
               components.push({
                 type: "header",
@@ -299,15 +304,15 @@ serve(async (req) => {
       }
 
       console.log("Template payload:", JSON.stringify(metaPayload));
-    } else if (effectiveMessageType === "image" && media_url) {
+    } else if (effectiveMessageType === "image" && resolvedMediaUrl) {
       metaPayload = {
         type: "image",
-        image: { link: media_url, caption: resolvedContent || undefined },
+        image: { link: resolvedMediaUrl, caption: resolvedContent || undefined },
       };
-    } else if (effectiveMessageType === "document" && media_url) {
+    } else if (effectiveMessageType === "document" && resolvedMediaUrl) {
       metaPayload = {
         type: "document",
-        document: { link: media_url, filename: media_filename || "document", caption: resolvedContent || undefined },
+        document: { link: resolvedMediaUrl, filename: resolvedMediaFilename || "document", caption: resolvedContent || undefined },
       };
     } else {
       const textBody = (resolvedContent || "") + optOutFooter;
