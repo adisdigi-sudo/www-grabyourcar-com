@@ -304,15 +304,15 @@ serve(async (req) => {
       }
 
       console.log("Template payload:", JSON.stringify(metaPayload));
-    } else if (effectiveMessageType === "image" && media_url) {
+    } else if (effectiveMessageType === "image" && resolvedMediaUrl) {
       metaPayload = {
         type: "image",
-        image: { link: media_url, caption: resolvedContent || undefined },
+        image: { link: resolvedMediaUrl, caption: resolvedContent || undefined },
       };
-    } else if (effectiveMessageType === "document" && media_url) {
+    } else if (effectiveMessageType === "document" && resolvedMediaUrl) {
       metaPayload = {
         type: "document",
-        document: { link: media_url, filename: media_filename || "document", caption: resolvedContent || undefined },
+        document: { link: resolvedMediaUrl, filename: resolvedMediaFilename || "document", caption: resolvedContent || undefined },
       };
     } else {
       const textBody = (resolvedContent || "") + optOutFooter;
