@@ -36,6 +36,8 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
     const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+    const WHATSAPP_BUSINESS_ACCOUNT_ID =
+      Deno.env.get("WHATSAPP_WABA_ID") || Deno.env.get("WHATSAPP_BUSINESS_ACCOUNT_ID");
 
     if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
       return jsonResponse({ success: false, error: "WhatsApp API not configured", fallback: true });
@@ -150,14 +152,74 @@ serve(async (req) => {
         }
 
         const components: Record<string, unknown>[] = [];
-        const tplBody = tplData?.body || "";
-        const tplLang = tplData?.language || "en";
+        let tplBody = tplData?.body || "";
+        let tplLang = tplData?.language || "en";
+        let tplHeaderType = String(tplData?.header_type || "").toLowerCase();
+        let tplHeaderContent = (tplData?.header_content as string | null) || null;
+        let tplButtons: Array<Record<string, unknown>> = Array.isArray(tplData?.buttons)
+          ? (tplData!.buttons as Array<Record<string, unknown>>)
+          : [];
+        const vars = (template_variables || {}) as Record<string, string>;
 
-        if (tplData?.header_type === "text" && tplData.header_content) {
-          const headerVarMatches = (tplData.header_content as string).match(/\{\{(\w+)\}\}/g) || [];
+        // ── Authoritative source: Meta template registry. The local DB cache
+        // can drift (e.g. a header was rejected during approval), and any
+        // mismatch between the payload we send and the live template causes
+        // Meta error #132018. Always reconcile against Meta before sending.
+        if (WHATSAPP_BUSINESS_ACCOUNT_ID) {
+          try {
+            const metaTplResp = await fetch(
+              `https://graph.facebook.com/v25.0/${WHATSAPP_BUSINESS_ACCOUNT_ID}/message_templates?name=${encodeURIComponent(template_name)}&fields=name,language,status,components`,
+              { headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` } },
+            );
+            const metaTplJson = await metaTplResp.json();
+            const metaTpl = (metaTplJson?.data || []).find(
+              (t: Record<string, unknown>) =>
+                String(t.name) === template_name &&
+                String(t.status || "").toUpperCase() === "APPROVED",
+            );
+            if (metaTpl) {
+              tplLang = String(metaTpl.language || tplLang);
+              const metaComps = Array.isArray(metaTpl.components)
+                ? (metaTpl.components as Array<Record<string, unknown>>)
+                : [];
+              const headerComp = metaComps.find(
+                (c) => String(c.type).toUpperCase() === "HEADER",
+              );
+              const bodyComp = metaComps.find(
+                (c) => String(c.type).toUpperCase() === "BODY",
+              );
+              const buttonsComp = metaComps.find(
+                (c) => String(c.type).toUpperCase() === "BUTTONS",
+              );
+              if (bodyComp && typeof bodyComp.text === "string") {
+                tplBody = bodyComp.text;
+              }
+              if (headerComp) {
+                tplHeaderType = String(headerComp.format || "TEXT").toLowerCase();
+                if (typeof headerComp.text === "string") {
+                  tplHeaderContent = headerComp.text;
+                }
+              } else {
+                tplHeaderType = "";
+                tplHeaderContent = null;
+              }
+              tplButtons =
+                buttonsComp && Array.isArray(buttonsComp.buttons)
+                  ? (buttonsComp.buttons as Array<Record<string, unknown>>)
+                  : [];
+            }
+          } catch (metaLookupErr) {
+            console.warn("Meta template lookup failed, falling back to DB cache", metaLookupErr);
+          }
+        }
+
+        // ── HEADER component (text / image / video / document) ──
+        if (tplHeaderType === "text" && tplHeaderContent) {
+          const headerVarMatches = tplHeaderContent.match(/\{\{(\w+)\}\}/g) || [];
           if (headerVarMatches.length > 0) {
             const headerVarName = headerVarMatches[0].replace(/[{}]/g, "");
-            const headerValue = template_variables?.[headerVarName] || template_variables?.["header_1"] || template_variables?.["var_1"] || "";
+            const headerValue =
+              vars[headerVarName] || vars["header_1"] || vars["var_1"] || "";
             if (headerValue) {
               components.push({
                 type: "header",
@@ -165,62 +227,75 @@ serve(async (req) => {
               });
             }
           }
+        } else if (
+          (tplHeaderType === "image" || tplHeaderType === "video" || tplHeaderType === "document") &&
+          (media_url || tplHeaderContent)
+        ) {
+          const headerLink = media_url || tplHeaderContent || "";
+          if (headerLink) {
+            const mediaParam: Record<string, unknown> = { link: headerLink };
+            if (tplHeaderType === "document" && media_filename) {
+              mediaParam.filename = media_filename;
+            }
+            components.push({
+              type: "header",
+              parameters: [{ type: tplHeaderType, [tplHeaderType]: mediaParam }],
+            });
+          }
         }
 
-        if (template_variables && Object.keys(template_variables).length > 0) {
-          const bodyVarMatches = tplBody.match(/\{\{(\w+)\}\}/g) || [];
-          const uniqueVars: string[] = [];
-          for (const m of bodyVarMatches) {
-            const varName = m.replace(/[{}]/g, "");
-            if (!uniqueVars.includes(varName)) uniqueVars.push(varName);
-          }
+        // ── BODY params (always send if template has {{n}} placeholders) ──
+        const bodyVarMatches = tplBody.match(/\{\{(\w+)\}\}/g) || [];
+        const uniqueVars: string[] = [];
+        for (const m of bodyVarMatches) {
+          const varName = m.replace(/[{}]/g, "");
+          if (!uniqueVars.includes(varName)) uniqueVars.push(varName);
+        }
 
+        if (uniqueVars.length > 0) {
           const bodyParams: Record<string, unknown>[] = [];
-
-          if (uniqueVars.length > 0) {
-            for (const varName of uniqueVars) {
-              const value = template_variables[varName]
-                || template_variables[`var_${uniqueVars.indexOf(varName) + 1}`]
-                || "";
-              bodyParams.push({ type: "text", text: String(value) });
-            }
-          } else {
-            const sortedKeys = Object.keys(template_variables)
-              .filter(k => /^(var_\d+|\d+)$/.test(k))
-              .sort((a, b) => {
-                const numA = parseInt(a.replace("var_", ""));
-                const numB = parseInt(b.replace("var_", ""));
-                return numA - numB;
-              });
-            for (const key of sortedKeys) {
-              bodyParams.push({ type: "text", text: String(template_variables[key]) });
-            }
-
-            if (bodyParams.length === 0) {
-              for (const [, value] of Object.entries(template_variables)) {
-                if (value !== null && value !== undefined && String(value).trim()) {
-                  bodyParams.push({ type: "text", text: String(value) });
-                }
-              }
-            }
+          for (let i = 0; i < uniqueVars.length; i++) {
+            const varName = uniqueVars[i];
+            const fallback =
+              vars[varName] ??
+              vars[`var_${i + 1}`] ??
+              vars[String(i + 1)] ??
+              vars["customer_name"] ??
+              vars["name"] ??
+              "";
+            bodyParams.push({ type: "text", text: String(fallback || " ") });
           }
-
+          components.push({ type: "body", parameters: bodyParams });
+        } else if (template_variables && Object.keys(template_variables).length > 0) {
+          const sortedKeys = Object.keys(template_variables)
+            .filter((k) => /^(var_\d+|\d+)$/.test(k))
+            .sort((a, b) => {
+              const numA = parseInt(a.replace("var_", ""));
+              const numB = parseInt(b.replace("var_", ""));
+              return numA - numB;
+            });
+          const bodyParams: Record<string, unknown>[] = [];
+          for (const key of sortedKeys) {
+            bodyParams.push({ type: "text", text: String(template_variables[key]) });
+          }
           if (bodyParams.length > 0) {
             components.push({ type: "body", parameters: bodyParams });
           }
         }
 
-        if (tplData?.buttons && Array.isArray(tplData.buttons)) {
-          const buttons = tplData.buttons as Array<Record<string, unknown>>;
-          buttons.forEach((btn, idx) => {
+        // ── BUTTON components (only URL/COPY_CODE with dynamic var) ──
+        if (tplButtons.length > 0) {
+          tplButtons.forEach((btn, idx) => {
             const btnType = String(btn.type || "").toUpperCase();
             const btnUrl = String(btn.url || "");
 
             if (btnType === "URL" && btnUrl.includes("{{")) {
-              const urlVar = template_variables?.["btn_url_" + idx]
-                || template_variables?.["var_1"]
-                || template_variables?.[Object.keys(template_variables || {})[0]]
-                || "";
+              const urlVar =
+                vars["btn_url_" + idx] ||
+                vars["button_" + (idx + 1)] ||
+                vars["var_1"] ||
+                Object.values(vars)[0] ||
+                "";
               if (urlVar) {
                 components.push({
                   type: "button",
@@ -230,6 +305,9 @@ serve(async (req) => {
                 });
               }
             }
+            // QUICK_REPLY / PHONE_NUMBER / static URL buttons: Meta does NOT
+            // accept a button component when the button text/url has no
+            // {{var}} placeholder — including one returns error #132018.
           });
         }
 

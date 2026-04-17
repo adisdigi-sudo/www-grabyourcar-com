@@ -675,19 +675,33 @@ function OneShotBroadcast() {
     mutationFn: async () => {
       const clean = testPhone.replace(/\D/g, "").replace(/^91/, "");
       if (!/^[6-9]\d{9}$/.test(clean)) throw new Error("Invalid Indian mobile (10 digits)");
-      const sampleRow: Record<string, string> = {};
-      requiredVars.forEach(v => {
-        const sample = form.variable_samples.find(s => s.key === v);
-        sampleRow[v] = sample?.value || BROADCAST_VARS.find(b => b.key === v)?.sample || "Test";
+
+      // Build template_variables map (same shape edge function expects)
+      const templateVars: Record<string, string> = {};
+      requiredVars.forEach((v, idx) => {
+        const sample = form.variable_samples.find((s) => s.key === v);
+        const value =
+          sample?.value || BROADCAST_VARS.find((b) => b.key === v)?.sample || "Test";
+        templateVars[v] = value;
+        templateVars[`var_${idx + 1}`] = value;
       });
+      // Phone helper var (used for some {{phone}} placeholders)
+      templateVars["phone"] = `91${clean}`;
+
+      // Resolve preview content for inbox/log display
       let content = form.message;
-      Object.entries(sampleRow).forEach(([k, v]) => { content = content.replace(new RegExp(`\\{\\{${k}\\}\\}`, "g"), v); });
+      Object.entries(templateVars).forEach(([k, v]) => {
+        content = content.replace(new RegExp(`\\{\\{${k}\\}\\}`, "g"), v);
+      });
+
       const { data, error } = await supabase.functions.invoke("wa-send-inbox", {
         body: {
           phone: `91${clean}`,
-          message_type: form.template_name ? "template" : (form.header_type === "none" || form.header_type === "text" ? "text" : form.header_type),
+          message_type: form.template_name ? "template" : "text",
           content,
           template_name: form.template_name,
+          template_variables: templateVars,
+          // Header media (image/video/document) — sent as Meta header component
           media_url: form.media_url || undefined,
           test_send: true,
         },
