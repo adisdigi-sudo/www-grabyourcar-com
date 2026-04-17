@@ -243,73 +243,73 @@ function validateTemplate(tpl: Partial<Template>, buttons: MetaButton[]): Valida
 }
 
 // --- Phone Preview Component ---
-function PhonePreview({ template, buttons }: { template: Partial<Template>; buttons?: MetaButton[] }) {
-  const renderBody = (text: string) => text.replace(/\{\{(\w+)\}\}/g, (_, v) => SAMPLE_VALUES[v] || `[${v}]`);
-  const btns = buttons || (template.buttons as MetaButton[]) || [];
+const PhonePreview = forwardRef<HTMLDivElement, { template: Partial<Template>; buttons?: MetaButton[] }>(
+  function PhonePreview({ template, buttons }, ref) {
+    const renderBody = (text: string) => text.replace(/\{\{(\w+)\}\}/g, (_, v) => SAMPLE_VALUES[v] || `[${v}]`);
+    const btns = buttons || (template.buttons as MetaButton[]) || [];
 
-  return (
-    <div className="w-[280px] mx-auto">
-      <div className="bg-gray-900 rounded-[2rem] p-2 shadow-2xl">
-        <div className="bg-gray-900 rounded-t-[1.5rem] pt-6 pb-1 px-4">
-          <div className="flex items-center gap-2 text-white text-xs">
-            <div className="h-8 w-8 rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-bold">G</div>
-            <div>
-              <p className="font-medium text-sm">GrabYourCar</p>
-              <p className="text-[10px] text-gray-400">Business Account</p>
+    return (
+      <div ref={ref} className="w-[280px] mx-auto">
+        <div className="bg-gray-900 rounded-[2rem] p-2 shadow-2xl">
+          <div className="bg-gray-900 rounded-t-[1.5rem] pt-6 pb-1 px-4">
+            <div className="flex items-center gap-2 text-white text-xs">
+              <div className="h-8 w-8 rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-bold">G</div>
+              <div>
+                <p className="font-medium text-sm">GrabYourCar</p>
+                <p className="text-[10px] text-gray-400">Business Account</p>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="bg-[#e5ddd5] rounded-b-[1.5rem] p-3 min-h-[320px] flex flex-col justify-end">
-          <div className="bg-white rounded-lg p-2.5 shadow-sm max-w-[90%] ml-auto">
-            {template.header_type === "text" && template.header_content && (
-              <p className="font-bold text-xs mb-1">{renderBody(template.header_content)}</p>
-            )}
-            {template.header_type === "image" && (
-              <div className="bg-gray-200 rounded h-24 flex items-center justify-center mb-2">
-                <Image className="h-6 w-6 text-gray-400" />
-              </div>
-            )}
-            {template.header_type === "video" && (
-              <div className="bg-gray-800 rounded h-24 flex items-center justify-center mb-2">
-                <Video className="h-6 w-6 text-gray-400" />
-              </div>
-            )}
-            <p className="text-[11px] whitespace-pre-wrap leading-relaxed">
-              {renderBody(template.body || "Your message preview will appear here...")}
-            </p>
-            {template.footer && (
-              <p className="text-[9px] text-gray-500 mt-1.5 border-t pt-1">{template.footer}</p>
-            )}
-            <p className="text-[9px] text-gray-400 text-right mt-1">
-              {new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} ✓✓
-            </p>
-          </div>
-          {/* Buttons */}
-          {btns.length > 0 && (
-            <div className="mt-1 max-w-[90%] ml-auto space-y-0.5">
-              {btns.map((btn, i) => (
-                <div key={i} className="bg-white rounded-lg py-1.5 text-center text-[11px] text-blue-600 font-medium shadow-sm flex items-center justify-center gap-1">
-                  {btn.type === "URL" && <Globe className="h-3 w-3" />}
-                  {btn.type === "PHONE_NUMBER" && <PhoneCall className="h-3 w-3" />}
-                  {btn.type === "QUICK_REPLY" && <Reply className="h-3 w-3" />}
-                  {btn.text || "Button"}
+          <div className="bg-[#e5ddd5] rounded-b-[1.5rem] p-3 min-h-[320px] flex flex-col justify-end">
+            <div className="bg-white rounded-lg p-2.5 shadow-sm max-w-[90%] ml-auto">
+              {template.header_type === "text" && template.header_content && (
+                <p className="font-bold text-xs mb-1">{renderBody(template.header_content)}</p>
+              )}
+              {template.header_type === "image" && (
+                <div className="bg-gray-200 rounded h-24 flex items-center justify-center mb-2">
+                  <Image className="h-6 w-6 text-gray-400" />
                 </div>
-              ))}
+              )}
+              {template.header_type === "video" && (
+                <div className="bg-gray-800 rounded h-24 flex items-center justify-center mb-2">
+                  <Video className="h-6 w-6 text-gray-400" />
+                </div>
+              )}
+              <p className="text-[11px] whitespace-pre-wrap leading-relaxed">
+                {renderBody(template.body || "Your message preview will appear here...")}
+              </p>
+              {template.footer && (
+                <p className="text-[9px] text-gray-500 mt-1.5 border-t pt-1">{template.footer}</p>
+              )}
+              <p className="text-[9px] text-gray-400 text-right mt-1">
+                {new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} ✓✓
+              </p>
             </div>
-          )}
-          {/* Category Badge */}
-          <div className="flex items-center gap-1.5 mt-2 justify-end">
-            {template.category && (
-              <Badge variant="outline" className={cn("text-[8px]", META_CATEGORIES[template.category as MetaCategory]?.color)}>
-                {META_CATEGORIES[template.category as MetaCategory]?.label || template.category}
-              </Badge>
+            {btns.length > 0 && (
+              <div className="mt-1 max-w-[90%] ml-auto space-y-0.5">
+                {btns.map((btn, i) => (
+                  <div key={i} className="bg-white rounded-lg py-1.5 text-center text-[11px] text-blue-600 font-medium shadow-sm flex items-center justify-center gap-1">
+                    {btn.type === "URL" && <Globe className="h-3 w-3" />}
+                    {btn.type === "PHONE_NUMBER" && <PhoneCall className="h-3 w-3" />}
+                    {btn.type === "QUICK_REPLY" && <Reply className="h-3 w-3" />}
+                    {btn.text || "Button"}
+                  </div>
+                ))}
+              </div>
             )}
+            <div className="flex items-center gap-1.5 mt-2 justify-end">
+              {template.category && (
+                <Badge variant="outline" className={cn("text-[8px]", META_CATEGORIES[template.category as MetaCategory]?.color)}>
+                  {META_CATEGORIES[template.category as MetaCategory]?.label || template.category}
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
+);
 
 // --- Media Header Uploader (Image / Video / Document) ---
 const MediaHeaderUploader = forwardRef<HTMLDivElement, {
