@@ -60,6 +60,7 @@ const WorkspaceSelector = () => {
   }, [authInitialized, authLoading, verticalLoading, user, isBootstrapping]);
 
   // Fetch which verticals have passwords set (for lock icon display)
+  // Note: actual password is server-side only (admin-only column).
   const { data: verticalPasswords = {} } = useQuery({
     queryKey: ["vertical-passwords-check"],
     queryFn: async () => {
@@ -67,11 +68,11 @@ const WorkspaceSelector = () => {
       if (isAdmin()) return {};
       const { data } = await supabase
         .from("business_verticals")
-        .select("id, vertical_password")
+        .select("id, has_vertical_password")
         .eq("is_active", true);
       const map: Record<string, boolean> = {};
       (data || []).forEach((v: any) => {
-        if (v.vertical_password) map[v.id] = true;
+        if (v.has_vertical_password) map[v.id] = true;
       });
       return map;
     },

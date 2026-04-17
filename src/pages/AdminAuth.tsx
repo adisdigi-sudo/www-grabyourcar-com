@@ -192,14 +192,14 @@ const AdminAuth = () => {
     );
     
     if (!isAdminUser) {
-      // Check if password exists for this vertical
+      // Check if password exists for this vertical (only the flag, not the password itself)
       const { data: vData } = await supabase
         .from("business_verticals")
-        .select("vertical_password")
+        .select("has_vertical_password")
         .eq("id", vertical.id)
         .single();
       
-      if (vData?.vertical_password && !getVerifiedVerticals().includes(vertical.id)) {
+      if (vData?.has_vertical_password && !getVerifiedVerticals().includes(vertical.id)) {
         setPasswordTarget(vertical);
         return;
       }
