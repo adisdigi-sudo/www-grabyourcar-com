@@ -152,12 +152,17 @@ serve(async (req) => {
         const components: Record<string, unknown>[] = [];
         const tplBody = tplData?.body || "";
         const tplLang = tplData?.language || "en";
+        const tplHeaderType = String(tplData?.header_type || "").toLowerCase();
+        const tplHeaderContent = (tplData?.header_content as string | null) || null;
+        const vars = (template_variables || {}) as Record<string, string>;
 
-        if (tplData?.header_type === "text" && tplData.header_content) {
-          const headerVarMatches = (tplData.header_content as string).match(/\{\{(\w+)\}\}/g) || [];
+        // ── HEADER component (text / image / video / document) ──
+        if (tplHeaderType === "text" && tplHeaderContent) {
+          const headerVarMatches = tplHeaderContent.match(/\{\{(\w+)\}\}/g) || [];
           if (headerVarMatches.length > 0) {
             const headerVarName = headerVarMatches[0].replace(/[{}]/g, "");
-            const headerValue = template_variables?.[headerVarName] || template_variables?.["header_1"] || template_variables?.["var_1"] || "";
+            const headerValue =
+              vars[headerVarName] || vars["header_1"] || vars["var_1"] || "";
             if (headerValue) {
               components.push({
                 type: "header",
@@ -165,51 +170,63 @@ serve(async (req) => {
               });
             }
           }
+        } else if (
+          (tplHeaderType === "image" || tplHeaderType === "video" || tplHeaderType === "document") &&
+          (media_url || tplHeaderContent)
+        ) {
+          const headerLink = media_url || tplHeaderContent || "";
+          if (headerLink) {
+            const mediaParam: Record<string, unknown> = { link: headerLink };
+            if (tplHeaderType === "document" && media_filename) {
+              mediaParam.filename = media_filename;
+            }
+            components.push({
+              type: "header",
+              parameters: [{ type: tplHeaderType, [tplHeaderType]: mediaParam }],
+            });
+          }
         }
 
-        if (template_variables && Object.keys(template_variables).length > 0) {
-          const bodyVarMatches = tplBody.match(/\{\{(\w+)\}\}/g) || [];
-          const uniqueVars: string[] = [];
-          for (const m of bodyVarMatches) {
-            const varName = m.replace(/[{}]/g, "");
-            if (!uniqueVars.includes(varName)) uniqueVars.push(varName);
-          }
+        // ── BODY params (always send if template has {{n}} placeholders) ──
+        const bodyVarMatches = tplBody.match(/\{\{(\w+)\}\}/g) || [];
+        const uniqueVars: string[] = [];
+        for (const m of bodyVarMatches) {
+          const varName = m.replace(/[{}]/g, "");
+          if (!uniqueVars.includes(varName)) uniqueVars.push(varName);
+        }
 
+        if (uniqueVars.length > 0) {
           const bodyParams: Record<string, unknown>[] = [];
-
-          if (uniqueVars.length > 0) {
-            for (const varName of uniqueVars) {
-              const value = template_variables[varName]
-                || template_variables[`var_${uniqueVars.indexOf(varName) + 1}`]
-                || "";
-              bodyParams.push({ type: "text", text: String(value) });
-            }
-          } else {
-            const sortedKeys = Object.keys(template_variables)
-              .filter(k => /^(var_\d+|\d+)$/.test(k))
-              .sort((a, b) => {
-                const numA = parseInt(a.replace("var_", ""));
-                const numB = parseInt(b.replace("var_", ""));
-                return numA - numB;
-              });
-            for (const key of sortedKeys) {
-              bodyParams.push({ type: "text", text: String(template_variables[key]) });
-            }
-
-            if (bodyParams.length === 0) {
-              for (const [, value] of Object.entries(template_variables)) {
-                if (value !== null && value !== undefined && String(value).trim()) {
-                  bodyParams.push({ type: "text", text: String(value) });
-                }
-              }
-            }
+          for (let i = 0; i < uniqueVars.length; i++) {
+            const varName = uniqueVars[i];
+            const fallback =
+              vars[varName] ??
+              vars[`var_${i + 1}`] ??
+              vars[String(i + 1)] ??
+              vars["customer_name"] ??
+              vars["name"] ??
+              "";
+            bodyParams.push({ type: "text", text: String(fallback || " ") });
           }
-
+          components.push({ type: "body", parameters: bodyParams });
+        } else if (template_variables && Object.keys(template_variables).length > 0) {
+          const sortedKeys = Object.keys(template_variables)
+            .filter((k) => /^(var_\d+|\d+)$/.test(k))
+            .sort((a, b) => {
+              const numA = parseInt(a.replace("var_", ""));
+              const numB = parseInt(b.replace("var_", ""));
+              return numA - numB;
+            });
+          const bodyParams: Record<string, unknown>[] = [];
+          for (const key of sortedKeys) {
+            bodyParams.push({ type: "text", text: String(template_variables[key]) });
+          }
           if (bodyParams.length > 0) {
             components.push({ type: "body", parameters: bodyParams });
           }
         }
 
+        // ── BUTTON components (URL / QUICK_REPLY with dynamic var) ──
         if (tplData?.buttons && Array.isArray(tplData.buttons)) {
           const buttons = tplData.buttons as Array<Record<string, unknown>>;
           buttons.forEach((btn, idx) => {
@@ -217,10 +234,12 @@ serve(async (req) => {
             const btnUrl = String(btn.url || "");
 
             if (btnType === "URL" && btnUrl.includes("{{")) {
-              const urlVar = template_variables?.["btn_url_" + idx]
-                || template_variables?.["var_1"]
-                || template_variables?.[Object.keys(template_variables || {})[0]]
-                || "";
+              const urlVar =
+                vars["btn_url_" + idx] ||
+                vars["button_" + (idx + 1)] ||
+                vars["var_1"] ||
+                Object.values(vars)[0] ||
+                "";
               if (urlVar) {
                 components.push({
                   type: "button",
@@ -229,6 +248,13 @@ serve(async (req) => {
                   parameters: [{ type: "text", text: String(urlVar) }],
                 });
               }
+            } else if (btnType === "QUICK_REPLY") {
+              components.push({
+                type: "button",
+                sub_type: "quick_reply",
+                index: idx,
+                parameters: [{ type: "payload", payload: String(btn.text || `qr_${idx}`) }],
+              });
             }
           });
         }
