@@ -15,7 +15,7 @@ import {
   Plus, Edit, Trash2, Copy, Zap, LayoutTemplate, Save, CheckCircle, Clock, XCircle,
   AlertTriangle, Eye, Send, MessageSquare, Shield, Megaphone,
   FileText, Image, Video, Globe, Search, Filter, RefreshCw, BarChart3,
-  GitBranch, TrendingUp, Phone, Link, Reply, PhoneCall, X
+  GitBranch, TrendingUp, Phone, Link, Reply, PhoneCall, X, Upload, Loader2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
