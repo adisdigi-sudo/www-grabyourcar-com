@@ -281,7 +281,29 @@ function PhonePreview({ template, buttons }: { template: Partial<Template>; butt
   );
 }
 
-// --- Validation Panel ---
+// --- Inline "How to fix" guidance for each common Meta validation message ---
+function getFixHint(field: string, message: string): string | null {
+  const m = message.toLowerCase();
+  if (field === "name" && m.includes("required")) return "Type a unique name like insurance_followup (lowercase + underscores).";
+  if (field === "name" && m.includes("lowercase")) return "Use only lowercase letters, numbers and _ (no spaces or capitals).";
+  if (field === "body" && m.includes("required")) return "Write the WhatsApp message text. Insert variables by clicking the chips on the right.";
+  if (field === "body" && m.includes("too many variables")) return "Add more plain words around your {{variables}} or remove a variable. Meta needs ~3 real words per variable.";
+  if (field === "body" && m.includes("marketing")) return "Marketing templates need a clear value proposition — add 1–2 sentences of real text, not just variables.";
+  if (field === "header" && m.includes("60 characters")) return "Shorten header to 60 chars or move details into the Body.";
+  if (field === "header" && m.includes("emoji")) return "Remove emojis from the header — they are blocked by Meta.";
+  if (field === "header" && m.includes("asterisk")) return "Remove * characters — Meta does not allow bold formatting in headers.";
+  if (field === "header" && m.includes("newline")) return "Remove line breaks — header must be a single line.";
+  if (field === "header" && m.includes("variable")) return "Header allows max 1 variable. Move extra variables into the Body.";
+  if (field === "buttons" && m.includes("max")) return "Reduce the number of buttons (max 3 total, 2 URL, 1 phone).";
+  if (field === "buttons" && m.includes("25")) return "Shorten the button label to 25 characters or fewer.";
+  if (field === "buttons" && m.includes("url is required")) return "Paste the full URL (https://…) inside the URL button.";
+  if (field === "buttons" && m.includes("phone number")) return "Add the phone number with country code, e.g. +919577200023.";
+  if (field === "buttons" && m.includes("http")) return "URLs must start with https:// (or http://).";
+  if (field === "body" && m.includes("otp")) return "Add the OTP variable, e.g. *{{otp}}* is your verification code.";
+  return null;
+}
+
+// --- Validation Panel with inline fix guidance ---
 function ValidationPanel({ issues }: { issues: ValidationIssue[] }) {
   const errors = issues.filter(i => i.type === "error");
   const warnings = issues.filter(i => i.type === "warning");
@@ -295,18 +317,30 @@ function ValidationPanel({ issues }: { issues: ValidationIssue[] }) {
   }
   return (
     <div className="space-y-1.5">
-      {errors.map((e, i) => (
-        <div key={`e-${i}`} className="bg-red-50 dark:bg-red-950/20 border border-red-200 rounded-lg p-2 text-xs text-red-700 flex items-start gap-2">
-          <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-          <div><span className="font-medium capitalize">{e.field}:</span> {e.message}</div>
-        </div>
-      ))}
-      {warnings.map((w, i) => (
-        <div key={`w-${i}`} className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 rounded-lg p-2 text-xs text-amber-700 flex items-start gap-2">
-          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-          <div><span className="font-medium capitalize">{w.field}:</span> {w.message}</div>
-        </div>
-      ))}
+      {errors.map((e, i) => {
+        const fix = getFixHint(e.field, e.message);
+        return (
+          <div key={`e-${i}`} className="bg-red-50 dark:bg-red-950/20 border border-red-200 rounded-lg p-2 text-xs text-red-700 flex items-start gap-2">
+            <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <div className="space-y-0.5">
+              <div><span className="font-medium capitalize">{e.field}:</span> {e.message}</div>
+              {fix && <div className="text-[10px] text-red-600/80"><span className="font-semibold">Fix:</span> {fix}</div>}
+            </div>
+          </div>
+        );
+      })}
+      {warnings.map((w, i) => {
+        const fix = getFixHint(w.field, w.message);
+        return (
+          <div key={`w-${i}`} className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 rounded-lg p-2 text-xs text-amber-700 flex items-start gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <div className="space-y-0.5">
+              <div><span className="font-medium capitalize">{w.field}:</span> {w.message}</div>
+              {fix && <div className="text-[10px] text-amber-600/80"><span className="font-semibold">Tip:</span> {fix}</div>}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
