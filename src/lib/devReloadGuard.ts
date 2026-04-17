@@ -1,4 +1,8 @@
-import { isSensitivePreviewRouteWindow } from "@/lib/adminPreviewStability";
+import {
+  isEmbeddedPreviewWindow,
+  isLovableEditorPreviewHost,
+  isSensitivePreviewRouteWindow,
+} from "@/lib/adminPreviewStability";
 
 export const DEV_SERVER_STATUS_EVENT = "lovable:dev-server-status";
 export const DEV_SERVER_PENDING_RELOAD_KEY = "lovable_dev_server_pending_reload";
@@ -36,6 +40,16 @@ export const markDevServerPendingReload = () => {
   }
 };
 
+const shouldGuardSensitiveRouteReload = () => {
+  if (typeof window === "undefined") return false;
+
+  return (
+    isSensitivePreviewRouteWindow() &&
+    !isEmbeddedPreviewWindow() &&
+    !isLovableEditorPreviewHost()
+  );
+};
+
 const tryPatchReload = (target: object, reload: () => void) => {
   try {
     Object.defineProperty(target, "reload", {
@@ -69,7 +83,7 @@ export const installSensitiveRouteReloadGuard = () => {
     const originalReload = window.location.reload.bind(window.location);
     const guardedReload = () => {
       try {
-        if (!isSensitivePreviewRouteWindow()) {
+        if (!shouldGuardSensitiveRouteReload()) {
           originalReload();
           return;
         }
@@ -99,7 +113,7 @@ export const installSensitiveRouteReloadGuard = () => {
     // Fallback: intercept beforeunload to catch Vite-triggered navigations
     window.addEventListener("beforeunload", (e) => {
       try {
-        if (isSensitivePreviewRouteWindow()) {
+        if (shouldGuardSensitiveRouteReload()) {
           markDevServerPendingReload();
           dispatchUpdateReady();
           e.preventDefault();
