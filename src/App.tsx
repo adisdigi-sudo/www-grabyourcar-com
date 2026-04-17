@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AdminSubdomainRouter } from "@/components/AdminSubdomainRouter";
+import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBoundary";
 import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
 import { usePageViewTracking } from "@/hooks/usePageViewTracking";
 import { scheduleChunkLoadRecoveryReset } from "@/lib/chunkLoadRecovery";
@@ -194,7 +195,14 @@ const AppRouterShell = () => {
             <Route path="/my-bookings" element={<MyBookings />} />
             <Route path="/my-orders" element={<MyOrders />} />
             <Route path="/car-finder" element={<CarFinder />} />
-            <Route path="/crm" element={<AdminLayout />} />
+            <Route
+              path="/crm"
+              element={
+                <AdminRenderBoundary contextLabel="CRM route shell">
+                  <AdminLayout />
+                </AdminRenderBoundary>
+              }
+            />
             <Route path="/crm-auth" element={<AdminAuth />} />
             <Route path="/crm-reset-password" element={<AdminResetPassword />} />
             <Route path="/admin" element={<Navigate to={withPreviewParams("/crm")} replace />} />
