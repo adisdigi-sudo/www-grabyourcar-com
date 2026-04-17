@@ -3,7 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WADripSequenceManager } from "./WADripSequenceManager";
 import { AutoDialerDashboard } from "./AutoDialerDashboard";
 import { AutoClosePipelineManager } from "./AutoClosePipelineManager";
-import { MessageSquare, Phone, Zap, Bot } from "lucide-react";
+import { AIBrainDashboard } from "./AIBrainDashboard";
+import { MessageSquare, Phone, Zap, Bot, Brain } from "lucide-react";
 
 export function AIAutomationHub() {
   return (
@@ -18,8 +19,12 @@ export function AIAutomationHub() {
         </p>
       </div>
 
-      <Tabs defaultValue="drip" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="ai-brain" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="ai-brain" className="flex items-center gap-2">
+            <Brain className="h-4 w-4" />
+            AI Brain
+          </TabsTrigger>
           <TabsTrigger value="drip" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             WA Drip Sequences
@@ -33,6 +38,10 @@ export function AIAutomationHub() {
             Auto-Close Pipeline
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="ai-brain" className="mt-6">
+          <AIBrainDashboard />
+        </TabsContent>
 
         <TabsContent value="drip" className="mt-6">
           <WADripSequenceManager />
