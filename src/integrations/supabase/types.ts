@@ -3939,13 +3939,18 @@ export type Database = {
         Row: {
           body_text: string
           category: string
+          channel: string
           created_at: string
+          email_html: string | null
           id: string
           is_active: boolean
+          is_default_followup: boolean
           label: string
           meta_category: string | null
           opt_out_footer: string | null
+          purpose: string | null
           slug: string
+          subject: string | null
           updated_at: string
           variables: string[] | null
           vertical: string
@@ -3953,13 +3958,18 @@ export type Database = {
         Insert: {
           body_text: string
           category?: string
+          channel?: string
           created_at?: string
+          email_html?: string | null
           id?: string
           is_active?: boolean
+          is_default_followup?: boolean
           label: string
           meta_category?: string | null
           opt_out_footer?: string | null
+          purpose?: string | null
           slug: string
+          subject?: string | null
           updated_at?: string
           variables?: string[] | null
           vertical?: string
@@ -3967,13 +3977,18 @@ export type Database = {
         Update: {
           body_text?: string
           category?: string
+          channel?: string
           created_at?: string
+          email_html?: string | null
           id?: string
           is_active?: boolean
+          is_default_followup?: boolean
           label?: string
           meta_category?: string | null
           opt_out_footer?: string | null
+          purpose?: string | null
           slug?: string
+          subject?: string | null
           updated_at?: string
           variables?: string[] | null
           vertical?: string
@@ -16111,6 +16126,63 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           vertical_name?: string
+        }
+        Relationships: []
+      }
+      template_send_log: {
+        Row: {
+          channel: string
+          created_at: string
+          error_message: string | null
+          follow_up_date: string | null
+          follow_up_time: string | null
+          id: string
+          lead_id: string
+          lead_table: string | null
+          payload: Json | null
+          recipient_email: string | null
+          recipient_name: string | null
+          recipient_phone: string | null
+          sent_at: string
+          status: string
+          template_slug: string
+          vertical: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          error_message?: string | null
+          follow_up_date?: string | null
+          follow_up_time?: string | null
+          id?: string
+          lead_id: string
+          lead_table?: string | null
+          payload?: Json | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          sent_at?: string
+          status?: string
+          template_slug: string
+          vertical: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          error_message?: string | null
+          follow_up_date?: string | null
+          follow_up_time?: string | null
+          id?: string
+          lead_id?: string
+          lead_table?: string | null
+          payload?: Json | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          sent_at?: string
+          status?: string
+          template_slug?: string
+          vertical?: string
         }
         Relationships: []
       }
