@@ -252,11 +252,11 @@ export default function IntegrationControlCenter() {
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardDescription>Healthy</CardDescription></CardHeader>
-          <CardContent><div className="text-3xl font-bold text-green-600">{summary.healthy}</div></CardContent>
+          <CardContent><div className="text-3xl font-bold text-[hsl(142_76%_36%)]">{summary.healthy}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardDescription>Failing</CardDescription></CardHeader>
-          <CardContent><div className="text-3xl font-bold text-red-600">{summary.failing}</div></CardContent>
+          <CardContent><div className="text-3xl font-bold text-destructive">{summary.failing}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardDescription>Untested</CardDescription></CardHeader>
