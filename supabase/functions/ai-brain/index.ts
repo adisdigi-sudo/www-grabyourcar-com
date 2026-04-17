@@ -941,6 +941,46 @@ async function handleStrictInsuranceSelfService(supabase: any, messages: any[], 
     };
   }
 
+  // ── Phone-only auto-verification ──
+  // If the registered mobile number has EXACTLY ONE insurance client on file,
+  // skip the strict Name + Car Number prompt and serve the policy directly.
+  // This avoids re-verification for customers who already received their policy
+  // via our follow-up template and are simply asking for it again.
+  if (!hasPendingVerificationPrompt(messages)) {
+    const phoneOnlyLookup = await toolLookupPolicyByPhone(supabase, customerPhone);
+    if (phoneOnlyLookup?.found && phoneOnlyLookup.uniqueClient) {
+      const primaryVehicle = Array.isArray(phoneOnlyLookup.vehicles) ? phoneOnlyLookup.vehicles[0] : null;
+      const primaryDocument = Array.isArray(phoneOnlyLookup.policy_documents) ? phoneOnlyLookup.policy_documents[0] : null;
+      const wantsDocumentCopy = wantsPolicyDocumentCopy(latestUserMessage);
+
+      if (wantsDocumentCopy && primaryDocument?.url) {
+        const deterministicResponse = buildSelfServiceResponse([{ name: "lookup_my_policy", result: phoneOnlyLookup }]);
+        return {
+          response: deterministicResponse?.response || "Here is your policy document.",
+          intent: "insurance",
+          suggestedActions: ["Verified policy shared (phone match)"],
+          documentShare: deterministicResponse?.documentShare || null,
+          humanHandover: null,
+        };
+      }
+
+      return {
+        response: [
+          `Your verified policy record for ${primaryVehicle?.vehicle_number || "your vehicle"}:`,
+          `Policy holder: ${phoneOnlyLookup.customer || "Customer"}`,
+          `Insurer: ${primaryVehicle?.insurer || "Not available"}`,
+          `Policy number: ${primaryVehicle?.policy_number || "Not available"}`,
+          `Valid till: ${phoneOnlyLookup.active_policies?.[0]?.valid_until || primaryVehicle?.expiry || "Not available"}`,
+          primaryDocument?.url ? `\nReply 'send policy' to receive the PDF copy.` : "",
+        ].filter(Boolean).join("\n"),
+        intent: "insurance",
+        suggestedActions: ["Verified by registered number"],
+        documentShare: null,
+        humanHandover: null,
+      };
+    }
+  }
+
   const { customerName, vehicleNumber } = extractStrictVerification(messages, latestUserMessage);
 
   if (!customerName || !vehicleNumber) {
@@ -1060,6 +1100,69 @@ async function toolLookupPolicy(supabase: any, customerPhone?: string, vehicleNu
     customer: verifiedClients[0].customer_name,
     phone_verified: true,
     vehicles: verifiedClients.map((c: any) => ({
+      vehicle: `${c.vehicle_make || ""} ${c.vehicle_model || ""}`.trim() || "N/A",
+      vehicle_number: c.vehicle_number,
+      year: c.vehicle_year,
+      policy_number: c.current_policy_number,
+      policy_type: c.current_policy_type,
+      insurer: c.current_insurer,
+      premium: c.current_premium ? `₹${c.current_premium.toLocaleString("en-IN")}` : "N/A",
+      expiry: c.policy_expiry_date,
+      ncb: c.ncb_percentage ? `${c.ncb_percentage}%` : "N/A",
+      status: c.pipeline_stage,
+    })),
+    active_policies: policies?.map((p: any) => ({
+      policy_number: p.policy_number,
+      type: p.policy_type,
+      insurer: p.insurer,
+      premium: p.premium_amount ? `₹${p.premium_amount.toLocaleString("en-IN")}` : "N/A",
+      valid_from: p.start_date,
+      valid_until: p.expiry_date,
+      renewal: p.is_renewal ? "Yes" : "No",
+    })) || [],
+    policy_documents: policyDocuments,
+  };
+}
+
+async function toolLookupPolicyByPhone(supabase: any, customerPhone?: string) {
+  if (!customerPhone) return { found: false };
+
+  const phones = phoneVariants(customerPhone);
+
+  const { data: clients } = await supabase.from("insurance_clients")
+    .select("id, customer_name, phone, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_policy_number, current_policy_type, current_insurer, current_premium, policy_expiry_date, policy_start_date, pipeline_stage, ncb_percentage")
+    .or(phones.map(p => `phone.eq.${p}`).join(","))
+    .limit(5);
+
+  if (!clients?.length) return { found: false };
+
+  // Only auto-verify if the phone uniquely identifies ONE client.
+  // Otherwise fall back to strict Name + Car Number verification.
+  const uniqueClient = clients.length === 1;
+  if (!uniqueClient) return { found: false, uniqueClient: false };
+
+  const clientIds = clients.map((c: any) => c.id);
+  const { data: policies } = await supabase.from("insurance_policies")
+    .select("policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal, policy_document_url, document_file_name")
+    .in("client_id", clientIds)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(3);
+
+  const policyDocuments = (policies || [])
+    .filter((p: any) => Boolean(p.policy_document_url))
+    .map((p: any) => ({
+      policy_number: p.policy_number,
+      url: p.policy_document_url,
+      file_name: p.document_file_name || `${p.policy_number || "policy"}.pdf`,
+    }));
+
+  return {
+    found: true,
+    uniqueClient: true,
+    customer: clients[0].customer_name,
+    phone_verified: true,
+    vehicles: clients.map((c: any) => ({
       vehicle: `${c.vehicle_make || ""} ${c.vehicle_model || ""}`.trim() || "N/A",
       vehicle_number: c.vehicle_number,
       year: c.vehicle_year,
