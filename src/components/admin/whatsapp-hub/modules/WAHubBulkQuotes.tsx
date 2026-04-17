@@ -14,7 +14,7 @@ import {
   Upload, Download, FileSpreadsheet, Send, Sparkles, ChevronRight,
   CheckCheck, AlertCircle, FileText, Quote, Loader2,
 } from "lucide-react";
-import * as XLSX from "xlsx";
+// ExcelJS lazy-loaded inside handleFile to keep bundle small
 
 // ── Vertical config (extend as needed) ──
 const VERTICALS = [
