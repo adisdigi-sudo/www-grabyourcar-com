@@ -682,11 +682,18 @@ function OneShotBroadcast() {
       const phoneVariants = [clean, fullPhone, `+${fullPhone}`];
       const contactInfo: Record<string, string> = {};
       try {
-        const [{ data: cust }, { data: lead }, { data: ic }] = await Promise.all([
-          supabase.from("customers").select("name, phone, email, vehicle_number").in("phone", phoneVariants).limit(1).maybeSingle(),
-          supabase.from("leads").select("name, phone, email, message, vertical").in("phone", phoneVariants).limit(1).maybeSingle(),
-          supabase.from("insurance_clients").select("customer_name, phone, vehicle_number, vehicle_make, vehicle_model, current_insurer, current_premium, policy_expiry_date").in("phone", phoneVariants).limit(1).maybeSingle(),
-        ]);
+        const customersRes: any = await (supabase as any).from("customers")
+          .select("name, phone, vehicle_number").in("phone", phoneVariants).limit(1).maybeSingle();
+        const leadsRes: any = await (supabase as any).from("leads")
+          .select("name, phone, vertical").in("phone", phoneVariants).limit(1).maybeSingle();
+        const icRes: any = await (supabase as any).from("insurance_clients")
+          .select("customer_name, phone, vehicle_number, vehicle_make, vehicle_model, current_insurer, current_premium, policy_expiry_date")
+          .in("phone", phoneVariants).limit(1).maybeSingle();
+
+        const cust = customersRes?.data || null;
+        const lead = leadsRes?.data || null;
+        const ic = icRes?.data || null;
+
         const name = ic?.customer_name || cust?.name || lead?.name;
         const vehicle = ic?.vehicle_number || cust?.vehicle_number;
         const carModel = ic ? [ic.vehicle_make, ic.vehicle_model].filter(Boolean).join(" ") : undefined;
