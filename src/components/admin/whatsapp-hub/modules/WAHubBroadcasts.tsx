@@ -941,6 +941,38 @@ function OneShotBroadcast() {
                 <CardTitle className="text-sm flex items-center gap-2"><FileUp className="h-4 w-4 text-blue-500" /> Step 3: Upload Recipients & Test Send</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {/* Saved / past recipient lists picker */}
+                {pastLists && pastLists.length > 0 && (
+                  <div className="border rounded-lg p-2.5 bg-muted/30 space-y-1.5">
+                    <Label className="text-xs font-semibold flex items-center gap-1.5">
+                      <HistoryIcon className="h-3 w-3 text-violet-500" /> Reuse a saved recipient list (last {pastLists.length})
+                    </Label>
+                    <Select onValueChange={(id) => {
+                      const c: any = (pastLists || []).find((x: any) => x.id === id);
+                      const rows = c?.metadata?.excel_recipients;
+                      if (Array.isArray(rows) && rows.length > 0) {
+                        setRecipients(rows);
+                        const lowerHeaders = Object.keys(rows[0] || {}).map(h => h.toLowerCase());
+                        const missing = requiredVars.filter(v => !lowerHeaders.includes(v.toLowerCase()));
+                        if (!lowerHeaders.includes("phone")) missing.unshift("phone");
+                        setExcelMissing(missing);
+                        if (missing.length > 0) toast.warning(`Loaded ${rows.length} but missing columns: ${missing.join(", ")}`);
+                        else toast.success(`✅ Reused ${rows.length} recipients from "${c.name}"`);
+                      }
+                    }}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick a previous campaign's list..." /></SelectTrigger>
+                      <SelectContent>
+                        {pastLists.map((c: any) => (
+                          <SelectItem key={c.id} value={c.id} className="text-xs">
+                            {c.name} • {c.metadata.excel_recipients.length} recipients • {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[10px] text-muted-foreground">Or upload a fresh Excel below ↓</p>
+                  </div>
+                )}
+
                 <RecipientExcelUploader
                   requiredVars={requiredVars}
                   onParsed={(d) => {
