@@ -77,7 +77,6 @@ const SAMPLE_VALUES: Record<string, string> = {
   message: "your update is ready", subject: "Important Update", reason: "policy renewal",
   date: "11 Apr 2026", time: "11:30 AM", link: "https://grabyourcar.com",
   address: "Sector 18, Noida", tracking_url: "https://gyc.in/t/abc", otp: "482913",
-  otp: "123456", car_model: "Hyundai Creta", booking_id: "BK-001",
 };
 
 // ─── META VALIDATION ENGINE ───
