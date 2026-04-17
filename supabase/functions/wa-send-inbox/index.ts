@@ -234,18 +234,18 @@ serve(async (req) => {
               }
               // No vars → no header component (Meta uses the static text)
             } else if (format === "IMAGE" || format === "VIDEO" || format === "DOCUMENT") {
-              const headerLink = media_url || dbHeaderFallback;
+              const headerLink = resolvedMediaUrl || dbHeaderFallback;
               if (!headerLink) {
                 return jsonResponse({
                   success: false,
-                  error: `Template "${template_name}" has a ${format} header. Please attach a ${format.toLowerCase()} URL (media_url) before sending.`,
+                  error: `Template "${template_name}" has a ${format} header. Please attach a ${format.toLowerCase()} URL before sending.`,
                   missing_media: true,
                 });
               }
               const fmtKey = format.toLowerCase();
               const mediaParam: Record<string, unknown> = { link: headerLink };
-              if (format === "DOCUMENT" && media_filename) {
-                mediaParam.filename = media_filename;
+              if (format === "DOCUMENT" && resolvedMediaFilename) {
+                mediaParam.filename = resolvedMediaFilename;
               }
               components.push({
                 type: "header",
