@@ -36,6 +36,7 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
     const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+    const WHATSAPP_BUSINESS_ACCOUNT_ID = Deno.env.get("WHATSAPP_BUSINESS_ACCOUNT_ID");
 
     if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
       return jsonResponse({ success: false, error: "WhatsApp API not configured", fallback: true });
@@ -150,11 +151,66 @@ serve(async (req) => {
         }
 
         const components: Record<string, unknown>[] = [];
-        const tplBody = tplData?.body || "";
-        const tplLang = tplData?.language || "en";
-        const tplHeaderType = String(tplData?.header_type || "").toLowerCase();
-        const tplHeaderContent = (tplData?.header_content as string | null) || null;
+        let tplBody = tplData?.body || "";
+        let tplLang = tplData?.language || "en";
+        let tplHeaderType = String(tplData?.header_type || "").toLowerCase();
+        let tplHeaderContent = (tplData?.header_content as string | null) || null;
+        let tplButtons: Array<Record<string, unknown>> = Array.isArray(tplData?.buttons)
+          ? (tplData!.buttons as Array<Record<string, unknown>>)
+          : [];
         const vars = (template_variables || {}) as Record<string, string>;
+
+        // ── Authoritative source: Meta template registry. The local DB cache
+        // can drift (e.g. a header was rejected during approval), and any
+        // mismatch between the payload we send and the live template causes
+        // Meta error #132018. Always reconcile against Meta before sending.
+        if (WHATSAPP_BUSINESS_ACCOUNT_ID) {
+          try {
+            const metaTplResp = await fetch(
+              `https://graph.facebook.com/v25.0/${WHATSAPP_BUSINESS_ACCOUNT_ID}/message_templates?name=${encodeURIComponent(template_name)}&fields=name,language,status,components`,
+              { headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` } },
+            );
+            const metaTplJson = await metaTplResp.json();
+            const metaTpl = (metaTplJson?.data || []).find(
+              (t: Record<string, unknown>) =>
+                String(t.name) === template_name &&
+                String(t.status || "").toUpperCase() === "APPROVED",
+            );
+            if (metaTpl) {
+              tplLang = String(metaTpl.language || tplLang);
+              const metaComps = Array.isArray(metaTpl.components)
+                ? (metaTpl.components as Array<Record<string, unknown>>)
+                : [];
+              const headerComp = metaComps.find(
+                (c) => String(c.type).toUpperCase() === "HEADER",
+              );
+              const bodyComp = metaComps.find(
+                (c) => String(c.type).toUpperCase() === "BODY",
+              );
+              const buttonsComp = metaComps.find(
+                (c) => String(c.type).toUpperCase() === "BUTTONS",
+              );
+              if (bodyComp && typeof bodyComp.text === "string") {
+                tplBody = bodyComp.text;
+              }
+              if (headerComp) {
+                tplHeaderType = String(headerComp.format || "TEXT").toLowerCase();
+                if (typeof headerComp.text === "string") {
+                  tplHeaderContent = headerComp.text;
+                }
+              } else {
+                tplHeaderType = "";
+                tplHeaderContent = null;
+              }
+              tplButtons =
+                buttonsComp && Array.isArray(buttonsComp.buttons)
+                  ? (buttonsComp.buttons as Array<Record<string, unknown>>)
+                  : [];
+            }
+          } catch (metaLookupErr) {
+            console.warn("Meta template lookup failed, falling back to DB cache", metaLookupErr);
+          }
+        }
 
         // ── HEADER component (text / image / video / document) ──
         if (tplHeaderType === "text" && tplHeaderContent) {
@@ -226,10 +282,9 @@ serve(async (req) => {
           }
         }
 
-        // ── BUTTON components (URL / QUICK_REPLY with dynamic var) ──
-        if (tplData?.buttons && Array.isArray(tplData.buttons)) {
-          const buttons = tplData.buttons as Array<Record<string, unknown>>;
-          buttons.forEach((btn, idx) => {
+        // ── BUTTON components (only URL/COPY_CODE with dynamic var) ──
+        if (tplButtons.length > 0) {
+          tplButtons.forEach((btn, idx) => {
             const btnType = String(btn.type || "").toUpperCase();
             const btnUrl = String(btn.url || "");
 
