@@ -82,6 +82,18 @@ const hasVisibleLayoutSurface = (root: HTMLElement) => {
 };
 
 const hasRenderableAppFrame = (root: HTMLElement) => {
+  const visibleLoadingShell = Array.from(root.querySelectorAll("[data-startup-ready], [data-startup-shell-ready], [aria-busy='true']")).some((element) => {
+    if (!(element instanceof HTMLElement)) {
+      return false;
+    }
+
+    return isElementVisible(element) && getMeaningfulTextLength(element) >= 8;
+  });
+
+  if (visibleLoadingShell) {
+    return true;
+  }
+
   const candidateSurfaces = Array.from(
     root.querySelectorAll("main, [role='main'], aside, nav, header, section, article, form"),
   );
