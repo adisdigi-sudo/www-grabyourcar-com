@@ -682,9 +682,11 @@ function OneShotBroadcast() {
       const { data, error } = await supabase.functions.invoke("wa-send-inbox", {
         body: {
           phone: `91${clean}`,
-          message_type: form.header_type === "none" || form.header_type === "text" ? "text" : form.header_type,
-          content, template_name: form.template_name,
-          media_url: form.media_url || undefined, test_send: true,
+          message_type: form.template_name ? "template" : (form.header_type === "none" || form.header_type === "text" ? "text" : form.header_type),
+          content,
+          template_name: form.template_name,
+          media_url: form.media_url || undefined,
+          test_send: true,
         },
       });
       if (error || !data?.success) throw new Error(data?.error || error?.message || "Test send failed");
