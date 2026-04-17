@@ -941,6 +941,46 @@ async function handleStrictInsuranceSelfService(supabase: any, messages: any[], 
     };
   }
 
+  // ── Phone-only auto-verification ──
+  // If the registered mobile number has EXACTLY ONE insurance client on file,
+  // skip the strict Name + Car Number prompt and serve the policy directly.
+  // This avoids re-verification for customers who already received their policy
+  // via our follow-up template and are simply asking for it again.
+  if (!hasPendingVerificationPrompt(messages)) {
+    const phoneOnlyLookup = await toolLookupPolicyByPhone(supabase, customerPhone);
+    if (phoneOnlyLookup?.found && phoneOnlyLookup.uniqueClient) {
+      const primaryVehicle = Array.isArray(phoneOnlyLookup.vehicles) ? phoneOnlyLookup.vehicles[0] : null;
+      const primaryDocument = Array.isArray(phoneOnlyLookup.policy_documents) ? phoneOnlyLookup.policy_documents[0] : null;
+      const wantsDocumentCopy = wantsPolicyDocumentCopy(latestUserMessage);
+
+      if (wantsDocumentCopy && primaryDocument?.url) {
+        const deterministicResponse = buildSelfServiceResponse([{ name: "lookup_my_policy", result: phoneOnlyLookup }]);
+        return {
+          response: deterministicResponse?.response || "Here is your policy document.",
+          intent: "insurance",
+          suggestedActions: ["Verified policy shared (phone match)"],
+          documentShare: deterministicResponse?.documentShare || null,
+          humanHandover: null,
+        };
+      }
+
+      return {
+        response: [
+          `Your verified policy record for ${primaryVehicle?.vehicle_number || "your vehicle"}:`,
+          `Policy holder: ${phoneOnlyLookup.customer || "Customer"}`,
+          `Insurer: ${primaryVehicle?.insurer || "Not available"}`,
+          `Policy number: ${primaryVehicle?.policy_number || "Not available"}`,
+          `Valid till: ${phoneOnlyLookup.active_policies?.[0]?.valid_until || primaryVehicle?.expiry || "Not available"}`,
+          primaryDocument?.url ? `\nReply 'send policy' to receive the PDF copy.` : "",
+        ].filter(Boolean).join("\n"),
+        intent: "insurance",
+        suggestedActions: ["Verified by registered number"],
+        documentShare: null,
+        humanHandover: null,
+      };
+    }
+  }
+
   const { customerName, vehicleNumber } = extractStrictVerification(messages, latestUserMessage);
 
   if (!customerName || !vehicleNumber) {
