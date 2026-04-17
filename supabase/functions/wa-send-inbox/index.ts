@@ -323,30 +323,32 @@ serve(async (req) => {
       displayContent = resolvedContent || `[Template: ${template_name}]`;
     }
 
-    // Insert into wa_inbox_messages
-    await supabase.from("wa_inbox_messages").insert({
-      conversation_id,
-      direction: "outbound",
-      message_type: costSaved ? "text" : message_type,
-      content: displayContent,
-      media_url: media_url || null,
-      media_filename: media_filename || null,
-      template_name: costSaved ? null : (template_name || null),
-      template_variables: costSaved ? null : (template_variables || null),
-      wa_message_id: waMessageId,
-      status: success ? "sent" : "failed",
-      status_updated_at: new Date().toISOString(),
-      error_message: success ? null : (result.error?.message || result.error?.error_user_msg || "Send failed"),
-      error_code: success ? null : (result.error?.code?.toString() || null),
-      sent_by,
-      sent_by_name,
-    });
+    // Insert into wa_inbox_messages (only when tied to an inbox conversation)
+    if (conversation_id) {
+      await supabase.from("wa_inbox_messages").insert({
+        conversation_id,
+        direction: "outbound",
+        message_type: costSaved ? "text" : message_type,
+        content: displayContent,
+        media_url: media_url || null,
+        media_filename: media_filename || null,
+        template_name: costSaved ? null : (template_name || null),
+        template_variables: costSaved ? null : (template_variables || null),
+        wa_message_id: waMessageId,
+        status: success ? "sent" : "failed",
+        status_updated_at: new Date().toISOString(),
+        error_message: success ? null : (result.error?.message || result.error?.error_user_msg || "Send failed"),
+        error_code: success ? null : (result.error?.code?.toString() || null),
+        sent_by,
+        sent_by_name,
+      });
 
-    // Update conversation
-    await supabase.from("wa_conversations").update({
-      last_message: displayContent.slice(0, 200),
-      last_message_at: new Date().toISOString(),
-    }).eq("id", conversation_id);
+      // Update conversation
+      await supabase.from("wa_conversations").update({
+        last_message: displayContent.slice(0, 200),
+        last_message_at: new Date().toISOString(),
+      }).eq("id", conversation_id);
+    }
 
     // Log in legacy wa_message_logs
     await supabase.from("wa_message_logs").insert({
