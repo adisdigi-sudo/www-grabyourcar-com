@@ -137,38 +137,17 @@ serve(async (req) => {
           },
         };
       } else {
-        const { data: tplData } = await supabase
-          .from("wa_templates")
-          .select("body, buttons, category, header_type, header_content, variables, language, status")
-          .eq("name", template_name)
-          .single();
+        // ── ALWAYS use Meta's LIVE template definition as the source of truth.
+        // The local DB cache can drift (e.g. Meta strips named variables like
+        // {{full_name}} during approval). Sending a payload that doesn't
+        // exactly match the approved structure causes error #132012.
+        let tplLang = "en";
+        let metaComponents: Array<Record<string, unknown>> = [];
 
-        if (tplData && String(tplData.status || "").toLowerCase() !== "approved") {
-          return jsonResponse({
-            success: false,
-            error: `Template "${template_name}" is not approved (status: ${tplData.status}). Only approved templates can be sent.`,
-            template_not_approved: true,
-          });
-        }
-
-        const components: Record<string, unknown>[] = [];
-        let tplBody = tplData?.body || "";
-        let tplLang = tplData?.language || "en";
-        let tplHeaderType = String(tplData?.header_type || "").toLowerCase();
-        let tplHeaderContent = (tplData?.header_content as string | null) || null;
-        let tplButtons: Array<Record<string, unknown>> = Array.isArray(tplData?.buttons)
-          ? (tplData!.buttons as Array<Record<string, unknown>>)
-          : [];
-        const vars = (template_variables || {}) as Record<string, string>;
-
-        // ── Authoritative source: Meta template registry. The local DB cache
-        // can drift (e.g. a header was rejected during approval), and any
-        // mismatch between the payload we send and the live template causes
-        // Meta error #132018. Always reconcile against Meta before sending.
         if (WHATSAPP_BUSINESS_ACCOUNT_ID) {
           try {
             const metaTplResp = await fetch(
-              `https://graph.facebook.com/v25.0/${WHATSAPP_BUSINESS_ACCOUNT_ID}/message_templates?name=${encodeURIComponent(template_name)}&fields=name,language,status,components`,
+              `https://graph.facebook.com/v25.0/${WHATSAPP_BUSINESS_ACCOUNT_ID}/message_templates?name=${encodeURIComponent(template_name)}&fields=name,language,status,components&limit=50`,
               { headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` } },
             );
             const metaTplJson = await metaTplResp.json();
@@ -177,138 +156,136 @@ serve(async (req) => {
                 String(t.name) === template_name &&
                 String(t.status || "").toUpperCase() === "APPROVED",
             );
-            if (metaTpl) {
-              tplLang = String(metaTpl.language || tplLang);
-              const metaComps = Array.isArray(metaTpl.components)
-                ? (metaTpl.components as Array<Record<string, unknown>>)
-                : [];
-              const headerComp = metaComps.find(
-                (c) => String(c.type).toUpperCase() === "HEADER",
-              );
-              const bodyComp = metaComps.find(
-                (c) => String(c.type).toUpperCase() === "BODY",
-              );
-              const buttonsComp = metaComps.find(
-                (c) => String(c.type).toUpperCase() === "BUTTONS",
-              );
-              if (bodyComp && typeof bodyComp.text === "string") {
-                tplBody = bodyComp.text;
-              }
-              if (headerComp) {
-                tplHeaderType = String(headerComp.format || "TEXT").toLowerCase();
-                if (typeof headerComp.text === "string") {
-                  tplHeaderContent = headerComp.text;
-                }
-              } else {
-                tplHeaderType = "";
-                tplHeaderContent = null;
-              }
-              tplButtons =
-                buttonsComp && Array.isArray(buttonsComp.buttons)
-                  ? (buttonsComp.buttons as Array<Record<string, unknown>>)
-                  : [];
-            }
-          } catch (metaLookupErr) {
-            console.warn("Meta template lookup failed, falling back to DB cache", metaLookupErr);
-          }
-        }
-
-        // ── HEADER component (text / image / video / document) ──
-        if (tplHeaderType === "text" && tplHeaderContent) {
-          const headerVarMatches = tplHeaderContent.match(/\{\{(\w+)\}\}/g) || [];
-          if (headerVarMatches.length > 0) {
-            const headerVarName = headerVarMatches[0].replace(/[{}]/g, "");
-            const headerValue =
-              vars[headerVarName] || vars["header_1"] || vars["var_1"] || "";
-            if (headerValue) {
-              components.push({
-                type: "header",
-                parameters: [{ type: "text", text: String(headerValue) }],
+            if (!metaTpl) {
+              return jsonResponse({
+                success: false,
+                error: `Template "${template_name}" is not APPROVED on Meta. Please wait for approval or pick another template.`,
+                template_not_approved: true,
               });
             }
+            tplLang = String(metaTpl.language || "en");
+            metaComponents = Array.isArray(metaTpl.components)
+              ? (metaTpl.components as Array<Record<string, unknown>>)
+              : [];
+          } catch (metaLookupErr) {
+            console.error("Meta template lookup failed:", metaLookupErr);
+            return jsonResponse({
+              success: false,
+              error: "Could not verify template with Meta. Please retry.",
+            });
           }
-        } else if (
-          (tplHeaderType === "image" || tplHeaderType === "video" || tplHeaderType === "document") &&
-          (media_url || tplHeaderContent)
-        ) {
-          const headerLink = media_url || tplHeaderContent || "";
-          if (headerLink) {
-            const mediaParam: Record<string, unknown> = { link: headerLink };
-            if (tplHeaderType === "document" && media_filename) {
-              mediaParam.filename = media_filename;
+        }
+
+        // Pull DB row only for media fallback (header_content of media templates
+        // stores the public sample URL we used at submission time).
+        const { data: tplDbRow } = await supabase
+          .from("wa_templates")
+          .select("header_content")
+          .eq("name", template_name)
+          .single();
+        const dbHeaderFallback = (tplDbRow?.header_content as string | null) || null;
+
+        const vars = (template_variables || {}) as Record<string, string>;
+        const components: Record<string, unknown>[] = [];
+
+        // Helper: pick a value for positional placeholder index (1-based)
+        const pickVar = (idx: number): string => {
+          const direct =
+            vars[`var_${idx}`] ??
+            vars[String(idx)] ??
+            vars[`{{${idx}}}`];
+          if (direct !== undefined && direct !== null && String(direct).length > 0) {
+            return String(direct);
+          }
+          // Soft fallback for first var only
+          if (idx === 1) {
+            return String(
+              vars.customer_name ||
+                vars.name ||
+                convo?.customer_name ||
+                sent_by_name ||
+                "Customer",
+            );
+          }
+          return " ";
+        };
+
+        // Walk Meta's live components and build the matching payload
+        for (const comp of metaComponents) {
+          const type = String(comp.type || "").toUpperCase();
+
+          if (type === "HEADER") {
+            const format = String(comp.format || "TEXT").toUpperCase();
+
+            if (format === "TEXT") {
+              const headerText = String(comp.text || "");
+              const headerVars = headerText.match(/\{\{(\d+)\}\}/g) || [];
+              if (headerVars.length > 0) {
+                const params = headerVars.map((m) => {
+                  const idx = parseInt(m.replace(/[{}]/g, ""), 10);
+                  return { type: "text", text: pickVar(idx) };
+                });
+                components.push({ type: "header", parameters: params });
+              }
+              // No vars → no header component (Meta uses the static text)
+            } else if (format === "IMAGE" || format === "VIDEO" || format === "DOCUMENT") {
+              const headerLink = media_url || dbHeaderFallback;
+              if (!headerLink) {
+                return jsonResponse({
+                  success: false,
+                  error: `Template "${template_name}" has a ${format} header. Please attach a ${format.toLowerCase()} URL (media_url) before sending.`,
+                  missing_media: true,
+                });
+              }
+              const fmtKey = format.toLowerCase();
+              const mediaParam: Record<string, unknown> = { link: headerLink };
+              if (format === "DOCUMENT" && media_filename) {
+                mediaParam.filename = media_filename;
+              }
+              components.push({
+                type: "header",
+                parameters: [{ type: fmtKey, [fmtKey]: mediaParam }],
+              });
             }
-            components.push({
-              type: "header",
-              parameters: [{ type: tplHeaderType, [tplHeaderType]: mediaParam }],
-            });
-          }
-        }
+          } else if (type === "BODY") {
+            const bodyText = String(comp.text || "");
+            const bodyVarMatches = bodyText.match(/\{\{(\d+)\}\}/g) || [];
+            // Dedupe & sort numerically
+            const uniqueIdx = Array.from(
+              new Set(bodyVarMatches.map((m) => parseInt(m.replace(/[{}]/g, ""), 10))),
+            ).sort((a, b) => a - b);
 
-        // ── BODY params (always send if template has {{n}} placeholders) ──
-        const bodyVarMatches = tplBody.match(/\{\{(\w+)\}\}/g) || [];
-        const uniqueVars: string[] = [];
-        for (const m of bodyVarMatches) {
-          const varName = m.replace(/[{}]/g, "");
-          if (!uniqueVars.includes(varName)) uniqueVars.push(varName);
-        }
-
-        if (uniqueVars.length > 0) {
-          const bodyParams: Record<string, unknown>[] = [];
-          for (let i = 0; i < uniqueVars.length; i++) {
-            const varName = uniqueVars[i];
-            const fallback =
-              vars[varName] ??
-              vars[`var_${i + 1}`] ??
-              vars[String(i + 1)] ??
-              vars["customer_name"] ??
-              vars["name"] ??
-              "";
-            bodyParams.push({ type: "text", text: String(fallback || " ") });
-          }
-          components.push({ type: "body", parameters: bodyParams });
-        } else if (template_variables && Object.keys(template_variables).length > 0) {
-          const sortedKeys = Object.keys(template_variables)
-            .filter((k) => /^(var_\d+|\d+)$/.test(k))
-            .sort((a, b) => {
-              const numA = parseInt(a.replace("var_", ""));
-              const numB = parseInt(b.replace("var_", ""));
-              return numA - numB;
-            });
-          const bodyParams: Record<string, unknown>[] = [];
-          for (const key of sortedKeys) {
-            bodyParams.push({ type: "text", text: String(template_variables[key]) });
-          }
-          if (bodyParams.length > 0) {
-            components.push({ type: "body", parameters: bodyParams });
-          }
-        }
-
-        // ── BUTTON components (only URL/COPY_CODE with dynamic var) ──
-        if (tplButtons.length > 0) {
-          tplButtons.forEach((btn, idx) => {
-            const btnType = String(btn.type || "").toUpperCase();
-            const btnUrl = String(btn.url || "");
-
-            if (btnType === "URL" && btnUrl.includes("{{")) {
-              const urlVar =
-                vars["btn_url_" + idx] ||
-                vars["button_" + (idx + 1)] ||
-                vars["var_1"] ||
-                Object.values(vars)[0] ||
-                "";
-              if (urlVar) {
+            if (uniqueIdx.length > 0) {
+              const params = uniqueIdx.map((idx) => ({
+                type: "text",
+                text: pickVar(idx),
+              }));
+              components.push({ type: "body", parameters: params });
+            }
+            // No positional vars → no body component (Meta will reject extras)
+          } else if (type === "BUTTONS") {
+            const btns = Array.isArray(comp.buttons)
+              ? (comp.buttons as Array<Record<string, unknown>>)
+              : [];
+            btns.forEach((btn, idx) => {
+              const btnType = String(btn.type || "").toUpperCase();
+              const btnUrl = String(btn.url || "");
+              // Only URL buttons with {{n}} placeholder need a runtime parameter
+              if (btnType === "URL" && /\{\{\d+\}\}/.test(btnUrl)) {
+                const m = btnUrl.match(/\{\{(\d+)\}\}/);
+                const idxNum = m ? parseInt(m[1], 10) : 1;
                 components.push({
                   type: "button",
                   sub_type: "url",
                   index: idx,
-                  parameters: [{ type: "text", text: String(urlVar) }],
+                  parameters: [{ type: "text", text: pickVar(idxNum) }],
                 });
               }
-            }
-            // QUICK_REPLY / PHONE_NUMBER / static URL buttons: Meta does NOT
-            // accept a button component when the button text/url has no
-            // {{var}} placeholder — including one returns error #132018.
-          });
+              // QUICK_REPLY / PHONE_NUMBER / static URL → no component needed
+              // Sending one for these triggers #132012 / #132018.
+            });
+          }
+          // FOOTER has no runtime component
         }
 
         metaPayload = {
