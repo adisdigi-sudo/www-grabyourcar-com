@@ -1036,6 +1036,12 @@ function OneShotBroadcast() {
                   </div>
                 )}
 
+                {/* Auto-detect Excel template downloader */}
+                <ExcelTemplateDownloader
+                  templateName={form.template_name || "broadcast"}
+                  requiredVars={requiredVars}
+                />
+
                 <RecipientExcelUploader
                   requiredVars={requiredVars}
                   onParsed={(d) => {
