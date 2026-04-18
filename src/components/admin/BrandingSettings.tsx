@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { Upload, Save, Palette, Image as ImageIcon, RefreshCw, Trash2, Eye, Move } from "lucide-react";
 import { AdminImageUpload } from "./AdminImageUpload";
 import { LogoFitPreview } from "./branding/LogoFitPreview";
-import { BRANDING_QUERY_KEY, normalizeBrandingSettings, useBrandingSettingsQuery, type BrandingSettings } from "@/hooks/useBrandingSettings";
+import { BRANDING_QUERY_KEY, normalizeBrandingSettings, useBrandingSettingsQuery, type BrandingSettings as BrandingSettingsData } from "@/hooks/useBrandingSettings";
 
 export const BrandingSettings = () => {
   const queryClient = useQueryClient();
@@ -26,7 +26,7 @@ export const BrandingSettings = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
-  const [formData, setFormData] = useState<BrandingSettings>(normalizeBrandingSettings());
+  const [formData, setFormData] = useState<BrandingSettingsData>(normalizeBrandingSettings());
 
   const { data: settings, isLoading } = useBrandingSettingsQuery();
 
@@ -39,7 +39,7 @@ export const BrandingSettings = () => {
 
   // Save mutation
   const saveMutation = useMutation({
-    mutationFn: async (data: BrandingSettings) => {
+    mutationFn: async (data: BrandingSettingsData) => {
       const jsonValue = JSON.parse(JSON.stringify(data));
       const { error } = await supabase
         .from('admin_settings')
