@@ -31,7 +31,8 @@ export const BrandingSettings = () => {
   
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  
+  const [previewRefreshKey, setPreviewRefreshKey] = useState(0);
+
   const [formData, setFormData] = useState<BrandingSettingsData>(normalizeBrandingSettings());
 
   const { data: settings, isLoading } = useBrandingSettingsQuery();
