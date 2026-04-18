@@ -123,6 +123,9 @@ export function PdfVerticalSettingsEditor() {
   const [selectedSlug, setSelectedSlug] = useState<string>("insurance");
   const [activeTab, setActiveTab] = useState("overrides");
   const [form, setForm] = useState<VerticalSettingsForm>(emptyForm("insurance", "Insurance"));
+  /** Which document type is currently being previewed/configured. Defaults to first
+   *  enabled type for the selected vertical. */
+  const [selectedDocType, setSelectedDocType] = useState<string>("quote");
 
   // Load active verticals
   const { data: verticals = [] } = useQuery({
