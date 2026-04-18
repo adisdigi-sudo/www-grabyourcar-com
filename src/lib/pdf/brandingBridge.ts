@@ -148,18 +148,20 @@ async function logGeneration(
     await supabase.from("pdf_manual_generations" as any).insert({
       vertical_slug: opts.vertical,
       document_type: opts.documentType,
-      file_name: opts.fileName ?? null,
-      file_size_bytes: pdfBytes,
-      generated_by: user?.id ?? null,
+      document_number: opts.audit?.referenceId ?? null,
       customer_name: opts.audit?.customerName ?? null,
       customer_phone: opts.audit?.customerPhone ?? null,
-      reference_id: opts.audit?.referenceId ?? null,
-      branding_snapshot: {
-        company_name: branding.company_name,
-        vertical_label: branding.vertical_label,
-        primary_color: branding.brand_primary_color,
+      generated_by: user?.id ?? null,
+      payload: {
+        file_name: opts.fileName ?? null,
+        file_size_bytes: pdfBytes,
+        branding_snapshot: {
+          company_name: branding.company_name,
+          vertical_label: branding.vertical_label,
+          primary_color: branding.brand_primary_color,
+        },
+        extra: opts.audit?.extra ?? null,
       },
-      extra: opts.audit?.extra ?? null,
     });
   } catch {
     // Non-blocking — never fail the PDF download because of audit log
