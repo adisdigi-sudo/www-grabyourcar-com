@@ -49,8 +49,8 @@ export const ResponsiveLogo = ({
       if (error && error.code !== 'PGRST116') return null;
       return data?.setting_value as BrandingSettings | null;
     },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
+    staleTime: 30 * 1000, // 30s — pick up admin changes quickly
+    refetchOnWindowFocus: true,
 
   // Determine logo URLs - animated logo takes priority if enabled
   // IMPORTANT: Only use backend URLs if they're valid and not empty

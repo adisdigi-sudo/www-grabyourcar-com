@@ -147,9 +147,11 @@ export const BrandingSettings = () => {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['brandingSettings'] });
-      toast.success('Branding settings saved!');
+    onSuccess: async () => {
+      // Force-refresh every consumer (header, footer, mobile menu, PDFs) immediately
+      await queryClient.invalidateQueries({ queryKey: ['brandingSettings'] });
+      await queryClient.refetchQueries({ queryKey: ['brandingSettings'] });
+      toast.success('Branding saved — changes are now live across the website');
     },
     onError: (error) => {
       toast.error('Failed to save settings');
