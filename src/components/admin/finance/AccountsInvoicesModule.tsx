@@ -12,8 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Plus, Search, Edit2, Trash2, Download, Send, Zap } from "lucide-react";
+import { FileText, Plus, Search, Edit2, Trash2, Download, Send, Zap, Sparkles } from "lucide-react";
 import { generateInvoicePDF } from "@/lib/generateInvoicePDF";
+import { generateBrandedInvoice } from "@/lib/pdf";
+import { PremiumInvoiceStudio } from "./PremiumInvoiceStudio";
 
 const STATUSES = ["draft", "sent", "viewed", "partial", "paid", "overdue", "cancelled"];
 const VERTICALS = ["Car Sales", "Insurance", "Car Loans", "HSRP", "Rental", "Accessories", "Service"];
@@ -32,6 +34,7 @@ export const AccountsInvoicesModule = () => {
   const [form, setForm] = useState<Record<string, any>>({});
   const [items, setItems] = useState<any[]>([{ description: "", hsn: "", quantity: 1, rate: 0, amount: 0 }]);
   const [tab, setTab] = useState("all");
+  const [view, setView] = useState<"list" | "studio">("list");
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["acc-invoices-all"],
@@ -86,6 +89,17 @@ export const AccountsInvoicesModule = () => {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex gap-2">
+          <Button variant={view === "list" ? "default" : "outline"} size="sm" onClick={() => setView("list")} className="gap-2"><FileText className="h-4 w-4" /> All Invoices</Button>
+          <Button variant={view === "studio" ? "default" : "outline"} size="sm" onClick={() => setView("studio")} className="gap-2"><Sparkles className="h-4 w-4" /> Premium Studio</Button>
+        </div>
+      </div>
+
+      {view === "studio" ? (
+        <PremiumInvoiceStudio />
+      ) : (
+      <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total Invoices</p><p className="text-2xl font-bold">{invoices.length}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total Receivable</p><p className="text-2xl font-bold text-orange-600">{fmt(totalReceivable)}</p></CardContent></Card>
@@ -126,7 +140,15 @@ export const AccountsInvoicesModule = () => {
                   </div>
                 </TableCell>
                 <TableCell className="text-right"><div className="flex gap-1 justify-end">
-                  <Button size="icon" variant="ghost" title="Download PDF" onClick={() => {
+                  <Button size="icon" variant="ghost" title="Download Branded PDF" onClick={async () => {
+                    try {
+                      toast.loading("Generating branded invoice...");
+                      await generateBrandedInvoice({ ...inv, items: Array.isArray(inv.items) ? inv.items : [] });
+                      toast.dismiss();
+                      toast.success("Downloaded");
+                    } catch (e: any) { toast.dismiss(); toast.error(e?.message || "Failed"); }
+                  }}><Sparkles className="h-4 w-4 text-primary" /></Button>
+                  <Button size="icon" variant="ghost" title="Download Classic PDF" onClick={() => {
                     generateInvoicePDF({ ...inv, items: Array.isArray(inv.items) ? inv.items : [] });
                   }}><Download className="h-4 w-4" /></Button>
                   {inv.client_email && (
@@ -197,6 +219,8 @@ export const AccountsInvoicesModule = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </>
+      )}
     </div>
   );
 };
