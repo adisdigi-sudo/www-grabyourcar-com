@@ -1,6 +1,7 @@
 import { isSensitivePreviewRouteWindow, shouldStabilizeStartupShellWindow } from "@/lib/adminPreviewStability";
 import { performSafePreviewReload } from "@/lib/chunkLoadRecovery";
 import { DEV_SERVER_STATUS_EVENT } from "@/lib/devReloadGuard";
+import { withPreviewParams } from "@/lib/previewRouting";
 
 const STARTUP_SHELL_ID = "lovable-startup-shell";
 const STARTUP_SHELL_RECOVERY_DELAY_MS = 4500;
@@ -10,8 +11,10 @@ const STARTUP_SHELL_READY_CONFIRM_MS = 320;
 const STARTUP_SHELL_AUTO_RELOAD_DELAY_MS = 1600;
 const STARTUP_SHELL_AUTO_RELOAD_MAX_ATTEMPTS = 2;
 const STARTUP_SHELL_AUTO_RELOAD_WINDOW_MS = 45000;
+const STARTUP_SHELL_ROUTE_TRANSITION_GRACE_MS = 1800;
 const APP_ROOT_ID = "root";
 const STARTUP_SHELL_AUTO_RELOAD_KEY = "lovable_startup_shell_auto_reload";
+const ROUTE_ACTIVITY_EVENT = "lovable:route-activity";
 
 let startupShellRecoveryTimer: number | null = null;
 let startupShellBlankTimer: number | null = null;
@@ -23,6 +26,7 @@ let rootObserver: MutationObserver | null = null;
 let bodyObserver: MutationObserver | null = null;
 let healthMonitorInstalled = false;
 let globalRecoveryListenersInstalled = false;
+let startupShellRouteTransitionUntil = 0;
 
 const STARTUP_READY_SELECTOR = [
   "button",
@@ -152,6 +156,12 @@ const clearAutoReloadTimer = () => {
     startupShellAutoReloadTimer = null;
   }
 };
+
+const markStartupShellRouteTransition = () => {
+  startupShellRouteTransitionUntil = Date.now() + STARTUP_SHELL_ROUTE_TRANSITION_GRACE_MS;
+};
+
+const isStartupShellRouteTransitionActive = () => Date.now() < startupShellRouteTransitionUntil;
 
 type StartupShellAutoReloadState = {
   attempts: number;
