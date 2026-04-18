@@ -24,8 +24,7 @@ let bootstrapListenersInstalled = false;
 const shouldUseSensitiveRouteRecovery = () =>
   isSensitivePreviewRouteWindow() && !isEmbeddedPreviewWindow() && !isLovableEditorPreviewHost();
 
-const shouldUseDevPreviewReconnectOverlay = () =>
-  import.meta.env.DEV && (isLovableEditorPreviewHost() || isEmbeddedPreviewWindow());
+const shouldUseDevPreviewReconnectOverlay = () => false;
 
 type ChunkRecoveryAttemptResult = "recovered" | "exhausted" | "ignored";
 
