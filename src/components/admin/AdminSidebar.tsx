@@ -41,6 +41,7 @@ import {
   MessageCircle,
   KeyRound,
   Trophy,
+  Bot,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
@@ -77,6 +78,9 @@ const navItems: NavItem[] = [
 
   // ── Sales CRM — sales vertical ──
   { id: "sales-crm", label: "🚗 Sales CRM", icon: Car, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
+  { id: "reply-agents", label: "🤖 Reply Agents", icon: Bot, badge: "WA+Email",
+    verticals: ["sales", "insurance", "rental", "hsrp", "accessories", "loans", "corporate", "fleet", "dealer-network"],
+    allowedRoles: ["super_admin", "admin", "sales", "operations", "insurance", "finance", "vertical_manager", "manager", "team_leader"] },
 
   // ── Services — vertical-specific children ──
   { 
@@ -418,6 +422,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
         .map(item => {
           if (
             item.id === "dashboard" ||
+            item.id === "reply-agents" ||
             item.id === "calling-system" ||
             item.id === "templates-hub" ||
             item.id === "ai-cofounder" ||
