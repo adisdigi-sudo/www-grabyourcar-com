@@ -831,7 +831,7 @@ Rules:
 
           if (humanHandover && inboxConvoId) {
             await supabase.from("wa_conversations").update({
-              assigned_vertical: humanHandover.vertical || "insurance",
+              assigned_vertical: "insurance",
               status: "needs_human",
             }).eq("id", inboxConvoId);
           }
