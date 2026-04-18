@@ -709,44 +709,39 @@ Deno.serve(async (req) => {
           }
 
           // ══════════════════════════════════════════════════════════
-          // STEP 2: Fallback to AI Brain if no chatbot rule matched
+          // STEP 2: DB-DRIVEN FLOW ENGINE (replaces AI Brain)
+          // Pure rule-based: keywords → DB triggers → fixed reply / doc / sales info
+          // No AI dependency — fully exportable to any host
           // ══════════════════════════════════════════════════════════
           if (!aiResponse) {
-            aiResponse = getFallbackResponse(lowerMessageText);
-
             try {
-              const brainResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-brain`, {
+              const flowResponse = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-flow-engine`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
                   Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
                 },
                 body: JSON.stringify({
-                  messages: conversationHistory.slice(-12),
-                  channel: "whatsapp",
-                  customer_name: contactName,
                   customer_phone: from,
+                  message_text: messageText,
+                  customer_name: contactName,
                 }),
               });
 
-              if (brainResponse.ok) {
-                const brainData = await brainResponse.json();
-                aiResponse = brainData.response || aiResponse;
-                intentDetected = brainData.intent || "general";
-                leadCaptured = brainData.lead_captured || false;
-                documentShare = brainData.document_share || null;
-                humanHandover = brainData.human_handover || null;
-              } else {
-                console.error("AI Brain error:", brainResponse.status);
-                if (isStrictSelfServiceRequest) {
-                  aiResponse = "For security, we only share details after verifying the registered mobile number, full name, and car number.";
+              if (flowResponse.ok) {
+                const flowData = await flowResponse.json();
+                aiResponse = flowData.outbound || getFallbackResponse(lowerMessageText);
+                intentDetected = flowData.matched || "no_match";
+                if (flowData.attachments?.length > 0) {
+                  documentShare = flowData.attachments[0];
                 }
+              } else {
+                console.error("Flow engine error:", flowResponse.status);
+                aiResponse = getFallbackResponse(lowerMessageText);
               }
             } catch (e) {
-              console.error("AI Brain call failed, using fallback:", e);
-              if (isStrictSelfServiceRequest) {
-                aiResponse = "For security, we only share details after verifying the registered mobile number, full name, and car number.";
-              }
+              console.error("Flow engine call failed:", e);
+              aiResponse = getFallbackResponse(lowerMessageText);
             }
           }
 
