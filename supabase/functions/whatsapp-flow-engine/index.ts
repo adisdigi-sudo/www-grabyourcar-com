@@ -4,12 +4,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
 interface InboundMessage {
@@ -21,7 +22,10 @@ interface InboundMessage {
 
 // Normalize text for matching
 function normalize(text: string): string {
-  return (text || "").toLowerCase().trim().replace(/[^\w\s@.]/g, " ").replace(/\s+/g, " ");
+  return (text || "").toLowerCase().trim().replace(/[^\w\s@.]/g, " ").replace(
+    /\s+/g,
+    " ",
+  );
 }
 
 // Match keywords against message
@@ -31,12 +35,21 @@ function matchKeywords(message: string, keywords: string[]): boolean {
     const variants = [kw];
 
     if (["brochure", "catalog", "leaflet", "booklet"].includes(normalize(kw))) {
-      variants.push("brocher", "broacher", "brochur", "broucher", "brouche", "brosure", "brocure");
+      variants.push(
+        "brocher",
+        "broacher",
+        "brochur",
+        "broucher",
+        "brouche",
+        "brosure",
+        "brocure",
+      );
     }
 
     return variants.some((variant) => {
       const k = normalize(variant);
-      return norm === k || norm.includes(k) || k.split(" ").every((w) => norm.includes(w));
+      return norm === k || norm.includes(k) ||
+        k.split(" ").every((w) => norm.includes(w));
     });
   });
 }
@@ -49,7 +62,9 @@ function isLikelyFollowUpIdentifier(message: string): boolean {
   if (words.length <= 4) return true;
 
   const identity = extractIdentity(message);
-  return Boolean(identity.vehicle_number || identity.policy_number || identity.phone);
+  return Boolean(
+    identity.vehicle_number || identity.policy_number || identity.phone,
+  );
 }
 
 // Extract identity from message (vehicle no, policy no, phone)
@@ -98,14 +113,19 @@ async function fetchDocument(cfg: any, identity: Record<string, string>) {
 
     let policyQuery = supabase
       .from("insurance_policies")
-      .select("id, policy_number, policy_document_url, document_file_name, client_id, created_at")
+      .select(
+        "id, policy_number, policy_document_url, document_file_name, client_id, created_at",
+      )
       .order("created_at", { ascending: false })
       .limit(1);
 
     if (clientIds.length > 0) {
       policyQuery = policyQuery.in("client_id", clientIds);
     } else if (identity.policy_number) {
-      policyQuery = policyQuery.ilike("policy_number", `%${identity.policy_number}%`);
+      policyQuery = policyQuery.ilike(
+        "policy_number",
+        `%${identity.policy_number}%`,
+      );
     } else {
       return { found: false };
     }
@@ -119,7 +139,8 @@ async function fetchDocument(cfg: any, identity: Record<string, string>) {
     return {
       found: true,
       pdf_url: data.policy_document_url,
-      filename: data.document_file_name || `${data.policy_number || "policy"}.pdf`,
+      filename: data.document_file_name ||
+        `${data.policy_number || "policy"}.pdf`,
       record: data,
     };
   }
@@ -170,7 +191,9 @@ async function fetchSalesInfo(cfg: any, message: string) {
     if (words.length === 0) return null;
 
     const sortedWords = [...words].sort((a, b) => b.length - a.length);
-    const selectFields = Array.from(new Set(["id", "name", ...((cfg.fields_to_send || []) as string[])]));
+    const selectFields = Array.from(
+      new Set(["id", "name", ...((cfg.fields_to_send || []) as string[])]),
+    );
 
     for (const word of sortedWords) {
       const { data: matches } = await supabase
@@ -180,10 +203,12 @@ async function fetchSalesInfo(cfg: any, message: string) {
         .limit(5);
 
       if (matches && matches.length > 0) {
-        const exact = (matches as any[]).find((c) => normalize(c.name || "") === word);
+        const exact = (matches as any[]).find((c) =>
+          normalize(c.name || "") === word
+        );
         if (exact) return exact;
         return (matches as any[]).sort(
-          (a, b) => (a.name?.length || 999) - (b.name?.length || 999)
+          (a, b) => (a.name?.length || 999) - (b.name?.length || 999),
         )[0];
       }
     }
@@ -203,7 +228,10 @@ function formatSalesReply(record: any, cfg: any): string {
   const lines = (cfg.fields_to_send || [])
     .filter((f: string) => !["id", "brochure_url"].includes(f))
     .map((f: string) => {
-      const label = f.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+      const label = f.replace(/_/g, " ").replace(
+        /\b\w/g,
+        (l) => l.toUpperCase(),
+      );
       const value = Array.isArray(record[f]) ? record[f].join(", ") : record[f];
       return `*${label}:* ${value ?? "—"}`;
     });
@@ -244,7 +272,10 @@ async function routeMessage(input: InboundMessage) {
     const merged = { ...(session.collected_variables || {}), ...newIdentity };
     await supabase
       .from("whatsapp_flow_sessions")
-      .update({ collected_variables: merged, last_message_at: new Date().toISOString() })
+      .update({
+        collected_variables: merged,
+        last_message_at: new Date().toISOString(),
+      })
       .eq("id", session.id);
     session.collected_variables = merged;
   }
@@ -257,10 +288,10 @@ async function routeMessage(input: InboundMessage) {
 
   const { data: triggers } = vertical_slug
     ? await triggerQuery
-        .or(`vertical_slug.eq.${vertical_slug},vertical_slug.is.null`)
-        .order("priority", { ascending: true })
+      .or(`vertical_slug.eq.${vertical_slug},vertical_slug.is.null`)
+      .order("priority", { ascending: true })
     : await triggerQuery
-        .order("priority", { ascending: true });
+      .order("priority", { ascending: true });
 
   let matched: any = null;
   for (const t of triggers || []) {
@@ -275,7 +306,12 @@ async function routeMessage(input: InboundMessage) {
     ? (triggers || []).find((trigger: any) => trigger.id === pendingTriggerId)
     : null;
 
-  if (pendingTrigger && (!matched || (matched.id !== pendingTrigger.id && isLikelyFollowUpIdentifier(message_text)))) {
+  if (
+    pendingTrigger &&
+    (!matched ||
+      (matched.id !== pendingTrigger.id &&
+        isLikelyFollowUpIdentifier(message_text)))
+  ) {
     matched = pendingTrigger;
   }
 
@@ -288,7 +324,8 @@ async function routeMessage(input: InboundMessage) {
   try {
     if (!matched) {
       // No match → polite redirect
-      outbound = `🙏 I didn't quite catch that. Could you rephrase?\n\nYou can ask me for:\n• *Policy* / *Insurance copy*\n• *Sanction letter* / *Loan document*\n• *Invoice* / *Receipt*\n• *Account* / *UPI* (payment details)\n• *Car name* (Fortuner, Creta, etc.)\n• *HSRP status*\n\nOr just type what you need!`;
+      outbound =
+        `🙏 I didn't quite catch that. Could you rephrase?\n\nYou can ask me for:\n• *Policy* / *Insurance copy*\n• *Sanction letter* / *Loan document*\n• *Invoice* / *Receipt*\n• *Account* / *UPI* (payment details)\n• *Car name* (Fortuner, Creta, etc.)\n• *HSRP status*\n\nOr just type what you need!`;
       action = "no_match_fallback";
     } else if (matched.intent_type === "payment_info") {
       outbound = buildPaymentReply(matched.action_config);
@@ -303,24 +340,39 @@ async function routeMessage(input: InboundMessage) {
     } else if (matched.intent_type === "document") {
       const identity = Object.fromEntries(
         Object.entries(session.collected_variables || {}).filter(
-          ([key, value]) => !key.startsWith("__") && typeof value === "string"
-        )
+          ([key, value]) => !key.startsWith("__") && typeof value === "string",
+        ),
       ) as Record<string, string>;
-      const missing = (matched.required_identity_fields || []).filter((f: string) => !identity[f]);
+      const missing = (matched.required_identity_fields || []).filter((
+        f: string,
+      ) => !identity[f]);
       if (missing.length > 0) {
-        outbound = matched.fallback_message || `Please share your ${missing.join(", ")} so I can fetch your document.`;
+        outbound = matched.fallback_message ||
+          `Please share your ${
+            missing.join(", ")
+          } so I can fetch your document.`;
         action = "identity_required";
       } else {
         const doc = await fetchDocument(matched.action_config, identity);
         if (doc.found && doc.pdf_url) {
-          outbound = `✅ Here is your ${matched.action_config.document_type.replace(/_/g, " ")}:`;
-          attachments = [{ type: "document", url: doc.pdf_url, filename: doc.filename || `${matched.action_config.document_type}.pdf` }];
+          outbound = `✅ Here is your ${
+            matched.action_config.document_type.replace(/_/g, " ")
+          }:`;
+          attachments = [{
+            type: "document",
+            url: doc.pdf_url,
+            filename: doc.filename ||
+              `${matched.action_config.document_type}.pdf`,
+          }];
           action = "document_sent";
         } else if (doc.missing_file) {
-          outbound = "Record mil gaya, but iska PDF/document abhi backend me uploaded nahi hai. Team isey upload kar degi ya manual share karegi.";
+          outbound =
+            "Record mil gaya, but iska PDF/document abhi backend me uploaded nahi hai. Team isey upload kar degi ya manual share karegi.";
           action = "document_missing_file";
         } else {
-          outbound = `I couldn't find a record matching ${Object.values(identity).join(", ")}. Please double-check or contact support.`;
+          outbound = `I couldn't find a record matching ${
+            Object.values(identity).join(", ")
+          }. Please double-check or contact support.`;
           action = "document_not_found";
         }
       }
@@ -329,22 +381,36 @@ async function routeMessage(input: InboundMessage) {
       if (record) {
         outbound = formatSalesReply(record, matched.action_config);
 
-        if (matched.trigger_name === "Car Brochure Request" && record.brochure_url) {
-          attachments = [{ type: "document", url: record.brochure_url, filename: `${record.name || "car"}-brochure.pdf` }];
+        if (
+          matched.trigger_name === "Car Brochure Request" && record.brochure_url
+        ) {
+          attachments = [{
+            type: "document",
+            url: record.brochure_url,
+            filename: `${record.name || "car"}-brochure.pdf`,
+          }];
           outbound = `Sure ji 🙏 ${record.name} ka brochure bhej raha hoon.`;
         } else if (matched.trigger_name === "Car Photo Request" && record.id) {
           const imageUrl = await fetchCarPrimaryImage(record.id);
           if (imageUrl) {
-            attachments = [{ type: "image", url: imageUrl, filename: `${record.name || "car"}.jpg` }];
+            attachments = [{
+              type: "image",
+              url: imageUrl,
+              filename: `${record.name || "car"}.jpg`,
+            }];
             outbound = `Sure ji 🙏 ${record.name} ki image bhej raha hoon.`;
           } else {
-            outbound = `${record.name} ki image abhi backend me mapped nahi hai, lekin official link ye hai: ${record.official_url || ""}`.trim();
+            outbound =
+              `${record.name} ki image abhi backend me mapped nahi hai, lekin official link ye hai: ${
+                record.official_url || ""
+              }`.trim();
           }
         }
 
         action = "sales_info_sent";
       } else {
-        outbound = matched.fallback_message || "I couldn't find that. Could you specify the exact model name?";
+        outbound = matched.fallback_message ||
+          "I couldn't find that. Could you specify the exact model name?";
         action = "sales_info_not_found";
       }
     }
@@ -359,23 +425,47 @@ async function routeMessage(input: InboundMessage) {
   } catch (e) {
     success = false;
     errorMsg = (e as Error).message;
-    outbound = "Sorry, I'm facing a technical issue. A human will reach out shortly.";
+    outbound =
+      "Sorry, I'm facing a technical issue. A human will reach out shortly.";
     action = "error";
   }
 
   const nextCollectedVariables = { ...(session?.collected_variables || {}) };
-  if (matched && ["identity_required", "sales_info_not_found", "document_not_found", "document_missing_file"].includes(action)) {
+  if (
+    matched &&
+    [
+      "identity_required",
+      "sales_info_not_found",
+      "document_not_found",
+      "document_missing_file",
+    ].includes(action)
+  ) {
     nextCollectedVariables.__pending_trigger_id = matched.id;
     nextCollectedVariables.__pending_trigger_name = matched.trigger_name;
-  } else if (["document_sent", "sales_info_sent", "sent_payment_info", "sent_fixed_reply", "redirected"].includes(action)) {
+  } else if (
+    [
+      "document_sent",
+      "sales_info_sent",
+      "sent_payment_info",
+      "sent_fixed_reply",
+      "redirected",
+    ].includes(action)
+  ) {
     delete nextCollectedVariables.__pending_trigger_id;
     delete nextCollectedVariables.__pending_trigger_name;
   }
 
-  if (session?.id && JSON.stringify(nextCollectedVariables) !== JSON.stringify(session.collected_variables || {})) {
+  if (
+    session?.id &&
+    JSON.stringify(nextCollectedVariables) !==
+      JSON.stringify(session.collected_variables || {})
+  ) {
     await supabase
       .from("whatsapp_flow_sessions")
-      .update({ collected_variables: nextCollectedVariables, last_message_at: new Date().toISOString() })
+      .update({
+        collected_variables: nextCollectedVariables,
+        last_message_at: new Date().toISOString(),
+      })
       .eq("id", session.id);
     session.collected_variables = nextCollectedVariables;
   }
@@ -394,11 +484,18 @@ async function routeMessage(input: InboundMessage) {
     processing_time_ms: Date.now() - startTime,
   });
 
-  return { outbound, attachments, action, matched: matched?.trigger_name || null };
+  return {
+    outbound,
+    attachments,
+    action,
+    matched: matched?.trigger_name || null,
+  };
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
     const body = await req.json();
