@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { SalesCustomerTimeline } from "./SalesCustomerTimeline";
 import { OmniShareDialog } from "@/components/admin/shared/OmniShareDialog";
+import { WhatsAppComposeDialog } from "@/components/admin/shared/WhatsAppComposeDialog";
 import { generateSalesOfferPDF } from "./SalesOfferPDF";
 import { generateDeliveryThankYouPDF } from "./DeliveryThankYouPDF";
 import { calculateLoanSalesBreakdown } from "@/components/admin/loans/loanSalesCalculator";
