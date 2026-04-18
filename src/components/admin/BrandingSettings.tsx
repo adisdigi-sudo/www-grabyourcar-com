@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -88,7 +88,7 @@ export const BrandingSettings = () => {
   });
 
   // Load settings when data changes
-  useState(() => {
+  useEffect(() => {
     if (settings?.setting_value) {
       const value = settings.setting_value as Record<string, string | number | boolean>;
       setFormData({
@@ -114,7 +114,7 @@ export const BrandingSettings = () => {
         banner_height_mobile: Number(value.banner_height_mobile) || 280,
       });
     }
-  });
+  }, [settings]);
 
   // Save mutation
   const saveMutation = useMutation({
