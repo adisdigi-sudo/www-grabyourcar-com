@@ -12,8 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Plus, Search, Edit2, Trash2, Download, Send, Zap } from "lucide-react";
+import { FileText, Plus, Search, Edit2, Trash2, Download, Send, Zap, Sparkles } from "lucide-react";
 import { generateInvoicePDF } from "@/lib/generateInvoicePDF";
+import { generateBrandedInvoice } from "@/lib/pdf";
+import { PremiumInvoiceStudio } from "./PremiumInvoiceStudio";
 
 const STATUSES = ["draft", "sent", "viewed", "partial", "paid", "overdue", "cancelled"];
 const VERTICALS = ["Car Sales", "Insurance", "Car Loans", "HSRP", "Rental", "Accessories", "Service"];
