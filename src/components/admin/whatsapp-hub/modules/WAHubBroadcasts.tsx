@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { AIPolishButtons } from "@/components/admin/shared/AIPolishButtons";
 
 // ─── Types ───
 interface CampaignButton {
@@ -1009,7 +1010,10 @@ function OneShotBroadcast() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold">Message Body *</Label>
+                      <div className="flex items-center justify-between gap-2">
+                        <Label className="text-xs font-semibold">Message Body *</Label>
+                        <AIPolishButtons value={form.message} onChange={(next) => setForm(p => ({ ...p, message: next }))} contextHint="WhatsApp broadcast template body for India CRM" />
+                      </div>
                       <Textarea placeholder="Hello {{customer_name}}! Your {{car_model}} loan is approved..." value={form.message} onChange={(e) => setForm(p => ({ ...p, message: e.target.value }))} rows={5} className="text-sm" />
                       <div className="flex items-center gap-1 flex-wrap">
                         <span className="text-[10px] text-muted-foreground mr-1">Insert variable:</span>
@@ -1594,7 +1598,10 @@ function EventTriggers() {
               <Input placeholder="Meta-approved template name" value={form.template_name} onChange={(e) => setForm((p) => ({ ...p, template_name: e.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label>Message Content *</Label>
+              <div className="flex items-center justify-between">
+                <Label>Message Content *</Label>
+                <AIPolishButtons value={form.message} onChange={(next) => setForm((p) => ({ ...p, message: next }))} contextHint="Trigger-based WhatsApp message" />
+              </div>
               <Textarea placeholder="Hello {name}! ..." value={form.message} onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))} rows={4} />
             </div>
           </div>

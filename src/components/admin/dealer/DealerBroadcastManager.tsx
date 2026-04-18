@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { Send, Users, MessageCircle, Filter, CheckCircle2, Clock, Search, Zap, Building2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { AIPolishButtons } from "@/components/admin/shared/AIPolishButtons";
 
 export default function DealerBroadcastManager() {
   const qc = useQueryClient();
@@ -223,7 +224,10 @@ export default function DealerBroadcastManager() {
             </Button>
 
             <div className="grid gap-2">
-              <Label>Message</Label>
+              <div className="flex items-center justify-between">
+                <Label>Message</Label>
+                <AIPolishButtons value={message} onChange={setMessage} contextHint="Dealer broadcast WhatsApp message" />
+              </div>
               <Textarea value={message} onChange={e => setMessage(e.target.value)} rows={12} placeholder="Type your broadcast message..." className="font-mono text-sm" />
               <p className="text-xs text-muted-foreground">{message.length} / 1024 characters</p>
             </div>

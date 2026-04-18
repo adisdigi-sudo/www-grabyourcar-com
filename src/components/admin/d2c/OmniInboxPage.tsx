@@ -21,6 +21,7 @@ import { WaContactManager } from "@/components/admin/inbox/WaContactManager";
 import { WaFlowBuilder } from "@/components/admin/inbox/WaFlowBuilder";
 import { WaChatbotBuilder } from "@/components/admin/inbox/WaChatbotBuilder";
 import { WaInboxAnalytics } from "@/components/admin/inbox/WaInboxAnalytics";
+import { AIPolishButtons } from "@/components/admin/shared/AIPolishButtons";
 
 const channelIcons: Record<Channel, any> = {
   whatsapp: MessageSquare, email: Mail, instagram: Instagram, messenger: MessageSquare, voip: Phone,
@@ -241,6 +242,7 @@ export const OmniInboxPage = () => {
                       <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex items-center gap-2">
                         <Button type="button" variant="ghost" size="icon" className="flex-shrink-0 text-muted-foreground"><Paperclip className="h-4 w-4" /></Button>
                         <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type a message..." className="flex-1" disabled={sendMessage.isPending} />
+                        <AIPolishButtons value={input} onChange={setInput} disabled={sendMessage.isPending} contextHint="Omni-channel customer chat" />
                         <Button type="button" variant="ghost" size="icon" className="flex-shrink-0 text-muted-foreground"><Smile className="h-4 w-4" /></Button>
                         <Button type="submit" size="icon" disabled={!input.trim() || sendMessage.isPending} className="flex-shrink-0"><Send className="h-4 w-4" /></Button>
                       </form>
