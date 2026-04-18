@@ -66,6 +66,7 @@ export const LiveWebsitePreview = ({
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [path, setPath] = useState<string>("/");
   const [manualRefresh, setManualRefresh] = useState(0);
+  const [previewScale, setPreviewScale] = useState(100);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
@@ -107,6 +108,27 @@ export const LiveWebsitePreview = ({
             )}
           </CardTitle>
           <div className="flex items-center gap-1">
+            <div className="mr-1 hidden items-center gap-1 rounded-md border bg-background px-1.5 py-1 sm:flex">
+              <button
+                type="button"
+                onClick={() => setPreviewScale((value) => Math.max(60, value - 10))}
+                className="rounded p-1 text-muted-foreground hover:bg-accent"
+                title="Zoom out"
+              >
+                <span className="text-xs font-semibold">−</span>
+              </button>
+              <span className="min-w-10 text-center text-[10px] font-medium text-muted-foreground">
+                {previewScale}%
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewScale((value) => Math.min(140, value + 10))}
+                className="rounded p-1 text-muted-foreground hover:bg-accent"
+                title="Zoom in"
+              >
+                <span className="text-xs font-semibold">+</span>
+              </button>
+            </div>
             {([
               { mode: "mobile" as Viewport, icon: Smartphone, label: "Mobile" },
               { mode: "tablet" as Viewport, icon: Tablet, label: "Tablet" },
@@ -251,7 +273,7 @@ export const LiveWebsitePreview = ({
           <div
             className="bg-background border border-border rounded-md overflow-hidden shadow-inner transition-all duration-300"
             style={{
-              width: VIEWPORT_WIDTH[viewport],
+              width: `calc(${VIEWPORT_WIDTH[viewport]} * ${previewScale / 100})`,
               maxWidth: "100%",
               height: viewport === "mobile" ? 640 : viewport === "tablet" ? 700 : 720,
             }}
