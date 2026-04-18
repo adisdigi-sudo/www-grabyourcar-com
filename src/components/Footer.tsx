@@ -46,8 +46,8 @@ export const Footer = forwardRef<HTMLElement, React.ComponentPropsWithoutRef<"fo
           {/* Left Side - Logo & Brand Info */}
           <div className="lg:col-span-4 space-y-5">
             {/* Logo at Top */}
-            <a href="/" className="inline-block">
-              <ResponsiveLogo variant="footer" className="brightness-0 invert" />
+            <a href="/" className="inline-block max-w-full">
+              <ResponsiveLogo variant="footer" className="w-auto max-w-full" />
             </a>
             
             {/* Tagline */}
