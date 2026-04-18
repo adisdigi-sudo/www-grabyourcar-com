@@ -377,6 +377,19 @@ serve(async (req) => {
         last_message: displayContent.slice(0, 200),
         last_message_at: new Date().toISOString(),
       }).eq("id", conversation_id);
+
+      // ── Auto-pause any active sales engine sessions for this phone (agent has taken over) ──
+      if (success && sent_by_name && !String(sent_by_name).startsWith("Engine:")) {
+        try {
+          await supabase.from("sales_engine_sessions").update({
+            paused_by_agent: true,
+            pause_reason: `Agent ${sent_by_name} replied from inbox`,
+            status: "paused",
+          }).eq("phone", to).in("status", ["pending_reply", "active"]);
+        } catch (e) {
+          console.warn("Failed to pause sales engine sessions:", e);
+        }
+      }
     }
 
     await supabase.from("wa_message_logs").insert({
