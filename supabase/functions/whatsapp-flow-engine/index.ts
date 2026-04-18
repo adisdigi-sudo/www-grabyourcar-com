@@ -302,8 +302,10 @@ async function routeMessage(input: InboundMessage) {
       action = "redirected";
     } else if (matched.intent_type === "document") {
       const identity = Object.fromEntries(
-        Object.entries(session.collected_variables || {}).filter(([key]) => !key.startsWith("__"))
-      );
+        Object.entries(session.collected_variables || {}).filter(
+          ([key, value]) => !key.startsWith("__") && typeof value === "string"
+        )
+      ) as Record<string, string>;
       const missing = (matched.required_identity_fields || []).filter((f: string) => !identity[f]);
       if (missing.length > 0) {
         outbound = matched.fallback_message || `Please share your ${missing.join(", ")} so I can fetch your document.`;
