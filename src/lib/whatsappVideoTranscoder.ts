@@ -91,14 +91,18 @@ export async function transcodeForWhatsApp(file: File, opts: TranscodeOptions = 
     outputName,
   ]);
 
-  const data = await ffmpeg.readFile(outputName) as Uint8Array;
+  const data = (await ffmpeg.readFile(outputName)) as Uint8Array;
+  // Copy into a fresh ArrayBuffer-backed Uint8Array so Blob/File typing accepts it
+  // (ffmpeg.wasm may hand back a SharedArrayBuffer-backed view).
+  const safe = new Uint8Array(data.byteLength);
+  safe.set(data);
 
   // Best-effort cleanup
   try { await ffmpeg.deleteFile(inputName); } catch { /* ignore */ }
   try { await ffmpeg.deleteFile(outputName); } catch { /* ignore */ }
 
   const baseName = file.name.replace(/\.[^.]+$/, "") || "video";
-  return new File([data], `${baseName}-wa.mp4`, { type: "video/mp4" });
+  return new File([safe], `${baseName}-wa.mp4`, { type: "video/mp4" });
 }
 
 /** Quick check — does the file look like a video at all? */
