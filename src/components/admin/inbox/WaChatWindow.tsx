@@ -135,6 +135,7 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
   const [templateValues, setTemplateValues] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showTemplateEditor, setShowTemplateEditor] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
