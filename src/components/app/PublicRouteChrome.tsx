@@ -65,7 +65,7 @@ const BrandingHeadSync = () => {
       meta.name = "twitter:image";
       return meta;
     }, branding.og_image_url);
-  }, [branding.brand_name, branding.favicon_url]);
+  }, [branding.brand_name, branding.favicon_url, branding.og_image_url]);
 
   return null;
 };

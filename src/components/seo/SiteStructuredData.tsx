@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet-async";
+import { normalizeBrandingSettings, useBrandingSettingsQuery } from "@/hooks/useBrandingSettings";
 
 const BASE_URL = "https://grabyourcar.com";
 
@@ -7,12 +8,15 @@ const BASE_URL = "https://grabyourcar.com";
  * Includes Organization, WebSite (with SearchAction), and LocalBusiness schemas.
  */
 export const SiteStructuredData = () => {
+  const { data } = useBrandingSettingsQuery();
+  const branding = normalizeBrandingSettings(data);
+
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "GrabYourCar",
+    name: branding.brand_name,
     url: BASE_URL,
-    logo: `${BASE_URL}/logo.png`,
+    logo: branding.logo_url?.startsWith("http") ? branding.logo_url : `${BASE_URL}${branding.logo_url || "/logo.png"}`,
     description:
       "India's leading car buying platform offering new car sales, car insurance, car loans, HSRP, accessories, and self-drive rentals.",
     sameAs: [
@@ -40,7 +44,7 @@ export const SiteStructuredData = () => {
   const webSiteSchema = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "GrabYourCar",
+    name: branding.brand_name,
     url: BASE_URL,
     potentialAction: {
       "@type": "SearchAction",
@@ -55,7 +59,7 @@ export const SiteStructuredData = () => {
   const localBusinessSchema = {
     "@context": "https://schema.org",
     "@type": "AutoDealer",
-    name: "GrabYourCar",
+    name: branding.brand_name,
     url: BASE_URL,
     telephone: "+91-9220592205",
     priceRange: "₹₹₹",
