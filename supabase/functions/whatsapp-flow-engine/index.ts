@@ -272,7 +272,6 @@ async function routeMessage(input: InboundMessage) {
       outbound = matched.action_config.redirect_message;
       action = "redirected";
     } else if (matched.intent_type === "document") {
-      // Check identity
       const identity = session.collected_variables || {};
       const missing = (matched.required_identity_fields || []).filter((f: string) => !identity[f]);
       if (missing.length > 0) {
@@ -282,8 +281,11 @@ async function routeMessage(input: InboundMessage) {
         const doc = await fetchDocument(matched.action_config, identity);
         if (doc.found && doc.pdf_url) {
           outbound = `✅ Here is your ${matched.action_config.document_type.replace(/_/g, " ")}:`;
-          attachments = [{ type: "document", url: doc.pdf_url, filename: `${matched.action_config.document_type}.pdf` }];
+          attachments = [{ type: "document", url: doc.pdf_url, filename: doc.filename || `${matched.action_config.document_type}.pdf` }];
           action = "document_sent";
+        } else if (doc.missing_file) {
+          outbound = "Record mil gaya, but iska PDF/document abhi backend me uploaded nahi hai. Team isey upload kar degi ya manual share karegi.";
+          action = "document_missing_file";
         } else {
           outbound = `I couldn't find a record matching ${Object.values(identity).join(", ")}. Please double-check or contact support.`;
           action = "document_not_found";
@@ -293,6 +295,20 @@ async function routeMessage(input: InboundMessage) {
       const record = await fetchSalesInfo(matched.action_config, message_text);
       if (record) {
         outbound = formatSalesReply(record, matched.action_config);
+
+        if (matched.trigger_name === "Car Brochure Request" && record.brochure_url) {
+          attachments = [{ type: "document", url: record.brochure_url, filename: `${record.name || "car"}-brochure.pdf` }];
+          outbound = `Sure ji 🙏 ${record.name} ka brochure bhej raha hoon.`;
+        } else if (matched.trigger_name === "Car Photo Request" && record.id) {
+          const imageUrl = await fetchCarPrimaryImage(record.id);
+          if (imageUrl) {
+            attachments = [{ type: "image", url: imageUrl, filename: `${record.name || "car"}.jpg` }];
+            outbound = `Sure ji 🙏 ${record.name} ki image bhej raha hoon.`;
+          } else {
+            outbound = `${record.name} ki image abhi backend me mapped nahi hai, lekin official link ye hai: ${record.official_url || ""}`.trim();
+          }
+        }
+
         action = "sales_info_sent";
       } else {
         outbound = matched.fallback_message || "I couldn't find that. Could you specify the exact model name?";

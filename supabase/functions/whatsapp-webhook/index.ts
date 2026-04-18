@@ -613,7 +613,7 @@ Deno.serve(async (req) => {
           let intentDetected = "general";
           let leadCaptured = false;
           let respondedBy = "hybrid_router";
-          let documentShare: { url: string; fileName?: string; caption?: string } | null = null;
+          let documentShare: { type?: "document" | "image"; url: string; fileName?: string; caption?: string } | null = null;
           let humanHandover: { vertical?: string; reason?: string } | null = null;
 
           const { data: chatbotRules } = isStrictSelfServiceRequest
@@ -916,6 +916,7 @@ Rules:
 
             if (gatewaySent && documentShare?.url) {
               try {
+                const mediaType = documentShare.type === "image" ? "image" : "document";
                 const documentResponse = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
                   method: "POST",
                   headers: {
@@ -924,21 +925,21 @@ Rules:
                   },
                   body: JSON.stringify({
                     to: from,
-                    messageType: "document",
+                    messageType: mediaType,
                     mediaUrl: documentShare.url,
-                    mediaFileName: documentShare.fileName || "policy.pdf",
-                    message: documentShare.caption || "Your verified policy PDF",
+                    mediaFileName: documentShare.fileName || (mediaType === "image" ? "image.jpg" : "document.pdf"),
+                    message: documentShare.caption || (mediaType === "image" ? "Requested car image" : "Requested document"),
                     name: contactName,
-                    logEvent: `${respondedBy}:document_share`,
+                    logEvent: `${respondedBy}:${mediaType}_share`,
                   }),
                 });
 
                 const documentData = await documentResponse.json().catch(() => null);
                 if (!documentResponse.ok || documentData?.success !== true) {
-                  console.error("Policy document send failed:", documentData?.error || documentData);
+                  console.error("Attachment send failed:", documentData?.error || documentData);
                 }
               } catch (documentError) {
-                console.error("Policy document send exception:", documentError);
+                console.error("Attachment send exception:", documentError);
               }
             }
           }
