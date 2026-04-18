@@ -940,7 +940,10 @@ export function SalesLeadDetailModal({
         {/* Share Offer button - fixed at bottom */}
         <div className="border-t pt-3 mt-2">
           <Button onClick={() => setShowShareOffer(true)} className="w-full gap-2" variant="outline">
-            <Share2 className="h-4 w-4" /> Share Car Offer (PDF / WhatsApp / Email / RCS)
+            <Share2 className="h-4 w-4" />
+            {currentStage === "won"
+              ? "Share Delivery Thank-You (PDF + Photos / WhatsApp / Email)"
+              : "Share Car Offer (PDF / WhatsApp / Email / RCS)"}
           </Button>
         </div>
       </DialogContent>
