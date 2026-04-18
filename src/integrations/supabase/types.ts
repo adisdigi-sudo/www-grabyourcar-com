@@ -19581,6 +19581,249 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_flow_logs: {
+        Row: {
+          action_taken: string | null
+          created_at: string | null
+          customer_phone: string
+          error_message: string | null
+          id: string
+          inbound_message: string | null
+          matched_flow_id: string | null
+          matched_node_id: string | null
+          matched_trigger_id: string | null
+          outbound_attachments: Json | null
+          outbound_message: string | null
+          processing_time_ms: number | null
+          session_id: string | null
+          success: boolean | null
+        }
+        Insert: {
+          action_taken?: string | null
+          created_at?: string | null
+          customer_phone: string
+          error_message?: string | null
+          id?: string
+          inbound_message?: string | null
+          matched_flow_id?: string | null
+          matched_node_id?: string | null
+          matched_trigger_id?: string | null
+          outbound_attachments?: Json | null
+          outbound_message?: string | null
+          processing_time_ms?: number | null
+          session_id?: string | null
+          success?: boolean | null
+        }
+        Update: {
+          action_taken?: string | null
+          created_at?: string | null
+          customer_phone?: string
+          error_message?: string | null
+          id?: string
+          inbound_message?: string | null
+          matched_flow_id?: string | null
+          matched_node_id?: string | null
+          matched_trigger_id?: string | null
+          outbound_attachments?: Json | null
+          outbound_message?: string | null
+          processing_time_ms?: number | null
+          session_id?: string | null
+          success?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_flow_logs_matched_flow_id_fkey"
+            columns: ["matched_flow_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_flow_logs_matched_trigger_id_fkey"
+            columns: ["matched_trigger_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_flow_triggers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_flow_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_flow_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_flow_sessions: {
+        Row: {
+          collected_variables: Json | null
+          completed_at: string | null
+          created_at: string | null
+          current_node_id: string | null
+          customer_phone: string
+          flow_id: string | null
+          handoff_reason: string | null
+          id: string
+          identity_verified: boolean | null
+          last_message_at: string | null
+          started_at: string | null
+          status: string
+          updated_at: string | null
+          verification_data: Json | null
+          vertical_slug: string | null
+        }
+        Insert: {
+          collected_variables?: Json | null
+          completed_at?: string | null
+          created_at?: string | null
+          current_node_id?: string | null
+          customer_phone: string
+          flow_id?: string | null
+          handoff_reason?: string | null
+          id?: string
+          identity_verified?: boolean | null
+          last_message_at?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          verification_data?: Json | null
+          vertical_slug?: string | null
+        }
+        Update: {
+          collected_variables?: Json | null
+          completed_at?: string | null
+          created_at?: string | null
+          current_node_id?: string | null
+          customer_phone?: string
+          flow_id?: string | null
+          handoff_reason?: string | null
+          id?: string
+          identity_verified?: boolean | null
+          last_message_at?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          verification_data?: Json | null
+          vertical_slug?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_flow_sessions_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_flow_triggers: {
+        Row: {
+          action_config: Json
+          created_at: string | null
+          created_by: string | null
+          fallback_message: string | null
+          id: string
+          intent_type: string
+          is_active: boolean | null
+          keywords: string[]
+          priority: number | null
+          required_identity_fields: string[] | null
+          total_triggered: number | null
+          trigger_name: string
+          updated_at: string | null
+          vertical_slug: string | null
+        }
+        Insert: {
+          action_config?: Json
+          created_at?: string | null
+          created_by?: string | null
+          fallback_message?: string | null
+          id?: string
+          intent_type: string
+          is_active?: boolean | null
+          keywords?: string[]
+          priority?: number | null
+          required_identity_fields?: string[] | null
+          total_triggered?: number | null
+          trigger_name: string
+          updated_at?: string | null
+          vertical_slug?: string | null
+        }
+        Update: {
+          action_config?: Json
+          created_at?: string | null
+          created_by?: string | null
+          fallback_message?: string | null
+          id?: string
+          intent_type?: string
+          is_active?: boolean | null
+          keywords?: string[]
+          priority?: number | null
+          required_identity_fields?: string[] | null
+          total_triggered?: number | null
+          trigger_name?: string
+          updated_at?: string | null
+          vertical_slug?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_flows: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          edges: Json
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          nodes: Json
+          start_node_id: string
+          total_completions: number | null
+          total_runs: number | null
+          trigger_keywords: string[] | null
+          updated_at: string | null
+          variables: Json | null
+          vertical_slug: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          edges?: Json
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          nodes?: Json
+          start_node_id?: string
+          total_completions?: number | null
+          total_runs?: number | null
+          trigger_keywords?: string[] | null
+          updated_at?: string | null
+          variables?: Json | null
+          vertical_slug: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          edges?: Json
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          nodes?: Json
+          start_node_id?: string
+          total_completions?: number | null
+          total_runs?: number | null
+          trigger_keywords?: string[] | null
+          updated_at?: string | null
+          variables?: Json | null
+          vertical_slug?: string
+        }
+        Relationships: []
+      }
       whatsapp_otps: {
         Row: {
           attempts: number
