@@ -62,13 +62,18 @@ export const BrandingSettings = () => {
     onMutate: async (nextData) => {
       await queryClient.cancelQueries({ queryKey: BRANDING_QUERY_KEY });
       queryClient.setQueryData(BRANDING_QUERY_KEY, nextData);
+      // Push optimistically to every other tab + the live preview iframe
+      broadcastBrandingUpdate(nextData);
       return { nextData };
     },
     onSuccess: async (savedData) => {
       queryClient.setQueryData(BRANDING_QUERY_KEY, savedData);
+      broadcastBrandingUpdate(savedData);
       await queryClient.invalidateQueries({ queryKey: BRANDING_QUERY_KEY });
       await queryClient.invalidateQueries({ queryKey: ['profileSettings'] });
       await queryClient.refetchQueries({ queryKey: BRANDING_QUERY_KEY });
+      // Force the right-side iframe preview to reload so admins see the change live
+      setPreviewRefreshKey((k) => k + 1);
       toast.success('Branding saved — changes are now live across the website');
     },
     onError: (error) => {
