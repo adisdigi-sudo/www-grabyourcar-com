@@ -268,16 +268,85 @@ export function WhatsAppComposeDialog({
 
             {/* Editable message */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Message (you can fully customize before sending)</Label>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <Label className="text-xs">Message (you can fully customize before sending)</Label>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 gap-1 text-xs border-purple-300 bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/30 dark:border-purple-800 dark:text-purple-300"
+                    disabled={isPolishing || !message.trim()}
+                    onClick={() => runAIAction("polish")}
+                    title="Fix grammar & spelling"
+                  >
+                    {isPolishing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                    AI Fix
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 gap-1 text-xs"
+                        disabled={isPolishing || !message.trim()}
+                        title="More AI rewrite options"
+                      >
+                        <Wand2 className="h-3 w-3" /> Rewrite
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52">
+                      <DropdownMenuLabel className="text-xs">Tone</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => runAIAction("professional")} className="text-xs gap-2">
+                        <Wand2 className="h-3.5 w-3.5" /> Make Professional
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => runAIAction("friendly")} className="text-xs gap-2">
+                        <Smile className="h-3.5 w-3.5" /> Make Friendly
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => runAIAction("shorten")} className="text-xs gap-2">
+                        <Sparkles className="h-3.5 w-3.5" /> Shorten / Crisp
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => runAIAction("emoji")} className="text-xs gap-2">
+                        <Smile className="h-3.5 w-3.5" /> Add Emojis
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-xs">Translate</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => runAIAction("hindi")} className="text-xs gap-2">
+                        <Languages className="h-3.5 w-3.5" /> Hindi (हिंदी)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => runAIAction("hinglish")} className="text-xs gap-2">
+                        <Languages className="h-3.5 w-3.5" /> Hinglish
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => runAIAction("english")} className="text-xs gap-2">
+                        <Languages className="h-3.5 w-3.5" /> English
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {previousMessage !== null && !isPolishing && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 gap-1 text-xs"
+                      onClick={handleUndoAI}
+                      title="Undo last AI change"
+                    >
+                      <RotateCcw className="h-3 w-3" /> Undo
+                    </Button>
+                  )}
+                </div>
+              </div>
               <Textarea
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={(e) => { setMessage(e.target.value); if (previousMessage !== null) setPreviousMessage(null); }}
                 rows={12}
                 className="text-sm font-mono resize-y"
                 placeholder="Type your WhatsApp message…"
+                disabled={isPolishing}
               />
               <p className="text-[11px] text-muted-foreground">
-                {message.length} chars · Use *bold*, _italic_, ~strike~ — WhatsApp formatting supported.
+                {message.length} chars · Use *bold*, _italic_, ~strike~ — WhatsApp formatting supported. AI Fix improves grammar & tone.
               </p>
             </div>
           </div>
