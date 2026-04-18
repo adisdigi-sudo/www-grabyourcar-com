@@ -279,6 +279,16 @@ export function SalesLeadDetailModal({
             {lead.status_outcome === "lost" && (
               <Badge className="bg-red-500/10 text-red-600 border-0">Lost</Badge>
             )}
+            {onEdit && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="ml-auto gap-1.5 h-7"
+                onClick={onEdit}
+              >
+                <Pencil className="h-3.5 w-3.5" /> Edit Details
+              </Button>
+            )}
           </DialogTitle>
         </DialogHeader>
 
