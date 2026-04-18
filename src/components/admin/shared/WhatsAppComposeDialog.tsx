@@ -5,7 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send, MessageSquare, LayoutTemplate, Loader2, Pencil, RotateCcw } from "lucide-react";
+import { Send, MessageSquare, LayoutTemplate, Loader2, Pencil, RotateCcw, Sparkles, Wand2, Languages, Smile } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { sendWhatsApp } from "@/lib/sendWhatsApp";
@@ -74,12 +75,63 @@ export function WhatsAppComposeDialog({
   const [selectedTplId, setSelectedTplId] = useState<string>("");
   const [isSending, setIsSending] = useState(false);
   const [showTemplateManager, setShowTemplateManager] = useState(false);
+  const [isPolishing, setIsPolishing] = useState(false);
+  const [previousMessage, setPreviousMessage] = useState<string | null>(null);
+
+  type AIMode = "polish" | "professional" | "friendly" | "shorten" | "hindi" | "english" | "hinglish" | "emoji";
+  const runAIAction = async (mode: AIMode) => {
+    if (!message.trim()) {
+      toast.error("Type a message first");
+      return;
+    }
+    const instructions: Record<AIMode, string> = {
+      polish: "Fix grammar, spelling, and punctuation. Keep the same meaning, tone, language and length. Keep WhatsApp formatting (*bold*, _italic_), emojis and line breaks intact.",
+      professional: "Rewrite in a polite, professional business tone suitable for a customer-facing WhatsApp message. Keep facts, numbers, names, links and formatting intact.",
+      friendly: "Rewrite in a warm, friendly conversational tone. Keep facts, numbers, names, links and formatting intact.",
+      shorten: "Make it crisp and shorter (under 60 words if possible) without losing key information. Keep formatting and emojis where useful.",
+      hindi: "Translate to natural Hindi (Devanagari script). Keep names, numbers, links and WhatsApp formatting intact.",
+      english: "Translate to natural professional English. Keep names, numbers, links and WhatsApp formatting intact.",
+      hinglish: "Rewrite in natural Hinglish (Hindi written in Roman/English letters) — the way Indian customers chat on WhatsApp. Keep names, numbers, links and formatting intact.",
+      emoji: "Add 2-4 relevant emojis at natural places to make it lively, but do not overdo it. Keep all original text and formatting.",
+    };
+    setIsPolishing(true);
+    setPreviousMessage(message);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-generate", {
+        body: {
+          systemPrompt: `You are a WhatsApp message editor for a car dealership/insurance/loans CRM in India. ${instructions[mode]} Return ONLY the final message text — no quotes, no explanations, no markdown code fences.`,
+          prompt: message,
+          temperature: 0.4,
+          max_tokens: 800,
+        },
+      });
+      if (error) throw error;
+      const cleaned = String(data?.content || "").trim().replace(/^```[\w]*\n?/, "").replace(/\n?```$/, "").replace(/^["']|["']$/g, "");
+      if (!cleaned) throw new Error("AI returned empty response");
+      setMessage(cleaned);
+      toast.success("AI updated ✨ — click Undo to revert");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "AI failed");
+      setPreviousMessage(null);
+    } finally {
+      setIsPolishing(false);
+    }
+  };
+
+  const handleUndoAI = () => {
+    if (previousMessage !== null) {
+      setMessage(previousMessage);
+      setPreviousMessage(null);
+      toast.success("Reverted to previous version");
+    }
+  };
 
   // Reset message when dialog reopens or defaultMessage changes
   useEffect(() => {
     if (open) {
       setMessage(defaultMessage);
       setSelectedTplId("");
+      setPreviousMessage(null);
     }
   }, [open, defaultMessage]);
 
@@ -216,16 +268,85 @@ export function WhatsAppComposeDialog({
 
             {/* Editable message */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Message (you can fully customize before sending)</Label>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <Label className="text-xs">Message (you can fully customize before sending)</Label>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 gap-1 text-xs border-purple-300 bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/30 dark:border-purple-800 dark:text-purple-300"
+                    disabled={isPolishing || !message.trim()}
+                    onClick={() => runAIAction("polish")}
+                    title="Fix grammar & spelling"
+                  >
+                    {isPolishing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                    AI Fix
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 gap-1 text-xs"
+                        disabled={isPolishing || !message.trim()}
+                        title="More AI rewrite options"
+                      >
+                        <Wand2 className="h-3 w-3" /> Rewrite
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52">
+                      <DropdownMenuLabel className="text-xs">Tone</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => runAIAction("professional")} className="text-xs gap-2">
+                        <Wand2 className="h-3.5 w-3.5" /> Make Professional
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => runAIAction("friendly")} className="text-xs gap-2">
+                        <Smile className="h-3.5 w-3.5" /> Make Friendly
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => runAIAction("shorten")} className="text-xs gap-2">
+                        <Sparkles className="h-3.5 w-3.5" /> Shorten / Crisp
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => runAIAction("emoji")} className="text-xs gap-2">
+                        <Smile className="h-3.5 w-3.5" /> Add Emojis
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-xs">Translate</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => runAIAction("hindi")} className="text-xs gap-2">
+                        <Languages className="h-3.5 w-3.5" /> Hindi (हिंदी)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => runAIAction("hinglish")} className="text-xs gap-2">
+                        <Languages className="h-3.5 w-3.5" /> Hinglish
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => runAIAction("english")} className="text-xs gap-2">
+                        <Languages className="h-3.5 w-3.5" /> English
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {previousMessage !== null && !isPolishing && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 gap-1 text-xs"
+                      onClick={handleUndoAI}
+                      title="Undo last AI change"
+                    >
+                      <RotateCcw className="h-3 w-3" /> Undo
+                    </Button>
+                  )}
+                </div>
+              </div>
               <Textarea
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={(e) => { setMessage(e.target.value); if (previousMessage !== null) setPreviousMessage(null); }}
                 rows={12}
                 className="text-sm font-mono resize-y"
                 placeholder="Type your WhatsApp message…"
+                disabled={isPolishing}
               />
               <p className="text-[11px] text-muted-foreground">
-                {message.length} chars · Use *bold*, _italic_, ~strike~ — WhatsApp formatting supported.
+                {message.length} chars · Use *bold*, _italic_, ~strike~ — WhatsApp formatting supported. AI Fix improves grammar & tone.
               </p>
             </div>
           </div>
