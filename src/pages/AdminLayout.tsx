@@ -300,7 +300,7 @@ const VALID_ADMIN_TABS = new Set([
   "cars-workspace", "cars-list", "cars-variants", "cars-specs", "cars-pricing", "cars-compare", "cars-colors", "cars-images",
   "cars-image-sync", "cars-migration", "cars-brands", "cars-ai-entry", "cars-bulk-import", "cars-quick-import", "cars-city-pricing",
   "cars-attributes", "cars-ai", "cars-url-scraper", "website-homepage", "website-content", "website-banners", "website-offers",
-  "website-branding", "website-pdf-branding", "website-testimonials", "website-faqs", "website-seo", "socialproof-reviews", "socialproof-stories",
+  "website-branding", "website-pdf-branding", "website-pdf-vertical-settings", "website-testimonials", "website-faqs", "website-seo", "socialproof-reviews", "socialproof-stories",
   "services-hsrp", "services-rentals", "services-driver-bookings", "services-api-partners", "services-insurance",
   "services-insurance-import", "services-messaging-channels", "services-loans-pipeline", "services-loans-disbursement", "services-loans-after-sales",
   "services-loans-bulk", "services-emi-calculator", "services-emi-pdf", "services-discounts", "services-quote-generator",
@@ -795,6 +795,8 @@ const AdminLayout = () => {
         return <BrandingSettings />;
       case "website-pdf-branding":
         return <PdfBrandingEditor />;
+      case "website-pdf-vertical-settings":
+        return <PdfVerticalSettingsEditor />;
       case "website-testimonials":
         return <TestimonialsManager />;
       case "website-faqs":
