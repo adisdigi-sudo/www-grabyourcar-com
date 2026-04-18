@@ -140,11 +140,27 @@ function MediaUploader({ headerType, mediaUrl, onUrlChange, onFileUploaded }: {
 
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop() || "bin";
+      let toUpload: File = file;
+      let finalContentType = file.type || "application/octet-stream";
+
+      // Transcode videos to WhatsApp-safe MP4 (Baseline H.264, no B-frames, +faststart).
+      // Meta accepts the upload but the recipient sees "video not available" otherwise.
+      if (headerType === "video") {
+        toast.info("Optimising video for WhatsApp… (one-time, ~10–30s)");
+        const { transcodeForWhatsApp } = await import("@/lib/whatsappVideoTranscoder");
+        toUpload = await transcodeForWhatsApp(file);
+        finalContentType = "video/mp4";
+        if (toUpload.size > maxSize) {
+          toast.error(`Re-encoded video still over ${Math.round(maxSize / (1024 * 1024))}MB. Trim it shorter and retry.`);
+          return;
+        }
+      }
+
+      const ext = headerType === "video" ? "mp4" : (toUpload.name.split(".").pop() || "bin");
       const path = `broadcast-media/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      
-      const { error: uploadErr } = await supabase.storage.from("wa-media").upload(path, file, {
-        contentType: file.type,
+
+      const { error: uploadErr } = await supabase.storage.from("wa-media").upload(path, toUpload, {
+        contentType: finalContentType,
         upsert: false,
       });
 
