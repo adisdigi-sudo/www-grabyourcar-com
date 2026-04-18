@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Send, FileText, Users, GitBranch, BarChart3, Blocks, Star, MousePointer, ShoppingCart, Vote, Sparkles, Zap, Store, Plug, Inbox, Archive } from "lucide-react";
+import { Mail, Send, FileText, Users, GitBranch, BarChart3, Blocks, Star, MousePointer, ShoppingCart, Vote, Sparkles, Zap, Store, Plug, Inbox, Archive, TrendingUp } from "lucide-react";
+import { MetaAdsRoiPanel } from "../whatsapp-hub/modules/analytics/MetaAdsRoiPanel";
 import { EmailInboxDashboard } from "./email/EmailInboxDashboard";
 import { EmailBlockBuilder } from "./email/EmailBlockBuilder";
 import { SubscriberSegmentation } from "./email/SubscriberSegmentation";
@@ -69,6 +70,9 @@ export function UnifiedMarketingHub() {
           <TabsTrigger value="analytics" className="gap-1.5 text-xs sm:text-sm">
             <BarChart3 className="h-3.5 w-3.5" />Analytics
           </TabsTrigger>
+          <TabsTrigger value="meta-roi" className="gap-1.5 text-xs sm:text-sm">
+            <TrendingUp className="h-3.5 w-3.5" />Meta Ads & ROI
+          </TabsTrigger>
           <TabsTrigger value="legacy" className="gap-1.5 text-xs sm:text-sm">
             <Archive className="h-3.5 w-3.5" />Legacy Leads
           </TabsTrigger>
@@ -89,6 +93,7 @@ export function UnifiedMarketingHub() {
         <TabsContent value="cart"><CartAbandonmentManager /></TabsContent>
         <TabsContent value="polls"><EmailPollManager /></TabsContent>
         <TabsContent value="analytics"><EmailAnalyticsDashboard /></TabsContent>
+        <TabsContent value="meta-roi"><MetaAdsRoiPanel /></TabsContent>
         <TabsContent value="legacy"><LegacyLeadsManager /></TabsContent>
         <TabsContent value="integrations"><IntegrationMarketplace /></TabsContent>
       </Tabs>
