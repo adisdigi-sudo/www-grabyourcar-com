@@ -120,7 +120,6 @@ export function WhatsAppComposeDialog({
         message: message.trim(),
         name: customerName || undefined,
         logEvent: logEvent || "compose_dialog_send",
-        lead_id: leadId,
       });
       if (result.success) {
         toast.success("Message sent on WhatsApp ✓");
