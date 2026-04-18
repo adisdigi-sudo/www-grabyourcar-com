@@ -157,6 +157,7 @@ export const useLogoUrls = () => {
     },
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
+  });
 
   const useAnimated = brandingSettings?.use_animated_logo && brandingSettings?.animated_logo_url;
 
