@@ -12,8 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Upload, Save, Palette, Image as ImageIcon, RefreshCw, Trash2, Eye, Move } from "lucide-react";
 import { AdminImageUpload } from "./AdminImageUpload";
-import { LogoFitPreview } from "./branding/LogoFitPreview";
-import { BRANDING_QUERY_KEY, normalizeBrandingSettings, useBrandingSettingsQuery, type BrandingSettings as BrandingSettingsData } from "@/hooks/useBrandingSettings";
+import { LiveWebsitePreview } from "./branding/LiveWebsitePreview";
+import {
+  BRANDING_QUERY_KEY,
+  broadcastBrandingUpdate,
+  normalizeBrandingSettings,
+  useBrandingSettingsQuery,
+  type BrandingSettings as BrandingSettingsData,
+} from "@/hooks/useBrandingSettings";
 
 export const BrandingSettings = () => {
   const queryClient = useQueryClient();
@@ -25,7 +31,8 @@ export const BrandingSettings = () => {
   
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  
+  const [previewRefreshKey, setPreviewRefreshKey] = useState(0);
+
   const [formData, setFormData] = useState<BrandingSettingsData>(normalizeBrandingSettings());
 
   const { data: settings, isLoading } = useBrandingSettingsQuery();
@@ -55,13 +62,18 @@ export const BrandingSettings = () => {
     onMutate: async (nextData) => {
       await queryClient.cancelQueries({ queryKey: BRANDING_QUERY_KEY });
       queryClient.setQueryData(BRANDING_QUERY_KEY, nextData);
+      // Push optimistically to every other tab + the live preview iframe
+      broadcastBrandingUpdate(nextData);
       return { nextData };
     },
     onSuccess: async (savedData) => {
       queryClient.setQueryData(BRANDING_QUERY_KEY, savedData);
+      broadcastBrandingUpdate(savedData);
       await queryClient.invalidateQueries({ queryKey: BRANDING_QUERY_KEY });
       await queryClient.invalidateQueries({ queryKey: ['profileSettings'] });
       await queryClient.refetchQueries({ queryKey: BRANDING_QUERY_KEY });
+      // Force the right-side iframe preview to reload so admins see the change live
+      setPreviewRefreshKey((k) => k + 1);
       toast.success('Branding saved — changes are now live across the website');
     },
     onError: (error) => {
@@ -116,23 +128,17 @@ export const BrandingSettings = () => {
 
     setIsUploading(true);
     try {
-      // Create a preview URL
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreviewUrl(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-
-      // For now, store as data URL since we need storage bucket setup
-      // In production, this would upload to Supabase Storage
-      const dataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
-
-      setFormData(prev => ({ ...prev, [field]: dataUrl }));
-      toast.success('Image uploaded! Click Save to apply changes.');
+      // Upload to Supabase storage so the URL persists everywhere (no fat data URLs)
+      const ext = file.name.split('.').pop() || 'png';
+      const path = `branding/${field}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('branding-assets')
+        .upload(path, file, { contentType: file.type, upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('branding-assets').getPublicUrl(path);
+      setPreviewUrl(urlData.publicUrl);
+      setFormData((prev) => ({ ...prev, [field]: urlData.publicUrl }));
+      toast.success('Image uploaded — click Save to apply');
     } catch (error) {
       toast.error('Failed to upload image');
       console.error(error);
@@ -300,28 +306,11 @@ export const BrandingSettings = () => {
             </Card>
             </div>
 
-            {/* Right column: Live website preview (sticky) */}
+            {/* Right column: Live website preview (sticky, real iframe) */}
             <div className="xl:sticky xl:top-4 xl:self-start space-y-4">
-              <LogoFitPreview
-                logoUrl={formData.logo_url}
-                logoDarkUrl={formData.logo_dark_url}
-                brandName={formData.brand_name}
-                tagline={formData.tagline}
-                heightHeader={formData.logo_height_header}
-                heightFooter={formData.logo_height_footer}
-                heightMobile={formData.logo_height_mobile}
-                widthHeader={formData.logo_width_header}
-                widthFooter={formData.logo_width_footer}
-                widthMobile={formData.logo_width_mobile}
-                positionHorizontal={formData.logo_position_horizontal}
-                onApplySuggested={(s) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    logo_height_header: s.heightHeader,
-                    logo_height_footer: s.heightFooter,
-                    logo_height_mobile: s.heightMobile,
-                  }))
-                }
+              <LiveWebsitePreview
+                refreshKey={previewRefreshKey}
+                syncing={saveMutation.isPending}
               />
               <Button
                 onClick={handleSave}
@@ -333,7 +322,7 @@ export const BrandingSettings = () => {
                 {saveMutation.isPending ? "Saving..." : "Save & Apply to Website"}
               </Button>
               <p className="text-[11px] text-muted-foreground text-center">
-                Changes appear instantly across the website after saving (header, footer, mobile menu).
+                Changes appear instantly across the website after saving (header, footer, mobile menu, hero).
               </p>
             </div>
           </div>

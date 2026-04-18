@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface BrandingSettings {
@@ -25,6 +26,7 @@ export interface BrandingSettings {
 }
 
 export const BRANDING_QUERY_KEY = ["brandingSettings"] as const;
+export const BRANDING_BROADCAST_CHANNEL = "gyc-branding-sync";
 
 export const normalizeBrandingSettings = (
   value?: Partial<BrandingSettings> | null,
@@ -62,10 +64,97 @@ const fetchBrandingSettings = async (): Promise<Partial<BrandingSettings> | null
   return (data?.setting_value as unknown as Partial<BrandingSettings>) || null;
 };
 
-export const useBrandingSettingsQuery = () =>
-  useQuery({
+/**
+ * Subscribe every consumer of branding settings to:
+ *  1. Supabase realtime row updates on `admin_settings`
+ *  2. A BroadcastChannel push from the admin panel after save
+ *  3. The browser `storage` event (cross-tab fallback)
+ *
+ * Effect: the moment the admin clicks Save, every open page
+ * (header, footer, mobile menu, hero, banners, public site, etc.)
+ * re-renders with the new branding without needing a manual refresh.
+ */
+export const useBrandingSettingsQuery = () => {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const apply = (incoming: unknown) => {
+      if (incoming && typeof incoming === "object") {
+        queryClient.setQueryData(BRANDING_QUERY_KEY, incoming);
+      } else {
+        queryClient.invalidateQueries({ queryKey: BRANDING_QUERY_KEY });
+      }
+    };
+
+    // 1. Realtime postgres updates
+    const channel = supabase
+      .channel("branding_settings_live")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "admin_settings",
+          filter: "setting_key=eq.branding_settings",
+        },
+        (payload) => {
+          const next = (payload.new as { setting_value?: unknown } | null)?.setting_value;
+          apply(next);
+        },
+      )
+      .subscribe();
+
+    // 2. Same-origin broadcast (fastest path inside the same browser)
+    let bc: BroadcastChannel | null = null;
+    if (typeof BroadcastChannel !== "undefined") {
+      bc = new BroadcastChannel(BRANDING_BROADCAST_CHANNEL);
+      bc.onmessage = (e) => apply(e.data);
+    }
+
+    // 3. localStorage event — cross-tab fallback when BroadcastChannel is unavailable
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== BRANDING_BROADCAST_CHANNEL || !e.newValue) return;
+      try {
+        apply(JSON.parse(e.newValue));
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      supabase.removeChannel(channel);
+      bc?.close();
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [queryClient]);
+
+  return useQuery({
     queryKey: BRANDING_QUERY_KEY,
     queryFn: fetchBrandingSettings,
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
+};
+
+/** Push the freshly-saved branding to every other tab + iframe instantly. */
+export const broadcastBrandingUpdate = (next: Partial<BrandingSettings>) => {
+  try {
+    if (typeof BroadcastChannel !== "undefined") {
+      const bc = new BroadcastChannel(BRANDING_BROADCAST_CHANNEL);
+      bc.postMessage(next);
+      bc.close();
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    // Storage event fires in OTHER tabs only — perfect for the public-site iframe
+    localStorage.setItem(
+      BRANDING_BROADCAST_CHANNEL,
+      JSON.stringify({ ...next, _ts: Date.now() }),
+    );
+  } catch {
+    /* ignore */
+  }
+};
