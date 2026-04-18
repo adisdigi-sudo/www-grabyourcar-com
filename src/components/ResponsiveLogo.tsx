@@ -51,6 +51,7 @@ export const ResponsiveLogo = ({
     },
     staleTime: 30 * 1000, // 30s — pick up admin changes quickly
     refetchOnWindowFocus: true,
+  });
 
   // Determine logo URLs - animated logo takes priority if enabled
   // IMPORTANT: Only use backend URLs if they're valid and not empty
