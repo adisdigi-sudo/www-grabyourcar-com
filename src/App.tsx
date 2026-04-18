@@ -164,9 +164,15 @@ const AppRouterShell = () => {
     >
       <Suspense
         fallback={
-          <div className="min-h-screen flex items-center justify-center bg-background">
+          <main
+            className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background"
+            role="main"
+            aria-busy="true"
+            data-startup-ready="route-suspense-loading"
+          >
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          </div>
+            <p className="text-sm text-muted-foreground animate-pulse">Loading page...</p>
+          </main>
         }
       >
         <RouteAwareStructuredData isChromelessExperience={isChromelessExperience} />
