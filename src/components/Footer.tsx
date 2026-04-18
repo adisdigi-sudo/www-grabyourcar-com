@@ -38,7 +38,7 @@ export const Footer = forwardRef<HTMLElement, React.ComponentPropsWithoutRef<"fo
   const { className, ...restProps } = props;
 
   return (
-    <footer ref={ref} className={className ?? "bg-foreground text-background"} {...restProps}>
+    <footer ref={ref} id="site-footer" className={className ?? "bg-foreground text-background"} {...restProps}>
       {/* Main Footer */}
       <div className="container mx-auto px-4 py-12 md:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
