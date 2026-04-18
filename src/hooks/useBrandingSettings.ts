@@ -1,6 +1,14 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  BRANDING_BROADCAST_CHANNEL,
+  BRANDING_DRAFT_BROADCAST_CHANNEL,
+  BRANDING_PREVIEW_QUERY_PARAM,
+  getBrandingDraftStorageKey,
+  getBrandingPreviewId,
+  readBrandingDraft,
+} from "@/lib/brandingPreview";
 
 export interface BrandingSettings {
   logo_url: string;
@@ -26,17 +34,6 @@ export interface BrandingSettings {
 }
 
 export const BRANDING_QUERY_KEY = ["brandingSettings"] as const;
-export const BRANDING_BROADCAST_CHANNEL = "gyc-branding-sync";
-export const BRANDING_DRAFT_BROADCAST_CHANNEL = "gyc-branding-draft-sync";
-export const BRANDING_PREVIEW_QUERY_PARAM = "__brandingPreviewId";
-
-const getBrandingPreviewId = () => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  return new URLSearchParams(window.location.search).get(BRANDING_PREVIEW_QUERY_PARAM);
-};
 
 export const normalizeBrandingSettings = (
   value?: Partial<BrandingSettings> | null,
@@ -64,6 +61,7 @@ export const normalizeBrandingSettings = (
 });
 
 const fetchBrandingSettings = async (): Promise<Partial<BrandingSettings> | null> => {
+  const previewId = getBrandingPreviewId();
   const { data, error } = await supabase
     .from("admin_settings")
     .select("setting_value")
@@ -71,7 +69,19 @@ const fetchBrandingSettings = async (): Promise<Partial<BrandingSettings> | null
     .maybeSingle();
 
   if (error) throw error;
-  return (data?.setting_value as unknown as Partial<BrandingSettings>) || null;
+
+  const savedSettings = (data?.setting_value as unknown as Partial<BrandingSettings>) || null;
+  const draftPayload = readBrandingDraft<{ previewId?: string; settings?: Partial<BrandingSettings> }>(previewId);
+  const draftSettings = draftPayload?.previewId === previewId ? draftPayload.settings : null;
+
+  if (!draftSettings) {
+    return savedSettings;
+  }
+
+  return {
+    ...(savedSettings || {}),
+    ...draftSettings,
+  };
 };
 
 /**
@@ -90,7 +100,7 @@ export const useBrandingSettingsQuery = () => {
   useEffect(() => {
     const previewId = getBrandingPreviewId();
     const draftStorageKey = previewId
-      ? `${BRANDING_DRAFT_BROADCAST_CHANNEL}:${previewId}`
+      ? getBrandingDraftStorageKey(previewId)
       : null;
 
     const apply = (incoming: unknown) => {
@@ -146,10 +156,8 @@ export const useBrandingSettingsQuery = () => {
 
     if (draftStorageKey) {
       try {
-        const storedDraft = localStorage.getItem(draftStorageKey);
-        if (storedDraft) {
-          applyDraft(JSON.parse(storedDraft));
-        }
+         const storedDraft = readBrandingDraft<{ previewId?: string; settings?: unknown }>(previewId);
+         if (storedDraft) applyDraft(storedDraft);
       } catch {
         /* ignore */
       }
