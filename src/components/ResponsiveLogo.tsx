@@ -1,31 +1,13 @@
 import { useTheme } from "@/components/theme/ThemeProvider";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import logoLightDefault from "@/assets/logo-grabyourcar-new.png";
 import logoDarkDefault from "@/assets/logo-grabyourcar-dark.png";
+import { normalizeBrandingSettings, useBrandingSettingsQuery } from "@/hooks/useBrandingSettings";
 
 interface ResponsiveLogoProps {
   variant?: "header" | "footer" | "mobile" | "sidebar" | "auth" | "compact";
   className?: string;
   onClick?: () => void;
-}
-
-interface BrandingSettings {
-  logo_url?: string;
-  logo_dark_url?: string;
-  animated_logo_url?: string;
-  use_animated_logo?: boolean;
-  brand_name?: string;
-  tagline?: string;
-  logo_height_header?: number;
-  logo_height_footer?: number;
-  logo_height_mobile?: number;
-  logo_width_header?: number;
-  logo_width_footer?: number;
-  logo_width_mobile?: number;
-  logo_position_horizontal?: "left" | "center" | "right";
-  logo_position_vertical?: "top" | "center" | "bottom";
 }
 
 export const ResponsiveLogo = ({ 
@@ -35,23 +17,8 @@ export const ResponsiveLogo = ({
 }: ResponsiveLogoProps) => {
   const { theme, resolvedTheme } = useTheme();
   const effectiveTheme = resolvedTheme || theme;
-
-  // Fetch branding settings from backend
-  const { data: brandingSettings } = useQuery({
-    queryKey: ['brandingSettings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('admin_settings')
-        .select('setting_value')
-        .eq('setting_key', 'branding_settings')
-        .single();
-      
-      if (error && error.code !== 'PGRST116') return null;
-      return data?.setting_value as BrandingSettings | null;
-    },
-    staleTime: 30 * 1000, // 30s — pick up admin changes quickly
-    refetchOnWindowFocus: true,
-  });
+  const { data } = useBrandingSettingsQuery();
+  const brandingSettings = normalizeBrandingSettings(data);
 
   // Determine logo URLs - animated logo takes priority if enabled
   // IMPORTANT: Only use backend URLs if they're valid and not empty
@@ -151,21 +118,8 @@ export const ResponsiveLogo = ({
 
 // Export a hook for getting logo URLs and settings
 export const useLogoUrls = () => {
-  const { data: brandingSettings } = useQuery({
-    queryKey: ['brandingSettings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('admin_settings')
-        .select('setting_value')
-        .eq('setting_key', 'branding_settings')
-        .single();
-      
-      if (error && error.code !== 'PGRST116') return null;
-      return data?.setting_value as Record<string, string | number | boolean> | null;
-    },
-    staleTime: 30 * 1000,
-    refetchOnWindowFocus: true,
-  });
+  const { data } = useBrandingSettingsQuery();
+  const brandingSettings = normalizeBrandingSettings(data);
 
   const useAnimated = brandingSettings?.use_animated_logo && brandingSettings?.animated_logo_url;
 

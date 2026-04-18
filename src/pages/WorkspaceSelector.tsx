@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Shield, Banknote, Car, Key, CreditCard, ShoppingBag, Megaphone, LogOut, Crown, Lock, MessageSquare } from "lucide-react";
 import { motion } from "framer-motion";
-import logoImage from "@/assets/logo-grabyourcar-main.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { VerticalPasswordDialog, getVerifiedVerticals } from "@/components/admin/VerticalPasswordDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { performSafePreviewReload } from "@/lib/chunkLoadRecovery";
 import { withPreviewParams } from "@/lib/previewRouting";
 import { removeStartupShell } from "@/lib/startupShell";
+import { ResponsiveLogo } from "@/components/ResponsiveLogo";
 
 const iconMap: Record<string, React.ElementType> = {
   Shield,
@@ -223,7 +223,7 @@ const WorkspaceSelector = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-8"
           >
-            <img src={logoImage} alt="Grabyourcar" className="h-12 mx-auto mb-4 dark:invert" />
+            <ResponsiveLogo variant="auth" className="mx-auto mb-4 w-auto max-w-full" />
             <h1 className="text-2xl md:text-3xl font-heading font-bold text-foreground">
               Welcome, {displayName}
             </h1>

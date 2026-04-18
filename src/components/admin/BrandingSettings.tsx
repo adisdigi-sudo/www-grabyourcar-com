@@ -13,29 +13,7 @@ import { toast } from "sonner";
 import { Upload, Save, Palette, Image as ImageIcon, RefreshCw, Trash2, Eye, Move } from "lucide-react";
 import { AdminImageUpload } from "./AdminImageUpload";
 import { LogoFitPreview } from "./branding/LogoFitPreview";
-
-interface BrandingSettings {
-  logo_url: string;
-  logo_dark_url: string;
-  animated_logo_url: string;
-  use_animated_logo: boolean;
-  favicon_url: string;
-  og_image_url: string;
-  primary_color: string;
-  secondary_color: string;
-  brand_name: string;
-  tagline: string;
-  logo_height_header: number;
-  logo_height_footer: number;
-  logo_height_mobile: number;
-  logo_width_header: number;
-  logo_width_footer: number;
-  logo_width_mobile: number;
-  logo_position_horizontal: "left" | "center" | "right";
-  logo_position_vertical: "top" | "center" | "bottom";
-  banner_height_desktop: number;
-  banner_height_mobile: number;
-}
+import { BRANDING_QUERY_KEY, normalizeBrandingSettings, useBrandingSettingsQuery, type BrandingSettings as BrandingSettingsData } from "@/hooks/useBrandingSettings";
 
 export const BrandingSettings = () => {
   const queryClient = useQueryClient();
@@ -48,110 +26,42 @@ export const BrandingSettings = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
-  const [formData, setFormData] = useState<BrandingSettings>({
-    logo_url: "/src/assets/logo-grabyourcar-new.png",
-    logo_dark_url: "",
-    animated_logo_url: "",
-    use_animated_logo: false,
-    favicon_url: "/favicon.png",
-    og_image_url: "/og-image.png",
-    primary_color: "#22c55e",
-    secondary_color: "#1e3a5f",
-    brand_name: "Grabyourcar",
-    tagline: "Your Trusted Car Partner",
-    logo_height_header: 64,
-    logo_height_footer: 56,
-    logo_height_mobile: 40,
-    logo_width_header: 0,
-    logo_width_footer: 0,
-    logo_width_mobile: 0,
-    logo_position_horizontal: "left",
-    logo_position_vertical: "center",
-    banner_height_desktop: 400,
-    banner_height_mobile: 280,
-  });
+  const [formData, setFormData] = useState<BrandingSettingsData>(normalizeBrandingSettings());
 
-  // Fetch branding settings
-  const { data: settings, isLoading } = useQuery({
-    queryKey: ['brandingSettings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('admin_settings')
-        .select('setting_value')
-        .eq('setting_key', 'branding_settings')
-        .single();
-      
-      if (error && error.code !== 'PGRST116') throw error;
-      return data?.setting_value as unknown as Partial<BrandingSettings> | null;
-    },
-    staleTime: 0,
-  });
+  const { data: settings, isLoading } = useBrandingSettingsQuery();
 
   // Load settings when data changes
   useEffect(() => {
     if (settings) {
-      const value = settings as unknown as Record<string, string | number | boolean>;
-      setFormData({
-        logo_url: String(value.logo_url || "/logo-grabyourcar.png"),
-        logo_dark_url: String(value.logo_dark_url || ""),
-        animated_logo_url: String(value.animated_logo_url || ""),
-        use_animated_logo: Boolean(value.use_animated_logo) || false,
-        favicon_url: String(value.favicon_url || "/favicon.png"),
-        og_image_url: String(value.og_image_url || "/og-image.png"),
-        primary_color: String(value.primary_color || "#2563eb"),
-        secondary_color: String(value.secondary_color || "#7c3aed"),
-        brand_name: String(value.brand_name || "Grabyourcar"),
-        tagline: String(value.tagline || "Your Trusted Car Partner"),
-        logo_height_header: Number(value.logo_height_header) || 64,
-        logo_height_footer: Number(value.logo_height_footer) || 56,
-        logo_height_mobile: Number(value.logo_height_mobile) || 40,
-        logo_width_header: Number(value.logo_width_header) || 0,
-        logo_width_footer: Number(value.logo_width_footer) || 0,
-        logo_width_mobile: Number(value.logo_width_mobile) || 0,
-        logo_position_horizontal: (value.logo_position_horizontal as "left" | "center" | "right") || "left",
-        logo_position_vertical: (value.logo_position_vertical as "top" | "center" | "bottom") || "center",
-        banner_height_desktop: Number(value.banner_height_desktop) || 400,
-        banner_height_mobile: Number(value.banner_height_mobile) || 280,
-      });
+      setFormData(normalizeBrandingSettings(settings));
     }
   }, [settings]);
 
   // Save mutation
   const saveMutation = useMutation({
-    mutationFn: async (data: BrandingSettings) => {
-      const { data: existing } = await supabase
-        .from('admin_settings')
-        .select('id')
-        .eq('setting_key', 'branding_settings')
-        .single();
-
+    mutationFn: async (data: BrandingSettingsData) => {
       const jsonValue = JSON.parse(JSON.stringify(data));
-
-      if (existing) {
-        const { error } = await supabase
-          .from('admin_settings')
-          .update({ 
-            setting_value: jsonValue,
-            updated_at: new Date().toISOString() 
-          })
-          .eq('setting_key', 'branding_settings');
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('admin_settings')
-          .insert([{
-            setting_key: 'branding_settings',
-            setting_value: jsonValue,
-            description: 'Brand logo and color settings',
-          }]);
-        if (error) throw error;
-      }
+      const { error } = await supabase
+        .from('admin_settings')
+        .upsert([{
+          setting_key: 'branding_settings',
+          setting_value: jsonValue,
+          description: 'Brand logo and color settings',
+          updated_at: new Date().toISOString(),
+        }], { onConflict: 'setting_key' });
+      if (error) throw error;
+      return data;
     },
-    onSuccess: async () => {
-      // Force-refresh every consumer (header, footer, mobile menu, PDFs) immediately
-      await queryClient.invalidateQueries({ queryKey: ['brandingSettings'] });
+    onMutate: async (nextData) => {
+      await queryClient.cancelQueries({ queryKey: BRANDING_QUERY_KEY });
+      queryClient.setQueryData(BRANDING_QUERY_KEY, nextData);
+      return { nextData };
+    },
+    onSuccess: async (savedData) => {
+      queryClient.setQueryData(BRANDING_QUERY_KEY, savedData);
+      await queryClient.invalidateQueries({ queryKey: BRANDING_QUERY_KEY });
       await queryClient.invalidateQueries({ queryKey: ['profileSettings'] });
-      await queryClient.refetchQueries({ queryKey: ['brandingSettings'] });
+      await queryClient.refetchQueries({ queryKey: BRANDING_QUERY_KEY });
       toast.success('Branding saved — changes are now live across the website');
     },
     onError: (error) => {
@@ -186,7 +96,7 @@ export const BrandingSettings = () => {
 
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
-    field: keyof BrandingSettings
+    field: keyof BrandingSettingsData
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
