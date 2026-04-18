@@ -36,6 +36,7 @@ interface SalesLeadDetailModalProps {
   activities: any[];
   stages: any[];
   onUpdate: (updates: any, logAction?: string, logRemarks?: string) => void;
+  onEdit?: () => void;
 }
 
 export function SalesLeadDetailModal({
@@ -45,6 +46,7 @@ export function SalesLeadDetailModal({
   activities,
   stages,
   onUpdate,
+  onEdit,
 }: SalesLeadDetailModalProps) {
   const [remarks, setRemarks] = useState("");
   const [callStatus, setCallStatus] = useState(lead.call_status || "");
