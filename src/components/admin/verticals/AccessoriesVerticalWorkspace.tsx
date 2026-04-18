@@ -35,6 +35,8 @@ export function AccessoriesVerticalWorkspace() {
         </CardContent>
       </Card>
 
+      <VerticalReplyAgentsCard verticalSlug="accessories" verticalLabel="Accessories" />
+
       <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
         {tabs.map(tab => {
           const Icon = tab.icon;

@@ -95,6 +95,8 @@ export function SalesVerticalWorkspace() {
         </CardContent>
       </Card>
 
+      <VerticalReplyAgentsCard verticalSlug="sales" verticalLabel="Automotive Sales" />
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full grid grid-cols-5">
           <TabsTrigger value="pipeline" className="gap-1.5">

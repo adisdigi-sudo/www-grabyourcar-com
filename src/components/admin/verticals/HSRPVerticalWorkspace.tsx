@@ -86,6 +86,8 @@ export function HSRPVerticalWorkspace() {
         </CardContent>
       </Card>
 
+      <VerticalReplyAgentsCard verticalSlug="hsrp" verticalLabel="HSRP & FASTag" />
+
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="w-full grid grid-cols-5">
           <TabsTrigger value="pipeline" className="gap-1.5">

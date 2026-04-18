@@ -350,6 +350,8 @@ function InsuranceVerticalWorkspace() {
         </CardContent>
       </Card>
 
+      <VerticalReplyAgentsCard verticalSlug="insurance" verticalLabel="Insurance" />
+
       {/* Tab Navigation */}
       <div className="overflow-x-auto">
         <div className="flex flex-wrap gap-1 p-1 bg-muted/50 rounded-lg min-w-max">

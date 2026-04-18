@@ -34,6 +34,8 @@ export function FleetVerticalWorkspace() {
         </CardContent>
       </Card>
 
+      <VerticalReplyAgentsCard verticalSlug="rental" verticalLabel="Corporate Fleet" />
+
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="planner" className="gap-1.5">
