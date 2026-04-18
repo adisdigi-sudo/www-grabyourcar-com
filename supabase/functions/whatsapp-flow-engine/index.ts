@@ -148,12 +148,17 @@ async function routeMessage(input: InboundMessage) {
   }
 
   // Find matching trigger (vertical-specific first, then global)
-  const { data: triggers } = await supabase
+  const triggerQuery = supabase
     .from("whatsapp_flow_triggers")
     .select("*")
-    .eq("is_active", true)
-    .or(`vertical_slug.eq.${vertical_slug || "_none_"},vertical_slug.is.null`)
-    .order("priority", { ascending: true });
+    .eq("is_active", true);
+
+  const { data: triggers } = vertical_slug
+    ? await triggerQuery
+        .or(`vertical_slug.eq.${vertical_slug},vertical_slug.is.null`)
+        .order("priority", { ascending: true })
+    : await triggerQuery
+        .order("priority", { ascending: true });
 
   let matched: any = null;
   for (const t of triggers || []) {
