@@ -179,7 +179,7 @@ export function OmniShareDialog({
     if (!email || !email.includes("@")) { toast.error("Please enter a valid email address"); return; }
     setSendingApi(true);
     try {
-      const { doc, fileName } = await generatePdf();
+      const { doc, fileName } = await buildBrandedPdf();
       const result = await omniSend({
         channel: "email",
         email,
@@ -243,7 +243,7 @@ export function OmniShareDialog({
   };
 
   const handleDownload = async () => {
-    const { doc, fileName } = await generatePdf();
+    const { doc, fileName } = await buildBrandedPdf();
     doc.save(fileName);
     toast.success("📋 PDF downloaded!");
     onShared?.();
