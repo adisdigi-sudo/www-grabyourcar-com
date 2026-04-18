@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Bot, Plus, Edit, Power, MessageSquare, Sparkles } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Bot, Plus, Edit, Power, MessageSquare, Sparkles, Send, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { VERTICALS, type SalesEngine } from "./types";
 
@@ -22,6 +23,9 @@ export function EnginesList({ onEdit }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newVertical, setNewVertical] = useState("loans");
+  const [launchEngine, setLaunchEngine] = useState<SalesEngine | null>(null);
+  const [launchPhones, setLaunchPhones] = useState("");
+  const [launching, setLaunching] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => { load(); }, []);
@@ -74,6 +78,39 @@ export function EnginesList({ onEdit }: Props) {
     setNewName("");
     toast({ title: "Engine created ✓ — add steps next" });
     if (data) onEdit((data as any).id);
+  }
+
+  async function launchBulk() {
+    if (!launchEngine) return;
+    const phones = launchPhones
+      .split(/[\s,;\n]+/)
+      .map((p) => p.trim())
+      .filter((p) => /^\d{10,13}$/.test(p.replace(/\D/g, "")) && p.replace(/\D/g, "").length >= 10);
+
+    if (phones.length === 0) {
+      toast({ title: "No valid phones", description: "Paste 10-digit numbers (one per line or comma-separated)", variant: "destructive" });
+      return;
+    }
+    if (!launchEngine.is_active) {
+      toast({ title: "Engine paused", description: "Activate the engine first.", variant: "destructive" });
+      return;
+    }
+    setLaunching(true);
+    const { data, error } = await supabase.functions.invoke("sales-engine-launcher", {
+      body: { engine_id: launchEngine.id, phones },
+    });
+    setLaunching(false);
+    if (error || !data?.success) {
+      toast({ title: "Launch failed", description: data?.error || error?.message || "Unknown error", variant: "destructive" });
+      return;
+    }
+    toast({
+      title: `Launched ✓ — ${data.sent} sent`,
+      description: `${data.failed} failed, ${data.skipped} skipped (already active)`,
+    });
+    setLaunchEngine(null);
+    setLaunchPhones("");
+    load();
   }
 
   return (
@@ -154,7 +191,16 @@ export function EnginesList({ onEdit }: Props) {
 
                   <div className="flex gap-2 pt-1">
                     <Button size="sm" variant="outline" onClick={() => onEdit(eng.id)} className="flex-1 h-8">
-                      <Edit className="h-3.5 w-3.5 mr-1" /> Edit Flow
+                      <Edit className="h-3.5 w-3.5 mr-1" /> Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => setLaunchEngine(eng)}
+                      disabled={!eng.is_active}
+                      className="flex-1 h-8 bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                      title={eng.is_active ? "Bulk launch this engine" : "Activate engine first"}
+                    >
+                      <Send className="h-3.5 w-3.5 mr-1" /> Launch
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => toggleActive(eng)} className="h-8">
                       <Power className={`h-3.5 w-3.5 ${eng.is_active ? "text-green-600" : "text-muted-foreground"}`} />
@@ -190,6 +236,42 @@ export function EnginesList({ onEdit }: Props) {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
             <Button onClick={createEngine} className="bg-green-600 hover:bg-green-700">Create & Edit</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk launch dialog */}
+      <Dialog open={!!launchEngine} onOpenChange={(o) => !o && setLaunchEngine(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="h-4 w-4 text-green-600" />
+              Bulk Launch: {launchEngine?.name}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Initial step ka message in sabhi numbers ko WhatsApp pe jayega. Customer reply karega → engine auto-qualify karega.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs">Phone numbers (one per line, comma or space-separated)</Label>
+              <Textarea
+                value={launchPhones}
+                onChange={(e) => setLaunchPhones(e.target.value)}
+                placeholder={"9876543210\n9123456789\n8765432109"}
+                rows={8}
+                className="text-xs font-mono"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                10-digit Indian numbers. Pacing: ~4/sec to avoid Meta rate limits.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLaunchEngine(null)} disabled={launching}>Cancel</Button>
+            <Button onClick={launchBulk} disabled={launching || !launchPhones.trim()} className="bg-green-600 hover:bg-green-700">
+              {launching ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Launching…</> : <><Send className="h-4 w-4 mr-1" /> Launch Now</>}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
