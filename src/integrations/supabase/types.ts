@@ -13465,6 +13465,114 @@ export type Database = {
         }
         Relationships: []
       }
+      meta_ads_config: {
+        Row: {
+          access_token: string | null
+          account_label: string
+          ad_account_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_sync_error: string | null
+          last_sync_status: string | null
+          last_synced_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          account_label: string
+          ad_account_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          account_label?: string
+          ad_account_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      meta_ads_daily_metrics: {
+        Row: {
+          ad_account_id: string
+          ad_id: string | null
+          ad_name: string | null
+          ad_set_id: string | null
+          ad_set_name: string | null
+          campaign_id: string | null
+          campaign_name: string | null
+          clicks: number
+          cpc: number | null
+          cpm: number | null
+          ctr: number | null
+          fetched_at: string
+          id: string
+          impressions: number
+          leads: number
+          level: string
+          metric_date: string
+          raw: Json | null
+          reach: number
+          spend: number
+        }
+        Insert: {
+          ad_account_id: string
+          ad_id?: string | null
+          ad_name?: string | null
+          ad_set_id?: string | null
+          ad_set_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          clicks?: number
+          cpc?: number | null
+          cpm?: number | null
+          ctr?: number | null
+          fetched_at?: string
+          id?: string
+          impressions?: number
+          leads?: number
+          level?: string
+          metric_date: string
+          raw?: Json | null
+          reach?: number
+          spend?: number
+        }
+        Update: {
+          ad_account_id?: string
+          ad_id?: string | null
+          ad_name?: string | null
+          ad_set_id?: string | null
+          ad_set_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          clicks?: number
+          cpc?: number | null
+          cpm?: number | null
+          ctr?: number | null
+          fetched_at?: string
+          id?: string
+          impressions?: number
+          leads?: number
+          level?: string
+          metric_date?: string
+          raw?: Json | null
+          reach?: number
+          spend?: number
+        }
+        Relationships: []
+      }
       monthly_financial_snapshots: {
         Row: {
           created_at: string | null
@@ -17892,6 +18000,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      wa_failure_codes: {
+        Row: {
+          category: string | null
+          code: number
+          description: string | null
+          title: string
+          updated_at: string
+          user_action: string | null
+        }
+        Insert: {
+          category?: string | null
+          code: number
+          description?: string | null
+          title: string
+          updated_at?: string
+          user_action?: string | null
+        }
+        Update: {
+          category?: string | null
+          code?: number
+          description?: string | null
+          title?: string
+          updated_at?: string
+          user_action?: string | null
+        }
+        Relationships: []
       }
       wa_flow_run_logs: {
         Row: {
