@@ -15,7 +15,6 @@ import { AdminImageUpload } from "./AdminImageUpload";
 import { LiveWebsitePreview } from "./branding/LiveWebsitePreview";
 import {
   BRANDING_QUERY_KEY,
-  BRANDING_DRAFT_BROADCAST_CHANNEL,
   broadcastBrandingDraft,
   broadcastBrandingUpdate,
   normalizeBrandingSettings,

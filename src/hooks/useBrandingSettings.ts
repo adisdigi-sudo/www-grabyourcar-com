@@ -28,7 +28,7 @@ export interface BrandingSettings {
 export const BRANDING_QUERY_KEY = ["brandingSettings"] as const;
 export const BRANDING_BROADCAST_CHANNEL = "gyc-branding-sync";
 export const BRANDING_DRAFT_BROADCAST_CHANNEL = "gyc-branding-draft-sync";
-export const BRANDING_PREVIEW_QUERY_PARAM = "_brandingPreview";
+export const BRANDING_PREVIEW_QUERY_PARAM = "__brandingPreviewId";
 
 const getBrandingPreviewId = () => {
   if (typeof window === "undefined") {
