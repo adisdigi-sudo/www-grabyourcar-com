@@ -427,7 +427,11 @@ export function SalesWorkspace() {
             updateLeadMutation.mutate({ id: selectedLead.id, updates, logAction, logRemarks });
             setSelectedLead((prev: any) => (prev ? { ...prev, ...updates } : null));
           }}
-          onEdit={() => setShowEditLead(true)}
+          onEdit={() => {
+            setShowDetailModal(false);
+            // Defer opening edit modal so detail Dialog fully closes first (focus trap release)
+            setTimeout(() => setShowEditLead(true), 50);
+          }}
         />
       )}
 
