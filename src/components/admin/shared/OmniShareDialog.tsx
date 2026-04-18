@@ -16,7 +16,7 @@ interface OmniShareDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  generatePdf: () => { doc: jsPDF; fileName: string };
+  generatePdf: () => { doc: jsPDF; fileName: string } | Promise<{ doc: jsPDF; fileName: string }>;
   defaultPhone?: string;
   defaultEmail?: string;
   customerName?: string;
@@ -114,7 +114,7 @@ export function OmniShareDialog({
   const handleWhatsAppShare = async () => {
     const cleanPhone = (phone || "").replace(/\D/g, "");
     if (cleanPhone.length < 10) { toast.error("Please enter a valid phone number"); return; }
-    const { doc, fileName } = generatePdf();
+    const { doc, fileName } = await generatePdf();
     const pdfUrl = await uploadPdfAndGetUrl(doc, fileName);
     doc.save(fileName);
     const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
@@ -131,7 +131,7 @@ export function OmniShareDialog({
     if (cleanPhone.length < 10) { toast.error("Please enter a valid phone number"); return; }
     setSendingApi(true);
     try {
-      const { doc, fileName } = generatePdf();
+      const { doc, fileName } = await generatePdf();
       const pdfUrl = await uploadPdfAndGetUrl(doc, fileName);
       const { fallbackTemplateName, fallbackTemplateVariables } = buildFallbackTemplate(pdfUrl);
       const result = await omniSend({
@@ -166,7 +166,7 @@ export function OmniShareDialog({
     if (!email || !email.includes("@")) { toast.error("Please enter a valid email address"); return; }
     setSendingApi(true);
     try {
-      const { doc, fileName } = generatePdf();
+      const { doc, fileName } = await generatePdf();
       const result = await omniSend({
         channel: "email",
         email,
@@ -229,8 +229,8 @@ export function OmniShareDialog({
     }
   };
 
-  const handleDownload = () => {
-    const { doc, fileName } = generatePdf();
+  const handleDownload = async () => {
+    const { doc, fileName } = await generatePdf();
     doc.save(fileName);
     toast.success("📋 PDF downloaded!");
     onShared?.();
