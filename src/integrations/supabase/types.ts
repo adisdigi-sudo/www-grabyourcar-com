@@ -14392,6 +14392,273 @@ export type Database = {
         }
         Relationships: []
       }
+      pdf_global_branding: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          alt_phone: string | null
+          bank_account_name: string | null
+          bank_account_number: string | null
+          bank_branch: string | null
+          bank_ifsc: string | null
+          bank_name: string | null
+          brand_accent_color: string
+          brand_muted_color: string
+          brand_primary_color: string
+          brand_text_color: string
+          cin: string | null
+          city: string | null
+          company_name: string
+          company_tagline: string | null
+          created_at: string
+          default_terms: string | null
+          email: string | null
+          font_body: string
+          font_heading: string
+          footer_text: string | null
+          gstin: string | null
+          id: string
+          irdai_license: string | null
+          is_active: boolean
+          logo_url: string | null
+          margin_bottom: number
+          margin_left: number
+          margin_right: number
+          margin_top: number
+          page_size: string
+          pan: string | null
+          phone: string | null
+          pincode: string | null
+          show_qr_footer: boolean
+          show_watermark: boolean
+          signature_name: string | null
+          signature_url: string | null
+          social_links: Json | null
+          state: string | null
+          updated_at: string
+          updated_by: string | null
+          upi_id: string | null
+          watermark_url: string | null
+          website: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          alt_phone?: string | null
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_branch?: string | null
+          bank_ifsc?: string | null
+          bank_name?: string | null
+          brand_accent_color?: string
+          brand_muted_color?: string
+          brand_primary_color?: string
+          brand_text_color?: string
+          cin?: string | null
+          city?: string | null
+          company_name?: string
+          company_tagline?: string | null
+          created_at?: string
+          default_terms?: string | null
+          email?: string | null
+          font_body?: string
+          font_heading?: string
+          footer_text?: string | null
+          gstin?: string | null
+          id?: string
+          irdai_license?: string | null
+          is_active?: boolean
+          logo_url?: string | null
+          margin_bottom?: number
+          margin_left?: number
+          margin_right?: number
+          margin_top?: number
+          page_size?: string
+          pan?: string | null
+          phone?: string | null
+          pincode?: string | null
+          show_qr_footer?: boolean
+          show_watermark?: boolean
+          signature_name?: string | null
+          signature_url?: string | null
+          social_links?: Json | null
+          state?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          upi_id?: string | null
+          watermark_url?: string | null
+          website?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          alt_phone?: string | null
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_branch?: string | null
+          bank_ifsc?: string | null
+          bank_name?: string | null
+          brand_accent_color?: string
+          brand_muted_color?: string
+          brand_primary_color?: string
+          brand_text_color?: string
+          cin?: string | null
+          city?: string | null
+          company_name?: string
+          company_tagline?: string | null
+          created_at?: string
+          default_terms?: string | null
+          email?: string | null
+          font_body?: string
+          font_heading?: string
+          footer_text?: string | null
+          gstin?: string | null
+          id?: string
+          irdai_license?: string | null
+          is_active?: boolean
+          logo_url?: string | null
+          margin_bottom?: number
+          margin_left?: number
+          margin_right?: number
+          margin_top?: number
+          page_size?: string
+          pan?: string | null
+          phone?: string | null
+          pincode?: string | null
+          show_qr_footer?: boolean
+          show_watermark?: boolean
+          signature_name?: string | null
+          signature_url?: string | null
+          social_links?: Json | null
+          state?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          upi_id?: string | null
+          watermark_url?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      pdf_manual_generations: {
+        Row: {
+          created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          delivery_channels: string[] | null
+          document_number: string | null
+          document_type: string
+          generated_by: string | null
+          generated_by_name: string | null
+          id: string
+          notes: string | null
+          payload: Json | null
+          pdf_storage_path: string | null
+          pdf_url: string | null
+          related_record_id: string | null
+          related_record_table: string | null
+          vertical_slug: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_channels?: string[] | null
+          document_number?: string | null
+          document_type: string
+          generated_by?: string | null
+          generated_by_name?: string | null
+          id?: string
+          notes?: string | null
+          payload?: Json | null
+          pdf_storage_path?: string | null
+          pdf_url?: string | null
+          related_record_id?: string | null
+          related_record_table?: string | null
+          vertical_slug: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_channels?: string[] | null
+          document_number?: string | null
+          document_type?: string
+          generated_by?: string | null
+          generated_by_name?: string | null
+          id?: string
+          notes?: string | null
+          payload?: Json | null
+          pdf_storage_path?: string | null
+          pdf_url?: string | null
+          related_record_id?: string | null
+          related_record_table?: string | null
+          vertical_slug?: string
+        }
+        Relationships: []
+      }
+      pdf_vertical_settings: {
+        Row: {
+          created_at: string
+          custom_fields: Json
+          document_types: Json
+          id: string
+          is_active: boolean
+          override_accent_color: string | null
+          override_brand_color: string | null
+          override_footer_text: string | null
+          override_logo_url: string | null
+          override_signature_name: string | null
+          override_signature_url: string | null
+          override_terms: string | null
+          template_sections: Json
+          updated_at: string
+          updated_by: string | null
+          vertical_label: string
+          vertical_slug: string
+        }
+        Insert: {
+          created_at?: string
+          custom_fields?: Json
+          document_types?: Json
+          id?: string
+          is_active?: boolean
+          override_accent_color?: string | null
+          override_brand_color?: string | null
+          override_footer_text?: string | null
+          override_logo_url?: string | null
+          override_signature_name?: string | null
+          override_signature_url?: string | null
+          override_terms?: string | null
+          template_sections?: Json
+          updated_at?: string
+          updated_by?: string | null
+          vertical_label: string
+          vertical_slug: string
+        }
+        Update: {
+          created_at?: string
+          custom_fields?: Json
+          document_types?: Json
+          id?: string
+          is_active?: boolean
+          override_accent_color?: string | null
+          override_brand_color?: string | null
+          override_footer_text?: string | null
+          override_logo_url?: string | null
+          override_signature_name?: string | null
+          override_signature_url?: string | null
+          override_terms?: string | null
+          template_sections?: Json
+          updated_at?: string
+          updated_by?: string | null
+          vertical_label?: string
+          vertical_slug?: string
+        }
+        Relationships: []
+      }
       performance_reviews: {
         Row: {
           approved_at: string | null
