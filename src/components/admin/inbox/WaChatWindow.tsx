@@ -19,6 +19,14 @@ import { format, formatDistanceToNowStrict, differenceInSeconds } from "date-fns
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { WaConversation, WaMessage } from "../WhatsAppBusinessInbox";
+import {
+  resolveWaMediaUrl,
+  isImageMime,
+  isVideoMime,
+  isAudioMime,
+  isDocumentMime,
+  prettyFileLabel,
+} from "./waMedia";
 
 interface Props {
   conversation: WaConversation | null;
