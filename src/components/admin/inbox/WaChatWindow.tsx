@@ -510,6 +510,16 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
 
                       if (!mediaSrc && !msg.template_name) return null;
 
+                      // Route documents through the in-app viewer so Chrome
+                      // ad-blockers (ERR_BLOCKED_BY_CLIENT on raw supabase
+                      // storage URLs) can't block previews or downloads.
+                      const docViewerHref = showDoc
+                        ? buildInsuranceDocumentViewerUrl({
+                            url: mediaSrc,
+                            fileName: msg.media_filename || prettyFileLabel(msg.media_mime_type, msg.media_filename),
+                          })
+                        : null;
+
                       return (
                         <div className="mb-1 space-y-1">
                           {showImage && (
@@ -535,7 +545,7 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
                           )}
                           {showDoc && (
                             <a
-                              href={downloadSrc || mediaSrc}
+                              href={docViewerHref || downloadSrc || mediaSrc}
                               target="_blank"
                               rel="noreferrer"
                               className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs hover:bg-muted transition-colors"
@@ -549,7 +559,10 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
                           )}
                           {!showImage && !showVideo && !showAudio && !showDoc && mediaSrc && (
                             <a
-                              href={mediaSrc}
+                              href={buildInsuranceDocumentViewerUrl({
+                                url: mediaSrc,
+                                fileName: msg.media_filename || "attachment",
+                              })}
                               target="_blank"
                               rel="noreferrer"
                               className="text-xs underline text-primary"
