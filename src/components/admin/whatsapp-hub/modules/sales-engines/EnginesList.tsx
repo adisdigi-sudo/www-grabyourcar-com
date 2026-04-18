@@ -23,6 +23,9 @@ export function EnginesList({ onEdit }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newVertical, setNewVertical] = useState("loans");
+  const [launchEngine, setLaunchEngine] = useState<SalesEngine | null>(null);
+  const [launchPhones, setLaunchPhones] = useState("");
+  const [launching, setLaunching] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => { load(); }, []);
