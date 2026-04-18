@@ -270,12 +270,16 @@ export const LiveWebsitePreview = ({
 
       <CardContent className="pt-0">
         <div className="rounded-lg border bg-muted/30 p-2 flex justify-center">
+          <div className="w-full overflow-auto rounded-md">
           <div
-            className="bg-background border border-border rounded-md overflow-hidden shadow-inner transition-all duration-300"
+            className="mx-auto origin-top bg-background border border-border rounded-md overflow-hidden shadow-inner transition-all duration-300"
             style={{
-              width: `calc(${VIEWPORT_WIDTH[viewport]} * ${previewScale / 100})`,
+              width: VIEWPORT_WIDTH[viewport],
               maxWidth: "100%",
               height: viewport === "mobile" ? 640 : viewport === "tablet" ? 700 : 720,
+              transform: `scale(${previewScale / 100})`,
+              transformOrigin: "top center",
+              marginBottom: `${Math.max(0, previewScale - 100) * 6}px`,
             }}
           >
             <iframe
@@ -286,6 +290,7 @@ export const LiveWebsitePreview = ({
               className="w-full h-full border-0 bg-background"
               sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
             />
+          </div>
           </div>
         </div>
         <p className="mt-2 text-[10px] text-muted-foreground text-center">
