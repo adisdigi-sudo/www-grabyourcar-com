@@ -96,7 +96,7 @@ export const BrandingSettings = () => {
 
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
-    field: keyof BrandingSettings
+    field: keyof BrandingSettingsData
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
