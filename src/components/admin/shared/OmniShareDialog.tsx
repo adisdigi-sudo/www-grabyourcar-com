@@ -9,6 +9,7 @@ import { MessageCircle, Mail, Download, Send, Loader2, Zap, Radio } from "lucide
 import { omniSend } from "@/lib/omniSend";
 import { supabase } from "@/integrations/supabase/client";
 import jsPDF from "jspdf";
+import { applyUnifiedBranding } from "@/lib/pdf";
 
 type TabValue = "whatsapp" | "whatsapp_api" | "email" | "rcs" | "download";
 
@@ -42,6 +43,18 @@ export function OmniShareDialog({
   const [email, setEmail] = useState(defaultEmail);
   const [sendingApi, setSendingApi] = useState(false);
   const [sendingRcs, setSendingRcs] = useState(false);
+
+  /** Generate PDF + apply unified branding bands, watermark, and audit log. */
+  const buildBrandedPdf = async () => {
+    const { doc, fileName } = await generatePdf();
+    await applyUnifiedBranding(doc, {
+      vertical: vertical || "general",
+      documentType: getMessageContext(),
+      fileName,
+      audit: { customerName, customerPhone: phone, referenceId: fileName },
+    });
+    return { doc, fileName };
+  };
 
   const getMessageContext = () => {
     if (/renewal/i.test(title)) return "renewal_reminder";
