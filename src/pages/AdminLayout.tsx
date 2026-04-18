@@ -91,6 +91,9 @@ const BrandingSettings = lazy(() =>
 const PdfBrandingEditor = lazy(() =>
   import("@/components/admin/pdf-branding/PdfBrandingEditor").then((module) => ({ default: module.PdfBrandingEditor })),
 );
+const PdfVerticalSettingsEditor = lazy(() =>
+  import("@/components/admin/pdf-branding/PdfVerticalSettingsEditor").then((module) => ({ default: module.PdfVerticalSettingsEditor })),
+);
 const APIIntegrationPortal = lazy(() =>
   import("@/components/admin/APIIntegrationPortal").then((module) => ({ default: module.APIIntegrationPortal })),
 );
