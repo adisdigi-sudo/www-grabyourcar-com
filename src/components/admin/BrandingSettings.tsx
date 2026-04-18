@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Upload, Save, Palette, Image as ImageIcon, RefreshCw, Trash2, Eye, Move } from "lucide-react";
+import { AdminImageUpload } from "./AdminImageUpload";
 
 interface BrandingSettings {
   logo_url: string;
@@ -265,51 +266,24 @@ export const BrandingSettings = () => {
 
         {/* Logos Tab */}
         <TabsContent value="logos" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6">
             {/* Main Logo */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Main Logo</CardTitle>
-                <CardDescription>Used in header and light backgrounds</CardDescription>
+                <CardDescription>Used in header and light backgrounds — live fitment preview shows how it sits in the navbar.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="border-2 border-dashed rounded-lg p-6 text-center bg-white">
-                  {formData.logo_url ? (
-                    <img 
-                      src={formData.logo_url} 
-                      alt="Logo" 
-                      className="max-h-16 mx-auto object-contain"
-                    />
-                  ) : (
-                    <ImageIcon className="h-16 w-16 mx-auto text-muted-foreground" />
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    ref={logoInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFileUpload(e, 'logo_url')}
-                  />
-                  <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => logoInputRef.current?.click()}
-                    disabled={isUploading}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {isUploading ? 'Uploading...' : 'Upload Logo'}
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Or enter URL</Label>
-                  <Input
-                    value={formData.logo_url}
-                    onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
-                    placeholder="/logo.png or https://..."
-                  />
-                </div>
+              <CardContent>
+                <AdminImageUpload
+                  value={formData.logo_url}
+                  onChange={(url) => setFormData({ ...formData, logo_url: url })}
+                  label="Main Logo"
+                  folder="branding/logo"
+                  bucket="branding-assets"
+                  recommendedSize="320×80"
+                  previewMode="logo"
+                  placeholder="/logo.png or https://..."
+                />
               </CardContent>
             </Card>
 
@@ -317,41 +291,17 @@ export const BrandingSettings = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Dark Mode Logo</CardTitle>
-                <CardDescription>Used in footer and dark backgrounds</CardDescription>
+                <CardDescription>Used in footer and dark backgrounds. Optional — defaults to main logo.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="border-2 border-dashed rounded-lg p-6 text-center bg-gray-900">
-                  {formData.logo_dark_url ? (
-                    <img 
-                      src={formData.logo_dark_url} 
-                      alt="Dark Logo" 
-                      className="max-h-16 mx-auto object-contain"
-                    />
-                  ) : (
-                    <ImageIcon className="h-16 w-16 mx-auto text-gray-400" />
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    ref={logoDarkInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFileUpload(e, 'logo_dark_url')}
-                  />
-                  <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => logoDarkInputRef.current?.click()}
-                    disabled={isUploading}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Dark Logo
-                  </Button>
-                </div>
-                <Input
+              <CardContent>
+                <AdminImageUpload
                   value={formData.logo_dark_url}
-                  onChange={(e) => setFormData({ ...formData, logo_dark_url: e.target.value })}
+                  onChange={(url) => setFormData({ ...formData, logo_dark_url: url })}
+                  label="Dark Mode Logo"
+                  folder="branding/logo-dark"
+                  bucket="branding-assets"
+                  recommendedSize="320×80"
+                  previewMode="logo"
                   placeholder="Optional - defaults to main logo"
                 />
               </CardContent>
@@ -377,38 +327,14 @@ export const BrandingSettings = () => {
                     <p className="text-xs text-muted-foreground">Replace static logo with animated version</p>
                   </div>
                 </div>
-                <div className="border-2 border-dashed rounded-lg p-6 text-center bg-white">
-                  {formData.animated_logo_url ? (
-                    <img 
-                      src={formData.animated_logo_url} 
-                      alt="Animated Logo" 
-                      className="max-h-16 mx-auto object-contain"
-                    />
-                  ) : (
-                    <ImageIcon className="h-16 w-16 mx-auto text-muted-foreground" />
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    ref={animatedLogoInputRef}
-                    type="file"
-                    accept="image/gif,image/webp,video/mp4,video/webm"
-                    className="hidden"
-                    onChange={(e) => handleFileUpload(e, 'animated_logo_url')}
-                  />
-                  <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => animatedLogoInputRef.current?.click()}
-                    disabled={isUploading}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Animated Logo
-                  </Button>
-                </div>
-                <Input
+                <AdminImageUpload
                   value={formData.animated_logo_url}
-                  onChange={(e) => setFormData({ ...formData, animated_logo_url: e.target.value })}
+                  onChange={(url) => setFormData({ ...formData, animated_logo_url: url })}
+                  label="Animated Logo"
+                  folder="branding/animated-logo"
+                  bucket="branding-assets"
+                  recommendedSize="320×80"
+                  previewMode="logo"
                   placeholder="https://... or /animated-logo.gif"
                 />
               </CardContent>
@@ -418,41 +344,17 @@ export const BrandingSettings = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Favicon</CardTitle>
-                <CardDescription>Browser tab icon (recommended: 32x32 or 64x64)</CardDescription>
+                <CardDescription>Browser tab icon (recommended: 32×32 or 64×64)</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                  {formData.favicon_url ? (
-                    <img 
-                      src={formData.favicon_url} 
-                      alt="Favicon" 
-                      className="h-16 w-16 mx-auto object-contain"
-                    />
-                  ) : (
-                    <ImageIcon className="h-16 w-16 mx-auto text-muted-foreground" />
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    ref={faviconInputRef}
-                    type="file"
-                    accept="image/*,.ico"
-                    className="hidden"
-                    onChange={(e) => handleFileUpload(e, 'favicon_url')}
-                  />
-                  <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => faviconInputRef.current?.click()}
-                    disabled={isUploading}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Favicon
-                  </Button>
-                </div>
-                <Input
+              <CardContent>
+                <AdminImageUpload
                   value={formData.favicon_url}
-                  onChange={(e) => setFormData({ ...formData, favicon_url: e.target.value })}
+                  onChange={(url) => setFormData({ ...formData, favicon_url: url })}
+                  label="Favicon"
+                  folder="branding/favicon"
+                  bucket="branding-assets"
+                  recommendedSize="64×64"
+                  previewMode="square"
                   placeholder="/favicon.ico"
                 />
               </CardContent>
@@ -462,43 +364,17 @@ export const BrandingSettings = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Social Share Image</CardTitle>
-                <CardDescription>Open Graph image for social media (1200x630)</CardDescription>
+                <CardDescription>Open Graph image for social media (1200×630)</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="border-2 border-dashed rounded-lg overflow-hidden aspect-video">
-                  {formData.og_image_url ? (
-                    <img 
-                      src={formData.og_image_url} 
-                      alt="OG Image" 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <ImageIcon className="h-16 w-16 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    ref={ogImageInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFileUpload(e, 'og_image_url')}
-                  />
-                  <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => ogImageInputRef.current?.click()}
-                    disabled={isUploading}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload OG Image
-                  </Button>
-                </div>
-                <Input
+              <CardContent>
+                <AdminImageUpload
                   value={formData.og_image_url}
-                  onChange={(e) => setFormData({ ...formData, og_image_url: e.target.value })}
+                  onChange={(url) => setFormData({ ...formData, og_image_url: url })}
+                  label="Social Share Image"
+                  folder="branding/og"
+                  bucket="branding-assets"
+                  recommendedSize="1200×630"
+                  previewMode="hero-desktop"
                   placeholder="/og-image.png"
                 />
               </CardContent>
