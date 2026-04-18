@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import {
   Send, Paperclip, Clock, Check, CheckCheck, X,
   AlertTriangle, Info, Zap, LayoutTemplate, MessageSquare,
-  UserPlus, Timer, Image, FileText, Video, Loader2, Bot, HandMetal, Pencil
+  UserPlus, Timer, Image, FileText, Video, Loader2, Bot, HandMetal, Pencil, Sparkles, Wand2, Languages, Smile
 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { WaTemplateManager } from "./WaTemplateManager";
 import { Switch } from "@/components/ui/switch";
 import { supabase as sbClient } from "@/integrations/supabase/client";
@@ -140,6 +141,61 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileAccept, setFileAccept] = useState("");
+  const [isAIPolishing, setIsAIPolishing] = useState(false);
+  const [previousText, setPreviousText] = useState<string | null>(null);
+
+  type AIMode = "polish" | "professional" | "friendly" | "shorten" | "hindi" | "english" | "hinglish" | "emoji";
+  const runAIRewrite = async (mode: AIMode) => {
+    if (!text.trim()) {
+      toast.error("Type a message first");
+      return;
+    }
+    const instructions: Record<AIMode, string> = {
+      polish: "Fix grammar, spelling, and punctuation. Keep the same meaning, tone, language and length. Keep WhatsApp formatting (*bold*, _italic_), emojis and line breaks intact.",
+      professional: "Rewrite in a polite, professional business tone for a customer-facing WhatsApp message. Keep facts, numbers, names, links and formatting intact.",
+      friendly: "Rewrite in a warm, friendly conversational tone. Keep facts, numbers, names, links and formatting intact.",
+      shorten: "Make it crisp and shorter (under 60 words if possible) without losing key information.",
+      hindi: "Translate to natural Hindi (Devanagari script). Keep names, numbers, links and formatting intact.",
+      english: "Translate to natural professional English. Keep names, numbers, links and formatting intact.",
+      hinglish: "Rewrite in natural Hinglish (Hindi written in Roman/English letters) — the way Indian customers chat on WhatsApp.",
+      emoji: "Add 2-4 relevant emojis at natural places to make it lively, but do not overdo it. Keep all original text and formatting.",
+    };
+    setIsAIPolishing(true);
+    setPreviousText(text);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-generate", {
+        body: {
+          systemPrompt: `You are a WhatsApp message editor for a car dealership / insurance / loans CRM in India. ${instructions[mode]} Return ONLY the final message text — no quotes, no explanations, no markdown code fences.`,
+          prompt: text,
+          temperature: 0.4,
+          max_tokens: 800,
+        },
+      });
+      if (error) throw error;
+      const cleaned = String(data?.content || "")
+        .trim()
+        .replace(/^```[\w]*\n?/, "")
+        .replace(/\n?```$/, "")
+        .replace(/^["']|["']$/g, "");
+      if (!cleaned) throw new Error("AI returned empty response");
+      setText(cleaned);
+      toast.success("AI updated ✨ — click Undo to revert");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "AI failed");
+      setPreviousText(null);
+    } finally {
+      setIsAIPolishing(false);
+      inputRef.current?.focus();
+    }
+  };
+
+  const handleUndoAI = () => {
+    if (previousText !== null) {
+      setText(previousText);
+      setPreviousText(null);
+      toast.success("Reverted");
+    }
+  };
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -738,11 +794,74 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
             ref={inputRef}
             placeholder={isWindowOpen ? "Type a message..." : "Use template (window closed)"}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => { setText(e.target.value); if (previousText !== null) setPreviousText(null); }}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-            disabled={!isWindowOpen || isSending || isUploading}
+            disabled={!isWindowOpen || isSending || isUploading || isAIPolishing}
             className="flex-1 h-9 text-sm"
           />
+
+          {/* AI Fix — quick grammar/spelling polish */}
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 shrink-0 border-purple-300 bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/30 dark:border-purple-800 dark:text-purple-300"
+            title="AI Fix — grammar, spelling & polish"
+            onClick={() => runAIRewrite("polish")}
+            disabled={!text.trim() || isAIPolishing || isSending}
+          >
+            {isAIPolishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          </Button>
+
+          {/* AI Rewrite menu — tone & translate */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                title="AI Rewrite — tone & translate"
+                disabled={!text.trim() || isAIPolishing || isSending}
+              >
+                <Wand2 className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuLabel className="text-xs">Tone</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => runAIRewrite("professional")} className="text-xs gap-2">
+                <Wand2 className="h-3.5 w-3.5" /> Make Professional
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runAIRewrite("friendly")} className="text-xs gap-2">
+                <Smile className="h-3.5 w-3.5" /> Make Friendly
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runAIRewrite("shorten")} className="text-xs gap-2">
+                <Sparkles className="h-3.5 w-3.5" /> Shorten / Crisp
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runAIRewrite("emoji")} className="text-xs gap-2">
+                <Smile className="h-3.5 w-3.5" /> Add Emojis
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs">Translate</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => runAIRewrite("hindi")} className="text-xs gap-2">
+                <Languages className="h-3.5 w-3.5" /> Hindi (हिंदी)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runAIRewrite("hinglish")} className="text-xs gap-2">
+                <Languages className="h-3.5 w-3.5" /> Hinglish
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runAIRewrite("english")} className="text-xs gap-2">
+                <Languages className="h-3.5 w-3.5" /> English
+              </DropdownMenuItem>
+              {previousText !== null && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleUndoAI} className="text-xs gap-2">
+                    <X className="h-3.5 w-3.5" /> Undo last AI change
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Button
             onClick={handleSend}
