@@ -305,6 +305,27 @@ Deno.serve(async (req) => {
             }).eq("id", existingContact.id);
           }
 
+          // ══════════════════════════════════════════════════════════
+          // SALES ENGINE ROUTER — handle active engine sessions FIRST
+          // (highest priority, before chatbot rules / AI brain)
+          // ══════════════════════════════════════════════════════════
+          if (!inboxConvo?.human_takeover) {
+            try {
+              const engineResp = await fetch(`${SUPABASE_URL}/functions/v1/sales-engine-router`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+                body: JSON.stringify({ phone: from, message_text: messageText, customer_name: contactName }),
+              });
+              const engineData = await engineResp.json();
+              if (engineData?.handled) {
+                console.log(`Sales engine handled reply for ${from}: action=${engineData.action}, status=${engineData.status}`);
+                continue; // skip chatbot rules + AI brain
+              }
+            } catch (e) {
+              console.error("sales-engine-router call failed:", e);
+            }
+          }
+
           // ── Check new inbox human_takeover flag ──
           if (inboxConvo?.human_takeover) {
             console.log(`Human takeover active (wa_conversations) for ${from}, skipping AI`);
