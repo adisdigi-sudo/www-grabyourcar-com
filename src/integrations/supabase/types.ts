@@ -15949,6 +15949,7 @@ export type Database = {
       sales_pipeline: {
         Row: {
           ad_platform: string | null
+          assigned_executive: string | null
           assigned_to: string | null
           booking_remarks: string | null
           booking_status: string | null
@@ -15958,6 +15959,7 @@ export type Database = {
           call_remarks: string | null
           call_status: string | null
           car_brand: string | null
+          car_color: string | null
           car_model: string | null
           car_variant: string | null
           car_year: string | null
@@ -15969,6 +15971,7 @@ export type Database = {
           delivery_documents: string[] | null
           delivery_images: string[] | null
           email: string | null
+          ex_showroom_price: number | null
           feedback_images: string[] | null
           feedback_rating: number | null
           feedback_text: string | null
@@ -15985,8 +15988,10 @@ export type Database = {
           loan_status: string | null
           lost_reason: string | null
           lost_remarks: string | null
+          on_road_price: number | null
           phone: string
           pipeline_stage: string
+          priority: string | null
           quote_history: Json | null
           remarks_history: Json | null
           source: string | null
@@ -16001,6 +16006,7 @@ export type Database = {
         }
         Insert: {
           ad_platform?: string | null
+          assigned_executive?: string | null
           assigned_to?: string | null
           booking_remarks?: string | null
           booking_status?: string | null
@@ -16010,6 +16016,7 @@ export type Database = {
           call_remarks?: string | null
           call_status?: string | null
           car_brand?: string | null
+          car_color?: string | null
           car_model?: string | null
           car_variant?: string | null
           car_year?: string | null
@@ -16021,6 +16028,7 @@ export type Database = {
           delivery_documents?: string[] | null
           delivery_images?: string[] | null
           email?: string | null
+          ex_showroom_price?: number | null
           feedback_images?: string[] | null
           feedback_rating?: number | null
           feedback_text?: string | null
@@ -16037,8 +16045,10 @@ export type Database = {
           loan_status?: string | null
           lost_reason?: string | null
           lost_remarks?: string | null
+          on_road_price?: number | null
           phone: string
           pipeline_stage?: string
+          priority?: string | null
           quote_history?: Json | null
           remarks_history?: Json | null
           source?: string | null
@@ -16053,6 +16063,7 @@ export type Database = {
         }
         Update: {
           ad_platform?: string | null
+          assigned_executive?: string | null
           assigned_to?: string | null
           booking_remarks?: string | null
           booking_status?: string | null
@@ -16062,6 +16073,7 @@ export type Database = {
           call_remarks?: string | null
           call_status?: string | null
           car_brand?: string | null
+          car_color?: string | null
           car_model?: string | null
           car_variant?: string | null
           car_year?: string | null
@@ -16073,6 +16085,7 @@ export type Database = {
           delivery_documents?: string[] | null
           delivery_images?: string[] | null
           email?: string | null
+          ex_showroom_price?: number | null
           feedback_images?: string[] | null
           feedback_rating?: number | null
           feedback_text?: string | null
@@ -16089,8 +16102,10 @@ export type Database = {
           loan_status?: string | null
           lost_reason?: string | null
           lost_remarks?: string | null
+          on_road_price?: number | null
           phone?: string
           pipeline_stage?: string
+          priority?: string | null
           quote_history?: Json | null
           remarks_history?: Json | null
           source?: string | null
