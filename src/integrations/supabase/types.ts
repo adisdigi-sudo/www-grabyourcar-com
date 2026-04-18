@@ -18769,6 +18769,131 @@ export type Database = {
         }
         Relationships: []
       }
+      wa_pdf_automation_rules: {
+        Row: {
+          caption_template: string | null
+          cooldown_hours: number
+          created_at: string
+          delay_minutes: number
+          description: string | null
+          event_name: string
+          id: string
+          is_active: boolean
+          last_triggered_at: string | null
+          max_sends_per_record: number
+          pdf_type: string
+          template_name: string | null
+          total_sent: number
+          updated_at: string
+          vertical: string
+        }
+        Insert: {
+          caption_template?: string | null
+          cooldown_hours?: number
+          created_at?: string
+          delay_minutes?: number
+          description?: string | null
+          event_name: string
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          max_sends_per_record?: number
+          pdf_type: string
+          template_name?: string | null
+          total_sent?: number
+          updated_at?: string
+          vertical: string
+        }
+        Update: {
+          caption_template?: string | null
+          cooldown_hours?: number
+          created_at?: string
+          delay_minutes?: number
+          description?: string | null
+          event_name?: string
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          max_sends_per_record?: number
+          pdf_type?: string
+          template_name?: string | null
+          total_sent?: number
+          updated_at?: string
+          vertical?: string
+        }
+        Relationships: []
+      }
+      wa_pdf_delivery_logs: {
+        Row: {
+          caption: string | null
+          created_at: string
+          customer_name: string | null
+          error_message: string | null
+          event_name: string
+          id: string
+          message_id: string | null
+          meta: Json | null
+          pdf_storage_path: string | null
+          pdf_type: string
+          pdf_url: string | null
+          phone: string
+          record_id: string | null
+          rule_id: string | null
+          sent_at: string | null
+          status: string
+          template_name: string | null
+          vertical: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          customer_name?: string | null
+          error_message?: string | null
+          event_name: string
+          id?: string
+          message_id?: string | null
+          meta?: Json | null
+          pdf_storage_path?: string | null
+          pdf_type: string
+          pdf_url?: string | null
+          phone: string
+          record_id?: string | null
+          rule_id?: string | null
+          sent_at?: string | null
+          status?: string
+          template_name?: string | null
+          vertical: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          customer_name?: string | null
+          error_message?: string | null
+          event_name?: string
+          id?: string
+          message_id?: string | null
+          meta?: Json | null
+          pdf_storage_path?: string | null
+          pdf_type?: string
+          pdf_url?: string | null
+          phone?: string
+          record_id?: string | null
+          rule_id?: string | null
+          sent_at?: string | null
+          status?: string
+          template_name?: string | null
+          vertical?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_pdf_delivery_logs_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "wa_pdf_automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wa_provider_config: {
         Row: {
           auth_type: string
