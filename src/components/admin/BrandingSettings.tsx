@@ -77,20 +77,20 @@ export const BrandingSettings = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('admin_settings')
-        .select('*')
+        .select('setting_value')
         .eq('setting_key', 'branding_settings')
         .single();
       
       if (error && error.code !== 'PGRST116') throw error;
-      return data;
+      return data?.setting_value as unknown as Partial<BrandingSettings> | null;
     },
     staleTime: 0,
   });
 
   // Load settings when data changes
   useEffect(() => {
-    if (settings?.setting_value) {
-      const value = settings.setting_value as Record<string, string | number | boolean>;
+    if (settings) {
+      const value = settings as unknown as Record<string, string | number | boolean>;
       setFormData({
         logo_url: String(value.logo_url || "/logo-grabyourcar.png"),
         logo_dark_url: String(value.logo_dark_url || ""),
@@ -150,6 +150,7 @@ export const BrandingSettings = () => {
     onSuccess: async () => {
       // Force-refresh every consumer (header, footer, mobile menu, PDFs) immediately
       await queryClient.invalidateQueries({ queryKey: ['brandingSettings'] });
+      await queryClient.invalidateQueries({ queryKey: ['profileSettings'] });
       await queryClient.refetchQueries({ queryKey: ['brandingSettings'] });
       toast.success('Branding saved — changes are now live across the website');
     },
@@ -284,7 +285,7 @@ export const BrandingSettings = () => {
                 <CardContent>
                   <AdminImageUpload
                     value={formData.logo_url}
-                    onChange={(url) => setFormData({ ...formData, logo_url: url })}
+                    onChange={(url) => setFormData((prev) => ({ ...prev, logo_url: url }))}
                     label="Main Logo"
                     folder="branding/logo"
                     bucket="branding-assets"
@@ -304,7 +305,7 @@ export const BrandingSettings = () => {
                 <CardContent>
                   <AdminImageUpload
                     value={formData.logo_dark_url}
-                    onChange={(url) => setFormData({ ...formData, logo_dark_url: url })}
+                    onChange={(url) => setFormData((prev) => ({ ...prev, logo_dark_url: url }))}
                     label="Dark Mode Logo"
                     folder="branding/logo-dark"
                     bucket="branding-assets"
@@ -337,7 +338,7 @@ export const BrandingSettings = () => {
                 </div>
                 <AdminImageUpload
                   value={formData.animated_logo_url}
-                  onChange={(url) => setFormData({ ...formData, animated_logo_url: url })}
+                  onChange={(url) => setFormData((prev) => ({ ...prev, animated_logo_url: url }))}
                   label="Animated Logo"
                   folder="branding/animated-logo"
                   bucket="branding-assets"
@@ -357,7 +358,7 @@ export const BrandingSettings = () => {
               <CardContent>
                 <AdminImageUpload
                   value={formData.favicon_url}
-                  onChange={(url) => setFormData({ ...formData, favicon_url: url })}
+                  onChange={(url) => setFormData((prev) => ({ ...prev, favicon_url: url }))}
                   label="Favicon"
                   folder="branding/favicon"
                   bucket="branding-assets"
@@ -377,7 +378,7 @@ export const BrandingSettings = () => {
               <CardContent>
                 <AdminImageUpload
                   value={formData.og_image_url}
-                  onChange={(url) => setFormData({ ...formData, og_image_url: url })}
+                  onChange={(url) => setFormData((prev) => ({ ...prev, og_image_url: url }))}
                   label="Social Share Image"
                   folder="branding/og"
                   bucket="branding-assets"
