@@ -12,7 +12,6 @@
 
 import { useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { withPreviewParams } from "@/lib/previewRouting";
@@ -24,7 +23,11 @@ import {
   ExternalLink,
   Eye,
 } from "lucide-react";
-import { BRANDING_PREVIEW_QUERY_PARAM } from "@/hooks/useBrandingSettings";
+import {
+  BRANDING_PREVIEW_QUERY_PARAM,
+  normalizeBrandingSettings,
+  type BrandingSettings,
+} from "@/hooks/useBrandingSettings";
 
 type Viewport = "desktop" | "tablet" | "mobile";
 
@@ -36,9 +39,11 @@ const VIEWPORT_WIDTH: Record<Viewport, string> = {
 
 const ROUTES: { label: string; path: string }[] = [
   { label: "Home", path: "/" },
-  { label: "New Cars", path: "/new-cars" },
+  { label: "Header", path: "/#site-header" },
+  { label: "Footer", path: "/#site-footer" },
+  { label: "Cars", path: "/cars" },
   { label: "About", path: "/about" },
-  { label: "Contact", path: "/contact" },
+  { label: "Auth", path: "/auth" },
 ];
 
 interface LiveWebsitePreviewProps {
@@ -48,12 +53,15 @@ interface LiveWebsitePreviewProps {
   syncing?: boolean;
   /** Shared draft-preview channel id from the branding editor */
   previewId: string;
+  /** Unsaved branding edits for instant header/footer/favicon previews */
+  draftSettings?: Partial<BrandingSettings>;
 }
 
 export const LiveWebsitePreview = ({
   refreshKey = 0,
   syncing = false,
   previewId,
+  draftSettings,
 }: LiveWebsitePreviewProps) => {
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [path, setPath] = useState<string>("/");
@@ -71,11 +79,15 @@ export const LiveWebsitePreview = ({
     return targetUrl.toString();
   }, [baseUrl, path, previewId, refreshKey, manualRefresh]);
 
+  const previewBranding = useMemo(
+    () => normalizeBrandingSettings(draftSettings),
+    [draftSettings],
+  );
+
+  const footerLogo = previewBranding.logo_dark_url || previewBranding.logo_url;
+
   const openExternalPreview = () => {
-    const targetUrl = new URL(src);
-    targetUrl.searchParams.delete(BRANDING_PREVIEW_QUERY_PARAM);
-    targetUrl.searchParams.delete("_brandingPreview");
-    window.open(targetUrl.toString(), "_blank", "noopener,noreferrer");
+    window.open(src, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -149,6 +161,68 @@ export const LiveWebsitePreview = ({
             </button>
           ))}
         </div>
+
+        <div className="grid gap-2 pt-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+          <div className="rounded-lg border bg-background p-2">
+            <p className="mb-2 text-[10px] font-medium text-muted-foreground">Favicon / Tab Preview</p>
+            <div className="inline-flex max-w-full items-center gap-2 rounded-t-lg border border-b-0 bg-card px-3 py-2 shadow-sm">
+              <img
+                src={previewBranding.favicon_url}
+                alt={`${previewBranding.brand_name} favicon`}
+                className="h-4 w-4 rounded-sm object-contain"
+              />
+              <span className="truncate text-xs font-medium text-foreground">{previewBranding.brand_name}</span>
+            </div>
+          </div>
+
+          <div className="rounded-lg border bg-background p-2">
+            <p className="mb-2 text-[10px] font-medium text-muted-foreground">Header Preview</p>
+            <div className="flex min-h-16 items-center justify-between rounded-md border bg-card px-3 py-2">
+              <img
+                src={previewBranding.logo_url}
+                alt={`${previewBranding.brand_name} header logo`}
+                className="max-w-full object-contain"
+                style={{
+                  height: previewBranding.logo_height_header,
+                  width: previewBranding.logo_width_header || undefined,
+                }}
+              />
+              <div className="text-[10px] text-muted-foreground">Desktop header</div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border bg-background p-2">
+            <p className="mb-2 text-[10px] font-medium text-muted-foreground">Footer Preview</p>
+            <div className="flex min-h-20 items-center justify-between rounded-md border bg-foreground px-3 py-3 text-background">
+              <img
+                src={footerLogo}
+                alt={`${previewBranding.brand_name} footer logo`}
+                className="max-w-full object-contain"
+                style={{
+                  height: previewBranding.logo_height_footer,
+                  width: previewBranding.logo_width_footer || undefined,
+                }}
+              />
+              <div className="text-right text-[10px] text-background/70">Footer / dark mode</div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border bg-background p-2">
+            <p className="mb-2 text-[10px] font-medium text-muted-foreground">Mobile Header</p>
+            <div className="mx-auto flex w-[220px] items-center justify-between rounded-[20px] border bg-card px-3 py-2">
+              <img
+                src={previewBranding.logo_url}
+                alt={`${previewBranding.brand_name} mobile logo`}
+                className="max-w-full object-contain"
+                style={{
+                  height: previewBranding.logo_height_mobile,
+                  width: previewBranding.logo_width_mobile || undefined,
+                }}
+              />
+              <span className="text-[10px] text-muted-foreground">Mobile</span>
+            </div>
+          </div>
+        </div>
       </CardHeader>
 
       <CardContent className="pt-0">
@@ -172,8 +246,7 @@ export const LiveWebsitePreview = ({
           </div>
         </div>
         <p className="mt-2 text-[10px] text-muted-foreground text-center">
-          Updates apply instantly when you click Save · switch pages above to preview
-          header, footer, hero, and more.
+          Upar tab, header, footer aur mobile preview live dikhega · Save par website aur tab icon update ho jayega.
         </p>
       </CardContent>
     </Card>
