@@ -94,6 +94,9 @@ const PdfBrandingEditor = lazy(() =>
 const PdfVerticalSettingsEditor = lazy(() =>
   import("@/components/admin/pdf-branding/PdfVerticalSettingsEditor").then((module) => ({ default: module.PdfVerticalSettingsEditor })),
 );
+const WaPdfAutomationControl = lazy(() =>
+  import("@/components/admin/whatsapp/WaPdfAutomationControl").then((module) => ({ default: module.WaPdfAutomationControl })),
+);
 const APIIntegrationPortal = lazy(() =>
   import("@/components/admin/APIIntegrationPortal").then((module) => ({ default: module.APIIntegrationPortal })),
 );
@@ -307,7 +310,7 @@ const VALID_ADMIN_TABS = new Set([
   "services-pricing", "services-partners", "ecommerce-accessories", "ecommerce-orders", "ecommerce-crosssell", "d2c-rto",
   "d2c-returns", "d2c-checkout", "d2c-inbox", "content-blog", "content-news", "content-launches", "content-ai",
   "content-intelligence", "marketing-command", "whatsapp-hub", "holi-share", "marketing-email", "marketing-bulk", "integrations-api",
-  "open-api-portal", "integrations-whatsapp", "marketing-templates", "marketing-automation", "integrations-shipping",
+  "open-api-portal", "integrations-whatsapp", "marketing-templates", "marketing-automation", "wa-pdf-automation", "integrations-shipping",
   "integrations-payments", "integrations-ad-tracking", "profile-business", "profile-logo", "profile-users", "profile-contact",
   "profile-otp", "roles", "team-management", "settings", "calling-system", "manager-dashboard", "team-engagement",
   "error-prevention", "workflow-engine", "automation-center", "auto-pilot", "lead-routing", "templates-hub", "dealer-inquiry", "dealer-companies",
@@ -798,6 +801,8 @@ const AdminLayout = () => {
         return <PdfBrandingEditor />;
       case "website-pdf-vertical-settings":
         return <PdfVerticalSettingsEditor />;
+      case "wa-pdf-automation":
+        return <WaPdfAutomationControl />;
       case "website-testimonials":
         return <TestimonialsManager />;
       case "website-faqs":
