@@ -948,14 +948,40 @@ export function SalesLeadDetailModal({
       <OmniShareDialog
         open={showShareOffer}
         onOpenChange={setShowShareOffer}
-        title="Car Deal Offer"
+        title={currentStage === "won" ? "Delivery Thank You" : "Car Deal Offer"}
         defaultPhone={lead.phone || ""}
         defaultEmail={lead.email || ""}
         customerName={lead.name || lead.customer_name || "Customer"}
         vertical="car_sales"
         shareMessage={(() => {
           const name = lead.name || lead.customer_name || "";
-          const car = lead.car_model || lead.interested_model || "your dream car";
+          const car = [lead.car_brand, lead.car_model || lead.interested_model, lead.car_variant]
+            .filter(Boolean)
+            .join(" ") || "your new car";
+
+          // ── Won / Delivered → Thank-you message ──
+          if (currentStage === "won") {
+            const lines = [
+              `🎉 *Congratulations ${name || "on your new car"}!*`,
+              ``,
+              `It was an absolute pleasure delivering your brand new *${car}* to you. 🚗✨`,
+              ``,
+              `Thank you so much for choosing *Grabyourcar* and trusting us with this special milestone in your life. We truly enjoyed serving you and being a small part of your journey.`,
+              ``,
+              `Please find attached your *delivery memento* with photos and details of this happy moment. 📸`,
+              ``,
+              `If you loved your experience, we'd be grateful if you could share a quick review:`,
+              `👉 https://share.google/xBBnueLfRt6stD8MO`,
+              ``,
+              `Wishing you many safe and happy miles ahead! 🛣️`,
+              ``,
+              `— Team Grabyourcar 💚`,
+              `📞 +91 98559 24442  |  www.grabyourcar.com`,
+            ];
+            return lines.join("\n");
+          }
+
+          // ── Default offer message (in-progress deals) ──
           let msg = `Hi ${name}! Here is your car deal offer for *${car}*.\n\n`;
           if (totalCarPrice > 0 || salesBreakdown.grossLoanAmount > 0) {
             msg += `*Section A: Car Price Summary*\n`;
@@ -986,29 +1012,52 @@ export function SalesLeadDetailModal({
           msg += `\nFor queries, call +91 98559 24442\nwww.grabyourcar.com\n- Grabyourcar`;
           return msg;
         })()}
-        generatePdf={() => generateSalesOfferPDF({
-          customerName: lead.name || lead.customer_name || "Customer",
-          phone: lead.phone || "",
-          carModel: [lead.car_brand, lead.car_model || lead.interested_model].filter(Boolean).join(" ") || "N/A",
-          city: lead.city || undefined,
-          variant: lead.car_variant || lead.variant || undefined,
-          color: lead.car_color || lead.color || undefined,
-          dealValue: totalCarPrice > 0 ? totalCarPrice : (lead.deal_value ? Number(lead.deal_value) : undefined),
-          exShowroomPrice: lead.ex_showroom_price ? Number(lead.ex_showroom_price) : undefined,
-          onRoadPrice: totalCarPrice > 0 ? totalCarPrice : (lead.on_road_price ? Number(lead.on_road_price) : undefined),
-          specialTerms: lead.special_terms || undefined,
-          dealership: lead.dealership || undefined,
-          bookingAmount: Number(bookingAmount) || undefined,
-          processingFees: Number(processingFees) || undefined,
-          otherExpenses: Number(otherExpenses) || undefined,
-          otherExpensesLabel: otherExpensesLabel !== "Other Bank Charges" ? otherExpensesLabel : undefined,
-          grossLoanAmount: Number(grossLoanAmount) || undefined,
-          loanProtectionAmount: Number(loanProtectionAmount) || undefined,
-          advancePaid: Number(advancePaid) || undefined,
-          interestRate: Number(interestRate) || undefined,
-          tenureMonths: Number(tenureMonths) || undefined,
-          discountAmount: 0,
-        })}
+        generatePdf={() => {
+          // ── Won / Delivered → Beautiful Thank-You PDF with delivery photos ──
+          if (currentStage === "won") {
+            return generateDeliveryThankYouPDF({
+              customerName: lead.name || lead.customer_name || "Customer",
+              phone: lead.phone || "",
+              email: lead.email || "",
+              city: lead.city || "",
+              carBrand: lead.car_brand || "",
+              carModel: lead.car_model || lead.interested_model || "Car",
+              carVariant: lead.car_variant || lead.variant || "",
+              carColor: lead.car_color || lead.color || "",
+              dealership: lead.dealership || "",
+              deliveryDate: lead.delivery_date || deliveryDate || undefined,
+              dealValue: Number(lead.deal_value) || undefined,
+              feedbackRating: Number(lead.feedback_rating) || undefined,
+              feedbackText: lead.feedback_text || "",
+              deliveryImages: (lead.delivery_images as string[]) || deliveryImages || [],
+            });
+          }
+
+          // ── Active deals → Standard offer PDF ──
+          return generateSalesOfferPDF({
+            customerName: lead.name || lead.customer_name || "Customer",
+            phone: lead.phone || "",
+            carModel: [lead.car_brand, lead.car_model || lead.interested_model].filter(Boolean).join(" ") || "N/A",
+            city: lead.city || undefined,
+            variant: lead.car_variant || lead.variant || undefined,
+            color: lead.car_color || lead.color || undefined,
+            dealValue: totalCarPrice > 0 ? totalCarPrice : (lead.deal_value ? Number(lead.deal_value) : undefined),
+            exShowroomPrice: lead.ex_showroom_price ? Number(lead.ex_showroom_price) : undefined,
+            onRoadPrice: totalCarPrice > 0 ? totalCarPrice : (lead.on_road_price ? Number(lead.on_road_price) : undefined),
+            specialTerms: lead.special_terms || undefined,
+            dealership: lead.dealership || undefined,
+            bookingAmount: Number(bookingAmount) || undefined,
+            processingFees: Number(processingFees) || undefined,
+            otherExpenses: Number(otherExpenses) || undefined,
+            otherExpensesLabel: otherExpensesLabel !== "Other Bank Charges" ? otherExpensesLabel : undefined,
+            grossLoanAmount: Number(grossLoanAmount) || undefined,
+            loanProtectionAmount: Number(loanProtectionAmount) || undefined,
+            advancePaid: Number(advancePaid) || undefined,
+            interestRate: Number(interestRate) || undefined,
+            tenureMonths: Number(tenureMonths) || undefined,
+            discountAmount: 0,
+          });
+        }}
       />
     </Dialog>
   );
