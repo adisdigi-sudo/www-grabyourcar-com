@@ -80,6 +80,39 @@ export function EnginesList({ onEdit }: Props) {
     if (data) onEdit((data as any).id);
   }
 
+  async function launchBulk() {
+    if (!launchEngine) return;
+    const phones = launchPhones
+      .split(/[\s,;\n]+/)
+      .map((p) => p.trim())
+      .filter((p) => /^\d{10,13}$/.test(p.replace(/\D/g, "")) && p.replace(/\D/g, "").length >= 10);
+
+    if (phones.length === 0) {
+      toast({ title: "No valid phones", description: "Paste 10-digit numbers (one per line or comma-separated)", variant: "destructive" });
+      return;
+    }
+    if (!launchEngine.is_active) {
+      toast({ title: "Engine paused", description: "Activate the engine first.", variant: "destructive" });
+      return;
+    }
+    setLaunching(true);
+    const { data, error } = await supabase.functions.invoke("sales-engine-launcher", {
+      body: { engine_id: launchEngine.id, phones },
+    });
+    setLaunching(false);
+    if (error || !data?.success) {
+      toast({ title: "Launch failed", description: data?.error || error?.message || "Unknown error", variant: "destructive" });
+      return;
+    }
+    toast({
+      title: `Launched ✓ — ${data.sent} sent`,
+      description: `${data.failed} failed, ${data.skipped} skipped (already active)`,
+    });
+    setLaunchEngine(null);
+    setLaunchPhones("");
+    load();
+  }
+
   return (
     <div className="p-4 space-y-4 overflow-y-auto h-full">
       {/* Header */}
