@@ -15566,6 +15566,278 @@ export type Database = {
           },
         ]
       }
+      sales_engine_branches: {
+        Row: {
+          action: string
+          action_note: string | null
+          branch_order: number
+          created_at: string
+          id: string
+          match_keywords: string[] | null
+          match_type: string
+          next_step_key: string | null
+          step_id: string
+        }
+        Insert: {
+          action?: string
+          action_note?: string | null
+          branch_order?: number
+          created_at?: string
+          id?: string
+          match_keywords?: string[] | null
+          match_type?: string
+          next_step_key?: string | null
+          step_id: string
+        }
+        Update: {
+          action?: string
+          action_note?: string | null
+          branch_order?: number
+          created_at?: string
+          id?: string
+          match_keywords?: string[] | null
+          match_type?: string
+          next_step_key?: string | null
+          step_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_engine_branches_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "sales_engine_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_engine_session_logs: {
+        Row: {
+          branch_matched: string | null
+          created_at: string
+          direction: string
+          id: string
+          message_text: string | null
+          message_type: string | null
+          raw_payload: Json | null
+          session_id: string
+          step_key: string | null
+        }
+        Insert: {
+          branch_matched?: string | null
+          created_at?: string
+          direction: string
+          id?: string
+          message_text?: string | null
+          message_type?: string | null
+          raw_payload?: Json | null
+          session_id: string
+          step_key?: string | null
+        }
+        Update: {
+          branch_matched?: string | null
+          created_at?: string
+          direction?: string
+          id?: string
+          message_text?: string | null
+          message_type?: string | null
+          raw_payload?: Json | null
+          session_id?: string
+          step_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_engine_session_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sales_engine_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_engine_sessions: {
+        Row: {
+          created_at: string
+          current_step_key: string | null
+          customer_name: string | null
+          engine_id: string
+          id: string
+          last_message_sent_at: string | null
+          last_reply_at: string | null
+          lead_id_created: string | null
+          lead_table: string | null
+          pause_reason: string | null
+          paused_by_agent: boolean | null
+          phone: string
+          qualification_data: Json | null
+          qualified_at: string | null
+          started_at: string
+          status: string
+          total_replies: number | null
+          triggered_by_campaign: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_step_key?: string | null
+          customer_name?: string | null
+          engine_id: string
+          id?: string
+          last_message_sent_at?: string | null
+          last_reply_at?: string | null
+          lead_id_created?: string | null
+          lead_table?: string | null
+          pause_reason?: string | null
+          paused_by_agent?: boolean | null
+          phone: string
+          qualification_data?: Json | null
+          qualified_at?: string | null
+          started_at?: string
+          status?: string
+          total_replies?: number | null
+          triggered_by_campaign?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_step_key?: string | null
+          customer_name?: string | null
+          engine_id?: string
+          id?: string
+          last_message_sent_at?: string | null
+          last_reply_at?: string | null
+          lead_id_created?: string | null
+          lead_table?: string | null
+          pause_reason?: string | null
+          paused_by_agent?: boolean | null
+          phone?: string
+          qualification_data?: Json | null
+          qualified_at?: string | null
+          started_at?: string
+          status?: string
+          total_replies?: number | null
+          triggered_by_campaign?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_engine_sessions_engine_id_fkey"
+            columns: ["engine_id"]
+            isOneToOne: false
+            referencedRelation: "sales_engines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_engine_steps: {
+        Row: {
+          capture_field: string | null
+          created_at: string
+          engine_id: string
+          expects_reply: boolean | null
+          id: string
+          is_initial: boolean | null
+          is_terminal: boolean | null
+          media_url: string | null
+          message_text: string
+          message_type: string
+          step_key: string
+          step_order: number
+          template_name: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          capture_field?: string | null
+          created_at?: string
+          engine_id: string
+          expects_reply?: boolean | null
+          id?: string
+          is_initial?: boolean | null
+          is_terminal?: boolean | null
+          media_url?: string | null
+          message_text: string
+          message_type?: string
+          step_key: string
+          step_order?: number
+          template_name?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          capture_field?: string | null
+          created_at?: string
+          engine_id?: string
+          expects_reply?: boolean | null
+          id?: string
+          is_initial?: boolean | null
+          is_terminal?: boolean | null
+          media_url?: string | null
+          message_text?: string
+          message_type?: string
+          step_key?: string
+          step_order?: number
+          template_name?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_engine_steps_engine_id_fkey"
+            columns: ["engine_id"]
+            isOneToOne: false
+            referencedRelation: "sales_engines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_engines: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          handover_phone: string | null
+          id: string
+          is_active: boolean | null
+          language: string | null
+          name: string
+          notes: string | null
+          qualify_action: string | null
+          trigger_template_name: string | null
+          updated_at: string
+          vertical: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          handover_phone?: string | null
+          id?: string
+          is_active?: boolean | null
+          language?: string | null
+          name: string
+          notes?: string | null
+          qualify_action?: string | null
+          trigger_template_name?: string | null
+          updated_at?: string
+          vertical: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          handover_phone?: string | null
+          id?: string
+          is_active?: boolean | null
+          language?: string | null
+          name?: string
+          notes?: string | null
+          qualify_action?: string | null
+          trigger_template_name?: string | null
+          updated_at?: string
+          vertical?: string
+        }
+        Relationships: []
+      }
       sales_pipeline: {
         Row: {
           ad_platform: string | null
