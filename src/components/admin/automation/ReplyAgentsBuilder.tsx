@@ -10,19 +10,28 @@ import { toast } from "sonner";
 import { ReplyAgentForm } from "./ReplyAgentForm";
 import { ReplyAgentLogs } from "./ReplyAgentLogs";
 
-export function ReplyAgentsBuilder() {
+interface ReplyAgentsBuilderProps {
+  /** When set, only show agents for this vertical and lock new agents to it */
+  verticalSlug?: string;
+  /** Hide the big header (useful when embedded in a vertical workspace) */
+  compact?: boolean;
+}
+
+export function ReplyAgentsBuilder({ verticalSlug, compact }: ReplyAgentsBuilderProps = {}) {
   const qc = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [logsAgentId, setLogsAgentId] = useState<string | null>(null);
 
   const { data: agents = [], isLoading } = useQuery({
-    queryKey: ["reply-agents"],
+    queryKey: ["reply-agents", verticalSlug || "all"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("reply_agents")
         .select("*, business_verticals(name, slug, color)")
         .order("created_at", { ascending: false });
+      if (verticalSlug) q = q.eq("vertical_slug", verticalSlug);
+      const { data, error } = await q;
       if (error) throw error;
       return data as any[];
     },
@@ -59,6 +68,7 @@ export function ReplyAgentsBuilder() {
     return (
       <ReplyAgentForm
         agentId={editingId}
+        verticalSlug={verticalSlug}
         onClose={() => {
           setCreating(false);
           setEditingId(null);
@@ -79,20 +89,29 @@ export function ReplyAgentsBuilder() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Bot className="h-6 w-6 text-primary" />
-            Reply Agents
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Build form-based AI agents that auto-reply on WhatsApp & Email — manage them yourself.
-          </p>
+      {!compact && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Bot className="h-6 w-6 text-primary" />
+              Reply Agents {verticalSlug && <span className="text-sm font-normal text-muted-foreground">— {verticalSlug}</span>}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Build form-based AI agents that auto-reply on WhatsApp & Email — manage them yourself.
+            </p>
+          </div>
+          <Button onClick={() => setCreating(true)} className="gap-2">
+            <Plus className="h-4 w-4" /> New Agent
+          </Button>
         </div>
-        <Button onClick={() => setCreating(true)} className="gap-2">
-          <Plus className="h-4 w-4" /> New Agent
-        </Button>
-      </div>
+      )}
+      {compact && (
+        <div className="flex justify-end">
+          <Button onClick={() => setCreating(true)} size="sm" className="gap-2">
+            <Plus className="h-4 w-4" /> New Agent
+          </Button>
+        </div>
+      )}
 
       {isLoading ? (
         <Card><CardContent className="py-10 text-center text-muted-foreground">Loading…</CardContent></Card>

@@ -8,6 +8,7 @@ import {
   FleetRequirementBuilder,
   LeaseVsBuyCalculator,
 } from "@/components/corporate";
+import { VerticalReplyAgentsCard } from "../automation/VerticalReplyAgentsCard";
 
 
 export function FleetVerticalWorkspace() {
@@ -33,6 +34,8 @@ export function FleetVerticalWorkspace() {
           </div>
         </CardContent>
       </Card>
+
+      <VerticalReplyAgentsCard verticalSlug="rental" verticalLabel="Corporate Fleet" />
 
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
         <TabsList>

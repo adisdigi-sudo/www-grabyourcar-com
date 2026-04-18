@@ -10,6 +10,7 @@ import { SalesDealTracker } from "../sales/SalesDealTracker";
 import { SalesRealTimeDashboard } from "../sales/SalesRealTimeDashboard";
 import { SalesPerformanceDashboard } from "../sales/SalesPerformanceDashboard";
 import { VerticalMessagingTab } from "../shared/VerticalMessagingTab";
+import { VerticalReplyAgentsCard } from "../automation/VerticalReplyAgentsCard";
 
 import { DateFilterBar, type DateFilterValue } from "../shared/DateFilterBar";
 import { startOfDay, subDays, startOfMonth, isWithinInterval } from "date-fns";
@@ -94,6 +95,8 @@ export function SalesVerticalWorkspace() {
           </div>
         </CardContent>
       </Card>
+
+      <VerticalReplyAgentsCard verticalSlug="sales" verticalLabel="Automotive Sales" />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full grid grid-cols-5">

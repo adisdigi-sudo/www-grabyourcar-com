@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Package, CheckCircle2, ShoppingCart, FileText, Tags } from "lucide-react";
 import { AccessoriesManagement } from "../AccessoriesManagement";
 import CrossSellManagement from "../CrossSellManagement";
+import { VerticalReplyAgentsCard } from "../automation/VerticalReplyAgentsCard";
 
 export function AccessoriesVerticalWorkspace() {
   const [activeTab, setActiveTab] = useState("products");
@@ -34,6 +35,8 @@ export function AccessoriesVerticalWorkspace() {
           </div>
         </CardContent>
       </Card>
+
+      <VerticalReplyAgentsCard verticalSlug="accessories" verticalLabel="Accessories" />
 
       <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
         {tabs.map(tab => {

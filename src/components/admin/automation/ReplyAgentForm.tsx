@@ -14,6 +14,8 @@ import { toast } from "sonner";
 interface Props {
   agentId: string | null;
   onClose: () => void;
+  /** Lock the agent to a specific vertical (when launched from inside a vertical workspace) */
+  verticalSlug?: string;
 }
 
 const MODELS = [
@@ -24,8 +26,9 @@ const MODELS = [
   { value: "openai/gpt-5", label: "GPT-5 (premium)" },
 ];
 
-export function ReplyAgentForm({ agentId, onClose }: Props) {
+export function ReplyAgentForm({ agentId, onClose, verticalSlug }: Props) {
   const isEdit = !!agentId;
+  const verticalLocked = !!verticalSlug;
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testInput, setTestInput] = useState("Hi, I want to know about your car loan rates");
@@ -63,6 +66,15 @@ export function ReplyAgentForm({ agentId, onClose }: Props) {
       return data || [];
     },
   });
+
+  // Auto-set vertical_id when scoped to a vertical (and not editing an existing agent)
+  useEffect(() => {
+    if (!verticalSlug || agentId || verticals.length === 0) return;
+    const v = (verticals as any[]).find((x) => x.slug === verticalSlug);
+    if (v && !form.vertical_id) {
+      setForm((p: any) => ({ ...p, vertical_id: v.id }));
+    }
+  }, [verticalSlug, verticals, agentId]);
 
   useEffect(() => {
     if (!agentId) return;
@@ -179,15 +191,16 @@ export function ReplyAgentForm({ agentId, onClose }: Props) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Vertical</Label>
+              <Label>Vertical {verticalLocked && <span className="text-xs text-muted-foreground">(locked)</span>}</Label>
               <Select
                 value={form.vertical_id || "all"}
                 onValueChange={(v) => setForm({ ...form, vertical_id: v === "all" ? null : v })}
+                disabled={verticalLocked}
               >
                 <SelectTrigger><SelectValue placeholder="All verticals" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All verticals</SelectItem>
-                  {verticals.map((v: any) => (
+                  {(verticals as any[]).map((v) => (
                     <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
                   ))}
                 </SelectContent>

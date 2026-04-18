@@ -11,6 +11,7 @@ import { HSRPOrderTracker } from "@/components/hsrp/HSRPOrderTracker";
 import { HSRPComplianceChecker } from "@/components/hsrp/HSRPComplianceChecker";
 import { HSRPPerformanceDashboard } from "../hsrp/HSRPPerformanceDashboard";
 import { VerticalMessagingTab } from "../shared/VerticalMessagingTab";
+import { VerticalReplyAgentsCard } from "../automation/VerticalReplyAgentsCard";
 
 import { DateFilterBar, type DateFilterValue } from "../shared/DateFilterBar";
 import { startOfDay, subDays, startOfMonth, isWithinInterval } from "date-fns";
@@ -85,6 +86,8 @@ export function HSRPVerticalWorkspace() {
           </div>
         </CardContent>
       </Card>
+
+      <VerticalReplyAgentsCard verticalSlug="hsrp" verticalLabel="HSRP & FASTag" />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="w-full grid grid-cols-5">

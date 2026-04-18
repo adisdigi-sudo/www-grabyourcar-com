@@ -8,6 +8,7 @@ import DriverBookingsManagement from "../DriverBookingsManagement";
 import APIPartnersManagement from "../APIPartnersManagement";
 import { AgreementManagement } from "../rentals/AgreementManagement";
 import { KYCVerificationPanel } from "../rentals/KYCVerificationPanel";
+import { VerticalReplyAgentsCard } from "../automation/VerticalReplyAgentsCard";
 
 
 export function RentalVerticalWorkspace() {
@@ -52,6 +53,8 @@ export function RentalVerticalWorkspace() {
           </div>
         </CardContent>
       </Card>
+
+      <VerticalReplyAgentsCard verticalSlug="rental" verticalLabel="Self-Drive Rental" />
 
       <div className="flex gap-1 p-1 bg-muted/50 rounded-lg overflow-x-auto">
         {tabs.map(tab => {
