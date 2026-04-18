@@ -15596,6 +15596,175 @@ export type Database = {
         }
         Relationships: []
       }
+      reply_agent_logs: {
+        Row: {
+          agent_id: string | null
+          ai_model_used: string | null
+          ai_reply: string | null
+          approval_required: boolean | null
+          auto_sent: boolean | null
+          channel: string | null
+          created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          inbound_message: string | null
+          status: string | null
+          tokens_used: number | null
+        }
+        Insert: {
+          agent_id?: string | null
+          ai_model_used?: string | null
+          ai_reply?: string | null
+          approval_required?: boolean | null
+          auto_sent?: boolean | null
+          channel?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          inbound_message?: string | null
+          status?: string | null
+          tokens_used?: number | null
+        }
+        Update: {
+          agent_id?: string | null
+          ai_model_used?: string | null
+          ai_reply?: string | null
+          approval_required?: boolean | null
+          auto_sent?: boolean | null
+          channel?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          inbound_message?: string | null
+          status?: string | null
+          tokens_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reply_agent_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "reply_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reply_agents: {
+        Row: {
+          ai_model: string
+          auto_send: boolean
+          business_end_hour: number | null
+          business_hours_only: boolean | null
+          business_start_hour: number | null
+          channel: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          knowledge_base: string | null
+          last_error: string | null
+          last_run_at: string | null
+          max_replies_per_lead: number | null
+          name: string
+          priority: number | null
+          reply_delay_seconds: number | null
+          system_prompt: string
+          temperature: number | null
+          total_approvals_pending: number | null
+          total_replies_sent: number | null
+          total_runs: number | null
+          trigger_keywords: string[] | null
+          trigger_stages: string[] | null
+          trigger_type: string
+          updated_at: string
+          vertical_id: string | null
+          vertical_slug: string | null
+        }
+        Insert: {
+          ai_model?: string
+          auto_send?: boolean
+          business_end_hour?: number | null
+          business_hours_only?: boolean | null
+          business_start_hour?: number | null
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          knowledge_base?: string | null
+          last_error?: string | null
+          last_run_at?: string | null
+          max_replies_per_lead?: number | null
+          name: string
+          priority?: number | null
+          reply_delay_seconds?: number | null
+          system_prompt: string
+          temperature?: number | null
+          total_approvals_pending?: number | null
+          total_replies_sent?: number | null
+          total_runs?: number | null
+          trigger_keywords?: string[] | null
+          trigger_stages?: string[] | null
+          trigger_type?: string
+          updated_at?: string
+          vertical_id?: string | null
+          vertical_slug?: string | null
+        }
+        Update: {
+          ai_model?: string
+          auto_send?: boolean
+          business_end_hour?: number | null
+          business_hours_only?: boolean | null
+          business_start_hour?: number | null
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          knowledge_base?: string | null
+          last_error?: string | null
+          last_run_at?: string | null
+          max_replies_per_lead?: number | null
+          name?: string
+          priority?: number | null
+          reply_delay_seconds?: number | null
+          system_prompt?: string
+          temperature?: number | null
+          total_approvals_pending?: number | null
+          total_replies_sent?: number | null
+          total_runs?: number | null
+          trigger_keywords?: string[] | null
+          trigger_stages?: string[] | null
+          trigger_type?: string
+          updated_at?: string
+          vertical_id?: string | null
+          vertical_slug?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reply_agents_vertical_id_fkey"
+            columns: ["vertical_id"]
+            isOneToOne: false
+            referencedRelation: "business_verticals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       return_requests: {
         Row: {
           contact_email: string | null
@@ -19584,6 +19753,7 @@ export type Database = {
         Returns: undefined
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_super_admin_user: { Args: { _uid: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string
