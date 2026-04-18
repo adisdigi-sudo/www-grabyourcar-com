@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { SalesCustomerTimeline } from "./SalesCustomerTimeline";
 import { OmniShareDialog } from "@/components/admin/shared/OmniShareDialog";
+import { WhatsAppComposeDialog } from "@/components/admin/shared/WhatsAppComposeDialog";
 import { generateSalesOfferPDF } from "./SalesOfferPDF";
 import { generateDeliveryThankYouPDF } from "./DeliveryThankYouPDF";
 import { calculateLoanSalesBreakdown } from "@/components/admin/loans/loanSalesCalculator";
@@ -74,6 +75,7 @@ export function SalesLeadDetailModal({
   const [tenureMonths, setTenureMonths] = useState(lead.tenure_months || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showShareOffer, setShowShareOffer] = useState(false);
+  const [showCompose, setShowCompose] = useState(false);
 
   // Full INR formatter — never abbreviate
   const fmtINR = (v: number) => `Rs. ${Math.round(v).toLocaleString("en-IN")}`;
@@ -264,32 +266,44 @@ export function SalesLeadDetailModal({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 flex-wrap">
-            <span>{lead.customer_name}</span>
-            {lead.client_id && (
-              <Badge variant="outline" className="font-mono text-xs">{lead.client_id}</Badge>
-            )}
-            <Badge className={stageConfig?.color}>{stageConfig?.label}</Badge>
-            {lead.status_outcome === "won" && (
-              <Badge className="bg-emerald-500/10 text-emerald-600 border-0">Won</Badge>
-            )}
-            {lead.status_outcome === "lost" && (
-              <Badge className="bg-red-500/10 text-red-600 border-0">Lost</Badge>
-            )}
-            {onEdit && (
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
+              <span>{lead.customer_name}</span>
+              {lead.client_id && (
+                <Badge variant="outline" className="font-mono text-xs">{lead.client_id}</Badge>
+              )}
+              <Badge className={stageConfig?.color}>{stageConfig?.label}</Badge>
+              {lead.status_outcome === "won" && (
+                <Badge className="bg-emerald-500/10 text-emerald-600 border-0">Won</Badge>
+              )}
+              {lead.status_outcome === "lost" && (
+                <Badge className="bg-red-500/10 text-red-600 border-0">Lost</Badge>
+              )}
+            </DialogTitle>
+            <div className="flex items-center gap-2 shrink-0">
               <Button
                 size="sm"
                 variant="outline"
-                className="ml-auto gap-1.5 h-7"
-                onClick={onEdit}
+                className="gap-1.5 h-8"
+                onClick={() => setShowCompose(true)}
               >
-                <Pencil className="h-3.5 w-3.5" /> Edit Details
+                <MessageSquare className="h-3.5 w-3.5 text-emerald-600" /> Send Message
               </Button>
-            )}
-          </DialogTitle>
+              {onEdit && (
+                <Button
+                  size="sm"
+                  className="gap-1.5 h-8"
+                  onClick={onEdit}
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Edit Details
+                </Button>
+              )}
+            </div>
+          </div>
         </DialogHeader>
 
         {/* Journey Breadcrumb */}
@@ -384,17 +398,7 @@ export function SalesLeadDetailModal({
                 variant="outline"
                 size="sm"
                 className="gap-1.5"
-                onClick={async () => {
-                  const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
-                  const msg = await getCrmMessage("sales_greeting", { customer_name: lead.customer_name || "" });
-                  const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-                  await sendWhatsApp({
-                    phone: lead.phone || "",
-                    message: msg,
-                    name: lead.customer_name,
-                    logEvent: "sales_contact",
-                  });
-                }}
+                onClick={() => setShowCompose(true)}
               >
                 <MessageSquare className="h-3.5 w-3.5 text-emerald-600" /> WhatsApp
               </Button>
@@ -1075,5 +1079,25 @@ export function SalesLeadDetailModal({
         }}
       />
     </Dialog>
+
+    {/* WhatsApp Compose Dialog (template picker + edit + AI) */}
+    <WhatsAppComposeDialog
+      open={showCompose}
+      onOpenChange={setShowCompose}
+      phone={lead.phone || ""}
+      customerName={lead.customer_name}
+      defaultMessage={`Hi ${lead.customer_name || "there"}, this is GrabYourCar regarding your ${[lead.car_brand, lead.car_model, lead.car_variant].filter(Boolean).join(" ") || "car"} inquiry. How can we help you today?`}
+      context={{
+        car_brand: lead.car_brand || "",
+        car_model: lead.car_model || "",
+        car_variant: lead.car_variant || "",
+        city: lead.city || "",
+        buying_intent: lead.buying_intent || "",
+      }}
+      logEvent="sales_contact"
+      leadId={lead.id}
+      onSent={() => onUpdate({}, "whatsapp_sent", "Message sent via composer")}
+    />
+    </>
   );
 }
