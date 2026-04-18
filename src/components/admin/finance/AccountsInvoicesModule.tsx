@@ -140,7 +140,15 @@ export const AccountsInvoicesModule = () => {
                   </div>
                 </TableCell>
                 <TableCell className="text-right"><div className="flex gap-1 justify-end">
-                  <Button size="icon" variant="ghost" title="Download PDF" onClick={() => {
+                  <Button size="icon" variant="ghost" title="Download Branded PDF" onClick={async () => {
+                    try {
+                      toast.loading("Generating branded invoice...");
+                      await generateBrandedInvoice({ ...inv, items: Array.isArray(inv.items) ? inv.items : [] });
+                      toast.dismiss();
+                      toast.success("Downloaded");
+                    } catch (e: any) { toast.dismiss(); toast.error(e?.message || "Failed"); }
+                  }}><Sparkles className="h-4 w-4 text-primary" /></Button>
+                  <Button size="icon" variant="ghost" title="Download Classic PDF" onClick={() => {
                     generateInvoicePDF({ ...inv, items: Array.isArray(inv.items) ? inv.items : [] });
                   }}><Download className="h-4 w-4" /></Button>
                   {inv.client_email && (
@@ -211,6 +219,8 @@ export const AccountsInvoicesModule = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </>
+      )}
     </div>
   );
 };
