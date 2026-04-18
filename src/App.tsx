@@ -208,7 +208,14 @@ const AppRouterShell = () => {
             <Route path="/admin" element={<Navigate to={withPreviewParams("/crm")} replace />} />
             <Route path="/admin-auth" element={<Navigate to={withPreviewParams("/crm-auth")} replace />} />
             <Route path="/admin-reset-password" element={<Navigate to={withPreviewParams("/crm-reset-password")} replace />} />
-            <Route path="/workspace" element={<WorkspaceSelector />} />
+            <Route
+              path="/workspace"
+              element={
+                <AdminRenderBoundary contextLabel="Workspace route shell">
+                  <WorkspaceSelector />
+                </AdminRenderBoundary>
+              }
+            />
             <Route path="/self-drive" element={<SelfDriveRentals />} />
             <Route path="/hsrp" element={<HSRP />} />
             <Route path="/upcoming-cars" element={<UpcomingCars />} />
