@@ -34,6 +34,7 @@ interface Props {
 }
 
 type DocSample = {
+  layout?: "table" | "letter" | "certificate" | "comparison" | "status";
   title: string;
   ref: string;
   billToLabel: string;
@@ -46,6 +47,7 @@ type DocSample = {
 
 const SAMPLES: Record<string, DocSample> = {
   quote: {
+    layout: "table",
     title: "QUOTATION",
     ref: "QT-2026-001",
     billToLabel: "Bill To",
@@ -55,6 +57,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹12,500",
   },
   policy: {
+    layout: "table",
     title: "INSURANCE POLICY",
     ref: "POL/2026/000123",
     billToLabel: "Insured",
@@ -68,6 +71,7 @@ const SAMPLES: Record<string, DocSample> = {
     badge: "ACTIVE",
   },
   renewal_reminder: {
+    layout: "status",
     title: "RENEWAL REMINDER",
     ref: "REN/2026/000044",
     billToLabel: "Customer",
@@ -78,6 +82,7 @@ const SAMPLES: Record<string, DocSample> = {
     badge: "ACTION NEEDED",
   },
   renewal_notice: {
+    layout: "status",
     title: "RENEWAL NOTICE",
     ref: "RN/2026/000044",
     billToLabel: "Customer",
@@ -87,6 +92,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹13,100",
   },
   claim_acknowledgement: {
+    layout: "status",
     title: "CLAIM ACKNOWLEDGEMENT",
     ref: "CLM/ACK/2026/0098",
     billToLabel: "Claimant",
@@ -97,6 +103,7 @@ const SAMPLES: Record<string, DocSample> = {
     badge: "RECEIVED",
   },
   claim_intimation: {
+    layout: "status",
     title: "CLAIM INTIMATION",
     ref: "CLM/INT/2026/0098",
     billToLabel: "Insured",
@@ -107,6 +114,7 @@ const SAMPLES: Record<string, DocSample> = {
     badge: "INITIATED",
   },
   endorsement: {
+    layout: "letter",
     title: "POLICY ENDORSEMENT",
     ref: "END/2026/0044",
     billToLabel: "Insured",
@@ -116,6 +124,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹2,400",
   },
   policy_schedule: {
+    layout: "comparison",
     title: "POLICY SCHEDULE",
     ref: "PS/2026/000123",
     billToLabel: "Insured",
@@ -128,6 +137,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹6,80,000",
   },
   proforma_invoice: {
+    layout: "table",
     title: "PROFORMA INVOICE",
     ref: "PI-2026-001",
     billToLabel: "Bill To",
@@ -137,6 +147,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹8,45,000",
   },
   booking_confirmation: {
+    layout: "certificate",
     title: "BOOKING CONFIRMATION",
     ref: "BK-2026-0044",
     billToLabel: "Customer",
@@ -147,6 +158,7 @@ const SAMPLES: Record<string, DocSample> = {
     badge: "CONFIRMED",
   },
   delivery_note: {
+    layout: "certificate",
     title: "DELIVERY NOTE",
     ref: "DN-2026-0044",
     billToLabel: "Customer",
@@ -157,6 +169,7 @@ const SAMPLES: Record<string, DocSample> = {
     badge: "DELIVERED",
   },
   tax_invoice: {
+    layout: "table",
     title: "TAX INVOICE",
     ref: "INV-2026-0044",
     billToLabel: "Bill To",
@@ -169,6 +182,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹11,800",
   },
   invoice: {
+    layout: "table",
     title: "INVOICE",
     ref: "INV-2026-0044",
     billToLabel: "Bill To",
@@ -178,6 +192,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹10,000",
   },
   loan_quote: {
+    layout: "table",
     title: "LOAN QUOTATION",
     ref: "LQ-2026-0044",
     billToLabel: "Applicant",
@@ -190,6 +205,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹12,387",
   },
   comparison_sheet: {
+    layout: "comparison",
     title: "BANK COMPARISON",
     ref: "CMP-2026-0044",
     billToLabel: "Applicant",
@@ -204,6 +220,7 @@ const SAMPLES: Record<string, DocSample> = {
     badge: "3-WAY",
   },
   sanction_letter: {
+    layout: "letter",
     title: "LOAN SANCTION LETTER",
     ref: "SL-2026-0044",
     billToLabel: "Applicant",
@@ -214,6 +231,7 @@ const SAMPLES: Record<string, DocSample> = {
     badge: "APPROVED",
   },
   disbursal_voucher: {
+    layout: "certificate",
     title: "DISBURSAL VOUCHER",
     ref: "DV-2026-0044",
     billToLabel: "Beneficiary",
@@ -224,6 +242,7 @@ const SAMPLES: Record<string, DocSample> = {
     badge: "PAID",
   },
   booking_receipt: {
+    layout: "certificate",
     title: "HSRP BOOKING RECEIPT",
     ref: "HSRP-2026-0044",
     billToLabel: "Customer",
@@ -234,6 +253,7 @@ const SAMPLES: Record<string, DocSample> = {
     badge: "BOOKED",
   },
   service_invoice: {
+    layout: "table",
     title: "SERVICE INVOICE",
     ref: "SVC-2026-0044",
     billToLabel: "Customer",
@@ -243,6 +263,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹1,500",
   },
   fitment_certificate: {
+    layout: "certificate",
     title: "FITMENT CERTIFICATE",
     ref: "FIT-2026-0044",
     billToLabel: "Vehicle Owner",
@@ -253,6 +274,7 @@ const SAMPLES: Record<string, DocSample> = {
     badge: "CERTIFIED",
   },
   rental_quote: {
+    layout: "table",
     title: "RENTAL QUOTE",
     ref: "RQ-2026-0044",
     billToLabel: "Renter",
@@ -262,6 +284,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹6,000",
   },
   agreement: {
+    layout: "letter",
     title: "RENTAL AGREEMENT",
     ref: "AGR-2026-0044",
     billToLabel: "Renter",
@@ -272,6 +295,7 @@ const SAMPLES: Record<string, DocSample> = {
     badge: "LEGAL",
   },
   damage_report: {
+    layout: "status",
     title: "DAMAGE REPORT",
     ref: "DMG-2026-0044",
     billToLabel: "Renter",
@@ -281,6 +305,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹0",
   },
   shipping_label: {
+    layout: "certificate",
     title: "SHIPPING LABEL",
     ref: "SHIP-2026-0044",
     billToLabel: "Ship To",
@@ -291,6 +316,7 @@ const SAMPLES: Record<string, DocSample> = {
     badge: "DISPATCHED",
   },
   warranty_card: {
+    layout: "certificate",
     title: "WARRANTY CARD",
     ref: "WAR-2026-0044",
     billToLabel: "Customer",
@@ -300,6 +326,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "12 Months",
   },
   proposal: {
+    layout: "letter",
     title: "PROPOSAL",
     ref: "PRO-2026-0044",
     billToLabel: "Client",
@@ -309,6 +336,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹50,000",
   },
   report: {
+    layout: "status",
     title: "REPORT",
     ref: "RPT-2026-0044",
     billToLabel: "Recipient",
@@ -318,6 +346,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "Apr 2026",
   },
   spec_sheet: {
+    layout: "comparison",
     title: "SPEC SHEET",
     ref: "SPEC-2026-0044",
     billToLabel: "Prepared For",
@@ -327,6 +356,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "Top",
   },
   comparison: {
+    layout: "comparison",
     title: "VEHICLE COMPARISON",
     ref: "VC-2026-0044",
     billToLabel: "Prepared For",
@@ -339,6 +369,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "Car A",
   },
   partner_invoice: {
+    layout: "table",
     title: "PARTNER INVOICE",
     ref: "PI-2026-0044",
     billToLabel: "Dealer",
@@ -348,6 +379,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹25,000",
   },
   commission_statement: {
+    layout: "comparison",
     title: "COMMISSION STATEMENT",
     ref: "CS-2026-0044",
     billToLabel: "Partner",
@@ -357,6 +389,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹24,000",
   },
   receipt: {
+    layout: "certificate",
     title: "PAYMENT RECEIPT",
     ref: "RCT-2026-0044",
     billToLabel: "Received From",
@@ -367,6 +400,7 @@ const SAMPLES: Record<string, DocSample> = {
     badge: "PAID",
   },
   credit_note: {
+    layout: "table",
     title: "CREDIT NOTE",
     ref: "CN-2026-0044",
     billToLabel: "Customer",
@@ -376,6 +410,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹2,000",
   },
   debit_note: {
+    layout: "table",
     title: "DEBIT NOTE",
     ref: "DN-2026-0044",
     billToLabel: "Customer",
@@ -385,6 +420,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹2,000",
   },
   offer_letter: {
+    layout: "letter",
     title: "OFFER LETTER",
     ref: "OL-2026-0044",
     billToLabel: "Candidate",
@@ -394,6 +430,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹6,00,000 / yr",
   },
   salary_slip: {
+    layout: "table",
     title: "SALARY SLIP",
     ref: "SAL-2026-04",
     billToLabel: "Employee",
@@ -406,6 +443,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "₹43,500",
   },
   experience_letter: {
+    layout: "letter",
     title: "EXPERIENCE LETTER",
     ref: "EXP-2026-0044",
     billToLabel: "Employee",
@@ -415,6 +453,7 @@ const SAMPLES: Record<string, DocSample> = {
     totalValue: "2 Years",
   },
   appointment_letter: {
+    layout: "letter",
     title: "APPOINTMENT LETTER",
     ref: "APP-2026-0044",
     billToLabel: "Appointee",
@@ -426,6 +465,7 @@ const SAMPLES: Record<string, DocSample> = {
 };
 
 const fallbackSample = (docType: string): DocSample => ({
+  layout: "table",
   title: docType.replace(/_/g, " ").toUpperCase(),
   ref: `${docType.slice(0, 3).toUpperCase()}-2026-0044`,
   billToLabel: "Recipient",
@@ -437,6 +477,7 @@ const fallbackSample = (docType: string): DocSample => ({
 
 export function PdfBrandingPreview({ branding, documentType = "quote" }: Props) {
   const sample = SAMPLES[documentType] ?? fallbackSample(documentType);
+  const layout = sample.layout ?? "table";
 
   const addressLines = [
     branding.address_line1,
@@ -485,7 +526,7 @@ export function PdfBrandingPreview({ branding, documentType = "quote" }: Props) 
       <div className="h-1" style={{ background: branding.brand_accent_color }} />
 
       {/* Body */}
-      <div className="p-4 space-y-3 text-[9px] flex-1 overflow-hidden">
+      <div className="p-4 space-y-3 text-[9px] leading-relaxed flex-1 overflow-hidden">
         <div className="flex items-center justify-between">
           <div>
             <div
@@ -544,36 +585,121 @@ export function PdfBrandingPreview({ branding, documentType = "quote" }: Props) 
           </div>
         </div>
 
-        {/* Items table */}
-        <div className="border rounded overflow-hidden">
-          <div
-            className="grid grid-cols-[1fr_auto_auto] gap-2 px-2 py-1 text-[8px] font-bold text-white"
-            style={{ background: branding.brand_primary_color }}
-          >
-            <div>Description</div>
-            <div className="text-right w-12">Qty</div>
-            <div className="text-right w-16">Amount</div>
-          </div>
-          {sample.rows.map((row, i) => (
+        {layout === "table" && (
+          <div className="border rounded overflow-hidden">
             <div
-              key={i}
-              className="grid grid-cols-[1fr_auto_auto] gap-2 px-2 py-1 text-[8px] border-b"
+              className="grid grid-cols-[minmax(0,1fr)_3rem_4.25rem] gap-2 px-2 py-1 text-[8px] font-bold text-white"
+              style={{ background: branding.brand_primary_color }}
             >
-              <div>{row.description}</div>
-              <div className="text-right w-12">{row.qty}</div>
-              <div className="text-right w-16">{row.amount}</div>
+              <div>Description</div>
+              <div className="text-right shrink-0">Qty</div>
+              <div className="text-right shrink-0">Amount</div>
             </div>
-          ))}
-          <div
-            className="grid grid-cols-[1fr_auto_auto] gap-2 px-2 py-1 text-[8px] font-bold"
-            style={{ background: `${branding.brand_accent_color}20` }}
-          >
-            <div className="text-right col-span-2">{sample.totalLabel}</div>
-            <div className="text-right w-16" style={{ color: branding.brand_primary_color }}>
-              {sample.totalValue}
+            {sample.rows.map((row, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-[minmax(0,1fr)_3rem_4.25rem] gap-2 px-2 py-1 text-[8px] border-b items-start"
+              >
+                <div className="break-words leading-relaxed">{row.description}</div>
+                <div className="text-right shrink-0 whitespace-nowrap">{row.qty}</div>
+                <div className="text-right shrink-0 whitespace-nowrap">{row.amount}</div>
+              </div>
+            ))}
+            <div
+              className="grid grid-cols-[minmax(0,1fr)_3rem_4.25rem] gap-2 px-2 py-1 text-[8px] font-bold"
+              style={{ background: `${branding.brand_accent_color}20` }}
+            >
+              <div className="text-right col-span-2 break-words">{sample.totalLabel}</div>
+              <div className="text-right shrink-0 whitespace-nowrap" style={{ color: branding.brand_primary_color }}>
+                {sample.totalValue}
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {layout === "comparison" && (
+          <div className="space-y-2 rounded border p-3" style={{ borderColor: `${branding.brand_primary_color}30` }}>
+            {sample.rows.map((row, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 rounded-md border p-2"
+                style={{ borderColor: `${branding.brand_accent_color}25` }}
+              >
+                <div className="min-w-0">
+                  <div className="text-[8px] font-semibold break-words">{row.description}</div>
+                  <div className="text-[7px]" style={{ color: branding.brand_muted_color }}>
+                    Tenure / Value: {row.qty}
+                  </div>
+                </div>
+                <div className="text-[9px] font-bold whitespace-nowrap" style={{ color: branding.brand_primary_color }}>
+                  {row.amount}
+                </div>
+              </div>
+            ))}
+            <div className="flex items-center justify-between rounded-md px-2 py-1.5 text-[8px] font-bold" style={{ background: `${branding.brand_accent_color}20` }}>
+              <span>{sample.totalLabel}</span>
+              <span style={{ color: branding.brand_primary_color }}>{sample.totalValue}</span>
+            </div>
+          </div>
+        )}
+
+        {layout === "letter" && (
+          <div className="rounded border p-3 text-[8px] leading-relaxed space-y-2" style={{ borderColor: `${branding.brand_primary_color}25` }}>
+            <p>
+              Dear <span className="font-semibold">Sample Customer</span>,
+            </p>
+            <p className="break-words">
+              This document confirms <span className="font-semibold">{sample.title.toLowerCase()}</span> under reference <span className="font-semibold">{sample.ref}</span>.
+              {" "}Please review the details below and retain this copy for your records.
+            </p>
+            {sample.rows.map((row, i) => (
+              <div key={i} className="rounded-md px-2 py-1.5" style={{ background: `${branding.brand_accent_color}14` }}>
+                <div className="font-semibold break-words">{row.description}</div>
+                <div className="mt-0.5 flex items-center justify-between gap-2 text-[7px]" style={{ color: branding.brand_muted_color }}>
+                  <span>Ref detail</span>
+                  <span className="whitespace-nowrap">{row.amount}</span>
+                </div>
+              </div>
+            ))}
+            <p className="break-words" style={{ color: branding.brand_muted_color }}>
+              {sample.totalLabel}: {sample.totalValue}
+            </p>
+          </div>
+        )}
+
+        {layout === "certificate" && (
+          <div className="rounded-xl border p-4 text-center space-y-2" style={{ borderColor: `${branding.brand_primary_color}30`, background: `${branding.brand_primary_color}05` }}>
+            <div className="text-[8px] uppercase tracking-[0.16em]" style={{ color: branding.brand_muted_color }}>
+              Verified Document
+            </div>
+            <div className="text-[12px] font-bold break-words" style={{ color: branding.brand_primary_color }}>
+              {sample.title}
+            </div>
+            <div className="text-[8px] break-words">{sample.rows[0]?.description}</div>
+            <div className="inline-flex items-center rounded-full px-2 py-1 text-[8px] font-bold" style={{ background: branding.brand_accent_color, color: "#fff" }}>
+              {sample.totalLabel}: {sample.totalValue}
+            </div>
+          </div>
+        )}
+
+        {layout === "status" && (
+          <div className="space-y-2">
+            <div className="rounded-lg border p-3" style={{ borderColor: `${branding.brand_primary_color}20` }}>
+              <div className="text-[8px] font-semibold uppercase" style={{ color: branding.brand_muted_color }}>
+                Current Update
+              </div>
+              <div className="mt-1 text-[11px] font-bold break-words" style={{ color: branding.brand_primary_color }}>
+                {sample.totalValue}
+              </div>
+              <div className="mt-1 text-[8px] break-words">{sample.rows[0]?.description}</div>
+            </div>
+            {sample.rows.slice(1).map((row, i) => (
+              <div key={i} className="rounded-md border px-2 py-1.5 text-[8px] break-words" style={{ borderColor: `${branding.brand_accent_color}25` }}>
+                {row.description}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Signature */}
         <div className="flex justify-end pt-2">
@@ -593,7 +719,7 @@ export function PdfBrandingPreview({ branding, documentType = "quote" }: Props) 
 
       {/* Footer band */}
       <div
-        className="px-4 py-2 text-[7px] text-center mt-auto"
+        className="px-4 py-2 text-[7px] text-center mt-auto break-words leading-relaxed"
         style={{
           background: `${branding.brand_primary_color}10`,
           color: branding.brand_muted_color,
