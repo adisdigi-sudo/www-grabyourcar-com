@@ -60,6 +60,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { sendWhatsApp } from "@/lib/sendWhatsApp";
 import { buildInsuranceRetargetMessage } from "@/lib/insuranceRetargetMessage";
+import { WhatsAppComposeDialog } from "../shared/WhatsAppComposeDialog";
 
 export type Client = {
   id: string;
@@ -617,6 +618,11 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
   const [showForwardDialog, setShowForwardDialog] = useState(false);
   const [forwardClient, setForwardClient] = useState<Client | null>(null);
 
+  // WhatsApp compose dialog (customizable message before send)
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [composeClient, setComposeClient] = useState<Client | null>(null);
+  const [composeDefault, setComposeDefault] = useState("");
+
   // Bulk select & send
   const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSending, setBulkSending] = useState(false);
@@ -661,12 +667,9 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
 
   const handleQuickWhatsApp = useCallback((client: Client) => {
     const defaultMessage = `🙏 Namaste ${client.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${client.vehicle_number ? ` for vehicle *${client.vehicle_number}*` : ""}.\n\n${client.current_insurer ? `🏢 Current insurer: *${client.current_insurer}*\n` : ""}${client.current_premium ? `💰 Premium: *₹${Number(client.current_premium).toLocaleString("en-IN")}*\n` : ""}\n✅ We can help you get the best renewal rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`;
-    void sendWhatsApp({
-      phone: client.phone,
-      message: defaultMessage,
-      name: client.customer_name || undefined,
-      logEvent: "lead_pipeline_quick_whatsapp",
-    });
+    setComposeClient(client);
+    setComposeDefault(defaultMessage);
+    setComposeOpen(true);
   }, []);
 
   // Filter - exclude won/policy_issued leads from pipeline and deduplicate same lead/vehicle
@@ -2002,6 +2005,25 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
           leadTable="insurance_clients"
           leadName={forwardClient.customer_name || "Unknown"}
           leadPhone={forwardClient.phone}
+        />
+      )}
+
+      {/* Customizable WhatsApp composer (message + template picker + edit) */}
+      {composeClient && (
+        <WhatsAppComposeDialog
+          open={composeOpen}
+          onOpenChange={(o) => { setComposeOpen(o); if (!o) setComposeClient(null); }}
+          phone={composeClient.phone}
+          customerName={composeClient.customer_name || undefined}
+          defaultMessage={composeDefault}
+          context={{
+            vehicle_number: composeClient.vehicle_number,
+            current_insurer: composeClient.current_insurer,
+            current_premium: composeClient.current_premium,
+            policy_expiry_date: composeClient.policy_expiry_date,
+          }}
+          logEvent="lead_pipeline_quick_whatsapp"
+          leadId={composeClient.id}
         />
       )}
     </>
