@@ -141,6 +141,61 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileAccept, setFileAccept] = useState("");
+  const [isAIPolishing, setIsAIPolishing] = useState(false);
+  const [previousText, setPreviousText] = useState<string | null>(null);
+
+  type AIMode = "polish" | "professional" | "friendly" | "shorten" | "hindi" | "english" | "hinglish" | "emoji";
+  const runAIRewrite = async (mode: AIMode) => {
+    if (!text.trim()) {
+      toast.error("Type a message first");
+      return;
+    }
+    const instructions: Record<AIMode, string> = {
+      polish: "Fix grammar, spelling, and punctuation. Keep the same meaning, tone, language and length. Keep WhatsApp formatting (*bold*, _italic_), emojis and line breaks intact.",
+      professional: "Rewrite in a polite, professional business tone for a customer-facing WhatsApp message. Keep facts, numbers, names, links and formatting intact.",
+      friendly: "Rewrite in a warm, friendly conversational tone. Keep facts, numbers, names, links and formatting intact.",
+      shorten: "Make it crisp and shorter (under 60 words if possible) without losing key information.",
+      hindi: "Translate to natural Hindi (Devanagari script). Keep names, numbers, links and formatting intact.",
+      english: "Translate to natural professional English. Keep names, numbers, links and formatting intact.",
+      hinglish: "Rewrite in natural Hinglish (Hindi written in Roman/English letters) — the way Indian customers chat on WhatsApp.",
+      emoji: "Add 2-4 relevant emojis at natural places to make it lively, but do not overdo it. Keep all original text and formatting.",
+    };
+    setIsAIPolishing(true);
+    setPreviousText(text);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-generate", {
+        body: {
+          systemPrompt: `You are a WhatsApp message editor for a car dealership / insurance / loans CRM in India. ${instructions[mode]} Return ONLY the final message text — no quotes, no explanations, no markdown code fences.`,
+          prompt: text,
+          temperature: 0.4,
+          max_tokens: 800,
+        },
+      });
+      if (error) throw error;
+      const cleaned = String(data?.content || "")
+        .trim()
+        .replace(/^```[\w]*\n?/, "")
+        .replace(/\n?```$/, "")
+        .replace(/^["']|["']$/g, "");
+      if (!cleaned) throw new Error("AI returned empty response");
+      setText(cleaned);
+      toast.success("AI updated ✨ — click Undo to revert");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "AI failed");
+      setPreviousText(null);
+    } finally {
+      setIsAIPolishing(false);
+      inputRef.current?.focus();
+    }
+  };
+
+  const handleUndoAI = () => {
+    if (previousText !== null) {
+      setText(previousText);
+      setPreviousText(null);
+      toast.success("Reverted");
+    }
+  };
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
