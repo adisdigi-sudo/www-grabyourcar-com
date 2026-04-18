@@ -199,6 +199,18 @@ export function PdfVerticalSettingsEditor() {
     }
   }, [verticalSettings, selectedSlug, verticals]);
 
+  // Keep selectedDocType valid for the active vertical/form. If the current selection
+  // isn't part of this vertical's type list, jump to the first available one.
+  useEffect(() => {
+    const available = [
+      ...new Set([...(DOC_TYPE_LIBRARY[selectedSlug] ?? []), ...form.document_types]),
+    ];
+    if (available.length === 0) return;
+    if (!available.includes(selectedDocType)) {
+      setSelectedDocType(available[0]);
+    }
+  }, [selectedSlug, form.document_types, selectedDocType]);
+
   // Save mutation (upsert)
   const saveMutation = useMutation({
     mutationFn: async () => {
