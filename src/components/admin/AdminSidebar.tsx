@@ -236,6 +236,7 @@ const navItems: NavItem[] = [
       { id: "website-offers", label: "Offers & Layout", icon: Settings },
       { id: "website-banners", label: "Banners & Sliders", icon: Image },
       { id: "website-branding", label: "Logo & Branding", icon: Palette },
+      { id: "website-pdf-branding", label: "PDF Branding", icon: FileText },
       { id: "website-testimonials", label: "Testimonials", icon: MessageSquare },
       { id: "website-faqs", label: "FAQs", icon: FileText },
       { id: "website-seo", label: "SEO Settings", icon: Settings },
