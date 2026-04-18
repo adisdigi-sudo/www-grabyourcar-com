@@ -14,6 +14,8 @@ import { toast } from "sonner";
 interface Props {
   agentId: string | null;
   onClose: () => void;
+  /** Lock the agent to a specific vertical (when launched from inside a vertical workspace) */
+  verticalSlug?: string;
 }
 
 const MODELS = [
@@ -24,8 +26,9 @@ const MODELS = [
   { value: "openai/gpt-5", label: "GPT-5 (premium)" },
 ];
 
-export function ReplyAgentForm({ agentId, onClose }: Props) {
+export function ReplyAgentForm({ agentId, onClose, verticalSlug }: Props) {
   const isEdit = !!agentId;
+  const verticalLocked = !!verticalSlug;
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testInput, setTestInput] = useState("Hi, I want to know about your car loan rates");
