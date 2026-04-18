@@ -132,6 +132,20 @@ const clearBlankRecoveryTimer = () => {
   }
 };
 
+const clearReadyConfirmTimer = () => {
+  if (startupShellReadyConfirmTimer) {
+    window.clearTimeout(startupShellReadyConfirmTimer);
+    startupShellReadyConfirmTimer = null;
+  }
+};
+
+const clearPostCleanupHealthTimer = () => {
+  if (startupShellPostCleanupHealthTimer) {
+    window.clearTimeout(startupShellPostCleanupHealthTimer);
+    startupShellPostCleanupHealthTimer = null;
+  }
+};
+
 const clearAutoReloadTimer = () => {
   if (startupShellAutoReloadTimer) {
     window.clearTimeout(startupShellAutoReloadTimer);
@@ -424,11 +438,26 @@ export const removeStartupShell = () => {
   const cleanupShell = () => {
     clearStartupShellRecoveryTimer();
     clearBlankRecoveryTimer();
+    clearReadyConfirmTimer();
+    clearPostCleanupHealthTimer();
     resetStartupShellAutoReloadState();
     detachStartupShellListeners?.();
     detachStartupShellListeners = null;
     const shell = typeof document !== "undefined" ? document.getElementById(STARTUP_SHELL_ID) : null;
     shell?.remove();
+
+    if (!shouldStabilizeStartupShellWindow()) {
+      return;
+    }
+
+    startupShellPostCleanupHealthTimer = window.setTimeout(() => {
+      if (isSensitiveRouteAppReady()) {
+        return;
+      }
+
+      ensureStartupShell();
+      promoteStartupShellToRecovery("Page shell hatne ke turant baad UI blank ho gayi thi, isliye recovery panel wapas dikhaya gaya hai.");
+    }, ROOT_BLANK_RECOVERY_DELAY_MS);
   };
 
   if (typeof document === "undefined") return;
@@ -439,9 +468,17 @@ export const removeStartupShell = () => {
   }
 
   if (isSensitiveRouteAppReady()) {
-    cleanupShell();
+    clearReadyConfirmTimer();
+    startupShellReadyConfirmTimer = window.setTimeout(() => {
+      if (!isSensitiveRouteAppReady()) {
+        return;
+      }
+      cleanupShell();
+    }, STARTUP_SHELL_READY_CONFIRM_MS);
     return;
   }
+
+  clearReadyConfirmTimer();
 
   const root = document.getElementById(APP_ROOT_ID);
   if (!root) {
@@ -451,16 +488,28 @@ export const removeStartupShell = () => {
   }
 
   const observer = new MutationObserver(() => {
-    if (!isSensitiveRouteAppReady()) return;
-    observer.disconnect();
-    window.clearTimeout(timeoutId);
-    cleanupShell();
+    if (!isSensitiveRouteAppReady()) {
+      clearReadyConfirmTimer();
+      return;
+    }
+
+    clearReadyConfirmTimer();
+    startupShellReadyConfirmTimer = window.setTimeout(() => {
+      if (!isSensitiveRouteAppReady()) {
+        return;
+      }
+
+      observer.disconnect();
+      window.clearTimeout(timeoutId);
+      cleanupShell();
+    }, STARTUP_SHELL_READY_CONFIRM_MS);
   });
 
   observer.observe(root, { childList: true, subtree: true });
 
   const timeoutId = window.setTimeout(() => {
     observer.disconnect();
+    clearReadyConfirmTimer();
     if (isSensitiveRouteAppReady()) {
       cleanupShell();
       return;
@@ -468,7 +517,7 @@ export const removeStartupShell = () => {
 
     ensureStartupShell();
     promoteStartupShellToRecovery("Page UI mount confirm nahi hui, isliye white screen avoid karne ke liye recovery panel hold par rakha gaya hai.");
-  }, STARTUP_SHELL_HIDE_WAIT_MS);
+  }, STARTUP_SHELL_HIDE_WAIT_MS + STARTUP_SHELL_READY_CONFIRM_MS);
 };
 
 const bindRootObserver = (onChange: () => void) => {
