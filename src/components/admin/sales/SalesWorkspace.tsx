@@ -58,6 +58,7 @@ export function SalesWorkspace() {
   const [showImport, setShowImport] = useState(false);
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditLead, setShowEditLead] = useState(false);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [draggingLead, setDraggingLead] = useState<any>(null);
 
