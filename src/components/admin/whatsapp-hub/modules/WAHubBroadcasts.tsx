@@ -451,13 +451,13 @@ function VariableSampleEditor({ body, samples, onChange }: { body: string; sampl
             <div key={v} className="flex items-center gap-1.5">
               <Badge variant="outline" className="text-[9px] shrink-0 font-mono">{`{{${v}}}`}</Badge>
               <Input
-                value={current || defaultSample}
+                value={current}
                 onChange={e => {
                   const existing = samples.filter(s => s.key !== v);
                   onChange([...existing, { key: v, value: e.target.value }]);
                 }}
                 className="h-6 text-[10px]"
-                placeholder={defaultSample}
+                placeholder={defaultSample || `Enter ${v}`}
               />
             </div>
           );
