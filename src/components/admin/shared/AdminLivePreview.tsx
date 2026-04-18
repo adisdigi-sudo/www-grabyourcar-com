@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { withPreviewParams } from "@/lib/previewRouting";
 import {
   Eye,
   EyeOff,
@@ -38,14 +39,15 @@ export function AdminLivePreview({
   const [refreshKey, setRefreshKey] = useState(0);
 
   const baseUrl = window.location.origin;
-  const fullUrl = `${baseUrl}${previewPath}`;
+  const routedPreviewPath = withPreviewParams(previewPath);
+  const fullUrl = `${baseUrl}${routedPreviewPath}`;
 
   const handleRefresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
   }, []);
 
   const handleOpenExternal = useCallback(() => {
-    window.open(fullUrl, "_blank");
+    window.open(fullUrl, "_blank", "noopener,noreferrer");
   }, [fullUrl]);
 
   if (!isOpen) return null;
