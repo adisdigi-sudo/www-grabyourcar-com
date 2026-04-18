@@ -451,13 +451,13 @@ function VariableSampleEditor({ body, samples, onChange }: { body: string; sampl
             <div key={v} className="flex items-center gap-1.5">
               <Badge variant="outline" className="text-[9px] shrink-0 font-mono">{`{{${v}}}`}</Badge>
               <Input
-                value={current || defaultSample}
+                value={current}
                 onChange={e => {
                   const existing = samples.filter(s => s.key !== v);
                   onChange([...existing, { key: v, value: e.target.value }]);
                 }}
                 className="h-6 text-[10px]"
-                placeholder={defaultSample}
+                placeholder={defaultSample || `Enter ${v}`}
               />
             </div>
           );
@@ -768,17 +768,24 @@ function OneShotBroadcast() {
         /* lookup is best-effort, ignore failures */
       }
 
-      // Build template_variables map (manual sample > contact lookup > BROADCAST_VARS default)
+      // Build template_variables map
+      // Priority: real contact data (DB lookup) > manual sample > BROADCAST_VARS default
+      // Real customer info ALWAYS wins so test send never shows "Test" when DB has the name.
       const templateVars: Record<string, string> = {};
       requiredVars.forEach((v, idx) => {
+        const lookupVal = contactInfo[v] || contactInfo[v.toLowerCase()];
         const sample = form.variable_samples.find((s) => s.key === v);
+        const sampleVal = sample?.value && sample.value.trim().toLowerCase() !== "test"
+          ? sample.value.trim()
+          : "";
+        const fallbackName = (v === "var_1" || /name/i.test(v)) ? contactInfo.customer_name : "";
         const value =
-          sample?.value ||
-          contactInfo[v] ||
-          contactInfo[v.toLowerCase()] ||
+          lookupVal ||
+          sampleVal ||
+          fallbackName ||
           BROADCAST_VARS.find((b) => b.key === v)?.sample ||
           contactInfo.customer_name ||
-          "Test";
+          "Customer";
         templateVars[v] = value;
         templateVars[`var_${idx + 1}`] = value;
       });
