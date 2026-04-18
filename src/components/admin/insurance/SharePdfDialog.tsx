@@ -9,6 +9,7 @@ import { MessageCircle, Mail, Download, Send, Loader2, Zap } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client";
 import jsPDF from "jspdf";
 import { persistInsuranceQuoteHistory } from "@/lib/insuranceQuotePersistence";
+import { applyUnifiedBranding } from "@/lib/pdf";
 
 interface ClientDetails {
   id?: string;
@@ -56,6 +57,22 @@ export function SharePdfDialog({
   const [phone, setPhone] = useState(defaultPhone);
   const [email, setEmail] = useState(defaultEmail);
   const [sendingApi, setSendingApi] = useState(false);
+
+  /** Generate PDF + apply unified Insurance branding (header/footer/watermark + audit log). */
+  const buildBrandedPdf = async () => {
+    const built = generatePdf();
+    await applyUnifiedBranding(built.doc, {
+      vertical: "insurance",
+      documentType: /renewal/i.test(title) ? "renewal_reminder" : "insurance_quote",
+      fileName: built.fileName,
+      audit: {
+        customerName: clientDetails?.customer_name || customerName,
+        customerPhone: clientDetails?.phone || phone,
+        referenceId: clientDetails?.id,
+      },
+    });
+    return built;
+  };
 
   const handleOpenChange = (v: boolean) => {
     if (v) {
