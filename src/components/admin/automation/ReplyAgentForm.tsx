@@ -67,6 +67,15 @@ export function ReplyAgentForm({ agentId, onClose, verticalSlug }: Props) {
     },
   });
 
+  // Auto-set vertical_id when scoped to a vertical (and not editing an existing agent)
+  useEffect(() => {
+    if (!verticalSlug || agentId || verticals.length === 0) return;
+    const v = (verticals as any[]).find((x) => x.slug === verticalSlug);
+    if (v && !form.vertical_id) {
+      setForm((p: any) => ({ ...p, vertical_id: v.id }));
+    }
+  }, [verticalSlug, verticals, agentId]);
+
   useEffect(() => {
     if (!agentId) return;
     (async () => {
@@ -182,15 +191,16 @@ export function ReplyAgentForm({ agentId, onClose, verticalSlug }: Props) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Vertical</Label>
+              <Label>Vertical {verticalLocked && <span className="text-xs text-muted-foreground">(locked)</span>}</Label>
               <Select
                 value={form.vertical_id || "all"}
                 onValueChange={(v) => setForm({ ...form, vertical_id: v === "all" ? null : v })}
+                disabled={verticalLocked}
               >
                 <SelectTrigger><SelectValue placeholder="All verticals" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All verticals</SelectItem>
-                  {verticals.map((v: any) => (
+                  {(verticals as any[]).map((v) => (
                     <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
                   ))}
                 </SelectContent>
