@@ -54,10 +54,9 @@ export const isSensitivePreviewRouteWindow = () => {
   return hostname.startsWith("admin.") || isSensitivePreviewRoutePath(pathname);
 };
 
-// Sensitive CRM routes need the same startup shell inside preview hosts as well,
-// otherwise a Vite reconnect/full reload can leave the iframe root blank until the
-// next successful mount. The shell auto-removes once the route is render-ready.
-export const shouldStabilizeStartupShellWindow = () => isSensitivePreviewRouteWindow();
+// Sensitive CRM routes should stabilize only in standalone windows.
+// Editor/embedded previews must fail open so the iframe never gets trapped
+// behind the global startup recovery shell.
 export const shouldStabilizeStartupShellWindow = () => {
   if (typeof window === "undefined") {
     return false;
