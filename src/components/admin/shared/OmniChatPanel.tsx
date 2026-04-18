@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type OmniChannel } from "@/lib/omniSend";
+import { AIPolishButtons } from "@/components/admin/shared/AIPolishButtons";
 
 interface OmniChatPanelProps {
   phone?: string;
@@ -468,6 +469,12 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                     className="h-8 text-xs"
                     onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleReply()}
                     disabled={sending}
+                  />
+                  <AIPolishButtons
+                    value={replyMessage}
+                    onChange={setReplyMessage}
+                    disabled={sending}
+                    contextHint={`${replyChannel} reply${context ? ` for ${context}` : ""}`}
                   />
                   <Button
                     size="icon"
