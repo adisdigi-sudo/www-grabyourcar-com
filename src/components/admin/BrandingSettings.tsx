@@ -82,7 +82,7 @@ export const BrandingSettings = () => {
         .single();
       
       if (error && error.code !== 'PGRST116') throw error;
-      return data?.setting_value as BrandingSettings | null;
+      return data?.setting_value as unknown as Partial<BrandingSettings> | null;
     },
     staleTime: 0,
   });
@@ -90,7 +90,7 @@ export const BrandingSettings = () => {
   // Load settings when data changes
   useEffect(() => {
     if (settings) {
-      const value = settings as Record<string, string | number | boolean>;
+      const value = settings as unknown as Record<string, string | number | boolean>;
       setFormData({
         logo_url: String(value.logo_url || "/logo-grabyourcar.png"),
         logo_dark_url: String(value.logo_dark_url || ""),
