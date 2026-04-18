@@ -473,23 +473,38 @@ export function PdfVerticalSettingsEditor() {
                   desc="Toggle which PDF document types this vertical generates."
                 />
                 <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-                  {[...new Set([...docTypeLib, ...form.document_types])].map((type) => (
-                    <label
-                      key={type}
-                      className="flex items-center gap-3 rounded-lg border bg-muted/20 p-3 hover:bg-muted/40 cursor-pointer"
-                    >
-                      <Switch
-                        checked={form.document_types.includes(type)}
-                        onCheckedChange={() => toggleDocType(type)}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium capitalize">
-                          {type.replace(/_/g, " ")}
+                  {[...new Set([...docTypeLib, ...form.document_types])].map((type) => {
+                    const isEnabled = form.document_types.includes(type);
+                    const isActive = selectedDocType === type;
+                    return (
+                      <div
+                        key={type}
+                        onClick={() => setSelectedDocType(type)}
+                        className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-all ${
+                          isActive
+                            ? "border-primary bg-primary/10 ring-2 ring-primary/30"
+                            : "bg-muted/20 hover:bg-muted/40"
+                        }`}
+                      >
+                        <Switch
+                          checked={isEnabled}
+                          onClick={(e) => e.stopPropagation()}
+                          onCheckedChange={() => toggleDocType(type)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium capitalize flex items-center gap-2">
+                            {type.replace(/_/g, " ")}
+                            {isActive && (
+                              <Badge variant="default" className="px-1.5 py-0 text-[9px]">
+                                Previewing
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">{type}</div>
                         </div>
-                        <div className="text-[11px] text-muted-foreground">{type}</div>
                       </div>
-                    </label>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <Separator />
@@ -673,11 +688,16 @@ export function PdfVerticalSettingsEditor() {
               </CardTitle>
               <CardDescription className="text-xs">
                 Reflects {form.vertical_label} overrides on top of global branding.
+                {selectedDocType && (
+                  <span className="block mt-0.5 font-medium text-foreground">
+                    Showing template: <span className="capitalize">{selectedDocType.replace(/_/g, " ")}</span>
+                  </span>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 p-3">
-              <PreviewViewport label={`${form.vertical_label} · A4`}>
-                <PdfBrandingPreview branding={previewBranding} />
+              <PreviewViewport label={`${form.vertical_label} · ${selectedDocType.replace(/_/g, " ")} · A4`}>
+                <PdfBrandingPreview branding={previewBranding} documentType={selectedDocType} />
               </PreviewViewport>
               <div className="rounded-lg border bg-muted/30 p-3 text-xs space-y-1">
                 <div className="flex items-center justify-between">
