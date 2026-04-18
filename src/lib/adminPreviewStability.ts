@@ -58,6 +58,17 @@ export const isSensitivePreviewRouteWindow = () => {
 // otherwise a Vite reconnect/full reload can leave the iframe root blank until the
 // next successful mount. The shell auto-removes once the route is render-ready.
 export const shouldStabilizeStartupShellWindow = () => isSensitivePreviewRouteWindow();
+export const shouldStabilizeStartupShellWindow = () => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  if (isEmbeddedPreviewWindow() || isLovableEditorPreviewHost()) {
+    return false;
+  }
+
+  return isSensitivePreviewRouteWindow();
+};
 
 // Avoid force-reload loops for any sensitive route during dev, including editor previews.
 export const shouldAvoidDevAutoReload = () => import.meta.env.DEV && isSensitivePreviewRouteWindow();
