@@ -56,6 +56,55 @@ function buildPaymentReply(cfg: any): string {
 
 // Fetch document from DB and return URL/info
 async function fetchDocument(cfg: any, identity: Record<string, string>) {
+  if (cfg.source_table === "insurance_policies") {
+    let clientIds: string[] = [];
+
+    if (identity.vehicle_number) {
+      const { data: clients } = await supabase
+        .from("insurance_clients")
+        .select("id")
+        .eq("vehicle_number", identity.vehicle_number)
+        .limit(5);
+      clientIds = (clients || []).map((row: any) => row.id);
+    }
+
+    if (clientIds.length === 0 && identity.phone) {
+      const { data: clients } = await supabase
+        .from("insurance_clients")
+        .select("id")
+        .ilike("phone", `%${identity.phone}%`)
+        .limit(5);
+      clientIds = (clients || []).map((row: any) => row.id);
+    }
+
+    let policyQuery = supabase
+      .from("insurance_policies")
+      .select("id, policy_number, policy_document_url, document_file_name, client_id, created_at")
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (clientIds.length > 0) {
+      policyQuery = policyQuery.in("client_id", clientIds);
+    } else if (identity.policy_number) {
+      policyQuery = policyQuery.ilike("policy_number", `%${identity.policy_number}%`);
+    } else {
+      return { found: false };
+    }
+
+    const { data, error } = await policyQuery.maybeSingle();
+    if (error || !data) return { found: false };
+    if (!data.policy_document_url) {
+      return { found: false, missing_file: true, record: data };
+    }
+
+    return {
+      found: true,
+      pdf_url: data.policy_document_url,
+      filename: data.document_file_name || `${data.policy_number || "policy"}.pdf`,
+      record: data,
+    };
+  }
+
   const lookupVal = identity[cfg.lookup_field];
   if (!lookupVal) return { found: false };
 
@@ -67,35 +116,52 @@ async function fetchDocument(cfg: any, identity: Record<string, string>) {
     .maybeSingle();
 
   if (error || !data) return { found: false };
+
+  const pdfUrl = data[cfg.pdf_url_field] || data.agreement_url || null;
+  if (!pdfUrl) {
+    return { found: false, missing_file: true, record: data };
+  }
+
   return {
     found: true,
-    pdf_url: data[cfg.pdf_url_field] || null,
+    pdf_url: pdfUrl,
+    filename: `${cfg.document_type || "document"}.pdf`,
     record: data,
   };
 }
 
+async function fetchCarPrimaryImage(carId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("car_images")
+    .select("url")
+    .eq("car_id", carId)
+    .order("is_primary", { ascending: false })
+    .order("sort_order", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  return data?.url || null;
+}
+
 // Fetch sales info (car details, order status, etc.)
 async function fetchSalesInfo(cfg: any, message: string) {
-  // For cars: extract candidate words from message and search DB directly
   if (cfg.source_table === "cars") {
     const norm = normalize(message);
     const words = norm.split(" ").filter((w) => w.length >= 3);
     if (words.length === 0) return null;
 
-    // Try each word as an ILIKE search against the car name (longest first)
     const sortedWords = [...words].sort((a, b) => b.length - a.length);
+    const selectFields = Array.from(new Set(["id", "name", ...((cfg.fields_to_send || []) as string[])]));
+
     for (const word of sortedWords) {
       const { data: matches } = await supabase
         .from("cars")
-        .select(cfg.fields_to_send.join(","))
+        .select(selectFields.join(","))
         .ilike("name", `%${word}%`)
         .limit(5);
 
       if (matches && matches.length > 0) {
-        // Prefer exact (case-insensitive) name match, else shortest name (base model)
-        const exact = (matches as any[]).find(
-          (c) => normalize(c.name || "") === word
-        );
+        const exact = (matches as any[]).find((c) => normalize(c.name || "") === word);
         if (exact) return exact;
         return (matches as any[]).sort(
           (a, b) => (a.name?.length || 999) - (b.name?.length || 999)
@@ -105,10 +171,9 @@ async function fetchSalesInfo(cfg: any, message: string) {
     return null;
   }
 
-  // Generic lookup
   const { data } = await supabase
     .from(cfg.source_table)
-    .select(cfg.fields_to_send.join(","))
+    .select((cfg.fields_to_send || []).join(","))
     .limit(1)
     .maybeSingle();
   return data;
@@ -116,10 +181,13 @@ async function fetchSalesInfo(cfg: any, message: string) {
 
 function formatSalesReply(record: any, cfg: any): string {
   const prefix = cfg.reply_prefix || "Here are the details:";
-  const lines = cfg.fields_to_send.map((f: string) => {
-    const label = f.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
-    return `*${label}:* ${record[f] ?? "—"}`;
-  });
+  const lines = (cfg.fields_to_send || [])
+    .filter((f: string) => !["id", "brochure_url"].includes(f))
+    .map((f: string) => {
+      const label = f.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+      const value = Array.isArray(record[f]) ? record[f].join(", ") : record[f];
+      return `*${label}:* ${value ?? "—"}`;
+    });
   return `${prefix}\n\n${lines.join("\n")}\n\n_Source: grabyourcar.com_`;
 }
 
@@ -204,7 +272,6 @@ async function routeMessage(input: InboundMessage) {
       outbound = matched.action_config.redirect_message;
       action = "redirected";
     } else if (matched.intent_type === "document") {
-      // Check identity
       const identity = session.collected_variables || {};
       const missing = (matched.required_identity_fields || []).filter((f: string) => !identity[f]);
       if (missing.length > 0) {
@@ -214,8 +281,11 @@ async function routeMessage(input: InboundMessage) {
         const doc = await fetchDocument(matched.action_config, identity);
         if (doc.found && doc.pdf_url) {
           outbound = `✅ Here is your ${matched.action_config.document_type.replace(/_/g, " ")}:`;
-          attachments = [{ type: "document", url: doc.pdf_url, filename: `${matched.action_config.document_type}.pdf` }];
+          attachments = [{ type: "document", url: doc.pdf_url, filename: doc.filename || `${matched.action_config.document_type}.pdf` }];
           action = "document_sent";
+        } else if (doc.missing_file) {
+          outbound = "Record mil gaya, but iska PDF/document abhi backend me uploaded nahi hai. Team isey upload kar degi ya manual share karegi.";
+          action = "document_missing_file";
         } else {
           outbound = `I couldn't find a record matching ${Object.values(identity).join(", ")}. Please double-check or contact support.`;
           action = "document_not_found";
@@ -225,6 +295,20 @@ async function routeMessage(input: InboundMessage) {
       const record = await fetchSalesInfo(matched.action_config, message_text);
       if (record) {
         outbound = formatSalesReply(record, matched.action_config);
+
+        if (matched.trigger_name === "Car Brochure Request" && record.brochure_url) {
+          attachments = [{ type: "document", url: record.brochure_url, filename: `${record.name || "car"}-brochure.pdf` }];
+          outbound = `Sure ji 🙏 ${record.name} ka brochure bhej raha hoon.`;
+        } else if (matched.trigger_name === "Car Photo Request" && record.id) {
+          const imageUrl = await fetchCarPrimaryImage(record.id);
+          if (imageUrl) {
+            attachments = [{ type: "image", url: imageUrl, filename: `${record.name || "car"}.jpg` }];
+            outbound = `Sure ji 🙏 ${record.name} ki image bhej raha hoon.`;
+          } else {
+            outbound = `${record.name} ki image abhi backend me mapped nahi hai, lekin official link ye hai: ${record.official_url || ""}`.trim();
+          }
+        }
+
         action = "sales_info_sent";
       } else {
         outbound = matched.fallback_message || "I couldn't find that. Could you specify the exact model name?";
