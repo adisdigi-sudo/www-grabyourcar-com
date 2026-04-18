@@ -378,7 +378,7 @@ export function PdfVerticalSettingsEditor() {
       </Card>
 
       {/* Side-by-side editor + preview */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_440px]">
+      <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.1fr_1fr]">
         {/* LEFT — Editor */}
         <Card>
           <CardContent className="p-4">
