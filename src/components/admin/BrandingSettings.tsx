@@ -128,23 +128,17 @@ export const BrandingSettings = () => {
 
     setIsUploading(true);
     try {
-      // Create a preview URL
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreviewUrl(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-
-      // For now, store as data URL since we need storage bucket setup
-      // In production, this would upload to Supabase Storage
-      const dataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
-
-      setFormData(prev => ({ ...prev, [field]: dataUrl }));
-      toast.success('Image uploaded! Click Save to apply changes.');
+      // Upload to Supabase storage so the URL persists everywhere (no fat data URLs)
+      const ext = file.name.split('.').pop() || 'png';
+      const path = `branding/${field}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('branding-assets')
+        .upload(path, file, { contentType: file.type, upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('branding-assets').getPublicUrl(path);
+      setPreviewUrl(urlData.publicUrl);
+      setFormData((prev) => ({ ...prev, [field]: urlData.publicUrl }));
+      toast.success('Image uploaded — click Save to apply');
     } catch (error) {
       toast.error('Failed to upload image');
       console.error(error);
