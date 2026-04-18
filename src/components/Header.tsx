@@ -105,7 +105,7 @@ export const Header = () => {
 
   return (
     <>
-      <header className="sticky top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/50 overflow-x-clip">
+      <header id="site-header" className="sticky top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/50 overflow-x-clip">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-12 md:h-14 lg:h-16 gap-2">
             {/* Mobile Menu Button - Left side */}

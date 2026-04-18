@@ -337,6 +337,7 @@ export const BrandingSettings = () => {
                 previewId={previewIdRef.current}
                 refreshKey={previewRefreshKey}
                 syncing={saveMutation.isPending}
+                draftSettings={formData}
               />
               <Button
                 onClick={handleSave}
