@@ -528,6 +528,12 @@ const AdminLayout = () => {
     }
   }, [initialized, isLoading, verticalAccessLoading, user]);
 
+  const isResolvingWorkspace =
+    !!user && !isLoading && !verticalAccessLoading && !activeVertical && availableVerticals.length === 1;
+
+  const isBootstrappingWorkspace = !!user && (verticalAccessLoading || isResolvingWorkspace);
+  const isBootstrappingAdmin = isBootstrappingAuth || isBootstrappingWorkspace;
+
   useEffect(() => {
     if (!isAuthResolved) {
       return;
@@ -559,12 +565,6 @@ const AdminLayout = () => {
     shouldResolveWorkspace,
     user,
   ]);
-
-  const isResolvingWorkspace =
-    !!user && !isLoading && !verticalAccessLoading && !activeVertical && availableVerticals.length === 1;
-
-  const isBootstrappingWorkspace = !!user && (verticalAccessLoading || isResolvingWorkspace);
-  const isBootstrappingAdmin = isBootstrappingAuth || isBootstrappingWorkspace;
 
   useEffect(() => {
     if (!isBootstrappingAdmin) {
