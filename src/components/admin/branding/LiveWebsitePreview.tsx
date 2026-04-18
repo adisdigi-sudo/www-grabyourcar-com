@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { withPreviewParams } from "@/lib/previewRouting";
 import {
   Monitor,
   Tablet,
@@ -23,6 +24,7 @@ import {
   ExternalLink,
   Eye,
 } from "lucide-react";
+import { BRANDING_PREVIEW_QUERY_PARAM } from "@/hooks/useBrandingSettings";
 
 type Viewport = "desktop" | "tablet" | "mobile";
 
@@ -44,11 +46,14 @@ interface LiveWebsitePreviewProps {
   refreshKey?: number;
   /** Optional badge to indicate "auto-syncing" */
   syncing?: boolean;
+  /** Shared draft-preview channel id from the branding editor */
+  previewId: string;
 }
 
 export const LiveWebsitePreview = ({
   refreshKey = 0,
   syncing = false,
+  previewId,
 }: LiveWebsitePreviewProps) => {
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [path, setPath] = useState<string>("/");
@@ -60,9 +65,18 @@ export const LiveWebsitePreview = ({
   // Cache-bust on every save or manual refresh so the iframe always re-fetches assets
   const src = useMemo(() => {
     const stamp = `${refreshKey}-${manualRefresh}`;
-    const sep = path.includes("?") ? "&" : "?";
-    return `${baseUrl}${path}${sep}_brandingPreview=${encodeURIComponent(stamp)}`;
-  }, [baseUrl, path, refreshKey, manualRefresh]);
+    const targetUrl = new URL(withPreviewParams(path), baseUrl || window.location.origin);
+    targetUrl.searchParams.set(BRANDING_PREVIEW_QUERY_PARAM, previewId);
+    targetUrl.searchParams.set("_brandingPreview", stamp);
+    return targetUrl.toString();
+  }, [baseUrl, path, previewId, refreshKey, manualRefresh]);
+
+  const openExternalPreview = () => {
+    const targetUrl = new URL(src);
+    targetUrl.searchParams.delete(BRANDING_PREVIEW_QUERY_PARAM);
+    targetUrl.searchParams.delete("_brandingPreview");
+    window.open(targetUrl.toString(), "_blank", "noopener,noreferrer");
+  };
 
   return (
     <Card className="border-primary/30 overflow-hidden">
@@ -108,7 +122,7 @@ export const LiveWebsitePreview = ({
             </button>
             <button
               type="button"
-              onClick={() => window.open(`${baseUrl}${path}`, "_blank")}
+              onClick={openExternalPreview}
               title="Open in new tab"
               className="p-1.5 rounded text-muted-foreground hover:bg-accent"
             >

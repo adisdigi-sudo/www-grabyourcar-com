@@ -27,6 +27,16 @@ export interface BrandingSettings {
 
 export const BRANDING_QUERY_KEY = ["brandingSettings"] as const;
 export const BRANDING_BROADCAST_CHANNEL = "gyc-branding-sync";
+export const BRANDING_DRAFT_BROADCAST_CHANNEL = "gyc-branding-draft-sync";
+export const BRANDING_PREVIEW_QUERY_PARAM = "__brandingPreviewId";
+
+const getBrandingPreviewId = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return new URLSearchParams(window.location.search).get(BRANDING_PREVIEW_QUERY_PARAM);
+};
 
 export const normalizeBrandingSettings = (
   value?: Partial<BrandingSettings> | null,
@@ -78,12 +88,29 @@ export const useBrandingSettingsQuery = () => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    const previewId = getBrandingPreviewId();
+    const draftStorageKey = previewId
+      ? `${BRANDING_DRAFT_BROADCAST_CHANNEL}:${previewId}`
+      : null;
+
     const apply = (incoming: unknown) => {
       if (incoming && typeof incoming === "object") {
         queryClient.setQueryData(BRANDING_QUERY_KEY, incoming);
       } else {
         queryClient.invalidateQueries({ queryKey: BRANDING_QUERY_KEY });
       }
+    };
+
+    const applyDraft = (incoming: unknown) => {
+      if (!previewId || !incoming || typeof incoming !== "object") return;
+
+      const payload = incoming as {
+        previewId?: string;
+        settings?: unknown;
+      };
+
+      if (payload.previewId !== previewId) return;
+      apply(payload.settings);
     };
 
     // 1. Realtime postgres updates
@@ -111,9 +138,45 @@ export const useBrandingSettingsQuery = () => {
       bc.onmessage = (e) => apply(e.data);
     }
 
+    let draftBc: BroadcastChannel | null = null;
+    if (previewId && typeof BroadcastChannel !== "undefined") {
+      draftBc = new BroadcastChannel(BRANDING_DRAFT_BROADCAST_CHANNEL);
+      draftBc.onmessage = (e) => applyDraft(e.data);
+    }
+
+    if (draftStorageKey) {
+      try {
+        const storedDraft = localStorage.getItem(draftStorageKey);
+        if (storedDraft) {
+          applyDraft(JSON.parse(storedDraft));
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
     // 3. localStorage event — cross-tab fallback when BroadcastChannel is unavailable
     const onStorage = (e: StorageEvent) => {
-      if (e.key !== BRANDING_BROADCAST_CHANNEL || !e.newValue) return;
+      if (!e.newValue) return;
+
+      if (e.key === BRANDING_BROADCAST_CHANNEL) {
+        try {
+          apply(JSON.parse(e.newValue));
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+
+      if (draftStorageKey && e.key === draftStorageKey) {
+        try {
+          applyDraft(JSON.parse(e.newValue));
+        } catch {
+          /* ignore */
+        }
+      }
+
+      if (e.key !== BRANDING_BROADCAST_CHANNEL) return;
       try {
         apply(JSON.parse(e.newValue));
       } catch {
@@ -125,6 +188,7 @@ export const useBrandingSettingsQuery = () => {
     return () => {
       supabase.removeChannel(channel);
       bc?.close();
+      draftBc?.close();
       window.removeEventListener("storage", onStorage);
     };
   }, [queryClient]);
@@ -153,6 +217,36 @@ export const broadcastBrandingUpdate = (next: Partial<BrandingSettings>) => {
     localStorage.setItem(
       BRANDING_BROADCAST_CHANNEL,
       JSON.stringify({ ...next, _ts: Date.now() }),
+    );
+  } catch {
+    /* ignore */
+  }
+};
+
+export const broadcastBrandingDraft = (
+  previewId: string,
+  next: Partial<BrandingSettings>,
+) => {
+  const payload = {
+    previewId,
+    settings: next,
+    _ts: Date.now(),
+  };
+
+  try {
+    if (typeof BroadcastChannel !== "undefined") {
+      const bc = new BroadcastChannel(BRANDING_DRAFT_BROADCAST_CHANNEL);
+      bc.postMessage(payload);
+      bc.close();
+    }
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    localStorage.setItem(
+      `${BRANDING_DRAFT_BROADCAST_CHANNEL}:${previewId}`,
+      JSON.stringify(payload),
     );
   } catch {
     /* ignore */

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import { AdminImageUpload } from "./AdminImageUpload";
 import { LiveWebsitePreview } from "./branding/LiveWebsitePreview";
 import {
   BRANDING_QUERY_KEY,
+  broadcastBrandingDraft,
   broadcastBrandingUpdate,
   normalizeBrandingSettings,
   useBrandingSettingsQuery,
@@ -28,21 +29,44 @@ export const BrandingSettings = () => {
   const animatedLogoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
   const ogImageInputRef = useRef<HTMLInputElement>(null);
+  const previewIdRef = useRef(`branding-preview-${Math.random().toString(36).slice(2, 10)}`);
   
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewRefreshKey, setPreviewRefreshKey] = useState(0);
+  const [hasLocalEdits, setHasLocalEdits] = useState(false);
 
   const [formData, setFormData] = useState<BrandingSettingsData>(normalizeBrandingSettings());
 
   const { data: settings, isLoading } = useBrandingSettingsQuery();
+  const normalizedSettings = useMemo(
+    () => normalizeBrandingSettings(settings),
+    [settings],
+  );
+  const hasHydratedRef = useRef(false);
 
   // Load settings when data changes
   useEffect(() => {
-    if (settings) {
-      setFormData(normalizeBrandingSettings(settings));
+    if (!settings) return;
+
+    if (!hasHydratedRef.current || !hasLocalEdits) {
+      setFormData(normalizedSettings);
+      hasHydratedRef.current = true;
     }
-  }, [settings]);
+  }, [settings, normalizedSettings, hasLocalEdits]);
+
+  useEffect(() => {
+    if (isLoading || !hasHydratedRef.current) return;
+
+    setHasLocalEdits(
+      JSON.stringify(formData) !== JSON.stringify(normalizedSettings),
+    );
+  }, [formData, normalizedSettings, isLoading]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    broadcastBrandingDraft(previewIdRef.current, formData);
+  }, [formData, isLoading]);
 
   // Save mutation
   const saveMutation = useMutation({
@@ -68,6 +92,7 @@ export const BrandingSettings = () => {
     },
     onSuccess: async (savedData) => {
       queryClient.setQueryData(BRANDING_QUERY_KEY, savedData);
+      setHasLocalEdits(false);
       broadcastBrandingUpdate(savedData);
       await queryClient.invalidateQueries({ queryKey: BRANDING_QUERY_KEY });
       await queryClient.invalidateQueries({ queryKey: ['profileSettings'] });
@@ -309,6 +334,7 @@ export const BrandingSettings = () => {
             {/* Right column: Live website preview (sticky, real iframe) */}
             <div className="xl:sticky xl:top-4 xl:self-start space-y-4">
               <LiveWebsitePreview
+                previewId={previewIdRef.current}
                 refreshKey={previewRefreshKey}
                 syncing={saveMutation.isPending}
               />
