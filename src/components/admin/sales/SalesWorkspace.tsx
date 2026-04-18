@@ -427,6 +427,28 @@ export function SalesWorkspace() {
             updateLeadMutation.mutate({ id: selectedLead.id, updates, logAction, logRemarks });
             setSelectedLead((prev: any) => (prev ? { ...prev, ...updates } : null));
           }}
+          onEdit={() => setShowEditLead(true)}
+        />
+      )}
+
+      {/* Edit Lead Modal */}
+      {selectedLead && (
+        <SalesEditLeadModal
+          open={showEditLead}
+          onOpenChange={setShowEditLead}
+          lead={selectedLead}
+          isPending={updateLeadMutation.isPending}
+          onSubmit={(updates: any) => {
+            updateLeadMutation.mutate(
+              { id: selectedLead.id, updates, logAction: "lead_updated", logRemarks: "Lead details edited" },
+              {
+                onSuccess: () => {
+                  setSelectedLead((prev: any) => (prev ? { ...prev, ...updates } : null));
+                  setShowEditLead(false);
+                },
+              }
+            );
+          }}
         />
       )}
     </div>
