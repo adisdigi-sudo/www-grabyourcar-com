@@ -34,6 +34,7 @@ import {
 import { toast } from "sonner";
 import { clearBrandingCache } from "@/lib/pdf";
 import { PdfBrandingPreview } from "./PdfBrandingPreview";
+import { PreviewViewport } from "./PreviewViewport";
 
 const STORAGE_BUCKET = "pdf-branding-assets";
 
@@ -227,7 +228,7 @@ export function PdfBrandingEditor() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+      <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.1fr_1fr]">
         {/* LEFT — Tabbed Editor */}
         <Card>
           <CardContent className="p-4">
@@ -437,18 +438,20 @@ export function PdfBrandingEditor() {
 
         {/* RIGHT — Live Preview */}
         <div className="space-y-4">
-          <Card className="sticky top-4">
+          <Card className="lg:sticky lg:top-4">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Eye className="h-4 w-4 text-primary" />
                 Live Preview
               </CardTitle>
               <CardDescription className="text-xs">
-                See exactly how branding will appear on PDFs.
+                Updates instantly as you edit. Use zoom controls to inspect logo, header & footer.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <PdfBrandingPreview branding={form} />
+            <CardContent className="p-3">
+              <PreviewViewport label={`${form.company_name || "Brand"} · A4`}>
+                <PdfBrandingPreview branding={form} />
+              </PreviewViewport>
             </CardContent>
           </Card>
         </div>
@@ -516,12 +519,17 @@ function AssetUploader({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const handleUpload = async (file?: File | null) => {
     if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop();
+      const ext = file.name.split(".").pop() || "png";
       const path = `${pathPrefix}/${crypto.randomUUID()}.${ext}`;
       const { error: uploadErr } = await supabase.storage
         .from(STORAGE_BUCKET)
@@ -530,7 +538,7 @@ function AssetUploader({
 
       const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
       onChange(data.publicUrl);
-      toast.success(`${label} uploaded`);
+      toast.success(`${label} uploaded — preview updated`);
     } catch (e: any) {
       toast.error(`${label} upload failed: ${e.message}`);
     } finally {
@@ -538,40 +546,89 @@ function AssetUploader({
     }
   };
 
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleUpload(file);
+  };
+
   return (
     <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
-      <Label className="text-xs font-medium">{label}</Label>
-      <div className="flex h-24 items-center justify-center rounded-md border border-dashed bg-background">
-        {value ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={value} alt={label} className="max-h-20 max-w-full object-contain" />
-        ) : (
-          <ImageIcon className="h-8 w-8 text-muted-foreground" />
+      <div className="flex items-center justify-between">
+        <Label className="text-xs font-medium">{label}</Label>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="text-[10px] text-muted-foreground hover:text-destructive"
+          >
+            Clear
+          </button>
         )}
       </div>
+
+      {/* Drop zone / preview */}
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragOver(true);
+        }}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={handleDrop}
+        onClick={() => !value && fileRef.current?.click()}
+        className={`relative flex h-28 items-center justify-center rounded-md border border-dashed bg-background transition-colors ${
+          isDragOver
+            ? "border-primary bg-primary/5"
+            : value
+              ? "border-border"
+              : "border-muted-foreground/30 hover:border-primary/60 cursor-pointer"
+        }`}
+      >
+        {value ? (
+          <img
+            src={value}
+            alt={label}
+            className="max-h-24 max-w-full object-contain p-2"
+            onError={(e) => ((e.currentTarget as HTMLImageElement).style.opacity = "0.3")}
+          />
+        ) : (
+          <div className="text-center px-2">
+            <ImageIcon className="h-7 w-7 mx-auto text-muted-foreground/60 mb-1" />
+            <p className="text-[10px] text-muted-foreground">
+              {isDragOver ? "Drop image here" : "Drag & drop or click to upload"}
+            </p>
+          </div>
+        )}
+      </div>
+
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Paste URL or upload"
-        className="text-xs"
+        placeholder="…or paste image URL"
+        className="text-xs h-8"
       />
+
       <input
         ref={fileRef}
         type="file"
         accept="image/png,image/jpeg,image/webp,image/svg+xml"
         className="hidden"
-        onChange={(e) => handleUpload(e.target.files?.[0])}
+        onChange={(e) => {
+          handleUpload(e.target.files?.[0]);
+          e.target.value = "";
+        }}
       />
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="w-full gap-2"
+        className="w-full gap-2 h-8"
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
       >
         {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-        {uploading ? "Uploading..." : "Upload"}
+        {uploading ? "Uploading..." : value ? "Replace" : "Browse"}
       </Button>
     </div>
   );

@@ -45,6 +45,7 @@ import {
 import { toast } from "sonner";
 import { clearBrandingCache } from "@/lib/pdf";
 import { PdfBrandingPreview } from "./PdfBrandingPreview";
+import { PreviewViewport } from "./PreviewViewport";
 import type { PdfTemplateSection, PdfCustomField } from "@/lib/pdf/types";
 
 const STORAGE_BUCKET = "pdf-branding-assets";
@@ -377,7 +378,7 @@ export function PdfVerticalSettingsEditor() {
       </Card>
 
       {/* Side-by-side editor + preview */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_440px]">
+      <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.1fr_1fr]">
         {/* LEFT — Editor */}
         <Card>
           <CardContent className="p-4">
@@ -671,8 +672,10 @@ export function PdfVerticalSettingsEditor() {
                 Reflects {form.vertical_label} overrides on top of global branding.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <PdfBrandingPreview branding={previewBranding} />
+            <CardContent className="space-y-3 p-3">
+              <PreviewViewport label={`${form.vertical_label} · A4`}>
+                <PdfBrandingPreview branding={previewBranding} />
+              </PreviewViewport>
               <div className="rounded-lg border bg-muted/30 p-3 text-xs space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Document types:</span>
