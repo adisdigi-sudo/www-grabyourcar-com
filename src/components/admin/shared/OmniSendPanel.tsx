@@ -22,6 +22,7 @@ import {
 } from "@/lib/omniSend";
 import { supabase } from "@/integrations/supabase/client";
 import { invalidateCrmTemplateCache } from "@/lib/crmMessageTemplates";
+import { AIPolishButtons } from "@/components/admin/shared/AIPolishButtons";
 
 interface OmniRecipient {
   phone?: string;
@@ -369,20 +370,34 @@ export function OmniSendPanel({ recipients = [], context, defaultChannel = "what
         )}
 
         {/* Message */}
-        <Textarea
-          placeholder={
-            channel === "whatsapp"
-              ? "Type your WhatsApp message..."
-              : channel === "email"
-              ? "Type your email body..."
-              : "Type your RCS message..."
-          }
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          rows={5}
-          className="text-sm"
-          disabled={sending}
-        />
+        <div className="space-y-2">
+          <Textarea
+            placeholder={
+              channel === "whatsapp"
+                ? "Type your WhatsApp message..."
+                : channel === "email"
+                ? "Type your email body..."
+                : "Type your RCS message..."
+            }
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={5}
+            className="text-sm"
+            disabled={sending}
+          />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-muted-foreground">
+              ✨ AI tools — fix grammar, change tone, or translate
+            </span>
+            <AIPolishButtons
+              value={message}
+              onChange={setMessage}
+              disabled={sending}
+              contextHint={`${channel} message${context ? ` for ${context}` : ""}`}
+              size="compact"
+            />
+          </div>
+        </div>
 
         {/* Save Template Toolbar */}
         <div className="flex items-center gap-2 flex-wrap">
