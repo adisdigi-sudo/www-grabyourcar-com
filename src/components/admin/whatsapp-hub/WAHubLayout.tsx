@@ -24,8 +24,9 @@ import { WAHubSurveys } from "./modules/WAHubSurveys";
 import { WAHubInteractive } from "./modules/WAHubInteractive";
 import { WAHubCampaignROI } from "./modules/WAHubCampaignROI";
 import { WAHubSalesEngines } from "./modules/WAHubSalesEngines";
+import { WAHubSmartTriggers } from "./modules/WAHubSmartTriggers";
 
-type Module = "inbox" | "templates" | "broadcasts" | "flows" | "contacts" | "analytics" | "team" | "crm-messages" | "surveys" | "interactive" | "campaign-roi" | "sales-engines";
+type Module = "inbox" | "templates" | "broadcasts" | "flows" | "contacts" | "analytics" | "team" | "crm-messages" | "surveys" | "interactive" | "campaign-roi" | "sales-engines" | "smart-triggers";
 
 interface NavItem {
   id: Module;
@@ -47,6 +48,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "interactive", label: "Interactive", icon: MousePointer, color: "text-indigo-500", section: "Marketing" },
   { id: "campaign-roi", label: "Campaign ROI", icon: TrendingUp, color: "text-teal-500", section: "Marketing" },
   // Automation
+  { id: "smart-triggers", label: "Smart Triggers", icon: Zap, color: "text-amber-500", section: "Automation" },
   { id: "sales-engines", label: "Sales Engines", icon: Sparkles, color: "text-emerald-500", section: "Automation" },
   { id: "flows", label: "Flows", icon: Workflow, color: "text-purple-500", section: "Automation" },
   // Management
@@ -74,6 +76,7 @@ export function WAHubLayout() {
       case "interactive": return <WAHubInteractive />;
       case "campaign-roi": return <WAHubCampaignROI />;
       case "sales-engines": return <WAHubSalesEngines />;
+      case "smart-triggers": return <WAHubSmartTriggers />;
       default: return <WAHubInbox />;
     }
   };
