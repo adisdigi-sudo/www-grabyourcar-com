@@ -612,7 +612,7 @@ Deno.serve(async (req) => {
           let aiResponse: string | null = null;
           let intentDetected = "general";
           let leadCaptured = false;
-          let respondedBy = "ai_brain";
+          let respondedBy = "hybrid_router";
           let documentShare: { url: string; fileName?: string; caption?: string } | null = null;
           let humanHandover: { vertical?: string; reason?: string } | null = null;
 
@@ -628,7 +628,6 @@ Deno.serve(async (req) => {
             const msgLower = lowerMessageText;
 
             for (const rule of chatbotRules) {
-              // Split comma-separated keywords and match
               const allKeywords = (rule.intent_keywords || [])
                 .flatMap((kw: string) => kw.split(",").map((k: string) => k.trim().toLowerCase()).filter(Boolean));
 
@@ -637,7 +636,6 @@ Deno.serve(async (req) => {
               if (matched) {
                 console.log(`Chatbot rule matched: ${rule.name} (${rule.response_type})`);
 
-                // Update match count
                 await supabase.from("wa_chatbot_rules").update({
                   match_count: (rule.match_count || 0) + 1,
                   last_matched_at: new Date().toISOString(),
@@ -650,7 +648,6 @@ Deno.serve(async (req) => {
                   respondedBy = `chatbot_rule:${rule.name}`;
                   intentDetected = rule.name;
                 } else if (rule.response_type === "ai_generated" && rule.ai_prompt) {
-                  // Use Lovable AI Gateway for AI-generated responses
                   try {
                     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
                     if (LOVABLE_API_KEY) {
@@ -680,7 +677,6 @@ Deno.serve(async (req) => {
                     console.error("Chatbot AI generation failed:", e);
                   }
                 } else if (rule.response_type === "template" && rule.template_name) {
-                  // Send template via messaging-service
                   try {
                     await fetch(`${SUPABASE_URL}/functions/v1/messaging-service`, {
                       method: "POST",
@@ -703,18 +699,20 @@ Deno.serve(async (req) => {
                   }
                 }
 
-                break; // First matched rule wins
+                break;
               }
             }
           }
 
           // ══════════════════════════════════════════════════════════
-          // STEP 2: DB-DRIVEN FLOW ENGINE (replaces AI Brain)
-          // Pure rule-based: keywords → DB triggers → fixed reply / doc / sales info
-          // No AI dependency — fully exportable to any host
+          // STEP 2: HYBRID ROUTER
+          // 1) Rule engine for deterministic workflows (policy/invoice/sanction/account/car DB)
+          // 2) AI fallback for open-ended advice (budget, recommendations, comparisons)
           // ══════════════════════════════════════════════════════════
+          let handledByFlowEngine = false;
           if (!aiResponse) {
             try {
+              const flowVertical = detectVerticalHint(lowerMessageText);
               const flowResponse = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-flow-engine`, {
                 method: "POST",
                 headers: {
@@ -725,23 +723,97 @@ Deno.serve(async (req) => {
                   customer_phone: from,
                   message_text: messageText,
                   customer_name: contactName,
+                  vertical_slug: flowVertical,
                 }),
               });
 
               if (flowResponse.ok) {
                 const flowData = await flowResponse.json();
-                aiResponse = flowData.outbound || getFallbackResponse(lowerMessageText);
-                intentDetected = flowData.matched || "no_match";
-                if (flowData.attachments?.length > 0) {
-                  documentShare = flowData.attachments[0];
+                handledByFlowEngine = flowData.action && flowData.action !== "no_match_fallback";
+
+                if (handledByFlowEngine) {
+                  aiResponse = flowData.outbound || null;
+                  intentDetected = flowData.matched || flowData.action || "flow_engine";
+                  respondedBy = `flow_engine:${flowData.action || "matched"}`;
+                  if (flowData.attachments?.length > 0) {
+                    documentShare = flowData.attachments[0];
+                  }
                 }
               } else {
                 console.error("Flow engine error:", flowResponse.status);
-                aiResponse = getFallbackResponse(lowerMessageText);
               }
             } catch (e) {
               console.error("Flow engine call failed:", e);
-              aiResponse = getFallbackResponse(lowerMessageText);
+            }
+          }
+
+          if (!aiResponse) {
+            try {
+              const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+              if (LOVABLE_API_KEY) {
+                const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                  },
+                  body: JSON.stringify({
+                    model: "google/gemini-3-flash-preview",
+                    messages: [
+                      {
+                        role: "system",
+                        content: `You are GrabYourCar's WhatsApp sales and support assistant.
+
+Rules:
+- If user asks for policy/invoice/receipt/sanction letter/account details/payment details/HSRP status, answer briefly and ask for the exact identifier needed if missing.
+- For car advice, budget guidance, recommendations, comparisons, features, and buying help, give a practical helpful answer.
+- Speak naturally in English, Hindi, or Hinglish based on the user's tone.
+- Be concise, useful, and sales-aware.
+- Mention GrabYourCar strengths naturally when relevant: 500+ cars delivered, pan-India support, loans, insurance, HSRP, accessories.
+- Never say you are limited to keywords.
+- If unsure, ask 1 clarifying question instead of saying you didn't understand.`,
+                      },
+                      ...conversationHistory.slice(-12),
+                      { role: "user", content: messageText },
+                    ],
+                    tools: [
+                      {
+                        type: "function",
+                        function: {
+                          name: "classify_reply",
+                          description: "Classify whether the user needs a deterministic document/status flow or a normal conversational answer.",
+                          parameters: {
+                            type: "object",
+                            properties: {
+                              route: { type: "string", enum: ["document_help", "sales_advice", "general_info", "handoff"] },
+                              reply: { type: "string" },
+                            },
+                            required: ["route", "reply"],
+                            additionalProperties: false,
+                          },
+                        },
+                      },
+                    ],
+                    tool_choice: { type: "function", function: { name: "classify_reply" } },
+                  }),
+                });
+
+                if (aiResp.status === 429 || aiResp.status === 402) {
+                  const errText = await aiResp.text();
+                  console.error("AI gateway limit/billing error:", aiResp.status, errText);
+                } else if (aiResp.ok) {
+                  const aiData = await aiResp.json();
+                  const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+                  const parsed = toolCall ? JSON.parse(toolCall.function.arguments) : null;
+                  aiResponse = parsed?.reply || aiData.choices?.[0]?.message?.content || null;
+                  intentDetected = parsed?.route || "ai_fallback";
+                  respondedBy = `ai_fallback:${intentDetected}`;
+                } else {
+                  console.error("AI fallback error:", aiResp.status, await aiResp.text());
+                }
+              }
+            } catch (e) {
+              console.error("AI fallback failed:", e);
             }
           }
 
@@ -759,7 +831,7 @@ Deno.serve(async (req) => {
 
           if (humanHandover && inboxConvoId) {
             await supabase.from("wa_conversations").update({
-              assigned_vertical: humanHandover.vertical || "insurance",
+              assigned_vertical: "insurance",
               status: "needs_human",
             }).eq("id", inboxConvoId);
           }
@@ -871,204 +943,10 @@ Deno.serve(async (req) => {
             }
           }
 
-          // ── Trigger wa_flows if applicable ──
-          try {
-            if (isStrictSelfServiceRequest) {
-              return new Response(JSON.stringify({ success: true, processed: "messages" }), {
-                status: 200,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-              });
-            }
-
-            const { data: activeFlows } = await supabase
-              .from("wa_flows")
-              .select("*")
-              .eq("is_active", true);
-
-            if (activeFlows && activeFlows.length > 0) {
-              for (const flow of activeFlows) {
-                const triggerConfig = flow.trigger_config as any;
-                const nodes = (flow.nodes as any[]) || [];
-                const edges = (flow.edges as any[]) || [];
-                const triggerNode = nodes.find((n: any) => n.type === "trigger");
-                let shouldTrigger = false;
-
-                if (flow.trigger_type === "keyword") {
-                  const rawKeywords = normalizeFlowKeywords(triggerConfig?.keywords ?? triggerNode?.config?.keywords);
-                  const keywords = rawKeywords.flatMap(
-                    (kw: string) => kw.split(",").map((k: string) => k.trim().toLowerCase()).filter(Boolean)
-                  );
-                  shouldTrigger = keywords.some((kw: string) => messageText.toLowerCase().includes(kw));
-                } else if (flow.trigger_type === "all_messages") {
-                  shouldTrigger = true;
-                } else if (flow.trigger_type === "first_message" || flow.trigger_type === "new_chat") {
-                  shouldTrigger = isNewInboxConversation;
-                }
-
-                if (shouldTrigger) {
-                  console.log(`Flow triggered: ${flow.name}`);
-                  const flowRunTimestamp = new Date().toISOString();
-                  await supabase.from("wa_flows").update({
-                    total_runs: (flow.total_runs || 0) + 1,
-                    last_run_at: flowRunTimestamp,
-                  }).eq("id", flow.id);
-
-                  const processNode = async (nodeId: string): Promise<void> => {
-                    const node = nodes.find((n: any) => n.id === nodeId);
-                    if (!node) return;
-
-                    if ((node.type === "message" || node.type === "send_message")) {
-                      const nodeMessageType = node.config?.message_type || "text";
-
-                      if (nodeMessageType === "template" && node.config?.template_name) {
-                        const templateResponse = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                          },
-                          body: JSON.stringify({
-                            to: from,
-                            messageType: "template",
-                            template_name: node.config.template_name,
-                            template_variables: {
-                              name: contactName,
-                              customer_name: contactName,
-                              phone: from,
-                              var_1: contactName,
-                              var_2: from,
-                            },
-                            name: contactName,
-                            logEvent: `flow:${flow.name}`,
-                          }),
-                        });
-
-                        const templateData = await templateResponse.json().catch(() => null);
-                        if (!templateResponse.ok || templateData?.success !== true) {
-                          throw new Error(templateData?.error || `Flow template send failed (${templateResponse.status})`);
-                        }
-                      } else {
-                        const rawMessage = node.config?.content || node.config?.message;
-                        if (rawMessage) {
-                          const flowMsg = interpolateFlowText(rawMessage, contactName, from);
-                          const flowSendResponse = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
-                              Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                            },
-                            body: JSON.stringify({
-                              to: from,
-                              messageType: "text",
-                              message: flowMsg,
-                              name: contactName,
-                              logEvent: `flow:${flow.name}`,
-                            }),
-                          });
-
-                          const flowSendData = await flowSendResponse.json().catch(() => null);
-                          if (!flowSendResponse.ok || flowSendData?.success !== true) {
-                            throw new Error(flowSendData?.error || `Flow text send failed (${flowSendResponse.status})`);
-                          }
-                        }
-                      }
-                    } else if (node.type === "ai_response") {
-                      const aiPrompt = node.config?.prompt || "Respond helpfully to the customer.";
-                      const brainResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-brain`, {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                        },
-                        body: JSON.stringify({
-                          messages: [
-                            { role: "system", content: aiPrompt },
-                            ...conversationHistory.slice(-12),
-                          ],
-                          channel: "whatsapp",
-                          customer_name: contactName,
-                          customer_phone: from,
-                        }),
-                      });
-
-                      const brainData = await brainResponse.json().catch(() => null);
-                      const flowAiMessage = brainData?.response ? interpolateFlowText(brainData.response, contactName, from) : null;
-                      if (!brainResponse.ok || !flowAiMessage) {
-                        throw new Error(brainData?.error || `Flow AI response failed (${brainResponse.status})`);
-                      }
-
-                      const aiSendResponse = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                        },
-                        body: JSON.stringify({
-                          to: from,
-                          messageType: "text",
-                          message: flowAiMessage,
-                          name: contactName,
-                          logEvent: `flow_ai:${flow.name}`,
-                        }),
-                      });
-
-                      const aiSendData = await aiSendResponse.json().catch(() => null);
-                      if (!aiSendResponse.ok || aiSendData?.success !== true) {
-                        throw new Error(aiSendData?.error || `Flow AI send failed (${aiSendResponse.status})`);
-                      }
-                    } else if (node.type === "delay") {
-                      const delaySeconds = getFlowDelaySeconds(node.config || {});
-                      // In webhook context, we skip delays (queue for later in production)
-                      console.log(`Flow delay: ${delaySeconds}s (skipped in webhook)`);
-                    } else if (node.type === "condition") {
-                      const operator = node.config?.operator || "contains";
-                      const expectedValue = String(node.config?.value || "").toLowerCase();
-                      const actualValue = String(messageText || "").toLowerCase();
-
-                      const conditionMatched =
-                        operator === "equals"
-                          ? actualValue === expectedValue
-                          : operator === "not_contains"
-                            ? !actualValue.includes(expectedValue)
-                            : operator === "starts_with"
-                              ? actualValue.startsWith(expectedValue)
-                              : actualValue.includes(expectedValue);
-
-                      if (!conditionMatched) {
-                        return;
-                      }
-                    }
-
-                    // Follow edges to next node
-                    const nextEdge = edges.find((e: any) => e.source === nodeId);
-                    if (nextEdge) {
-                      await processNode(nextEdge.target);
-                    }
-                  };
-
-                  try {
-                    if (triggerNode) {
-                      const firstEdge = edges.find((e: any) => e.source === triggerNode.id);
-                      if (firstEdge) {
-                        await processNode(firstEdge.target);
-                      }
-                    }
-
-                    await supabase.from("wa_flows").update({
-                      total_completions: (flow.total_completions || 0) + 1,
-                    }).eq("id", flow.id);
-                  } catch (flowNodeError) {
-                    console.error(`Flow execution failed for ${flow.name}:`, flowNodeError);
-                    await supabase.from("wa_flows").update({
-                      total_failures: (flow.total_failures || 0) + 1,
-                    }).eq("id", flow.id);
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            console.error("Flow execution error:", e);
-          }
+          // ── Legacy wa_flows execution disabled for inbound WhatsApp ──
+          // Hybrid router above is now the single reply source:
+          // 1) deterministic flow-engine for docs/status/payments/car DB
+          // 2) AI fallback for open-ended sales/support queries
         }
 
         return new Response(JSON.stringify({ success: true, processed: "messages" }), {
@@ -1094,19 +972,41 @@ Deno.serve(async (req) => {
 });
 
 function getFallbackResponse(message: string): string {
-  if (message.includes("price") || message.includes("cost") || message.includes("kitna")) {
-    return `🚗 For the best on-road price, our expert will call you within 5 minutes!\n\nBrowse cars: www.grabyourcar.com/cars`;
+  if (message.includes("policy") || message.includes("insurance")) {
+    return `Please share your *vehicle number* or *policy number* and I’ll help fetch your insurance details. 📄`;
   }
-  if (message.includes("loan") || message.includes("emi") || message.includes("finance")) {
-    return `💰 Car Finance: Interest from 8.5%, up to 100% funding!\n\nCalculate EMI: www.grabyourcar.com/car-loans`;
+  if (message.includes("invoice") || message.includes("receipt") || message.includes("bill")) {
+    return `Please share your *booking/order number* or *registered phone number* so I can help with your invoice/receipt. 🧾`;
   }
-  if (message.includes("insurance") || message.includes("bima")) {
-    return `🛡️ Car Insurance with up to 70% discount!\n\nGet quote: www.grabyourcar.com/car-insurance`;
+  if (message.includes("loan") || message.includes("sanction") || message.includes("emi") || message.includes("finance")) {
+    return `Please share your *registered phone number* or *loan/application reference* and I’ll help with your loan details. 💰`;
+  }
+  if (message.includes("budget") || message.includes("range") || message.includes("recommend") || message.includes("suggest")) {
+    return `Sure 👍 Tell me your *budget*, *fuel preference*, and *city*, and I’ll suggest the best cars for you.`;
   }
   if (message.includes("hi") || message.includes("hello") || message.includes("namaste")) {
-    return `👋 Welcome to GrabYourCar!\n\nI'm your AI car assistant. I can help with:\n\n1️⃣ Find the perfect car\n2️⃣ Check prices & offers\n3️⃣ Calculate EMI\n4️⃣ Get Insurance Quote\n5️⃣ Book Test Drive\n\nJust ask me anything! 🚗`;
+    return `🚗 Welcome to GrabYourCar!\n\nI can help with car suggestions, prices, EMI, insurance, loan docs, invoices, HSRP, and payment details.\n\nWhat would you like help with today?`;
   }
-  return `Thank you for your message! Our car expert will connect with you shortly.\n\nMeanwhile, explore: www.grabyourcar.com`;
+  return `I can help with *cars, budget advice, policy copy, sanction letter, invoice, HSRP status,* or *payment details*. Just tell me what you need.`;
+}
+
+function detectVerticalHint(message: string): string | undefined {
+  if (["policy", "insurance", "premium", "renewal", "claim", "bima"].some((keyword) => message.includes(keyword))) {
+    return "insurance";
+  }
+  if (["loan", "emi", "finance", "sanction", "approval"].some((keyword) => message.includes(keyword))) {
+    return "loans";
+  }
+  if (["hsrp", "plate", "number plate"].some((keyword) => message.includes(keyword))) {
+    return "hsrp";
+  }
+  if (["rent", "rental", "booking"].some((keyword) => message.includes(keyword))) {
+    return "self-drive";
+  }
+  if (["accessory", "accessories", "order", "helmet", "seat cover"].some((keyword) => message.includes(keyword))) {
+    return "accessories";
+  }
+  return undefined;
 }
 
 function normalizeFlowKeywords(keywords: unknown): string[] {
