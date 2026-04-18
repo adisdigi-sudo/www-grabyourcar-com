@@ -16,7 +16,7 @@ import jsPDF from "jspdf";
 import {
   Phone, MessageSquare, UserPlus, PhoneCall, Tag, FileText,
   BarChart3, Handshake, CheckCircle2, XCircle, Star, Clock,
-  Calendar, Trophy, Download, Share2, Upload, Image, Video, X, Car,
+  Calendar, Trophy, Download, Share2, Upload, Image, Video, X, Car, Pencil,
 } from "lucide-react";
 import { SalesCustomerTimeline } from "./SalesCustomerTimeline";
 import { OmniShareDialog } from "@/components/admin/shared/OmniShareDialog";
