@@ -768,17 +768,24 @@ function OneShotBroadcast() {
         /* lookup is best-effort, ignore failures */
       }
 
-      // Build template_variables map (manual sample > contact lookup > BROADCAST_VARS default)
+      // Build template_variables map
+      // Priority: real contact data (DB lookup) > manual sample > BROADCAST_VARS default
+      // Real customer info ALWAYS wins so test send never shows "Test" when DB has the name.
       const templateVars: Record<string, string> = {};
       requiredVars.forEach((v, idx) => {
+        const lookupVal = contactInfo[v] || contactInfo[v.toLowerCase()];
         const sample = form.variable_samples.find((s) => s.key === v);
+        const sampleVal = sample?.value && sample.value.trim().toLowerCase() !== "test"
+          ? sample.value.trim()
+          : "";
+        const fallbackName = (v === "var_1" || /name/i.test(v)) ? contactInfo.customer_name : "";
         const value =
-          sample?.value ||
-          contactInfo[v] ||
-          contactInfo[v.toLowerCase()] ||
+          lookupVal ||
+          sampleVal ||
+          fallbackName ||
           BROADCAST_VARS.find((b) => b.key === v)?.sample ||
           contactInfo.customer_name ||
-          "Test";
+          "Customer";
         templateVars[v] = value;
         templateVars[`var_${idx + 1}`] = value;
       });
