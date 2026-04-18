@@ -794,11 +794,74 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
             ref={inputRef}
             placeholder={isWindowOpen ? "Type a message..." : "Use template (window closed)"}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => { setText(e.target.value); if (previousText !== null) setPreviousText(null); }}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-            disabled={!isWindowOpen || isSending || isUploading}
+            disabled={!isWindowOpen || isSending || isUploading || isAIPolishing}
             className="flex-1 h-9 text-sm"
           />
+
+          {/* AI Fix — quick grammar/spelling polish */}
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 shrink-0 border-purple-300 bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/30 dark:border-purple-800 dark:text-purple-300"
+            title="AI Fix — grammar, spelling & polish"
+            onClick={() => runAIRewrite("polish")}
+            disabled={!text.trim() || isAIPolishing || isSending}
+          >
+            {isAIPolishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          </Button>
+
+          {/* AI Rewrite menu — tone & translate */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                title="AI Rewrite — tone & translate"
+                disabled={!text.trim() || isAIPolishing || isSending}
+              >
+                <Wand2 className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuLabel className="text-xs">Tone</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => runAIRewrite("professional")} className="text-xs gap-2">
+                <Wand2 className="h-3.5 w-3.5" /> Make Professional
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runAIRewrite("friendly")} className="text-xs gap-2">
+                <Smile className="h-3.5 w-3.5" /> Make Friendly
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runAIRewrite("shorten")} className="text-xs gap-2">
+                <Sparkles className="h-3.5 w-3.5" /> Shorten / Crisp
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runAIRewrite("emoji")} className="text-xs gap-2">
+                <Smile className="h-3.5 w-3.5" /> Add Emojis
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs">Translate</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => runAIRewrite("hindi")} className="text-xs gap-2">
+                <Languages className="h-3.5 w-3.5" /> Hindi (हिंदी)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runAIRewrite("hinglish")} className="text-xs gap-2">
+                <Languages className="h-3.5 w-3.5" /> Hinglish
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runAIRewrite("english")} className="text-xs gap-2">
+                <Languages className="h-3.5 w-3.5" /> English
+              </DropdownMenuItem>
+              {previousText !== null && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleUndoAI} className="text-xs gap-2">
+                    <X className="h-3.5 w-3.5" /> Undo last AI change
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Button
             onClick={handleSend}
