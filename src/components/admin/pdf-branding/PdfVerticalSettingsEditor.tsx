@@ -290,7 +290,18 @@ export function PdfVerticalSettingsEditor() {
 
   const toggleDocType = (type: string) => {
     const has = form.document_types.includes(type);
-    update("document_types", has ? form.document_types.filter((t) => t !== type) : [...form.document_types, type]);
+    const nextTypes = has ? form.document_types.filter((t) => t !== type) : [...form.document_types, type];
+    update("document_types", nextTypes);
+
+    if (!has) {
+      setSelectedDocType(type);
+      return;
+    }
+
+    if (selectedDocType === type) {
+      const fallback = nextTypes[0] ?? docTypeLib[0] ?? type;
+      setSelectedDocType(fallback);
+    }
   };
 
   // Build merged preview branding (vertical overrides → global → defaults)
@@ -530,6 +541,7 @@ export function PdfVerticalSettingsEditor() {
                         const v = (e.target as HTMLInputElement).value.trim().toLowerCase().replace(/\s+/g, "_");
                         if (v && !form.document_types.includes(v)) {
                           update("document_types", [...form.document_types, v]);
+                          setSelectedDocType(v);
                           (e.target as HTMLInputElement).value = "";
                         }
                       }
@@ -542,6 +554,7 @@ export function PdfVerticalSettingsEditor() {
                       const v = el?.value.trim().toLowerCase().replace(/\s+/g, "_");
                       if (v && !form.document_types.includes(v)) {
                         update("document_types", [...form.document_types, v]);
+                          setSelectedDocType(v);
                         if (el) el.value = "";
                       }
                     }}
@@ -708,8 +721,12 @@ export function PdfVerticalSettingsEditor() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 p-3">
-              <PreviewViewport label={`${form.vertical_label} · ${selectedDocType.replace(/_/g, " ")} · A4`}>
-                <PdfBrandingPreview branding={previewBranding} documentType={selectedDocType} />
+              <PreviewViewport key={`${form.vertical_slug}-${selectedDocType}`} label={`${form.vertical_label} · ${selectedDocType.replace(/_/g, " ")} · A4`}>
+                <PdfBrandingPreview
+                  key={`${form.vertical_slug}-${selectedDocType}-${form.document_types.join("|")}`}
+                  branding={previewBranding}
+                  documentType={selectedDocType}
+                />
               </PreviewViewport>
               <div className="rounded-lg border bg-muted/30 p-3 text-xs space-y-1">
                 <div className="flex items-center justify-between">
