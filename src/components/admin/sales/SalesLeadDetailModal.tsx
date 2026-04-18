@@ -269,29 +269,40 @@ export function SalesLeadDetailModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 flex-wrap">
-            <span>{lead.customer_name}</span>
-            {lead.client_id && (
-              <Badge variant="outline" className="font-mono text-xs">{lead.client_id}</Badge>
-            )}
-            <Badge className={stageConfig?.color}>{stageConfig?.label}</Badge>
-            {lead.status_outcome === "won" && (
-              <Badge className="bg-emerald-500/10 text-emerald-600 border-0">Won</Badge>
-            )}
-            {lead.status_outcome === "lost" && (
-              <Badge className="bg-red-500/10 text-red-600 border-0">Lost</Badge>
-            )}
-            {onEdit && (
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
+              <span>{lead.customer_name}</span>
+              {lead.client_id && (
+                <Badge variant="outline" className="font-mono text-xs">{lead.client_id}</Badge>
+              )}
+              <Badge className={stageConfig?.color}>{stageConfig?.label}</Badge>
+              {lead.status_outcome === "won" && (
+                <Badge className="bg-emerald-500/10 text-emerald-600 border-0">Won</Badge>
+              )}
+              {lead.status_outcome === "lost" && (
+                <Badge className="bg-red-500/10 text-red-600 border-0">Lost</Badge>
+              )}
+            </DialogTitle>
+            <div className="flex items-center gap-2 shrink-0">
               <Button
                 size="sm"
                 variant="outline"
-                className="ml-auto gap-1.5 h-7"
-                onClick={onEdit}
+                className="gap-1.5 h-8"
+                onClick={() => setShowCompose(true)}
               >
-                <Pencil className="h-3.5 w-3.5" /> Edit Details
+                <MessageSquare className="h-3.5 w-3.5 text-emerald-600" /> Send Message
               </Button>
-            )}
-          </DialogTitle>
+              {onEdit && (
+                <Button
+                  size="sm"
+                  className="gap-1.5 h-8"
+                  onClick={onEdit}
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Edit Details
+                </Button>
+              )}
+            </div>
+          </div>
         </DialogHeader>
 
         {/* Journey Breadcrumb */}
