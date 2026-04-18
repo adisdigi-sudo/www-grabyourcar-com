@@ -27,6 +27,7 @@ import {
   isDocumentMime,
   prettyFileLabel,
 } from "./waMedia";
+import { buildInsuranceDocumentViewerUrl } from "@/lib/insuranceDocumentViewer";
 
 interface Props {
   conversation: WaConversation | null;
