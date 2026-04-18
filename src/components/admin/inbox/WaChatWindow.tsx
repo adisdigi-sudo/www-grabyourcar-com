@@ -663,7 +663,18 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-2" align="start">
-              <p className="text-xs font-semibold mb-2">📋 Templates {!isWindowOpen && <span className="text-amber-600">(required)</span>}</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold">📋 Templates {!isWindowOpen && <span className="text-amber-600">(required)</span>}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-[11px] gap-1"
+                  onClick={() => { setShowTemplates(false); setShowTemplateEditor(true); }}
+                  title="Manage / Edit Templates"
+                >
+                  <Pencil className="h-3 w-3" /> Edit
+                </Button>
+              </div>
               <div className="space-y-1 max-h-56 overflow-auto">
                 {templates.length === 0 ? (
                   <p className="text-xs text-muted-foreground p-2">No approved templates</p>
@@ -680,6 +691,17 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
               </div>
             </PopoverContent>
           </Popover>
+
+          {/* Quick Edit Templates button (always visible) */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            title="Edit Templates"
+            onClick={() => setShowTemplateEditor(true)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
 
           {/* Attachments */}
           <Popover open={showAttachMenu} onOpenChange={setShowAttachMenu}>
