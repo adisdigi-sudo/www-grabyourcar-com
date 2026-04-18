@@ -497,22 +497,77 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
                         {msg.sent_by_name}
                       </p>
                     )}
-                    {msg.message_type === "image" && msg.media_url && (
-                      <div className="mb-1">
-                        <Badge variant="outline" className="text-[9px]">📷 Image</Badge>
-                      </div>
+                    {(() => {
+                      const mediaSrc = resolveWaMediaUrl(msg.media_url);
+                      const downloadSrc = resolveWaMediaUrl(msg.media_url, {
+                        download: true,
+                        filename: msg.media_filename,
+                      });
+                      const showImage = mediaSrc && isImageMime(msg.media_mime_type, msg.message_type);
+                      const showVideo = mediaSrc && isVideoMime(msg.media_mime_type, msg.message_type);
+                      const showAudio = mediaSrc && isAudioMime(msg.media_mime_type, msg.message_type);
+                      const showDoc = mediaSrc && isDocumentMime(msg.media_mime_type, msg.message_type);
+
+                      if (!mediaSrc && !msg.template_name) return null;
+
+                      return (
+                        <div className="mb-1 space-y-1">
+                          {showImage && (
+                            <a href={mediaSrc} target="_blank" rel="noreferrer" className="block">
+                              <img
+                                src={mediaSrc}
+                                alt={msg.media_filename || "Image"}
+                                loading="lazy"
+                                className="max-h-72 w-auto rounded-md border border-border object-cover"
+                              />
+                            </a>
+                          )}
+                          {showVideo && (
+                            <video
+                              src={mediaSrc}
+                              controls
+                              preload="metadata"
+                              className="max-h-72 w-full rounded-md border border-border bg-black"
+                            />
+                          )}
+                          {showAudio && (
+                            <audio src={mediaSrc} controls preload="metadata" className="w-full" />
+                          )}
+                          {showDoc && (
+                            <a
+                              href={downloadSrc || mediaSrc}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs hover:bg-muted transition-colors"
+                            >
+                              <FileText className="h-4 w-4 text-orange-500 shrink-0" />
+                              <span className="truncate font-medium">
+                                {prettyFileLabel(msg.media_mime_type, msg.media_filename)}
+                              </span>
+                              <span className="ml-auto text-[10px] text-muted-foreground">Open</span>
+                            </a>
+                          )}
+                          {!showImage && !showVideo && !showAudio && !showDoc && mediaSrc && (
+                            <a
+                              href={mediaSrc}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs underline text-primary"
+                            >
+                              View attachment
+                            </a>
+                          )}
+                          {msg.template_name && (
+                            <Badge variant="outline" className="text-[9px] bg-blue-50">
+                              📋 {msg.template_name}
+                            </Badge>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    {msg.content && (
+                      <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                     )}
-                    {msg.message_type === "document" && (
-                      <div className="mb-1">
-                        <Badge variant="outline" className="text-[9px]">📄 {msg.media_filename || "Document"}</Badge>
-                      </div>
-                    )}
-                    {msg.template_name && (
-                      <div className="mb-1">
-                        <Badge variant="outline" className="text-[9px] bg-blue-50">📋 {msg.template_name}</Badge>
-                      </div>
-                    )}
-                    <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                     <div className="flex items-center justify-end gap-1 mt-0.5">
                       <span className="text-[10px] text-muted-foreground">
                         {format(new Date(msg.created_at), "HH:mm")}
