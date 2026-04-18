@@ -397,17 +397,7 @@ export function SalesLeadDetailModal({
                 variant="outline"
                 size="sm"
                 className="gap-1.5"
-                onClick={async () => {
-                  const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
-                  const msg = await getCrmMessage("sales_greeting", { customer_name: lead.customer_name || "" });
-                  const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-                  await sendWhatsApp({
-                    phone: lead.phone || "",
-                    message: msg,
-                    name: lead.customer_name,
-                    logEvent: "sales_contact",
-                  });
-                }}
+                onClick={() => setShowCompose(true)}
               >
                 <MessageSquare className="h-3.5 w-3.5 text-emerald-600" /> WhatsApp
               </Button>
