@@ -34,6 +34,7 @@ import {
 import { toast } from "sonner";
 import { clearBrandingCache } from "@/lib/pdf";
 import { PdfBrandingPreview } from "./PdfBrandingPreview";
+import { PreviewViewport } from "./PreviewViewport";
 
 const STORAGE_BUCKET = "pdf-branding-assets";
 
@@ -227,7 +228,7 @@ export function PdfBrandingEditor() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+      <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.1fr_1fr]">
         {/* LEFT — Tabbed Editor */}
         <Card>
           <CardContent className="p-4">
@@ -437,18 +438,20 @@ export function PdfBrandingEditor() {
 
         {/* RIGHT — Live Preview */}
         <div className="space-y-4">
-          <Card className="sticky top-4">
+          <Card className="lg:sticky lg:top-4">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Eye className="h-4 w-4 text-primary" />
                 Live Preview
               </CardTitle>
               <CardDescription className="text-xs">
-                See exactly how branding will appear on PDFs.
+                Updates instantly as you edit. Use zoom controls to inspect logo, header & footer.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <PdfBrandingPreview branding={form} />
+            <CardContent className="p-3">
+              <PreviewViewport label={`${form.company_name || "Brand"} · A4`}>
+                <PdfBrandingPreview branding={form} />
+              </PreviewViewport>
             </CardContent>
           </Card>
         </div>
