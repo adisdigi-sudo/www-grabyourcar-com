@@ -17,6 +17,7 @@ import { differenceInHours } from "date-fns";
 import { SalesLeadCard } from "./SalesLeadCard";
 import { SalesLeadDetailModal } from "./SalesLeadDetailModal";
 import { SalesAddLeadModal } from "./SalesAddLeadModal";
+import { SalesEditLeadModal } from "./SalesEditLeadModal";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner } from "../shared/StageNotificationBanner";
 
