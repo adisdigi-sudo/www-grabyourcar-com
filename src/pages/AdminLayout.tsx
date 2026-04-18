@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { logAdminActivity } from "@/lib/adminActivityLogger";
 import { performSafePreviewReload, resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { withPreviewParams } from "@/lib/previewRouting";
+import { removeStartupShell } from "@/lib/startupShell";
 import { Button } from "@/components/ui/button";
 import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBoundary";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
@@ -526,6 +527,38 @@ const AdminLayout = () => {
       resetChunkLoadRecovery("crm_chunk_load_recovery");
     }
   }, [initialized, isLoading, verticalAccessLoading, user]);
+
+  useEffect(() => {
+    if (!isAuthResolved) {
+      return;
+    }
+
+    const shouldKeepStartupShell =
+      isBootstrappingAuth ||
+      isBootstrappingWorkspace ||
+      (!user && !bootstrapTimedOut) ||
+      (shouldResolveWorkspace && !activeVertical && !bootstrapTimedOut);
+
+    if (shouldKeepStartupShell) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      removeStartupShell();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [
+    activeVertical,
+    bootstrapTimedOut,
+    isAuthResolved,
+    isBootstrappingAuth,
+    isBootstrappingWorkspace,
+    shouldResolveWorkspace,
+    user,
+  ]);
 
   const isResolvingWorkspace =
     !!user && !isLoading && !verticalAccessLoading && !activeVertical && availableVerticals.length === 1;
