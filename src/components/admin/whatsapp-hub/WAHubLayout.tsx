@@ -7,7 +7,7 @@ import {
   MessageSquare, LayoutTemplate, Megaphone, Bot, Users, BarChart3,
   UsersRound, ChevronLeft, ChevronRight, Wifi, WifiOff, Search,
   Settings, Workflow, MessageSquareText, ClipboardList, MousePointer,
-  TrendingUp, Sparkles
+  TrendingUp, Sparkles, Zap
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
