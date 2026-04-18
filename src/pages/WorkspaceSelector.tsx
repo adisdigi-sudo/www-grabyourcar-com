@@ -38,7 +38,6 @@ const WorkspaceSelector = () => {
   const [passwordTarget, setPasswordTarget] = useState<BusinessVertical | null>(null);
   const [bootstrapTimedOut, setBootstrapTimedOut] = useState(false);
   const isBootstrapping = !authInitialized || authLoading || verticalLoading;
-  const shouldRevealWorkspaceUi = !isBootstrapping || bootstrapTimedOut;
 
   useEffect(() => {
     if (!isBootstrapping) {
@@ -98,7 +97,8 @@ const WorkspaceSelector = () => {
   }, [user, authLoading, authInitialized, navigate]);
 
   useEffect(() => {
-    if (!shouldRevealWorkspaceUi) {
+    const shouldReleaseStartupShell = bootstrapTimedOut || (!isBootstrapping && !!user);
+    if (!shouldReleaseStartupShell) {
       return;
     }
 
@@ -109,23 +109,7 @@ const WorkspaceSelector = () => {
     return () => {
       window.cancelAnimationFrame(frame);
     };
-  }, [shouldRevealWorkspaceUi, sortedVerticals.length, user?.id]);
-
-  // Hard safety net: even if the bootstrap effect chain is interrupted,
-  // ensure the startup shell never lingers past 5s on /workspace.
-  useEffect(() => {
-    const hardTimer = window.setTimeout(() => {
-      try {
-        removeStartupShell();
-      } catch (err) {
-        console.warn("[WorkspaceSelector] Hard shell removal failed", err);
-      }
-    }, 5000);
-
-    return () => {
-      window.clearTimeout(hardTimer);
-    };
-  }, []);
+  }, [bootstrapTimedOut, isBootstrapping, user?.id, sortedVerticals.length]);
 
   // If only 1 vertical available, auto-select it (skip password for single vertical)
   useEffect(() => {
