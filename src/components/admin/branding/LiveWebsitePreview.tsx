@@ -24,10 +24,10 @@ import {
   Eye,
 } from "lucide-react";
 import {
-  BRANDING_PREVIEW_QUERY_PARAM,
   normalizeBrandingSettings,
   type BrandingSettings,
 } from "@/hooks/useBrandingSettings";
+import { BRANDING_PREVIEW_QUERY_PARAM } from "@/lib/brandingPreview";
 
 type Viewport = "desktop" | "tablet" | "mobile";
 
