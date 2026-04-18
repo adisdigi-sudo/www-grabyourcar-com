@@ -27,7 +27,7 @@ const iconMap: Record<string, React.ElementType> = {
   Megaphone,
 };
 
-const WORKSPACE_BOOTSTRAP_TIMEOUT_MS = 12000;
+const WORKSPACE_BOOTSTRAP_TIMEOUT_MS = 8000;
 
 const WorkspaceSelector = () => {
   const navigate = useNavigate();
@@ -110,6 +110,22 @@ const WorkspaceSelector = () => {
       window.cancelAnimationFrame(frame);
     };
   }, [shouldRevealWorkspaceUi, sortedVerticals.length, user?.id]);
+
+  // Hard safety net: even if the bootstrap effect chain is interrupted,
+  // ensure the startup shell never lingers past 5s on /workspace.
+  useEffect(() => {
+    const hardTimer = window.setTimeout(() => {
+      try {
+        removeStartupShell();
+      } catch (err) {
+        console.warn("[WorkspaceSelector] Hard shell removal failed", err);
+      }
+    }, 5000);
+
+    return () => {
+      window.clearTimeout(hardTimer);
+    };
+  }, []);
 
   // If only 1 vertical available, auto-select it (skip password for single vertical)
   useEffect(() => {
