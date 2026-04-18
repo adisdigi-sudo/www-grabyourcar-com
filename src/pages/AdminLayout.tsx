@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { logAdminActivity } from "@/lib/adminActivityLogger";
 import { performSafePreviewReload, resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { withPreviewParams } from "@/lib/previewRouting";
+import { removeStartupShell } from "@/lib/startupShell";
 import { Button } from "@/components/ui/button";
 import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBoundary";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
@@ -532,6 +533,38 @@ const AdminLayout = () => {
 
   const isBootstrappingWorkspace = !!user && (verticalAccessLoading || isResolvingWorkspace);
   const isBootstrappingAdmin = isBootstrappingAuth || isBootstrappingWorkspace;
+
+  useEffect(() => {
+    if (!isAuthResolved) {
+      return;
+    }
+
+    const shouldKeepStartupShell =
+      isBootstrappingAuth ||
+      isBootstrappingWorkspace ||
+      (!user && !bootstrapTimedOut) ||
+      (shouldResolveWorkspace && !activeVertical && !bootstrapTimedOut);
+
+    if (shouldKeepStartupShell) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      removeStartupShell();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [
+    activeVertical,
+    bootstrapTimedOut,
+    isAuthResolved,
+    isBootstrappingAuth,
+    isBootstrappingWorkspace,
+    shouldResolveWorkspace,
+    user,
+  ]);
 
   useEffect(() => {
     if (!isBootstrappingAdmin) {
