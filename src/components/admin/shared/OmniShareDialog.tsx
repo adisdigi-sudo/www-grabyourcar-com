@@ -127,9 +127,7 @@ export function OmniShareDialog({
   const handleWhatsAppShare = async () => {
     const cleanPhone = (phone || "").replace(/\D/g, "");
     if (cleanPhone.length < 10) { toast.error("Please enter a valid phone number"); return; }
-    const { doc, fileName } = await generatePdf();
-    const pdfUrl = await uploadPdfAndGetUrl(doc, fileName);
-    doc.save(fileName);
+    const { doc, fileName } = await buildBrandedPdf();
     const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
     const waText = [defaultMsg, pdfUrl ? `View PDF: ${pdfUrl}` : `Document: ${fileName}`].filter(Boolean).join("\n\n");
     const waUrl = `https://wa.me/${fullPhone}?text=${encodeURIComponent(waText)}`;
