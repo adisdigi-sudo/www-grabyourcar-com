@@ -38,8 +38,24 @@ interface WhatsAppComposeDialogProps {
   onSent?: () => void;
 }
 
-function applyVars(body: string, vars: Record<string, string>) {
-  return body.replace(/\{\{\s*([a-zA-Z_]\w*)\s*\}\}/g, (_, key: string) => vars[key] ?? "");
+function applyVars(
+  body: string,
+  vars: Record<string, string>,
+  positionalVars: string[] = []
+) {
+  return body.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key: string) => {
+    // Named variable match (customer_name, vehicle_number, etc.)
+    if (vars[key] !== undefined && vars[key] !== "") return vars[key];
+    // Numeric placeholder like {{1}}, {{2}} → map to template.variables[index] then resolve from vars
+    if (/^\d+$/.test(key)) {
+      const idx = parseInt(key, 10) - 1;
+      const varName = positionalVars[idx];
+      if (varName && vars[varName] !== undefined) return vars[varName];
+      // Fallback: if first numeric placeholder, use customer_name
+      if (idx === 0 && vars.customer_name) return vars.customer_name;
+    }
+    return vars[key] ?? "";
+  });
 }
 
 export function WhatsAppComposeDialog({
@@ -96,7 +112,7 @@ export function WhatsAppComposeDialog({
     setSelectedTplId(tplId);
     const tpl = templates.find((t) => t.id === tplId);
     if (!tpl) return;
-    setMessage(applyVars(tpl.body, variableMap));
+    setMessage(applyVars(tpl.body, variableMap, tpl.variables || []));
   };
 
   const handleResetDefault = () => {
