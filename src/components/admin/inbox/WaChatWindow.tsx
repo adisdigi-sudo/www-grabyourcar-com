@@ -793,6 +793,20 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Template Editor Dialog — same component used in WhatsApp Hub Templates */}
+      <Dialog open={showTemplateEditor} onOpenChange={setShowTemplateEditor}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-4 w-4" /> Manage WhatsApp Templates
+            </DialogTitle>
+          </DialogHeader>
+          <div className="pt-2">
+            <WaTemplateManager />
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
