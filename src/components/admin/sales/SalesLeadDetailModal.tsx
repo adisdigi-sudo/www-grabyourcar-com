@@ -1079,5 +1079,25 @@ export function SalesLeadDetailModal({
         }}
       />
     </Dialog>
+
+    {/* WhatsApp Compose Dialog (template picker + edit + AI) */}
+    <WhatsAppComposeDialog
+      open={showCompose}
+      onOpenChange={setShowCompose}
+      phone={lead.phone || ""}
+      customerName={lead.customer_name}
+      defaultMessage={`Hi ${lead.customer_name || "there"}, this is GrabYourCar regarding your ${[lead.car_brand, lead.car_model, lead.car_variant].filter(Boolean).join(" ") || "car"} inquiry. How can we help you today?`}
+      context={{
+        car_brand: lead.car_brand || "",
+        car_model: lead.car_model || "",
+        car_variant: lead.car_variant || "",
+        city: lead.city || "",
+        buying_intent: lead.buying_intent || "",
+      }}
+      logEvent="sales_contact"
+      leadId={lead.id}
+      onSent={() => onUpdate({}, "whatsapp_sent", "Message sent via composer")}
+    />
+    </>
   );
 }
