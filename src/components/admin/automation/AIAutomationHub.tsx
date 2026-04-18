@@ -4,7 +4,8 @@ import { WADripSequenceManager } from "./WADripSequenceManager";
 import { AutoDialerDashboard } from "./AutoDialerDashboard";
 import { AutoClosePipelineManager } from "./AutoClosePipelineManager";
 import { AIBrainDashboard } from "./AIBrainDashboard";
-import { MessageSquare, Phone, Zap, Bot, Brain } from "lucide-react";
+import { ReplyAgentsBuilder } from "./ReplyAgentsBuilder";
+import { MessageSquare, Phone, Zap, Bot, Brain, Sparkles } from "lucide-react";
 
 export function AIAutomationHub() {
   return (
@@ -19,8 +20,12 @@ export function AIAutomationHub() {
         </p>
       </div>
 
-      <Tabs defaultValue="ai-brain" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="reply-agents" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="reply-agents" className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            Reply Agents
+          </TabsTrigger>
           <TabsTrigger value="ai-brain" className="flex items-center gap-2">
             <Brain className="h-4 w-4" />
             AI Brain
@@ -38,6 +43,10 @@ export function AIAutomationHub() {
             Auto-Close Pipeline
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="reply-agents" className="mt-6">
+          <ReplyAgentsBuilder />
+        </TabsContent>
 
         <TabsContent value="ai-brain" className="mt-6">
           <AIBrainDashboard />
