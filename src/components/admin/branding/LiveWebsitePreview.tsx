@@ -24,7 +24,6 @@ import {
   ExternalLink,
   Eye,
 } from "lucide-react";
-import { useId } from "react";
 import { BRANDING_PREVIEW_QUERY_PARAM } from "@/hooks/useBrandingSettings";
 
 type Viewport = "desktop" | "tablet" | "mobile";
@@ -47,13 +46,15 @@ interface LiveWebsitePreviewProps {
   refreshKey?: number;
   /** Optional badge to indicate "auto-syncing" */
   syncing?: boolean;
+  /** Shared draft-preview channel id from the branding editor */
+  previewId: string;
 }
 
 export const LiveWebsitePreview = ({
   refreshKey = 0,
   syncing = false,
+  previewId,
 }: LiveWebsitePreviewProps) => {
-  const previewId = useId().replace(/:/g, "");
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [path, setPath] = useState<string>("/");
   const [manualRefresh, setManualRefresh] = useState(0);
