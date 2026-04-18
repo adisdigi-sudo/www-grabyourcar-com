@@ -28,9 +28,28 @@ function normalize(text: string): string {
 function matchKeywords(message: string, keywords: string[]): boolean {
   const norm = normalize(message);
   return keywords.some((kw) => {
-    const k = normalize(kw);
-    return norm === k || norm.includes(k) || k.split(" ").every((w) => norm.includes(w));
+    const variants = [kw];
+
+    if (["brochure", "catalog", "leaflet", "booklet"].includes(normalize(kw))) {
+      variants.push("brocher", "broacher", "brochur", "broucher", "brouche", "brosure", "brocure");
+    }
+
+    return variants.some((variant) => {
+      const k = normalize(variant);
+      return norm === k || norm.includes(k) || k.split(" ").every((w) => norm.includes(w));
+    });
   });
+}
+
+function isLikelyFollowUpIdentifier(message: string): boolean {
+  const norm = normalize(message);
+  if (!norm) return false;
+
+  const words = norm.split(" ").filter(Boolean);
+  if (words.length <= 4) return true;
+
+  const identity = extractIdentity(message);
+  return Boolean(identity.vehicle_number || identity.policy_number || identity.phone);
 }
 
 // Extract identity from message (vehicle no, policy no, phone)
@@ -195,6 +214,7 @@ function formatSalesReply(record: any, cfg: any): string {
 async function routeMessage(input: InboundMessage) {
   const startTime = Date.now();
   const { customer_phone, message_text, vertical_slug } = input;
+  const extractedIdentity = extractIdentity(message_text);
 
   // Get or create session
   let { data: session } = await supabase
@@ -213,14 +233,14 @@ async function routeMessage(input: InboundMessage) {
         customer_phone,
         vertical_slug,
         status: "active",
-        collected_variables: extractIdentity(message_text),
+        collected_variables: extractedIdentity,
       })
       .select()
       .single();
     session = newSession;
   } else {
     // Update collected variables with new identity info
-    const newIdentity = extractIdentity(message_text);
+    const newIdentity = extractedIdentity;
     const merged = { ...(session.collected_variables || {}), ...newIdentity };
     await supabase
       .from("whatsapp_flow_sessions")
@@ -250,6 +270,15 @@ async function routeMessage(input: InboundMessage) {
     }
   }
 
+  const pendingTriggerId = session?.collected_variables?.__pending_trigger_id;
+  const pendingTrigger = pendingTriggerId
+    ? (triggers || []).find((trigger: any) => trigger.id === pendingTriggerId)
+    : null;
+
+  if (pendingTrigger && (!matched || (matched.id !== pendingTrigger.id && isLikelyFollowUpIdentifier(message_text)))) {
+    matched = pendingTrigger;
+  }
+
   let outbound = "";
   let attachments: any[] = [];
   let action = "no_match";
@@ -272,7 +301,9 @@ async function routeMessage(input: InboundMessage) {
       outbound = matched.action_config.redirect_message;
       action = "redirected";
     } else if (matched.intent_type === "document") {
-      const identity = session.collected_variables || {};
+      const identity = Object.fromEntries(
+        Object.entries(session.collected_variables || {}).filter(([key]) => !key.startsWith("__"))
+      );
       const missing = (matched.required_identity_fields || []).filter((f: string) => !identity[f]);
       if (missing.length > 0) {
         outbound = matched.fallback_message || `Please share your ${missing.join(", ")} so I can fetch your document.`;
@@ -328,6 +359,23 @@ async function routeMessage(input: InboundMessage) {
     errorMsg = (e as Error).message;
     outbound = "Sorry, I'm facing a technical issue. A human will reach out shortly.";
     action = "error";
+  }
+
+  const nextCollectedVariables = { ...(session?.collected_variables || {}) };
+  if (matched && ["identity_required", "sales_info_not_found", "document_not_found", "document_missing_file"].includes(action)) {
+    nextCollectedVariables.__pending_trigger_id = matched.id;
+    nextCollectedVariables.__pending_trigger_name = matched.trigger_name;
+  } else if (["document_sent", "sales_info_sent", "sent_payment_info", "sent_fixed_reply", "redirected"].includes(action)) {
+    delete nextCollectedVariables.__pending_trigger_id;
+    delete nextCollectedVariables.__pending_trigger_name;
+  }
+
+  if (session?.id && JSON.stringify(nextCollectedVariables) !== JSON.stringify(session.collected_variables || {})) {
+    await supabase
+      .from("whatsapp_flow_sessions")
+      .update({ collected_variables: nextCollectedVariables, last_message_at: new Date().toISOString() })
+      .eq("id", session.id);
+    session.collected_variables = nextCollectedVariables;
   }
 
   // Log
