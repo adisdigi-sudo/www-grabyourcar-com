@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Zap, Plus, Trash2, Play, Pause, Activity, Clock, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { AIPolishButtons } from "@/components/admin/shared/AIPolishButtons";
 
 interface AutomationRule {
   id: string;
@@ -173,7 +174,10 @@ export function WAAutomationRules() {
             </div>
             {!form.template_id && (
               <div className="space-y-2">
-                <Label>Custom Message</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Custom Message</Label>
+                  <AIPolishButtons value={form.message_content || ""} onChange={(next) => setForm({ ...form, message_content: next })} contextHint="WhatsApp automation rule message" />
+                </div>
                 <Textarea placeholder="Hello {name}! Welcome to GrabYourCar..." value={form.message_content} onChange={e => setForm({ ...form, message_content: e.target.value })} rows={3} />
               </div>
             )}
