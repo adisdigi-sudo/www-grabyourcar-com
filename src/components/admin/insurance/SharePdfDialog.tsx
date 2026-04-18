@@ -9,6 +9,7 @@ import { MessageCircle, Mail, Download, Send, Loader2, Zap } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client";
 import jsPDF from "jspdf";
 import { persistInsuranceQuoteHistory } from "@/lib/insuranceQuotePersistence";
+import { applyUnifiedBranding } from "@/lib/pdf";
 
 interface ClientDetails {
   id?: string;
@@ -56,6 +57,22 @@ export function SharePdfDialog({
   const [phone, setPhone] = useState(defaultPhone);
   const [email, setEmail] = useState(defaultEmail);
   const [sendingApi, setSendingApi] = useState(false);
+
+  /** Generate PDF + apply unified Insurance branding (header/footer/watermark + audit log). */
+  const buildBrandedPdf = async () => {
+    const built = generatePdf();
+    await applyUnifiedBranding(built.doc, {
+      vertical: "insurance",
+      documentType: /renewal/i.test(title) ? "renewal_reminder" : "insurance_quote",
+      fileName: built.fileName,
+      audit: {
+        customerName: clientDetails?.customer_name || customerName,
+        customerPhone: clientDetails?.phone || phone,
+        referenceId: clientDetails?.id,
+      },
+    });
+    return built;
+  };
 
   const handleOpenChange = (v: boolean) => {
     if (v) {
@@ -119,7 +136,7 @@ export function SharePdfDialog({
     if (cleanPhone.length < 10) { toast.error("Please enter a valid phone number"); return; }
 
     try {
-      const { doc, fileName } = generatePdf();
+      const { doc, fileName } = await buildBrandedPdf();
       doc.save(fileName);
 
       const pdfUrl = await uploadPdfAndGetUrl(doc, fileName);
@@ -150,7 +167,7 @@ export function SharePdfDialog({
 
     setSendingApi(true);
     try {
-      const { doc, fileName } = generatePdf();
+      const { doc, fileName } = await buildBrandedPdf();
       const pdfUrl = await uploadPdfAndGetUrl(doc, fileName);
 
       const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
@@ -177,7 +194,7 @@ export function SharePdfDialog({
 
   const handleEmailShare = async () => {
     if (!email || !email.includes("@")) { toast.error("Please enter a valid email address"); return; }
-    const { doc, fileName } = generatePdf();
+    const { doc, fileName } = await buildBrandedPdf();
     const subject = encodeURIComponent(`${title} - ${customerName || "Customer"} | Grabyourcar Insurance`);
     const body = encodeURIComponent(
       shareMessage || `Dear ${customerName || "Valued Customer"},\n\nPlease find the attached ${title} for your reference.\n\nFor any queries, feel free to contact us:\nPhone: +91 98559 24442\nEmail: hello@grabyourcar.com\nWeb: www.grabyourcar.com\n\nBest regards,\nGrabyourcar Insurance Desk`
@@ -190,7 +207,7 @@ export function SharePdfDialog({
   };
 
   const handleDownload = async () => {
-    const { doc, fileName } = generatePdf();
+    const { doc, fileName } = await buildBrandedPdf();
     doc.save(fileName);
     await autoSaveQuote(doc, fileName, "pdf_download");
     toast.success("📋 PDF downloaded & quote auto-saved!");
