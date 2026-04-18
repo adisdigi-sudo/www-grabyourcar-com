@@ -467,6 +467,10 @@ export const removeStartupShell = () => {
     }
 
     startupShellPostCleanupHealthTimer = window.setTimeout(() => {
+      if (isStartupShellRouteTransitionActive()) {
+        return;
+      }
+
       if (isSensitiveRouteAppReady()) {
         return;
       }
@@ -526,6 +530,11 @@ export const removeStartupShell = () => {
   const timeoutId = window.setTimeout(() => {
     observer.disconnect();
     clearReadyConfirmTimer();
+
+    if (isStartupShellRouteTransitionActive()) {
+      return;
+    }
+
     if (isSensitiveRouteAppReady()) {
       cleanupShell();
       return;
@@ -555,7 +564,7 @@ const queueBlankStateRecovery = (reason: string) => {
 
   clearBlankRecoveryTimer();
   startupShellBlankTimer = window.setTimeout(() => {
-    if (!shouldStabilizeStartupShellWindow() || isSensitiveRouteAppReady()) {
+    if (!shouldStabilizeStartupShellWindow() || isStartupShellRouteTransitionActive() || isSensitiveRouteAppReady()) {
       return;
     }
 
