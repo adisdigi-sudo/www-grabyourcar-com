@@ -239,6 +239,42 @@ export function EnginesList({ onEdit }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk launch dialog */}
+      <Dialog open={!!launchEngine} onOpenChange={(o) => !o && setLaunchEngine(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="h-4 w-4 text-green-600" />
+              Bulk Launch: {launchEngine?.name}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Initial step ka message in sabhi numbers ko WhatsApp pe jayega. Customer reply karega → engine auto-qualify karega.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs">Phone numbers (one per line, comma or space-separated)</Label>
+              <Textarea
+                value={launchPhones}
+                onChange={(e) => setLaunchPhones(e.target.value)}
+                placeholder={"9876543210\n9123456789\n8765432109"}
+                rows={8}
+                className="text-xs font-mono"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                10-digit Indian numbers. Pacing: ~4/sec to avoid Meta rate limits.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLaunchEngine(null)} disabled={launching}>Cancel</Button>
+            <Button onClick={launchBulk} disabled={launching || !launchPhones.trim()} className="bg-green-600 hover:bg-green-700">
+              {launching ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Launching…</> : <><Send className="h-4 w-4 mr-1" /> Launch Now</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
