@@ -407,6 +407,7 @@ const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
         "website-banners",
         "website-offers",
         "website-branding",
+        "website-pdf-branding",
         "website-testimonials",
         "website-faqs",
         "website-seo",
