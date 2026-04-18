@@ -16,7 +16,7 @@ import jsPDF from "jspdf";
 import {
   Phone, MessageSquare, UserPlus, PhoneCall, Tag, FileText,
   BarChart3, Handshake, CheckCircle2, XCircle, Star, Clock,
-  Calendar, Trophy, Download, Share2, Upload, Image, Video, X, Car,
+  Calendar, Trophy, Download, Share2, Upload, Image, Video, X, Car, Pencil,
 } from "lucide-react";
 import { SalesCustomerTimeline } from "./SalesCustomerTimeline";
 import { OmniShareDialog } from "@/components/admin/shared/OmniShareDialog";
@@ -36,6 +36,7 @@ interface SalesLeadDetailModalProps {
   activities: any[];
   stages: any[];
   onUpdate: (updates: any, logAction?: string, logRemarks?: string) => void;
+  onEdit?: () => void;
 }
 
 export function SalesLeadDetailModal({
@@ -45,6 +46,7 @@ export function SalesLeadDetailModal({
   activities,
   stages,
   onUpdate,
+  onEdit,
 }: SalesLeadDetailModalProps) {
   const [remarks, setRemarks] = useState("");
   const [callStatus, setCallStatus] = useState(lead.call_status || "");
@@ -276,6 +278,16 @@ export function SalesLeadDetailModal({
             )}
             {lead.status_outcome === "lost" && (
               <Badge className="bg-red-500/10 text-red-600 border-0">Lost</Badge>
+            )}
+            {onEdit && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="ml-auto gap-1.5 h-7"
+                onClick={onEdit}
+              >
+                <Pencil className="h-3.5 w-3.5" /> Edit Details
+              </Button>
             )}
           </DialogTitle>
         </DialogHeader>

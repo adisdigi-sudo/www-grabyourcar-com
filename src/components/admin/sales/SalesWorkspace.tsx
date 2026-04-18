@@ -17,6 +17,7 @@ import { differenceInHours } from "date-fns";
 import { SalesLeadCard } from "./SalesLeadCard";
 import { SalesLeadDetailModal } from "./SalesLeadDetailModal";
 import { SalesAddLeadModal } from "./SalesAddLeadModal";
+import { SalesEditLeadModal } from "./SalesEditLeadModal";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner } from "../shared/StageNotificationBanner";
 
@@ -57,6 +58,7 @@ export function SalesWorkspace() {
   const [showImport, setShowImport] = useState(false);
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditLead, setShowEditLead] = useState(false);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [draggingLead, setDraggingLead] = useState<any>(null);
 
@@ -424,6 +426,28 @@ export function SalesWorkspace() {
           onUpdate={(updates: any, logAction?: string, logRemarks?: string) => {
             updateLeadMutation.mutate({ id: selectedLead.id, updates, logAction, logRemarks });
             setSelectedLead((prev: any) => (prev ? { ...prev, ...updates } : null));
+          }}
+          onEdit={() => setShowEditLead(true)}
+        />
+      )}
+
+      {/* Edit Lead Modal */}
+      {selectedLead && (
+        <SalesEditLeadModal
+          open={showEditLead}
+          onOpenChange={setShowEditLead}
+          lead={selectedLead}
+          isPending={updateLeadMutation.isPending}
+          onSubmit={(updates: any) => {
+            updateLeadMutation.mutate(
+              { id: selectedLead.id, updates, logAction: "lead_updated", logRemarks: "Lead details edited" },
+              {
+                onSuccess: () => {
+                  setSelectedLead((prev: any) => (prev ? { ...prev, ...updates } : null));
+                  setShowEditLead(false);
+                },
+              }
+            );
           }}
         />
       )}
