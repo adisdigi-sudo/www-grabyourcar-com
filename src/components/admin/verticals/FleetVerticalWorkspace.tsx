@@ -8,6 +8,7 @@ import {
   FleetRequirementBuilder,
   LeaseVsBuyCalculator,
 } from "@/components/corporate";
+import { VerticalReplyAgentsCard } from "../automation/VerticalReplyAgentsCard";
 
 
 export function FleetVerticalWorkspace() {

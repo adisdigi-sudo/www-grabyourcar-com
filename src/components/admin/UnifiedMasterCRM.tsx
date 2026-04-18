@@ -51,6 +51,7 @@ import { HSRPVerticalWorkspace } from "./verticals/HSRPVerticalWorkspace";
 import { RentalVerticalWorkspace } from "./verticals/RentalVerticalWorkspace";
 import { FleetVerticalWorkspace } from "./verticals/FleetVerticalWorkspace";
 import { OmniMessagingWorkspace } from "./shared/OmniMessagingWorkspace";
+import { VerticalReplyAgentsCard } from "./automation/VerticalReplyAgentsCard";
 type Vertical = "overview" | "insurance" | "car-sales" | "loans" | "accessories" | "hsrp" | "rentals" | "fleet";
 
 const VERTICALS = [

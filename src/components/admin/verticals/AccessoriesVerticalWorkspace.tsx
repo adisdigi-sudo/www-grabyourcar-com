@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Package, CheckCircle2, ShoppingCart, FileText, Tags } from "lucide-react";
 import { AccessoriesManagement } from "../AccessoriesManagement";
 import CrossSellManagement from "../CrossSellManagement";
+import { VerticalReplyAgentsCard } from "../automation/VerticalReplyAgentsCard";
 
 export function AccessoriesVerticalWorkspace() {
   const [activeTab, setActiveTab] = useState("products");

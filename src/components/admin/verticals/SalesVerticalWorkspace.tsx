@@ -10,6 +10,7 @@ import { SalesDealTracker } from "../sales/SalesDealTracker";
 import { SalesRealTimeDashboard } from "../sales/SalesRealTimeDashboard";
 import { SalesPerformanceDashboard } from "../sales/SalesPerformanceDashboard";
 import { VerticalMessagingTab } from "../shared/VerticalMessagingTab";
+import { VerticalReplyAgentsCard } from "../automation/VerticalReplyAgentsCard";
 
 import { DateFilterBar, type DateFilterValue } from "../shared/DateFilterBar";
 import { startOfDay, subDays, startOfMonth, isWithinInterval } from "date-fns";

@@ -8,6 +8,7 @@ import DriverBookingsManagement from "../DriverBookingsManagement";
 import APIPartnersManagement from "../APIPartnersManagement";
 import { AgreementManagement } from "../rentals/AgreementManagement";
 import { KYCVerificationPanel } from "../rentals/KYCVerificationPanel";
+import { VerticalReplyAgentsCard } from "../automation/VerticalReplyAgentsCard";
 
 
 export function RentalVerticalWorkspace() {
