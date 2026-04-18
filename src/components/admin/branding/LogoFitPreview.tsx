@@ -91,6 +91,8 @@ export const LogoFitPreview = ({
 }: LogoFitPreviewProps) => {
   const [natural, setNatural] = useState<NaturalSize | null>(null);
   const probeRef = useRef<HTMLImageElement>(null);
+  // Track which URL we've already auto-suggested for, so we don't fight the user's manual edits
+  const lastAutoFitUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!logoUrl) {
@@ -101,18 +103,27 @@ export const LogoFitPreview = ({
     img.crossOrigin = "anonymous";
     img.onload = () => {
       if (img.naturalWidth && img.naturalHeight) {
-        setNatural({
+        const n = {
           width: img.naturalWidth,
           height: img.naturalHeight,
           ratio: img.naturalWidth / img.naturalHeight,
-        });
+        };
+        setNatural(n);
+        // 🔥 Auto-apply suggested sizes the FIRST time we see this logo URL.
+        // This way the user just uploads → website instantly looks correct.
+        if (lastAutoFitUrlRef.current !== logoUrl) {
+          lastAutoFitUrlRef.current = logoUrl;
+          onApplySuggested(suggestSizes(n));
+        }
       }
     };
     img.onerror = () => setNatural(null);
     img.src = logoUrl;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logoUrl]);
 
   const suggested = natural ? suggestSizes(natural) : null;
+
 
   const justifyClass =
     positionHorizontal === "center"
