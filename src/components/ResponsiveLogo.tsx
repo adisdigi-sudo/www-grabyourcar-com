@@ -155,8 +155,8 @@ export const useLogoUrls = () => {
       if (error && error.code !== 'PGRST116') return null;
       return data?.setting_value as Record<string, string | number | boolean> | null;
     },
-    staleTime: 5 * 60 * 1000,
-  });
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
 
   const useAnimated = brandingSettings?.use_animated_logo && brandingSettings?.animated_logo_url;
 
