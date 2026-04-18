@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import {
   Send, Paperclip, Clock, Check, CheckCheck, X,
   AlertTriangle, Info, Zap, LayoutTemplate, MessageSquare,
-  UserPlus, Timer, Image, FileText, Video, Loader2, Bot, HandMetal, Pencil
+  UserPlus, Timer, Image, FileText, Video, Loader2, Bot, HandMetal, Pencil, Sparkles, Wand2, Languages, Smile
 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { WaTemplateManager } from "./WaTemplateManager";
 import { Switch } from "@/components/ui/switch";
 import { supabase as sbClient } from "@/integrations/supabase/client";
