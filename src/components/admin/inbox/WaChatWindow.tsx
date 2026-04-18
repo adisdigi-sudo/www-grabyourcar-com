@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import {
   Send, Paperclip, Clock, Check, CheckCheck, X,
   AlertTriangle, Info, Zap, LayoutTemplate, MessageSquare,
-  UserPlus, Timer, Image, FileText, Video, Loader2, Bot, HandMetal
+  UserPlus, Timer, Image, FileText, Video, Loader2, Bot, HandMetal, Pencil
 } from "lucide-react";
+import { WaTemplateManager } from "./WaTemplateManager";
 import { Switch } from "@/components/ui/switch";
 import { supabase as sbClient } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -134,6 +135,7 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
   const [templateValues, setTemplateValues] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showTemplateEditor, setShowTemplateEditor] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -661,7 +663,18 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-2" align="start">
-              <p className="text-xs font-semibold mb-2">📋 Templates {!isWindowOpen && <span className="text-amber-600">(required)</span>}</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold">📋 Templates {!isWindowOpen && <span className="text-amber-600">(required)</span>}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-[11px] gap-1"
+                  onClick={() => { setShowTemplates(false); setShowTemplateEditor(true); }}
+                  title="Manage / Edit Templates"
+                >
+                  <Pencil className="h-3 w-3" /> Edit
+                </Button>
+              </div>
               <div className="space-y-1 max-h-56 overflow-auto">
                 {templates.length === 0 ? (
                   <p className="text-xs text-muted-foreground p-2">No approved templates</p>
@@ -678,6 +691,17 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
               </div>
             </PopoverContent>
           </Popover>
+
+          {/* Quick Edit Templates button (always visible) */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            title="Edit Templates"
+            onClick={() => setShowTemplateEditor(true)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
 
           {/* Attachments */}
           <Popover open={showAttachMenu} onOpenChange={setShowAttachMenu}>
@@ -767,6 +791,20 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
               Send template
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Template Editor Dialog — same component used in WhatsApp Hub Templates */}
+      <Dialog open={showTemplateEditor} onOpenChange={setShowTemplateEditor}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-4 w-4" /> Manage WhatsApp Templates
+            </DialogTitle>
+          </DialogHeader>
+          <div className="pt-2">
+            <WaTemplateManager />
+          </div>
         </DialogContent>
       </Dialog>
     </>
