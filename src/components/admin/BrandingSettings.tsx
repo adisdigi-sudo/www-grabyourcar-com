@@ -385,6 +385,44 @@ export const BrandingSettings = () => {
                 />
               </CardContent>
             </Card>
+            </div>
+
+            {/* Right column: Live website preview (sticky) */}
+            <div className="xl:sticky xl:top-4 xl:self-start space-y-4">
+              <LogoFitPreview
+                logoUrl={formData.logo_url}
+                logoDarkUrl={formData.logo_dark_url}
+                brandName={formData.brand_name}
+                tagline={formData.tagline}
+                heightHeader={formData.logo_height_header}
+                heightFooter={formData.logo_height_footer}
+                heightMobile={formData.logo_height_mobile}
+                widthHeader={formData.logo_width_header}
+                widthFooter={formData.logo_width_footer}
+                widthMobile={formData.logo_width_mobile}
+                positionHorizontal={formData.logo_position_horizontal}
+                onApplySuggested={(s) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    logo_height_header: s.heightHeader,
+                    logo_height_footer: s.heightFooter,
+                    logo_height_mobile: s.heightMobile,
+                  }))
+                }
+              />
+              <Button
+                onClick={handleSave}
+                disabled={saveMutation.isPending || isUploading}
+                className="w-full"
+                size="lg"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {saveMutation.isPending ? "Saving..." : "Save & Apply to Website"}
+              </Button>
+              <p className="text-[11px] text-muted-foreground text-center">
+                Changes appear instantly across the website after saving (header, footer, mobile menu).
+              </p>
+            </div>
           </div>
         </TabsContent>
 
