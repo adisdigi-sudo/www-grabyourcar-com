@@ -95,19 +95,19 @@ export const ResponsiveLogo = ({
         return {
           height: brandingSettings.logo_height_header || 64,
           width: brandingSettings.logo_width_header || undefined,
-          maxWidth: 300,
+          maxWidth: 480,
         };
       case "footer":
         return {
           height: brandingSettings.logo_height_footer || 56,
           width: brandingSettings.logo_width_footer || undefined,
-          maxWidth: 220,
+          maxWidth: 360,
         };
       case "mobile":
         return {
           height: brandingSettings.logo_height_mobile || 40,
           width: brandingSettings.logo_width_mobile || undefined,
-          maxWidth: 120,
+          maxWidth: 200,
         };
       default:
         return defaultDimensions[variant];
