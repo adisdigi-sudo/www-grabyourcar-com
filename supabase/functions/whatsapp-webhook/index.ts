@@ -612,7 +612,7 @@ Deno.serve(async (req) => {
           let aiResponse: string | null = null;
           let intentDetected = "general";
           let leadCaptured = false;
-          let respondedBy = "ai_brain";
+          let respondedBy = "hybrid_router";
           let documentShare: { url: string; fileName?: string; caption?: string } | null = null;
           let humanHandover: { vertical?: string; reason?: string } | null = null;
 
@@ -628,7 +628,6 @@ Deno.serve(async (req) => {
             const msgLower = lowerMessageText;
 
             for (const rule of chatbotRules) {
-              // Split comma-separated keywords and match
               const allKeywords = (rule.intent_keywords || [])
                 .flatMap((kw: string) => kw.split(",").map((k: string) => k.trim().toLowerCase()).filter(Boolean));
 
@@ -637,7 +636,6 @@ Deno.serve(async (req) => {
               if (matched) {
                 console.log(`Chatbot rule matched: ${rule.name} (${rule.response_type})`);
 
-                // Update match count
                 await supabase.from("wa_chatbot_rules").update({
                   match_count: (rule.match_count || 0) + 1,
                   last_matched_at: new Date().toISOString(),
@@ -650,7 +648,6 @@ Deno.serve(async (req) => {
                   respondedBy = `chatbot_rule:${rule.name}`;
                   intentDetected = rule.name;
                 } else if (rule.response_type === "ai_generated" && rule.ai_prompt) {
-                  // Use Lovable AI Gateway for AI-generated responses
                   try {
                     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
                     if (LOVABLE_API_KEY) {
@@ -680,7 +677,6 @@ Deno.serve(async (req) => {
                     console.error("Chatbot AI generation failed:", e);
                   }
                 } else if (rule.response_type === "template" && rule.template_name) {
-                  // Send template via messaging-service
                   try {
                     await fetch(`${SUPABASE_URL}/functions/v1/messaging-service`, {
                       method: "POST",
@@ -703,18 +699,20 @@ Deno.serve(async (req) => {
                   }
                 }
 
-                break; // First matched rule wins
+                break;
               }
             }
           }
 
           // ══════════════════════════════════════════════════════════
-          // STEP 2: DB-DRIVEN FLOW ENGINE (replaces AI Brain)
-          // Pure rule-based: keywords → DB triggers → fixed reply / doc / sales info
-          // No AI dependency — fully exportable to any host
+          // STEP 2: HYBRID ROUTER
+          // 1) Rule engine for deterministic workflows (policy/invoice/sanction/account/car DB)
+          // 2) AI fallback for open-ended advice (budget, recommendations, comparisons)
           // ══════════════════════════════════════════════════════════
+          let handledByFlowEngine = false;
           if (!aiResponse) {
             try {
+              const flowVertical = detectVerticalHint(lowerMessageText);
               const flowResponse = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-flow-engine`, {
                 method: "POST",
                 headers: {
@@ -725,23 +723,97 @@ Deno.serve(async (req) => {
                   customer_phone: from,
                   message_text: messageText,
                   customer_name: contactName,
+                  vertical_slug: flowVertical,
                 }),
               });
 
               if (flowResponse.ok) {
                 const flowData = await flowResponse.json();
-                aiResponse = flowData.outbound || getFallbackResponse(lowerMessageText);
-                intentDetected = flowData.matched || "no_match";
-                if (flowData.attachments?.length > 0) {
-                  documentShare = flowData.attachments[0];
+                handledByFlowEngine = flowData.action && flowData.action !== "no_match_fallback";
+
+                if (handledByFlowEngine) {
+                  aiResponse = flowData.outbound || null;
+                  intentDetected = flowData.matched || flowData.action || "flow_engine";
+                  respondedBy = `flow_engine:${flowData.action || "matched"}`;
+                  if (flowData.attachments?.length > 0) {
+                    documentShare = flowData.attachments[0];
+                  }
                 }
               } else {
                 console.error("Flow engine error:", flowResponse.status);
-                aiResponse = getFallbackResponse(lowerMessageText);
               }
             } catch (e) {
               console.error("Flow engine call failed:", e);
-              aiResponse = getFallbackResponse(lowerMessageText);
+            }
+          }
+
+          if (!aiResponse) {
+            try {
+              const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+              if (LOVABLE_API_KEY) {
+                const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                  },
+                  body: JSON.stringify({
+                    model: "google/gemini-3-flash-preview",
+                    messages: [
+                      {
+                        role: "system",
+                        content: `You are GrabYourCar's WhatsApp sales and support assistant.
+
+Rules:
+- If user asks for policy/invoice/receipt/sanction letter/account details/payment details/HSRP status, answer briefly and ask for the exact identifier needed if missing.
+- For car advice, budget guidance, recommendations, comparisons, features, and buying help, give a practical helpful answer.
+- Speak naturally in English, Hindi, or Hinglish based on the user's tone.
+- Be concise, useful, and sales-aware.
+- Mention GrabYourCar strengths naturally when relevant: 500+ cars delivered, pan-India support, loans, insurance, HSRP, accessories.
+- Never say you are limited to keywords.
+- If unsure, ask 1 clarifying question instead of saying you didn't understand.`,
+                      },
+                      ...conversationHistory.slice(-12),
+                      { role: "user", content: messageText },
+                    ],
+                    tools: [
+                      {
+                        type: "function",
+                        function: {
+                          name: "classify_reply",
+                          description: "Classify whether the user needs a deterministic document/status flow or a normal conversational answer.",
+                          parameters: {
+                            type: "object",
+                            properties: {
+                              route: { type: "string", enum: ["document_help", "sales_advice", "general_info", "handoff"] },
+                              reply: { type: "string" },
+                            },
+                            required: ["route", "reply"],
+                            additionalProperties: false,
+                          },
+                        },
+                      },
+                    ],
+                    tool_choice: { type: "function", function: { name: "classify_reply" } },
+                  }),
+                });
+
+                if (aiResp.status === 429 || aiResp.status === 402) {
+                  const errText = await aiResp.text();
+                  console.error("AI gateway limit/billing error:", aiResp.status, errText);
+                } else if (aiResp.ok) {
+                  const aiData = await aiResp.json();
+                  const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+                  const parsed = toolCall ? JSON.parse(toolCall.function.arguments) : null;
+                  aiResponse = parsed?.reply || aiData.choices?.[0]?.message?.content || null;
+                  intentDetected = parsed?.route || "ai_fallback";
+                  respondedBy = `ai_fallback:${intentDetected}`;
+                } else {
+                  console.error("AI fallback error:", aiResp.status, await aiResp.text());
+                }
+              }
+            } catch (e) {
+              console.error("AI fallback failed:", e);
             }
           }
 
