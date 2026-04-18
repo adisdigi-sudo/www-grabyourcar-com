@@ -13,10 +13,10 @@ export function AIAutomationHub() {
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-3">
           <Bot className="h-8 w-8 text-primary" />
-          AI Automation Hub
+          Hybrid Automation Hub
         </h1>
         <p className="text-muted-foreground mt-1">
-          WhatsApp drip sequences, auto-dialer, lead qualification & auto-close pipeline
+          Rule-based WhatsApp automations with AI fallback for open-ended sales and support conversations
         </p>
       </div>
 
@@ -28,7 +28,7 @@ export function AIAutomationHub() {
           </TabsTrigger>
           <TabsTrigger value="ai-brain" className="flex items-center gap-2">
             <Brain className="h-4 w-4" />
-            AI Brain
+            Hybrid Brain
           </TabsTrigger>
           <TabsTrigger value="drip" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
