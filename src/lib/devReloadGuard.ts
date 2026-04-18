@@ -1,8 +1,4 @@
-import {
-  isEmbeddedPreviewWindow,
-  isLovableEditorPreviewHost,
-  isSensitivePreviewRouteWindow,
-} from "@/lib/adminPreviewStability";
+import { isSensitivePreviewRouteWindow } from "@/lib/adminPreviewStability";
 
 export const DEV_SERVER_STATUS_EVENT = "lovable:dev-server-status";
 export const DEV_SERVER_PENDING_RELOAD_KEY = "lovable_dev_server_pending_reload";
@@ -43,11 +39,7 @@ export const markDevServerPendingReload = () => {
 const shouldGuardSensitiveRouteReload = () => {
   if (typeof window === "undefined") return false;
 
-  return (
-    isSensitivePreviewRouteWindow() &&
-    !isEmbeddedPreviewWindow() &&
-    !isLovableEditorPreviewHost()
-  );
+  return isSensitivePreviewRouteWindow();
 };
 
 const tryPatchReload = (target: object, reload: () => void) => {
@@ -70,11 +62,6 @@ const tryPatchReload = (target: object, reload: () => void) => {
 
 export const installSensitiveRouteReloadGuard = () => {
   if (!import.meta.env.DEV || typeof window === "undefined") return;
-  try {
-    if (window.top !== window) return;
-  } catch {
-    return;
-  }
   if (window.__lovableDevReloadGuardInstalled) return;
 
   window.__lovableDevReloadGuardInstalled = true;
