@@ -17,6 +17,11 @@ export {
 export { resolveBranding, clearBrandingCache } from "./brandingResolver";
 export { substitute, buildPlaceholderContext } from "./placeholders";
 export { hexToRgb, lighten, type RGB } from "./colorUtils";
+export {
+  applyUnifiedBranding,
+  finalizeAndSave,
+  type ApplyBrandingOptions,
+} from "./brandingBridge";
 export type {
   ResolvedBranding,
   PdfGlobalBranding,
