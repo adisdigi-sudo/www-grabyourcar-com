@@ -240,6 +240,7 @@ export const HeroSlidesManagement = () => {
                 folder="hero-slides"
                 recommendedSize="1920×900"
                 placeholder="https://... or upload an image"
+                previewMode="hero-desktop"
               />
             </div>
             <div>

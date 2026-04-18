@@ -143,6 +143,7 @@ export function BannersManager() {
                   label="Desktop Image *"
                   folder="banners"
                   recommendedSize="1920×600"
+                  previewMode="hero-desktop"
                 />
 
                 <AdminImageUpload
@@ -151,6 +152,7 @@ export function BannersManager() {
                   label="Mobile Image (optional)"
                   folder="banners/mobile"
                   recommendedSize="768×400"
+                  previewMode="hero-mobile"
                 />
 
                 <div className="grid grid-cols-2 gap-4">
