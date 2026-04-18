@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Upload, Save, Palette, Image as ImageIcon, RefreshCw, Trash2, Eye, Move } from "lucide-react";
 import { AdminImageUpload } from "./AdminImageUpload";
+import { LogoFitPreview } from "./branding/LogoFitPreview";
 
 interface BrandingSettings {
   logo_url: string;
@@ -266,46 +267,51 @@ export const BrandingSettings = () => {
 
         {/* Logos Tab */}
         <TabsContent value="logos" className="space-y-6">
-          <div className="grid gap-6">
-            {/* Main Logo */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Main Logo</CardTitle>
-                <CardDescription>Used in header and light backgrounds — live fitment preview shows how it sits in the navbar.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AdminImageUpload
-                  value={formData.logo_url}
-                  onChange={(url) => setFormData({ ...formData, logo_url: url })}
-                  label="Main Logo"
-                  folder="branding/logo"
-                  bucket="branding-assets"
-                  recommendedSize="320×80"
-                  previewMode="logo"
-                  placeholder="/logo.png or https://..."
-                />
-              </CardContent>
-            </Card>
+          {/* Side-by-side: uploaders on the left, live website preview on the right */}
+          <div className="grid gap-6 xl:grid-cols-[1fr_minmax(420px,520px)]">
+            <div className="space-y-6 min-w-0">
+              {/* Main Logo */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Main Logo</CardTitle>
+                  <CardDescription>
+                    Used in header and light backgrounds. The live website preview on the right
+                    auto-suggests an optimal size based on your image's aspect ratio.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AdminImageUpload
+                    value={formData.logo_url}
+                    onChange={(url) => setFormData({ ...formData, logo_url: url })}
+                    label="Main Logo"
+                    folder="branding/logo"
+                    bucket="branding-assets"
+                    recommendedSize="320×80"
+                    previewMode="logo"
+                    placeholder="/logo.png or https://..."
+                  />
+                </CardContent>
+              </Card>
 
-            {/* Dark Logo */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Dark Mode Logo</CardTitle>
-                <CardDescription>Used in footer and dark backgrounds. Optional — defaults to main logo.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AdminImageUpload
-                  value={formData.logo_dark_url}
-                  onChange={(url) => setFormData({ ...formData, logo_dark_url: url })}
-                  label="Dark Mode Logo"
-                  folder="branding/logo-dark"
-                  bucket="branding-assets"
-                  recommendedSize="320×80"
-                  previewMode="logo"
-                  placeholder="Optional - defaults to main logo"
-                />
-              </CardContent>
-            </Card>
+              {/* Dark Logo */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Dark Mode Logo</CardTitle>
+                  <CardDescription>Used in footer and dark backgrounds. Optional — defaults to main logo.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AdminImageUpload
+                    value={formData.logo_dark_url}
+                    onChange={(url) => setFormData({ ...formData, logo_dark_url: url })}
+                    label="Dark Mode Logo"
+                    folder="branding/logo-dark"
+                    bucket="branding-assets"
+                    recommendedSize="320×80"
+                    previewMode="logo"
+                    placeholder="Optional - defaults to main logo"
+                  />
+                </CardContent>
+              </Card>
 
             {/* Animated Logo */}
             <Card>
