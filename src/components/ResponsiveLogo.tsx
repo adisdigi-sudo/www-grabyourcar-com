@@ -169,9 +169,12 @@ export const useLogoUrls = () => {
 
   const useAnimated = brandingSettings?.use_animated_logo && brandingSettings?.animated_logo_url;
 
+  const adminHasCustomLogo = brandingSettings?.logo_url && String(brandingSettings.logo_url).trim() !== "";
   return {
     logoLight: useAnimated ? String(brandingSettings?.animated_logo_url) : (brandingSettings?.logo_url || logoLightDefault),
-    logoDark: useAnimated ? String(brandingSettings?.animated_logo_url) : (brandingSettings?.logo_dark_url || logoDarkDefault),
+    logoDark: useAnimated
+      ? String(brandingSettings?.animated_logo_url)
+      : (brandingSettings?.logo_dark_url || (adminHasCustomLogo ? brandingSettings?.logo_url : logoDarkDefault)),
     animatedLogoUrl: brandingSettings?.animated_logo_url || "",
     useAnimatedLogo: Boolean(brandingSettings?.use_animated_logo),
     brandName: String(brandingSettings?.brand_name || "Grabyourcar"),
