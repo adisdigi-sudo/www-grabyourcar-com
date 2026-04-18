@@ -15,6 +15,8 @@ import { AdminImageUpload } from "./AdminImageUpload";
 import { LiveWebsitePreview } from "./branding/LiveWebsitePreview";
 import {
   BRANDING_QUERY_KEY,
+  BRANDING_DRAFT_BROADCAST_CHANNEL,
+  broadcastBrandingDraft,
   broadcastBrandingUpdate,
   normalizeBrandingSettings,
   useBrandingSettingsQuery,
@@ -28,6 +30,7 @@ export const BrandingSettings = () => {
   const animatedLogoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
   const ogImageInputRef = useRef<HTMLInputElement>(null);
+  const previewIdRef = useRef(`branding-preview-${Math.random().toString(36).slice(2, 10)}`);
   
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -43,6 +46,11 @@ export const BrandingSettings = () => {
       setFormData(normalizeBrandingSettings(settings));
     }
   }, [settings]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    broadcastBrandingDraft(previewIdRef.current, formData);
+  }, [formData, isLoading]);
 
   // Save mutation
   const saveMutation = useMutation({
@@ -309,6 +317,7 @@ export const BrandingSettings = () => {
             {/* Right column: Live website preview (sticky, real iframe) */}
             <div className="xl:sticky xl:top-4 xl:self-start space-y-4">
               <LiveWebsitePreview
+                previewId={previewIdRef.current}
                 refreshKey={previewRefreshKey}
                 syncing={saveMutation.isPending}
               />
