@@ -12,8 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Upload, Save, Palette, Image as ImageIcon, RefreshCw, Trash2, Eye, Move } from "lucide-react";
 import { AdminImageUpload } from "./AdminImageUpload";
-import { LogoFitPreview } from "./branding/LogoFitPreview";
-import { BRANDING_QUERY_KEY, normalizeBrandingSettings, useBrandingSettingsQuery, type BrandingSettings as BrandingSettingsData } from "@/hooks/useBrandingSettings";
+import { LiveWebsitePreview } from "./branding/LiveWebsitePreview";
+import {
+  BRANDING_QUERY_KEY,
+  broadcastBrandingUpdate,
+  normalizeBrandingSettings,
+  useBrandingSettingsQuery,
+  type BrandingSettings as BrandingSettingsData,
+} from "@/hooks/useBrandingSettings";
 
 export const BrandingSettings = () => {
   const queryClient = useQueryClient();
