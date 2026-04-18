@@ -15,6 +15,7 @@ import {
   MousePointer, ListOrdered, Plus, Trash2, Eye, Send,
   LayoutList, MessageSquare, Zap, Copy, MoreVertical
 } from "lucide-react";
+import { AIPolishButtons } from "@/components/admin/shared/AIPolishButtons";
 
 type InteractiveType = "reply_buttons" | "list_message" | "cta_url";
 
@@ -164,7 +165,10 @@ function InteractiveBuilder({ open, onClose, onSave }: { open: boolean; onClose:
             </div>
 
             <div>
-              <Label>Body Text *</Label>
+              <div className="flex items-center justify-between">
+                <Label>Body Text *</Label>
+                <AIPolishButtons value={msg.body_text} onChange={(next) => setMsg({ ...msg, body_text: next })} contextHint="Interactive WhatsApp message body" />
+              </div>
               <Textarea value={msg.body_text} onChange={(e) => setMsg({ ...msg, body_text: e.target.value })} placeholder="Main message content..." rows={4} className="mt-1" />
             </div>
 
