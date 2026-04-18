@@ -136,15 +136,15 @@ export function AIBrainDashboard() {
               <Brain className="h-8 w-8 text-primary" />
               <Sparkles className="h-4 w-4 text-amber-500 absolute -top-1 -right-1" />
             </div>
-            AI Communication Brain
+            Hybrid Brain
           </h1>
           <p className="text-muted-foreground mt-1">
-            Autonomous AI deciding who to contact, what to say, and when — across all 11 verticals
+            Deterministic document/status automation with AI fallback for budget advice, recommendations, and open-ended customer questions
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">AI Brain:</span>
+            <span className="text-muted-foreground">Hybrid Brain:</span>
             <Switch
               checked={config?.is_enabled ?? false}
               onCheckedChange={(v) => updateConfig.mutate({ is_enabled: v })}
@@ -155,7 +155,7 @@ export function AIBrainDashboard() {
           </div>
           <Button onClick={() => runNow.mutate()} disabled={runNow.isPending} className="gap-2">
             <PlayCircle className="h-4 w-4" />
-            {runNow.isPending ? "Running..." : "Run Now"}
+            {runNow.isPending ? "Running..." : "Run Hybrid Now"}
           </Button>
         </div>
       </div>
@@ -176,7 +176,7 @@ export function AIBrainDashboard() {
             <div className="flex items-center gap-3">
               <Sparkles className="h-5 w-5 text-primary" />
               <div>
-                <p className="text-sm font-medium">Last AI Brain run</p>
+                <p className="text-sm font-medium">Last Hybrid Brain run</p>
                 <p className="text-xs text-muted-foreground">
                   {formatDistanceToNow(new Date(config.last_run_at), { addSuffix: true })} •
                   Next run in ~{config.scan_interval_minutes} min
