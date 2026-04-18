@@ -66,9 +66,17 @@ export const ResponsiveLogo = ({
   const logoLight = useAnimated && isValidUrl(brandingSettings?.animated_logo_url)
     ? brandingSettings!.animated_logo_url 
     : (isValidUrl(brandingSettings?.logo_url) ? brandingSettings!.logo_url : logoLightDefault);
+  // Dark logo: prefer dedicated dark URL → animated → user's uploaded light logo → bundled default
+  // (Never silently fall back to the BUNDLED dark image when the admin has set a custom main logo,
+  //  otherwise the footer keeps showing the old logo.)
+  const adminHasCustomLogo = isValidUrl(brandingSettings?.logo_url);
   const logoDark = useAnimated && isValidUrl(brandingSettings?.animated_logo_url)
-    ? brandingSettings!.animated_logo_url 
-    : (isValidUrl(brandingSettings?.logo_dark_url) ? brandingSettings!.logo_dark_url : logoDarkDefault);
+    ? brandingSettings!.animated_logo_url
+    : isValidUrl(brandingSettings?.logo_dark_url)
+      ? brandingSettings!.logo_dark_url
+      : adminHasCustomLogo
+        ? brandingSettings!.logo_url           // use the new uploaded logo everywhere
+        : logoDarkDefault;
   
   // Use dark logo for footer (always on dark bg) or when in dark mode
   const logoImage = variant === "footer" || effectiveTheme === "dark" 
