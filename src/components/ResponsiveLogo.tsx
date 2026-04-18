@@ -66,9 +66,17 @@ export const ResponsiveLogo = ({
   const logoLight = useAnimated && isValidUrl(brandingSettings?.animated_logo_url)
     ? brandingSettings!.animated_logo_url 
     : (isValidUrl(brandingSettings?.logo_url) ? brandingSettings!.logo_url : logoLightDefault);
+  // Dark logo: prefer dedicated dark URL → animated → user's uploaded light logo → bundled default
+  // (Never silently fall back to the BUNDLED dark image when the admin has set a custom main logo,
+  //  otherwise the footer keeps showing the old logo.)
+  const adminHasCustomLogo = isValidUrl(brandingSettings?.logo_url);
   const logoDark = useAnimated && isValidUrl(brandingSettings?.animated_logo_url)
-    ? brandingSettings!.animated_logo_url 
-    : (isValidUrl(brandingSettings?.logo_dark_url) ? brandingSettings!.logo_dark_url : logoDarkDefault);
+    ? brandingSettings!.animated_logo_url
+    : isValidUrl(brandingSettings?.logo_dark_url)
+      ? brandingSettings!.logo_dark_url
+      : adminHasCustomLogo
+        ? brandingSettings!.logo_url           // use the new uploaded logo everywhere
+        : logoDarkDefault;
   
   // Use dark logo for footer (always on dark bg) or when in dark mode
   const logoImage = variant === "footer" || effectiveTheme === "dark" 
@@ -95,19 +103,19 @@ export const ResponsiveLogo = ({
         return {
           height: brandingSettings.logo_height_header || 64,
           width: brandingSettings.logo_width_header || undefined,
-          maxWidth: 300,
+          maxWidth: 480,
         };
       case "footer":
         return {
           height: brandingSettings.logo_height_footer || 56,
           width: brandingSettings.logo_width_footer || undefined,
-          maxWidth: 220,
+          maxWidth: 360,
         };
       case "mobile":
         return {
           height: brandingSettings.logo_height_mobile || 40,
           width: brandingSettings.logo_width_mobile || undefined,
-          maxWidth: 120,
+          maxWidth: 200,
         };
       default:
         return defaultDimensions[variant];
@@ -161,9 +169,12 @@ export const useLogoUrls = () => {
 
   const useAnimated = brandingSettings?.use_animated_logo && brandingSettings?.animated_logo_url;
 
+  const adminHasCustomLogo = brandingSettings?.logo_url && String(brandingSettings.logo_url).trim() !== "";
   return {
     logoLight: useAnimated ? String(brandingSettings?.animated_logo_url) : (brandingSettings?.logo_url || logoLightDefault),
-    logoDark: useAnimated ? String(brandingSettings?.animated_logo_url) : (brandingSettings?.logo_dark_url || logoDarkDefault),
+    logoDark: useAnimated
+      ? String(brandingSettings?.animated_logo_url)
+      : (brandingSettings?.logo_dark_url || (adminHasCustomLogo ? brandingSettings?.logo_url : logoDarkDefault)),
     animatedLogoUrl: brandingSettings?.animated_logo_url || "",
     useAnimatedLogo: Boolean(brandingSettings?.use_animated_logo),
     brandName: String(brandingSettings?.brand_name || "Grabyourcar"),
