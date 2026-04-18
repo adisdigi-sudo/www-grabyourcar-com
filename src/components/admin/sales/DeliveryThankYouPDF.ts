@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import brandLogoUrl from "@/assets/logo-grabyourcar-transparent.png";
 
 export interface DeliveryThankYouParams {
   customerName: string;
@@ -44,6 +45,31 @@ async function loadImageAsDataUrl(url: string): Promise<{ dataUrl: string; w: nu
       const img = new Image();
       img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
       img.onerror = () => resolve({ w: 800, h: 600 });
+      img.src = dataUrl;
+    });
+    const format = blob.type.includes("png") ? "PNG" : "JPEG";
+    return { dataUrl, w: dims.w, h: dims.h, format };
+  } catch {
+    return null;
+  }
+}
+
+async function loadLocalImage(url: string): Promise<{ dataUrl: string; w: number; h: number; format: string } | null> {
+  // Same as loadImageAsDataUrl but tolerates same-origin asset URLs (no CORS mode).
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const dataUrl: string = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    const dims: { w: number; h: number } = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => resolve({ w: 600, h: 200 });
       img.src = dataUrl;
     });
     const format = blob.type.includes("png") ? "PNG" : "JPEG";
