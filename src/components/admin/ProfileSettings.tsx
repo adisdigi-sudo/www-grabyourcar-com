@@ -242,6 +242,8 @@ export const ProfileSettings = () => {
         logo_url: dataUrl,
       };
 
+      queryClient.setQueryData(["brandingSettings"], updatedBranding);
+
       await supabase
         .from("admin_settings")
         .upsert([{
