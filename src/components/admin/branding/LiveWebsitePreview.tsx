@@ -66,6 +66,7 @@ export const LiveWebsitePreview = ({
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [path, setPath] = useState<string>("/");
   const [manualRefresh, setManualRefresh] = useState(0);
+  const [previewScale, setPreviewScale] = useState(100);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
@@ -107,6 +108,27 @@ export const LiveWebsitePreview = ({
             )}
           </CardTitle>
           <div className="flex items-center gap-1">
+            <div className="mr-1 hidden items-center gap-1 rounded-md border bg-background px-1.5 py-1 sm:flex">
+              <button
+                type="button"
+                onClick={() => setPreviewScale((value) => Math.max(60, value - 10))}
+                className="rounded p-1 text-muted-foreground hover:bg-accent"
+                title="Zoom out"
+              >
+                <span className="text-xs font-semibold">−</span>
+              </button>
+              <span className="min-w-10 text-center text-[10px] font-medium text-muted-foreground">
+                {previewScale}%
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewScale((value) => Math.min(140, value + 10))}
+                className="rounded p-1 text-muted-foreground hover:bg-accent"
+                title="Zoom in"
+              >
+                <span className="text-xs font-semibold">+</span>
+              </button>
+            </div>
             {([
               { mode: "mobile" as Viewport, icon: Smartphone, label: "Mobile" },
               { mode: "tablet" as Viewport, icon: Tablet, label: "Tablet" },
@@ -248,12 +270,16 @@ export const LiveWebsitePreview = ({
 
       <CardContent className="pt-0">
         <div className="rounded-lg border bg-muted/30 p-2 flex justify-center">
+          <div className="w-full overflow-auto rounded-md">
           <div
-            className="bg-background border border-border rounded-md overflow-hidden shadow-inner transition-all duration-300"
+            className="mx-auto origin-top bg-background border border-border rounded-md overflow-hidden shadow-inner transition-all duration-300"
             style={{
               width: VIEWPORT_WIDTH[viewport],
               maxWidth: "100%",
               height: viewport === "mobile" ? 640 : viewport === "tablet" ? 700 : 720,
+              transform: `scale(${previewScale / 100})`,
+              transformOrigin: "top center",
+              marginBottom: `${Math.max(0, previewScale - 100) * 6}px`,
             }}
           >
             <iframe
@@ -264,6 +290,7 @@ export const LiveWebsitePreview = ({
               className="w-full h-full border-0 bg-background"
               sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
             />
+          </div>
           </div>
         </div>
         <p className="mt-2 text-[10px] text-muted-foreground text-center">

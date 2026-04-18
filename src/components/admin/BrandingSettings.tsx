@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,7 +43,62 @@ export const BrandingSettings = () => {
     () => normalizeBrandingSettings(settings),
     [settings],
   );
+  const defaultSettings = useMemo(() => normalizeBrandingSettings(), []);
   const hasHydratedRef = useRef(false);
+
+  const applyAutoLogoSizing = useCallback(async (field: keyof BrandingSettingsData, url: string) => {
+    if (field !== "logo_url" || !url) return;
+
+    const dimensions = await new Promise<{ width: number; height: number } | null>((resolve) => {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+      image.onerror = () => resolve(null);
+      image.src = url;
+    });
+
+    if (!dimensions?.width || !dimensions?.height) return;
+
+    const aspectRatio = dimensions.width / dimensions.height;
+
+    setFormData((prev) => {
+      const next = { ...prev };
+
+      if (prev.logo_height_header <= defaultSettings.logo_height_header + 4) {
+        next.logo_height_header = Math.min(96, aspectRatio > 3 ? 82 : aspectRatio > 2 ? 74 : 68);
+      }
+
+      if (prev.logo_height_footer <= defaultSettings.logo_height_footer + 4) {
+        next.logo_height_footer = Math.min(72, Math.round(next.logo_height_header * 0.82));
+      }
+
+      if (prev.logo_height_mobile <= defaultSettings.logo_height_mobile + 4) {
+        next.logo_height_mobile = Math.min(56, Math.round(next.logo_height_header * 0.62));
+      }
+
+      if (!prev.logo_width_header) {
+        next.logo_width_header = Math.min(520, Math.round(next.logo_height_header * aspectRatio));
+      }
+
+      if (!prev.logo_width_footer) {
+        next.logo_width_footer = Math.min(360, Math.round(next.logo_height_footer * aspectRatio));
+      }
+
+      if (!prev.logo_width_mobile) {
+        next.logo_width_mobile = Math.min(240, Math.round(next.logo_height_mobile * aspectRatio));
+      }
+
+      return next;
+    });
+  }, [defaultSettings.logo_height_footer, defaultSettings.logo_height_header, defaultSettings.logo_height_mobile]);
+
+  const handleBrandingImageChange = useCallback((field: keyof BrandingSettingsData) => async (url: string) => {
+    setFormData((prev) => ({ ...prev, [field]: url }));
+
+    if (url) {
+      await applyAutoLogoSizing(field, url);
+    }
+  }, [applyAutoLogoSizing]);
 
   // Load settings when data changes
   useEffect(() => {
@@ -226,7 +281,7 @@ export const BrandingSettings = () => {
                 <CardContent>
                   <AdminImageUpload
                     value={formData.logo_url}
-                    onChange={(url) => setFormData((prev) => ({ ...prev, logo_url: url }))}
+                    onChange={handleBrandingImageChange("logo_url")}
                     label="Main Logo"
                     folder="branding/logo"
                     bucket="branding-assets"
@@ -246,7 +301,7 @@ export const BrandingSettings = () => {
                 <CardContent>
                   <AdminImageUpload
                     value={formData.logo_dark_url}
-                    onChange={(url) => setFormData((prev) => ({ ...prev, logo_dark_url: url }))}
+                    onChange={handleBrandingImageChange("logo_dark_url")}
                     label="Dark Mode Logo"
                     folder="branding/logo-dark"
                     bucket="branding-assets"
@@ -279,7 +334,7 @@ export const BrandingSettings = () => {
                 </div>
                 <AdminImageUpload
                   value={formData.animated_logo_url}
-                  onChange={(url) => setFormData((prev) => ({ ...prev, animated_logo_url: url }))}
+                  onChange={handleBrandingImageChange("animated_logo_url")}
                   label="Animated Logo"
                   folder="branding/animated-logo"
                   bucket="branding-assets"
@@ -299,7 +354,7 @@ export const BrandingSettings = () => {
               <CardContent>
                 <AdminImageUpload
                   value={formData.favicon_url}
-                  onChange={(url) => setFormData((prev) => ({ ...prev, favicon_url: url }))}
+                  onChange={handleBrandingImageChange("favicon_url")}
                   label="Favicon"
                   folder="branding/favicon"
                   bucket="branding-assets"
@@ -319,7 +374,7 @@ export const BrandingSettings = () => {
               <CardContent>
                 <AdminImageUpload
                   value={formData.og_image_url}
-                  onChange={(url) => setFormData((prev) => ({ ...prev, og_image_url: url }))}
+                  onChange={handleBrandingImageChange("og_image_url")}
                   label="Social Share Image"
                   folder="branding/og"
                   bucket="branding-assets"
@@ -327,6 +382,83 @@ export const BrandingSettings = () => {
                   previewMode="hero-desktop"
                   placeholder="/og-image.png"
                 />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Quick Logo Size Controls</CardTitle>
+                <CardDescription>
+                  Yahin se header, footer aur mobile logo ka size turant bada/chhota karo.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {[
+                    {
+                      title: "Header",
+                      heightKey: "logo_height_header" as const,
+                      widthKey: "logo_width_header" as const,
+                      heightMin: 32,
+                      heightMax: 120,
+                      widthMin: 0,
+                      widthMax: 520,
+                    },
+                    {
+                      title: "Footer",
+                      heightKey: "logo_height_footer" as const,
+                      widthKey: "logo_width_footer" as const,
+                      heightMin: 24,
+                      heightMax: 90,
+                      widthMin: 0,
+                      widthMax: 380,
+                    },
+                    {
+                      title: "Mobile",
+                      heightKey: "logo_height_mobile" as const,
+                      widthKey: "logo_width_mobile" as const,
+                      heightMin: 24,
+                      heightMax: 70,
+                      widthMin: 0,
+                      widthMax: 260,
+                    },
+                  ].map((item) => (
+                    <div key={item.title} className="space-y-3 rounded-lg border p-4">
+                      <div>
+                        <p className="text-sm font-medium">{item.title}</p>
+                        <p className="text-[11px] text-muted-foreground">0 width = auto fit</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">Height (px)</Label>
+                        <Input
+                          type="number"
+                          min={item.heightMin}
+                          max={item.heightMax}
+                          value={formData[item.heightKey]}
+                          onChange={(e) => setFormData((prev) => ({
+                            ...prev,
+                            [item.heightKey]: Number(e.target.value),
+                          }))}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">Width (px)</Label>
+                        <Input
+                          type="number"
+                          min={item.widthMin}
+                          max={item.widthMax}
+                          value={formData[item.widthKey]}
+                          onChange={(e) => setFormData((prev) => ({
+                            ...prev,
+                            [item.widthKey]: Number(e.target.value),
+                          }))}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
             </div>
