@@ -458,7 +458,7 @@ export class UnifiedPdfRenderer {
 
     const rows: [string, string][] = [];
     if (b.bank.account_name) rows.push(["A/c Name", b.bank.account_name]);
-    if (b.bank.bank_name || b.bank.name) rows.push(["Bank", b.bank.name]);
+    if (b.bank.name) rows.push(["Bank", b.bank.name]);
     if (b.bank.account_number) rows.push(["A/c No.", b.bank.account_number]);
     if (b.bank.ifsc) rows.push(["IFSC", b.bank.ifsc]);
     if (b.bank.branch) rows.push(["Branch", b.bank.branch]);
