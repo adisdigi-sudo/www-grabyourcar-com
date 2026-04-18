@@ -194,6 +194,9 @@ const EmployeePerformanceDashboard = lazy(() =>
 const AIAutomationHub = lazy(() =>
   import("@/components/admin/automation/AIAutomationHub").then((module) => ({ default: module.AIAutomationHub })),
 );
+const ReplyAgentsBuilder = lazy(() =>
+  import("@/components/admin/automation/ReplyAgentsBuilder").then((module) => ({ default: module.ReplyAgentsBuilder })),
+);
 const LeadScoringDashboard = lazy(() =>
   import("@/components/admin/LeadScoringDashboard").then((module) => ({ default: module.LeadScoringDashboard })),
 );
@@ -696,6 +699,10 @@ const AdminLayout = () => {
   };
 
   const renderContent = () => {
+    const replyAgentVerticalSlug = activeVertical?.slug === "corporate" || activeVertical?.slug === "fleet"
+      ? "rental"
+      : activeVertical?.slug;
+
     switch (resolvedActiveTab) {
       case "dashboard": {
         const slug = activeVertical?.slug;
@@ -729,6 +736,8 @@ const AdminLayout = () => {
         return <EmployeePerformanceDashboard />;
       case "ai-automation-hub":
         return <AIAutomationHub />;
+      case "reply-agents":
+        return <ReplyAgentsBuilder verticalSlug={replyAgentVerticalSlug} />;
       case "lead-scoring":
         return <LeadScoringDashboard />;
       case "client-management":
