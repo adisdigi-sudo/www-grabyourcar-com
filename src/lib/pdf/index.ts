@@ -22,6 +22,12 @@ export {
   finalizeAndSave,
   type ApplyBrandingOptions,
 } from "./brandingBridge";
+export {
+  generateBrandedInvoice,
+  type BrandedInvoiceData,
+  type BrandedInvoiceItem,
+  type GenerateBrandedInvoiceOpts,
+} from "./generateBrandedInvoice";
 export type {
   ResolvedBranding,
   PdfGlobalBranding,
