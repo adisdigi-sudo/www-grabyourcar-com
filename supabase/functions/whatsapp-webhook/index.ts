@@ -943,204 +943,10 @@ Rules:
             }
           }
 
-          // ── Trigger wa_flows if applicable ──
-          try {
-            if (isStrictSelfServiceRequest) {
-              return new Response(JSON.stringify({ success: true, processed: "messages" }), {
-                status: 200,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-              });
-            }
-
-            const { data: activeFlows } = await supabase
-              .from("wa_flows")
-              .select("*")
-              .eq("is_active", true);
-
-            if (activeFlows && activeFlows.length > 0) {
-              for (const flow of activeFlows) {
-                const triggerConfig = flow.trigger_config as any;
-                const nodes = (flow.nodes as any[]) || [];
-                const edges = (flow.edges as any[]) || [];
-                const triggerNode = nodes.find((n: any) => n.type === "trigger");
-                let shouldTrigger = false;
-
-                if (flow.trigger_type === "keyword") {
-                  const rawKeywords = normalizeFlowKeywords(triggerConfig?.keywords ?? triggerNode?.config?.keywords);
-                  const keywords = rawKeywords.flatMap(
-                    (kw: string) => kw.split(",").map((k: string) => k.trim().toLowerCase()).filter(Boolean)
-                  );
-                  shouldTrigger = keywords.some((kw: string) => messageText.toLowerCase().includes(kw));
-                } else if (flow.trigger_type === "all_messages") {
-                  shouldTrigger = true;
-                } else if (flow.trigger_type === "first_message" || flow.trigger_type === "new_chat") {
-                  shouldTrigger = isNewInboxConversation;
-                }
-
-                if (shouldTrigger) {
-                  console.log(`Flow triggered: ${flow.name}`);
-                  const flowRunTimestamp = new Date().toISOString();
-                  await supabase.from("wa_flows").update({
-                    total_runs: (flow.total_runs || 0) + 1,
-                    last_run_at: flowRunTimestamp,
-                  }).eq("id", flow.id);
-
-                  const processNode = async (nodeId: string): Promise<void> => {
-                    const node = nodes.find((n: any) => n.id === nodeId);
-                    if (!node) return;
-
-                    if ((node.type === "message" || node.type === "send_message")) {
-                      const nodeMessageType = node.config?.message_type || "text";
-
-                      if (nodeMessageType === "template" && node.config?.template_name) {
-                        const templateResponse = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                          },
-                          body: JSON.stringify({
-                            to: from,
-                            messageType: "template",
-                            template_name: node.config.template_name,
-                            template_variables: {
-                              name: contactName,
-                              customer_name: contactName,
-                              phone: from,
-                              var_1: contactName,
-                              var_2: from,
-                            },
-                            name: contactName,
-                            logEvent: `flow:${flow.name}`,
-                          }),
-                        });
-
-                        const templateData = await templateResponse.json().catch(() => null);
-                        if (!templateResponse.ok || templateData?.success !== true) {
-                          throw new Error(templateData?.error || `Flow template send failed (${templateResponse.status})`);
-                        }
-                      } else {
-                        const rawMessage = node.config?.content || node.config?.message;
-                        if (rawMessage) {
-                          const flowMsg = interpolateFlowText(rawMessage, contactName, from);
-                          const flowSendResponse = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
-                              Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                            },
-                            body: JSON.stringify({
-                              to: from,
-                              messageType: "text",
-                              message: flowMsg,
-                              name: contactName,
-                              logEvent: `flow:${flow.name}`,
-                            }),
-                          });
-
-                          const flowSendData = await flowSendResponse.json().catch(() => null);
-                          if (!flowSendResponse.ok || flowSendData?.success !== true) {
-                            throw new Error(flowSendData?.error || `Flow text send failed (${flowSendResponse.status})`);
-                          }
-                        }
-                      }
-                    } else if (node.type === "ai_response") {
-                      const aiPrompt = node.config?.prompt || "Respond helpfully to the customer.";
-                      const brainResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-brain`, {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                        },
-                        body: JSON.stringify({
-                          messages: [
-                            { role: "system", content: aiPrompt },
-                            ...conversationHistory.slice(-12),
-                          ],
-                          channel: "whatsapp",
-                          customer_name: contactName,
-                          customer_phone: from,
-                        }),
-                      });
-
-                      const brainData = await brainResponse.json().catch(() => null);
-                      const flowAiMessage = brainData?.response ? interpolateFlowText(brainData.response, contactName, from) : null;
-                      if (!brainResponse.ok || !flowAiMessage) {
-                        throw new Error(brainData?.error || `Flow AI response failed (${brainResponse.status})`);
-                      }
-
-                      const aiSendResponse = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                        },
-                        body: JSON.stringify({
-                          to: from,
-                          messageType: "text",
-                          message: flowAiMessage,
-                          name: contactName,
-                          logEvent: `flow_ai:${flow.name}`,
-                        }),
-                      });
-
-                      const aiSendData = await aiSendResponse.json().catch(() => null);
-                      if (!aiSendResponse.ok || aiSendData?.success !== true) {
-                        throw new Error(aiSendData?.error || `Flow AI send failed (${aiSendResponse.status})`);
-                      }
-                    } else if (node.type === "delay") {
-                      const delaySeconds = getFlowDelaySeconds(node.config || {});
-                      // In webhook context, we skip delays (queue for later in production)
-                      console.log(`Flow delay: ${delaySeconds}s (skipped in webhook)`);
-                    } else if (node.type === "condition") {
-                      const operator = node.config?.operator || "contains";
-                      const expectedValue = String(node.config?.value || "").toLowerCase();
-                      const actualValue = String(messageText || "").toLowerCase();
-
-                      const conditionMatched =
-                        operator === "equals"
-                          ? actualValue === expectedValue
-                          : operator === "not_contains"
-                            ? !actualValue.includes(expectedValue)
-                            : operator === "starts_with"
-                              ? actualValue.startsWith(expectedValue)
-                              : actualValue.includes(expectedValue);
-
-                      if (!conditionMatched) {
-                        return;
-                      }
-                    }
-
-                    // Follow edges to next node
-                    const nextEdge = edges.find((e: any) => e.source === nodeId);
-                    if (nextEdge) {
-                      await processNode(nextEdge.target);
-                    }
-                  };
-
-                  try {
-                    if (triggerNode) {
-                      const firstEdge = edges.find((e: any) => e.source === triggerNode.id);
-                      if (firstEdge) {
-                        await processNode(firstEdge.target);
-                      }
-                    }
-
-                    await supabase.from("wa_flows").update({
-                      total_completions: (flow.total_completions || 0) + 1,
-                    }).eq("id", flow.id);
-                  } catch (flowNodeError) {
-                    console.error(`Flow execution failed for ${flow.name}:`, flowNodeError);
-                    await supabase.from("wa_flows").update({
-                      total_failures: (flow.total_failures || 0) + 1,
-                    }).eq("id", flow.id);
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            console.error("Flow execution error:", e);
-          }
+          // ── Legacy wa_flows execution disabled for inbound WhatsApp ──
+          // Hybrid router above is now the single reply source:
+          // 1) deterministic flow-engine for docs/status/payments/car DB
+          // 2) AI fallback for open-ended sales/support queries
         }
 
         return new Response(JSON.stringify({ success: true, processed: "messages" }), {
@@ -1166,19 +972,41 @@ Rules:
 });
 
 function getFallbackResponse(message: string): string {
-  if (message.includes("price") || message.includes("cost") || message.includes("kitna")) {
-    return `🚗 For the best on-road price, our expert will call you within 5 minutes!\n\nBrowse cars: www.grabyourcar.com/cars`;
+  if (message.includes("policy") || message.includes("insurance")) {
+    return `Please share your *vehicle number* or *policy number* and I’ll help fetch your insurance details. 📄`;
   }
-  if (message.includes("loan") || message.includes("emi") || message.includes("finance")) {
-    return `💰 Car Finance: Interest from 8.5%, up to 100% funding!\n\nCalculate EMI: www.grabyourcar.com/car-loans`;
+  if (message.includes("invoice") || message.includes("receipt") || message.includes("bill")) {
+    return `Please share your *booking/order number* or *registered phone number* so I can help with your invoice/receipt. 🧾`;
   }
-  if (message.includes("insurance") || message.includes("bima")) {
-    return `🛡️ Car Insurance with up to 70% discount!\n\nGet quote: www.grabyourcar.com/car-insurance`;
+  if (message.includes("loan") || message.includes("sanction") || message.includes("emi") || message.includes("finance")) {
+    return `Please share your *registered phone number* or *loan/application reference* and I’ll help with your loan details. 💰`;
+  }
+  if (message.includes("budget") || message.includes("range") || message.includes("recommend") || message.includes("suggest")) {
+    return `Sure 👍 Tell me your *budget*, *fuel preference*, and *city*, and I’ll suggest the best cars for you.`;
   }
   if (message.includes("hi") || message.includes("hello") || message.includes("namaste")) {
-    return `👋 Welcome to GrabYourCar!\n\nI'm your AI car assistant. I can help with:\n\n1️⃣ Find the perfect car\n2️⃣ Check prices & offers\n3️⃣ Calculate EMI\n4️⃣ Get Insurance Quote\n5️⃣ Book Test Drive\n\nJust ask me anything! 🚗`;
+    return `🚗 Welcome to GrabYourCar!\n\nI can help with car suggestions, prices, EMI, insurance, loan docs, invoices, HSRP, and payment details.\n\nWhat would you like help with today?`;
   }
-  return `Thank you for your message! Our car expert will connect with you shortly.\n\nMeanwhile, explore: www.grabyourcar.com`;
+  return `I can help with *cars, budget advice, policy copy, sanction letter, invoice, HSRP status,* or *payment details*. Just tell me what you need.`;
+}
+
+function detectVerticalHint(message: string): string | undefined {
+  if (["policy", "insurance", "premium", "renewal", "claim", "bima"].some((keyword) => message.includes(keyword))) {
+    return "insurance";
+  }
+  if (["loan", "emi", "finance", "sanction", "approval"].some((keyword) => message.includes(keyword))) {
+    return "loans";
+  }
+  if (["hsrp", "plate", "number plate"].some((keyword) => message.includes(keyword))) {
+    return "hsrp";
+  }
+  if (["rent", "rental", "booking"].some((keyword) => message.includes(keyword))) {
+    return "self-drive";
+  }
+  if (["accessory", "accessories", "order", "helmet", "seat cover"].some((keyword) => message.includes(keyword))) {
+    return "accessories";
+  }
+  return undefined;
 }
 
 function normalizeFlowKeywords(keywords: unknown): string[] {
