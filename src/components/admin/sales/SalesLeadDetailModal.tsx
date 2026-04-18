@@ -21,6 +21,7 @@ import {
 import { SalesCustomerTimeline } from "./SalesCustomerTimeline";
 import { OmniShareDialog } from "@/components/admin/shared/OmniShareDialog";
 import { generateSalesOfferPDF } from "./SalesOfferPDF";
+import { generateDeliveryThankYouPDF } from "./DeliveryThankYouPDF";
 import { calculateLoanSalesBreakdown } from "@/components/admin/loans/loanSalesCalculator";
 import { UnifiedSalesCalculator } from "@/components/admin/shared/UnifiedSalesCalculator";
 
