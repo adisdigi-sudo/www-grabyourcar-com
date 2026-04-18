@@ -24,10 +24,10 @@ import {
   Eye,
 } from "lucide-react";
 import {
-  BRANDING_PREVIEW_QUERY_PARAM,
   normalizeBrandingSettings,
   type BrandingSettings,
 } from "@/hooks/useBrandingSettings";
+import { BRANDING_PREVIEW_QUERY_PARAM } from "@/lib/brandingPreview";
 
 type Viewport = "desktop" | "tablet" | "mobile";
 
@@ -85,6 +85,9 @@ export const LiveWebsitePreview = ({
   );
 
   const footerLogo = previewBranding.logo_dark_url || previewBranding.logo_url;
+  const heroHeight = viewport === "mobile"
+    ? previewBranding.banner_height_mobile
+    : previewBranding.banner_height_desktop;
 
   const openExternalPreview = () => {
     window.open(src, "_blank", "noopener,noreferrer");
@@ -222,6 +225,24 @@ export const LiveWebsitePreview = ({
               <span className="text-[10px] text-muted-foreground">Mobile</span>
             </div>
           </div>
+
+          <div className="rounded-lg border bg-background p-2 sm:col-span-2 xl:col-span-1 2xl:col-span-2">
+            <p className="mb-2 text-[10px] font-medium text-muted-foreground">Hero / Banner Height Preview</p>
+            <div className="overflow-hidden rounded-md border bg-muted/40">
+              <div
+                className="relative flex items-end justify-between bg-gradient-to-r from-primary/15 via-background to-secondary/15 px-4 py-3"
+                style={{ height: Math.max(140, Math.min(heroHeight, 260)) }}
+              >
+                <div>
+                  <div className="text-xs font-semibold text-foreground">{previewBranding.brand_name}</div>
+                  <div className="text-[10px] text-muted-foreground">{previewBranding.tagline}</div>
+                </div>
+                <Badge variant="outline" className="text-[10px] bg-background/80">
+                  {viewport === "mobile" ? `${previewBranding.banner_height_mobile}px mobile` : `${previewBranding.banner_height_desktop}px desktop`}
+                </Badge>
+              </div>
+            </div>
+          </div>
         </div>
       </CardHeader>
 
@@ -246,7 +267,7 @@ export const LiveWebsitePreview = ({
           </div>
         </div>
         <p className="mt-2 text-[10px] text-muted-foreground text-center">
-          Upar tab, header, footer aur mobile preview live dikhega · Save par website aur tab icon update ho jayega.
+          Favicon, header, footer, mobile aur banner preview yahin live dikhega · Save par public website realtime update hogi.
         </p>
       </CardContent>
     </Card>
