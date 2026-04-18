@@ -112,7 +112,7 @@ export function WhatsAppComposeDialog({
     setSelectedTplId(tplId);
     const tpl = templates.find((t) => t.id === tplId);
     if (!tpl) return;
-    setMessage(applyVars(tpl.body, variableMap));
+    setMessage(applyVars(tpl.body, variableMap, tpl.variables || []));
   };
 
   const handleResetDefault = () => {
