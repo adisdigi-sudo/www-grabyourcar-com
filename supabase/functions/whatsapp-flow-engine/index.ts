@@ -76,19 +76,33 @@ async function fetchDocument(cfg: any, identity: Record<string, string>) {
 
 // Fetch sales info (car details, order status, etc.)
 async function fetchSalesInfo(cfg: any, message: string) {
-  // For cars: match name in message
+  // For cars: extract candidate words from message and search DB directly
   if (cfg.source_table === "cars") {
     const norm = normalize(message);
-    const { data: cars } = await supabase
-      .from("cars")
-      .select(cfg.fields_to_send.join(","))
-      .limit(50);
+    const words = norm.split(" ").filter((w) => w.length >= 3);
+    if (words.length === 0) return null;
 
-    if (!cars) return null;
-    const match = (cars as any[]).find((c) =>
-      normalize(c.name || "").split(" ").some((w: string) => norm.includes(w) && w.length > 3)
-    );
-    return match;
+    // Try each word as an ILIKE search against the car name (longest first)
+    const sortedWords = [...words].sort((a, b) => b.length - a.length);
+    for (const word of sortedWords) {
+      const { data: matches } = await supabase
+        .from("cars")
+        .select(cfg.fields_to_send.join(","))
+        .ilike("name", `%${word}%`)
+        .limit(5);
+
+      if (matches && matches.length > 0) {
+        // Prefer exact (case-insensitive) name match, else shortest name (base model)
+        const exact = (matches as any[]).find(
+          (c) => normalize(c.name || "") === word
+        );
+        if (exact) return exact;
+        return (matches as any[]).sort(
+          (a, b) => (a.name?.length || 999) - (b.name?.length || 999)
+        )[0];
+      }
+    }
+    return null;
   }
 
   // Generic lookup
