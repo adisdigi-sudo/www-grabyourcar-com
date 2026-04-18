@@ -131,6 +131,7 @@ export function WhatsAppComposeDialog({
     if (open) {
       setMessage(defaultMessage);
       setSelectedTplId("");
+      setPreviousMessage(null);
     }
   }, [open, defaultMessage]);
 
