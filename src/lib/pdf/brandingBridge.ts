@@ -75,23 +75,23 @@ async function loadLogoAsDataUrl(url: string): Promise<string | null> {
 function stampAccentBands(doc: jsPDF, branding: ResolvedBranding) {
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
-  const primary = hexToRgb(branding.brand_primary_color);
-  const accent = hexToRgb(branding.brand_accent_color);
+  const [pr, pg, pb] = hexToRgb(branding.brand_primary_color);
+  const [ar, ag, ab] = hexToRgb(branding.brand_accent_color);
   const pageCount = doc.getNumberOfPages();
 
   for (let p = 1; p <= pageCount; p++) {
     doc.setPage(p);
     // Top primary strip
-    doc.setFillColor(primary.r, primary.g, primary.b);
+    doc.setFillColor(pr, pg, pb);
     doc.rect(0, 0, W, HEADER_BAND_H, "F");
     // Thin accent line right under it
-    doc.setFillColor(accent.r, accent.g, accent.b);
+    doc.setFillColor(ar, ag, ab);
     doc.rect(0, HEADER_BAND_H, W, 0.6, "F");
 
     // Bottom accent line + footer band
-    doc.setFillColor(accent.r, accent.g, accent.b);
+    doc.setFillColor(ar, ag, ab);
     doc.rect(0, H - FOOTER_BAND_H - 0.6, W, 0.6, "F");
-    doc.setFillColor(primary.r, primary.g, primary.b);
+    doc.setFillColor(pr, pg, pb);
     doc.rect(0, H - FOOTER_BAND_H, W, FOOTER_BAND_H, "F");
 
     // Footer text (white on primary)
