@@ -82,7 +82,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const persistedSession = readPersistedSession();
     if (persistedSession) {
+      // Render the UI immediately with the cached session so users never
+      // see an indefinite "Loading sign in..." spinner while we verify
+      // the session in the background.
       applySession(persistedSession);
+      setInitialized(true);
+      setLoading(false);
+    } else {
+      // No cached session — surface the auth UI quickly even if the
+      // network call is slow, so users can sign in without waiting.
+      const FAST_NO_SESSION_MS = 1500;
+      window.setTimeout(() => {
+        if (!isMounted || bootstrapResolved) return;
+        setInitialized(true);
+        setLoading(false);
+      }, FAST_NO_SESSION_MS);
     }
 
     bootstrapTimeout = window.setTimeout(() => {
