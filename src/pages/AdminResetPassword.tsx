@@ -9,8 +9,8 @@ import { Lock, Loader2, Shield, CheckCircle, Eye, EyeOff, Building2, KeyRound } 
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { z } from "zod";
-import logoImage from "@/assets/logo-grabyourcar-main.png";
 import { withPreviewParams } from "@/lib/previewRouting";
+import { ResponsiveLogo } from "@/components/ResponsiveLogo";
 
 const passwordSchema = z.string()
   .min(8, "Password must be at least 8 characters")
@@ -135,11 +135,7 @@ const AdminResetPassword = () => {
             >
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/20 rounded-2xl blur-xl" />
-                <img 
-                  src={logoImage} 
-                  alt="Grabyourcar Admin" 
-                  className="h-16 relative dark:invert"
-                />
+                <ResponsiveLogo variant="auth" className="relative w-auto max-w-full" />
               </div>
             </motion.div>
             

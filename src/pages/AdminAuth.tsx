@@ -10,12 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { toast } from "sonner";
 import { Lock, Loader2, Shield, KeyRound, Building2, Eye, EyeOff, User, ArrowLeft, Crown, Phone, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import logoImage from "@/assets/logo-grabyourcar-main.png";
 import AdminForgotPassword from "@/components/admin/AdminForgotPassword";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { VerticalPasswordDialog, getVerifiedVerticals, markVerticalVerified } from "@/components/admin/VerticalPasswordDialog";
 import { withPreviewParams } from "@/lib/previewRouting";
+import { ResponsiveLogo } from "@/components/ResponsiveLogo";
 
 type LoginStep =
   | "choose-type"
@@ -375,7 +375,7 @@ const AdminAuth = () => {
             <div className="flex justify-center mb-6">
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/20 rounded-2xl blur-xl" />
-                <img src={logoImage} alt="Grabyourcar Admin" className="h-16 relative dark:invert" />
+                <ResponsiveLogo variant="auth" className="relative w-auto max-w-full" />
               </div>
             </div>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-4">
