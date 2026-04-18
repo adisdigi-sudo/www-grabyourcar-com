@@ -166,3 +166,5 @@ project_id = "ynoiwioypxpurwdbjvyt"
     verify_jwt = false
   [functions.whatsapp-webhook]
     verify_jwt = false
+  [functions.whatsapp-media-proxy]
+    verify_jwt = false
