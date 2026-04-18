@@ -38,7 +38,7 @@ export function PdfBrandingPreview({ branding }: Props) {
 
   return (
     <div
-      className="rounded-md border bg-white shadow-sm overflow-hidden"
+      className="relative rounded-md border bg-white shadow-lg overflow-hidden flex flex-col"
       style={{ aspectRatio: "1 / 1.414", color: branding.brand_text_color }}
     >
       {/* Header band */}
@@ -77,7 +77,7 @@ export function PdfBrandingPreview({ branding }: Props) {
       <div className="h-1" style={{ background: branding.brand_accent_color }} />
 
       {/* Body */}
-      <div className="p-4 space-y-3 text-[9px]">
+      <div className="p-4 space-y-3 text-[9px] flex-1 overflow-hidden">
         <div className="flex items-center justify-between">
           <div>
             <div
@@ -167,7 +167,7 @@ export function PdfBrandingPreview({ branding }: Props) {
 
       {/* Footer band */}
       <div
-        className="absolute-fake px-4 py-2 text-[7px] text-center mt-auto"
+        className="px-4 py-2 text-[7px] text-center mt-auto"
         style={{
           background: `${branding.brand_primary_color}10`,
           color: branding.brand_muted_color,
