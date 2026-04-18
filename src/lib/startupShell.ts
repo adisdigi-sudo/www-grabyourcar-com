@@ -258,6 +258,11 @@ const handleGlobalRuntimeFatal = () => {
   recoverStartupShell("Runtime issue detect hui hai. Niche diye options se page ko safely recover karo.");
 };
 
+const handleGlobalRouteActivity = () => {
+  markStartupShellRouteTransition();
+  clearBlankRecoveryTimer();
+};
+
 const handleGlobalDevServerStatus = (event: Event) => {
   const detail = (event as CustomEvent<{ status?: string; reason?: string }>).detail;
   const status = detail?.status;
@@ -282,6 +287,7 @@ const installGlobalRecoveryListeners = () => {
   globalRecoveryListenersInstalled = true;
   window.addEventListener("lovable:runtime-fatal", handleGlobalRuntimeFatal as EventListener);
   window.addEventListener(DEV_SERVER_STATUS_EVENT, handleGlobalDevServerStatus as EventListener);
+  window.addEventListener(ROUTE_ACTIVITY_EVENT, handleGlobalRouteActivity as EventListener);
 };
 
 export const isSensitiveRouteAppReady = () => {
@@ -426,7 +432,7 @@ export const ensureStartupShell = () => {
     clearBlankRecoveryTimer();
     clearAutoReloadTimer();
     window.location.replace(
-      new URL(isSensitivePreviewRouteWindow() ? "/crm-auth" : "/", window.location.origin).toString(),
+      new URL(withPreviewParams(isSensitivePreviewRouteWindow() ? "/crm-auth" : "/"), window.location.origin).toString(),
     );
   };
 
