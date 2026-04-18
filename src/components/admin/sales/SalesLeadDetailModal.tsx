@@ -75,6 +75,7 @@ export function SalesLeadDetailModal({
   const [tenureMonths, setTenureMonths] = useState(lead.tenure_months || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showShareOffer, setShowShareOffer] = useState(false);
+  const [showCompose, setShowCompose] = useState(false);
 
   // Full INR formatter — never abbreviate
   const fmtINR = (v: number) => `Rs. ${Math.round(v).toLocaleString("en-IN")}`;
