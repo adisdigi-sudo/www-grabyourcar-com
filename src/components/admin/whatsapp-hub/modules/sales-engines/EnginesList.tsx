@@ -191,7 +191,16 @@ export function EnginesList({ onEdit }: Props) {
 
                   <div className="flex gap-2 pt-1">
                     <Button size="sm" variant="outline" onClick={() => onEdit(eng.id)} className="flex-1 h-8">
-                      <Edit className="h-3.5 w-3.5 mr-1" /> Edit Flow
+                      <Edit className="h-3.5 w-3.5 mr-1" /> Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => setLaunchEngine(eng)}
+                      disabled={!eng.is_active}
+                      className="flex-1 h-8 bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                      title={eng.is_active ? "Bulk launch this engine" : "Activate engine first"}
+                    >
+                      <Send className="h-3.5 w-3.5 mr-1" /> Launch
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => toggleActive(eng)} className="h-8">
                       <Power className={`h-3.5 w-3.5 ${eng.is_active ? "text-green-600" : "text-muted-foreground"}`} />
