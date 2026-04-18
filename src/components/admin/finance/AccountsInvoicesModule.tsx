@@ -34,6 +34,7 @@ export const AccountsInvoicesModule = () => {
   const [form, setForm] = useState<Record<string, any>>({});
   const [items, setItems] = useState<any[]>([{ description: "", hsn: "", quantity: 1, rate: 0, amount: 0 }]);
   const [tab, setTab] = useState("all");
+  const [view, setView] = useState<"list" | "studio">("list");
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["acc-invoices-all"],
@@ -88,6 +89,17 @@ export const AccountsInvoicesModule = () => {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex gap-2">
+          <Button variant={view === "list" ? "default" : "outline"} size="sm" onClick={() => setView("list")} className="gap-2"><FileText className="h-4 w-4" /> All Invoices</Button>
+          <Button variant={view === "studio" ? "default" : "outline"} size="sm" onClick={() => setView("studio")} className="gap-2"><Sparkles className="h-4 w-4" /> Premium Studio</Button>
+        </div>
+      </div>
+
+      {view === "studio" ? (
+        <PremiumInvoiceStudio />
+      ) : (
+      <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total Invoices</p><p className="text-2xl font-bold">{invoices.length}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total Receivable</p><p className="text-2xl font-bold text-orange-600">{fmt(totalReceivable)}</p></CardContent></Card>
