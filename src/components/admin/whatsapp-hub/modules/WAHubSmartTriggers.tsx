@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
-import { Plus, Zap, Edit, Trash2, Play, FileText, Banknote, MessageCircle, Search, CheckCircle2, XCircle, Activity } from "lucide-react";
+import { Plus, Zap, Edit, Trash2, Play, FileText, Banknote, MessageCircle, Search, CheckCircle2, XCircle, Activity, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
@@ -33,6 +33,76 @@ const VERTICALS = [
   { value: "self-drive", label: "Self-Drive Rentals" },
   { value: "accessories", label: "Accessories" },
   { value: "crm", label: "CRM (Cars Sales)" },
+];
+
+// Common typo / Hinglish variants for popular keywords
+const TYPO_VARIANTS: Record<string, string[]> = {
+  policy: ["policy", "policy copy", "paalisi", "polisy", "policy pdf", "insurance copy", "send my policy"],
+  invoice: ["invoice", "bill", "receipt", "rasid", "invoice pdf", "send invoice"],
+  brochure: ["brochure", "brouche", "brocher", "broacher", "broucher", "catalog", "leaflet", "pdf"],
+  photos: ["photo", "photos", "image", "images", "pic", "pics", "tasveer", "gallery"],
+  account: ["account", "bank", "upi", "payment details", "khata", "kaha bhejun", "account number"],
+  sanction: ["sanction", "sanction letter", "loan letter", "manjoori", "loan approval"],
+  hsrp: ["hsrp", "plate status", "number plate", "plate order"],
+};
+
+// One-click templates for the most common scenarios
+const QUICK_PRESETS = [
+  {
+    label: "📄 Send Policy (per customer)",
+    apply: {
+      trigger_name: "Send Insurance Policy",
+      keywords: TYPO_VARIANTS.policy.join(", "),
+      intent_type: "document",
+      required_identity_fields: "vehicle_number, phone",
+      fallback_message: "Please share your vehicle number (e.g. HR26AB1234) so I can fetch your policy.",
+      action_config: { source_table: "insurance_policies", document_type: "policy_pdf", lookup_field: "vehicle_number", pdf_url_field: "policy_document_url" },
+    },
+  },
+  {
+    label: "🧾 Send Invoice (per customer)",
+    apply: {
+      trigger_name: "Send Invoice",
+      keywords: TYPO_VARIANTS.invoice.join(", "),
+      intent_type: "document",
+      required_identity_fields: "phone",
+      fallback_message: "Please share your registered phone number so I can find your invoice.",
+      action_config: { source_table: "invoices", document_type: "invoice", lookup_field: "client_phone", pdf_url_field: "pdf_url" },
+    },
+  },
+  {
+    label: "🚗 Car Brochure (auto from DB)",
+    apply: {
+      trigger_name: "Car Brochure Request",
+      keywords: TYPO_VARIANTS.brochure.join(", "),
+      intent_type: "sales_info",
+      required_identity_fields: "",
+      fallback_message: "Please mention the exact car model name. Example: Thar brochure",
+      action_config: { source_table: "cars", lookup_field: "name", fields_to_send: ["name", "brand", "brochure_url"], reply_prefix: "Sure ji 🙏 Here is the brochure:" },
+    },
+  },
+  {
+    label: "📸 Car Photo (auto from DB)",
+    apply: {
+      trigger_name: "Car Photo Request",
+      keywords: TYPO_VARIANTS.photos.join(", "),
+      intent_type: "sales_info",
+      required_identity_fields: "",
+      fallback_message: "Please mention the exact car model name. Example: Thar photos",
+      action_config: { source_table: "cars", lookup_field: "name", fields_to_send: ["name", "brand"], reply_prefix: "Sure ji 🙏 Here is the photo:" },
+    },
+  },
+  {
+    label: "🏦 Payment / UPI details",
+    apply: {
+      trigger_name: "Payment Details",
+      keywords: TYPO_VARIANTS.account.join(", "),
+      intent_type: "payment_info",
+      required_identity_fields: "",
+      fallback_message: "",
+      action_config: { account_name: "", account_number: "", ifsc: "", bank: "", upi_id: "", upi_number: "" },
+    },
+  },
 ];
 
 interface TriggerForm {
@@ -421,6 +491,36 @@ export function WAHubSmartTriggers() {
             <DialogTitle>{editingId ? "Edit Trigger" : "Create New Trigger"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {!editingId && (
+              <div className="rounded-lg border bg-muted/40 p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                  <p className="text-xs font-semibold uppercase tracking-wide">Quick Presets</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {QUICK_PRESETS.map((p) => (
+                    <Button
+                      key={p.label}
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() =>
+                        setForm({
+                          vertical_slug: form.vertical_slug || "_global",
+                          priority: form.priority || 100,
+                          is_active: true,
+                          ...p.apply,
+                        } as TriggerForm)
+                      }
+                    >
+                      {p.label}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-2">Click a preset to auto-fill keywords, intent, and lookup config. You can edit anything after.</p>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Trigger Name</Label>
@@ -445,7 +545,25 @@ export function WAHubSmartTriggers() {
                 placeholder="policy, policy copy, send my policy, insurance pdf"
                 rows={2}
               />
-              <p className="text-xs text-muted-foreground mt-1">Match is case-insensitive. Multi-word keywords match if all words present.</p>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {Object.entries(TYPO_VARIANTS).map(([key, list]) => (
+                  <Button
+                    key={key}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-6 text-[10px] px-2"
+                    onClick={() => {
+                      const existing = form.keywords.split(",").map((s) => s.trim()).filter(Boolean);
+                      const merged = Array.from(new Set([...existing, ...list]));
+                      setForm({ ...form, keywords: merged.join(", ") });
+                    }}
+                  >
+                    + {key} typos
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Match is case-insensitive. Click chips above to auto-add common typos / Hinglish variants.</p>
             </div>
 
             <div>
