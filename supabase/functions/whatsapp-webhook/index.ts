@@ -420,24 +420,7 @@ Deno.serve(async (req) => {
               } else if (engineData?.reason === "no_active_session") {
                 // ─── AUTO-START engine session if lead vertical matches ───
                 try {
-                  let leadVertical: string | null = null;
-                  // Detect vertical from existing lead tables
-                  const phoneVariants = [from, from.replace(/^91/, ""), `91${from.replace(/^91/, "")}`];
-                  const checks: Array<[string, string]> = [
-                    ["insurance_clients", "insurance"],
-                    ["loan_leads", "loans"],
-                    ["hsrp_bookings", "hsrp"],
-                    ["rental_bookings", "rentals"],
-                  ];
-                  for (const [tbl, vert] of checks) {
-                    const { data: hit } = await supabase.from(tbl).select("id").or(phoneVariants.map(p => `phone.eq.${p}`).join(",")).limit(1).maybeSingle();
-                    if (hit) { leadVertical = vert; break; }
-                  }
-                  // Fallback: check generic leads table for service_category
-                  if (!leadVertical) {
-                    const { data: anyLead } = await supabase.from("leads").select("service_category").or(phoneVariants.map(p => `phone.eq.${p}`).join(",")).limit(1).maybeSingle();
-                    if (anyLead?.service_category) leadVertical = String(anyLead.service_category).toLowerCase();
-                  }
+                  const leadVertical = await detectLeadVertical(supabase, from);
 
                   if (leadVertical) {
                     const { data: matchEngine } = await supabase
@@ -495,15 +478,33 @@ Deno.serve(async (req) => {
           // ══════════════════════════════════════════════════════════
           if (!engineHandled && !inboxConvo?.human_takeover) {
             try {
-              const { data: agent } = await supabase
+              const leadVertical = await detectLeadVertical(supabase, from);
+              let agentQuery = supabase
                 .from("reply_agents")
-                .select("id, name")
+                .select("id, name, auto_send, vertical_slug, trigger_type, trigger_keywords")
                 .eq("is_active", true)
                 .eq("channel", "whatsapp")
+                .in("trigger_type", ["inbound_message", "any", "keyword"])
                 .order("priority", { ascending: false })
                 .order("created_at", { ascending: false })
-                .limit(1)
-                .maybeSingle();
+                .limit(20);
+
+              if (leadVertical) {
+                agentQuery = agentQuery.or(`vertical_slug.eq.${leadVertical},vertical_slug.is.null`);
+              }
+
+              const { data: agentCandidates } = await agentQuery;
+              const normalizedInbound = String(messageText || "").toLowerCase();
+              const agent = (agentCandidates || []).find((candidate: any) => {
+                const triggerType = String(candidate.trigger_type || "inbound_message");
+                if (triggerType === "keyword") {
+                  const keywords = Array.isArray(candidate.trigger_keywords)
+                    ? candidate.trigger_keywords.map((keyword: string) => String(keyword).toLowerCase().trim()).filter(Boolean)
+                    : [];
+                  return keywords.some((keyword: string) => normalizedInbound.includes(keyword));
+                }
+                return true;
+              });
 
               if (agent) {
                 // Fetch last 10 messages for memory/context
@@ -536,7 +537,7 @@ Deno.serve(async (req) => {
                   }),
                 });
                 const agentData = await agentResp.json();
-                if (agentData?.reply && agentData?.auto_sent !== false) {
+                if (agentData?.reply && agentData?.status === "sent") {
                   // Send via WhatsApp
                   const WA_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
                   const WA_PHONE_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
