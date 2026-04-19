@@ -126,41 +126,67 @@ async function executeToolCall(
         });
       }
 
-      // Try sending via WhatsApp
+      // Try sending via WhatsApp using the canonical whatsapp-send function
+      let waSuccess = false;
+      let waError: string | null = null;
       try {
-        await supabase.functions.invoke("wa-send-inbox", {
+        const { data: waData, error: waErr } = await supabase.functions.invoke("whatsapp-send", {
           body: {
-            phone: `91${cleanPhone}`,
-            message_type: "document",
-            content: `Hi ${name || "there"}! Riya here from GrabYourCar 👋\n\n${car.brand} ${car.name} ka brochure attached hai. Koi bhi question ho to reply karein!`,
-            media_url: car.brochure_url,
-            media_filename: `${car.brand}-${car.name}-brochure.pdf`,
-            sent_by_name: "Riya (AI)",
+            to: cleanPhone,
+            messageType: "document",
+            message: `Hi ${name || "there"}! ${(sessionContext as { agentName?: string }).agentName || "Team"} from GrabYourCar 👋 Yahan hai ${car.brand} ${car.name} ka brochure. Koi question ho to reply karein!`,
+            mediaUrl: car.brochure_url,
+            mediaFileName: `${car.brand}-${car.name}-brochure.pdf`,
+            name: name || null,
+            logEvent: "riya_brochure",
           },
         });
+        if (waErr) {
+          waError = waErr.message || "WhatsApp send failed";
+          console.error("[riya-chat] WhatsApp send error:", waErr);
+        } else if (waData && (waData as { success?: boolean }).success === false) {
+          waError = (waData as { error?: string }).error || "WhatsApp delivery failed";
+          console.error("[riya-chat] WhatsApp returned failure:", waData);
+        } else {
+          waSuccess = true;
+        }
       } catch (e) {
-        console.warn("[riya-chat] WhatsApp send failed, brochure URL will be returned:", e);
+        waError = e instanceof Error ? e.message : "WhatsApp send threw";
+        console.error("[riya-chat] WhatsApp send threw:", e);
       }
 
-      // Save lead
+      // Save lead with accurate status
       await supabase.from("automation_lead_tracking").insert({
         lead_id: crypto.randomUUID(),
         name: name || "Brochure Request",
         phone: cleanPhone,
         vertical: "sales",
         source: "riya_chatbot",
-        lead_source_type: "brochure_sent",
-        message: `Brochure sent for ${car.brand} ${car.name}`,
-        status: "contacted",
-        contacted: true,
-        contacted_at: new Date().toISOString(),
-        raw_data: { ...args, brochure_url: car.brochure_url } as never,
+        lead_source_type: waSuccess ? "brochure_sent" : "brochure_failed",
+        message: waSuccess
+          ? `Brochure sent for ${car.brand} ${car.name}`
+          : `Brochure send FAILED for ${car.brand} ${car.name} — ${waError}`,
+        status: waSuccess ? "contacted" : "new",
+        contacted: waSuccess,
+        contacted_at: waSuccess ? new Date().toISOString() : null,
+        priority: waSuccess ? null : "high",
+        raw_data: { ...args, brochure_url: car.brochure_url, wa_error: waError } as never,
       });
 
+      if (waSuccess) {
+        return JSON.stringify({
+          success: true,
+          delivered: true,
+          message: `${car.brand} ${car.name} ka brochure WhatsApp pe ${cleanPhone} pe bhej diya ✅`,
+        });
+      }
+
+      // Fallback: give the customer a direct link AND tell them team will resend
       return JSON.stringify({
         success: true,
+        delivered: false,
         brochure_url: car.brochure_url,
-        message: `${car.brand} ${car.name} ka brochure WhatsApp pe bhej diya (${cleanPhone}). Direct link: ${car.brochure_url}`,
+        message: `WhatsApp pe bhejne me chhota issue aaya 😕 — yeh raha direct link: ${car.brochure_url}\nHamari team ${cleanPhone} pe 5 min me dobara WhatsApp pe bhej degi.`,
       });
     }
 
@@ -266,7 +292,11 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body = await req.json();
-    const { messages, sessionId } = body as { messages: Array<{ role: string; content: string }>; sessionId?: string };
+    const { messages, sessionId, agentName } = body as {
+      messages: Array<{ role: string; content: string }>;
+      sessionId?: string;
+      agentName?: string;
+    };
 
     if (!Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "messages array required" }), {
@@ -275,14 +305,17 @@ serve(async (req) => {
       });
     }
 
+    const safeAgent = (agentName && /^[A-Za-z\u0900-\u097F ]{2,20}$/.test(agentName)) ? agentName : "Riya";
+
     const sessionContext = {
       sessionId: sessionId || crypto.randomUUID(),
       userAgent: req.headers.get("user-agent") || undefined,
+      agentName: safeAgent,
     };
 
-    // Multi-turn tool loop (non-streaming for tool calls, stream final response)
+    // Multi-turn tool loop
     let conversationMessages: Array<Record<string, unknown>> = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: buildSystemPrompt(safeAgent) },
       ...messages,
     ];
 
