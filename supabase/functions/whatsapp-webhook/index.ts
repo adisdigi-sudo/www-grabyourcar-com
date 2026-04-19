@@ -24,6 +24,102 @@ function mergeJsonObject(base: unknown, patch: Record<string, unknown>) {
   };
 }
 
+const VERTICAL_DETECTION_CONFIG = [
+  { table: "insurance_clients", vertical: "insurance", phoneFields: ["phone"] },
+  { table: "loan_applications", vertical: "loans", phoneFields: ["phone"] },
+  { table: "sales_pipeline", vertical: "sales", phoneFields: ["phone"] },
+  { table: "hsrp_bookings", vertical: "hsrp", phoneFields: ["mobile"] },
+  { table: "rental_bookings", vertical: "rentals", phoneFields: ["phone"] },
+  { table: "accessory_orders", vertical: "accessories", phoneFields: ["shipping_phone"] },
+] as const;
+
+const VERTICAL_ALIASES: Record<string, string> = {
+  insurance: "insurance",
+  insure: "insurance",
+  loan: "loans",
+  loans: "loans",
+  finance: "loans",
+  "car loan": "loans",
+  "car loans": "loans",
+  sales: "sales",
+  sale: "sales",
+  car: "sales",
+  "car sales": "sales",
+  "car sale": "sales",
+  "car-sales": "sales",
+  hsrp: "hsrp",
+  fastag: "hsrp",
+  rental: "rentals",
+  rentals: "rentals",
+  "self drive": "rentals",
+  "self-drive": "rentals",
+  accessories: "accessories",
+  accessory: "accessories",
+};
+
+function normalizePhoneVariants(phone: string | null | undefined) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (!digits) return [] as string[];
+
+  const withoutCountry = digits.replace(/^91/, "").replace(/^0+/, "");
+  return Array.from(new Set([
+    digits,
+    withoutCountry,
+    withoutCountry ? `91${withoutCountry}` : "",
+  ].filter(Boolean)));
+}
+
+function buildPhoneMatchFilter(fields: readonly string[], phones: string[]) {
+  return fields.flatMap((field) => phones.map((phone) => `${field}.eq.${phone}`)).join(",");
+}
+
+function normalizeVerticalSlug(value: string | null | undefined) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+
+  if (!normalized) return null;
+  if (VERTICAL_ALIASES[normalized]) return VERTICAL_ALIASES[normalized];
+  if (normalized.includes("insurance")) return "insurance";
+  if (normalized.includes("loan") || normalized.includes("finance")) return "loans";
+  if (normalized.includes("sale") || normalized === "car") return "sales";
+  if (normalized.includes("hsrp") || normalized.includes("fastag")) return "hsrp";
+  if (normalized.includes("rental") || normalized.includes("self drive")) return "rentals";
+  if (normalized.includes("accessor")) return "accessories";
+  return null;
+}
+
+async function detectLeadVertical(supabase: any, phone: string) {
+  const phoneVariants = normalizePhoneVariants(phone);
+  if (!phoneVariants.length) return null;
+
+  for (const config of VERTICAL_DETECTION_CONFIG) {
+    const filter = buildPhoneMatchFilter(config.phoneFields, phoneVariants);
+    if (!filter) continue;
+
+    const { data: hit } = await supabase
+      .from(config.table)
+      .select("id")
+      .or(filter)
+      .limit(1)
+      .maybeSingle();
+
+    if (hit) return config.vertical;
+  }
+
+  const genericLeadFilter = buildPhoneMatchFilter(["phone"], phoneVariants);
+  const { data: anyLead } = await supabase
+    .from("leads")
+    .select("service_category, vertical")
+    .or(genericLeadFilter)
+    .limit(1)
+    .maybeSingle();
+
+  return normalizeVerticalSlug(anyLead?.service_category || anyLead?.vertical);
+}
+
 async function syncDealerInquiryCampaignCounts(supabase: any, campaignId: string) {
   const { data: recipients } = await supabase
     .from("dealer_inquiry_recipients")
