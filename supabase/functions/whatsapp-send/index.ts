@@ -88,7 +88,9 @@ function buildImplicitFallbackTemplate(params: {
   }
 
   const safeName = params.name || "Customer";
-  const linkText = params.mediaUrl ? `Open here: ${params.mediaUrl}` : "Reply to receive details";
+  const linkText = params.mediaUrl
+    ? `Open here: ${params.mediaUrl}`
+    : "Reply to receive details";
   const ctx = (params.messageContext || "").toLowerCase();
   const vert = (params.vertical || "").toLowerCase();
 
@@ -123,7 +125,9 @@ function buildImplicitFallbackTemplate(params: {
 
     return {
       name: "welcome_new_lead",
-      variables: { var_1: `${safeName} - Your loan update is ready. ${linkText}` },
+      variables: {
+        var_1: `${safeName} - Your loan update is ready. ${linkText}`,
+      },
       components: undefined,
     };
   }
@@ -159,13 +163,17 @@ function buildImplicitFallbackTemplate(params: {
   return {
     name: "welcome_new_lead",
     variables: {
-      var_1: params.mediaUrl ? `${safeName} - View your document: ${params.mediaUrl}` : safeName,
+      var_1: params.mediaUrl
+        ? `${safeName} - View your document: ${params.mediaUrl}`
+        : safeName,
     },
     components: undefined,
   };
 }
 
-function normalizePhone(phone: string): { full: string; short: string; valid: boolean } {
+function normalizePhone(
+  phone: string,
+): { full: string; short: string; valid: boolean } {
   const clean = phone.replace(/\D/g, "").replace(/^0+/, "");
   let short = clean;
   if (clean.startsWith("91") && clean.length === 12) {
@@ -178,18 +186,23 @@ function normalizePhone(phone: string): { full: string; short: string; valid: bo
 function extractTemplateVariableOrder(templateMeta?: ManagedTemplateMeta) {
   const explicit = Array.isArray(templateMeta?.variables)
     ? templateMeta.variables
-        .map((value) => String(value).replace(/[{}]/g, "").trim())
-        .filter(Boolean)
+      .map((value) => String(value).replace(/[{}]/g, "").trim())
+      .filter(Boolean)
     : [];
 
   if (explicit.length > 0) return explicit;
 
   const body = templateMeta?.body || "";
-  const matches = Array.from(body.matchAll(/\{\{\s*([a-zA-Z_]\w*)\s*\}\}/g)).map((match) => match[1]);
+  const matches = Array.from(body.matchAll(/\{\{\s*([a-zA-Z_]\w*)\s*\}\}/g))
+    .map((match) => match[1]);
   return Array.from(new Set(matches));
 }
 
-function buildTemplateParameters(templateVariables?: Record<string, unknown>, orderedKeys: string[] = [], templateHasVariables?: boolean) {
+function buildTemplateParameters(
+  templateVariables?: Record<string, unknown>,
+  orderedKeys: string[] = [],
+  templateHasVariables?: boolean,
+) {
   if (!templateVariables) return [];
 
   // If the template explicitly has 0 variables, never send parameters
@@ -208,7 +221,8 @@ function buildTemplateParameters(templateVariables?: Record<string, unknown>, or
         const fallbackKeys = [key, `var_${index + 1}`, String(index + 1)];
         const matchedKey = fallbackKeys.find((candidate) => {
           const value = templateVariables[candidate];
-          return value !== null && value !== undefined && String(value).trim().length > 0;
+          return value !== null && value !== undefined &&
+            String(value).trim().length > 0;
         });
 
         if (!matchedKey) return null;
@@ -217,7 +231,10 @@ function buildTemplateParameters(templateVariables?: Record<string, unknown>, or
       .filter((value): value is unknown => value !== null);
 
     if (orderedValues.length === orderedKeys.length) {
-      return orderedValues.map((value) => ({ type: "text", text: String(value) }));
+      return orderedValues.map((value) => ({
+        type: "text",
+        text: String(value),
+      }));
     }
   }
 
@@ -226,11 +243,16 @@ function buildTemplateParameters(templateVariables?: Record<string, unknown>, or
       const match = key.match(/^var_(\d+)$/) || key.match(/^(\d+)$/);
       return match ? { index: Number(match[1]), value } : null;
     })
-    .filter((entry): entry is { index: number; value: unknown } => entry !== null)
+    .filter((entry): entry is { index: number; value: unknown } =>
+      entry !== null
+    )
     .sort((a, b) => a.index - b.index);
 
   if (positionalEntries.length === entries.length) {
-    return positionalEntries.map(({ value }) => ({ type: "text", text: String(value) }));
+    return positionalEntries.map(({ value }) => ({
+      type: "text",
+      text: String(value),
+    }));
   }
 
   return entries.map(([key, value]) => ({
@@ -245,7 +267,7 @@ async function sendViaMeta(
   token: string,
   phoneNumberId: string,
   to: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
 ): Promise<SendResult> {
   const url = `https://graph.facebook.com/v25.0/${phoneNumberId}/messages`;
   const body = {
@@ -270,10 +292,18 @@ async function sendViaMeta(
   console.log("Meta API response:", JSON.stringify(result));
 
   if (response.ok && result.messages?.[0]?.id) {
-    return { success: true, messageId: result.messages[0].id, provider: "meta" };
+    return {
+      success: true,
+      messageId: result.messages[0].id,
+      provider: "meta",
+    };
   }
 
-  return { success: false, error: result.error?.message || JSON.stringify(result), provider: "meta" };
+  return {
+    success: false,
+    error: result.error?.message || JSON.stringify(result),
+    provider: "meta",
+  };
 }
 
 // ── WAAB Provider (legacy REST API) ──
@@ -281,7 +311,11 @@ async function sendViaWaab(
   apiKey: string,
   baseUrl: string,
   to: string,
-  payload: { type: "text"; message: string } | { type: "template"; template_name: string; variables?: Record<string, string> }
+  payload: { type: "text"; message: string } | {
+    type: "template";
+    template_name: string;
+    variables?: Record<string, string>;
+  },
 ): Promise<SendResult> {
   const endpoint = `${baseUrl}/api/v1/messages/send`;
 
@@ -293,7 +327,9 @@ async function sendViaWaab(
       template: { name: payload.template_name, language: "en" },
     };
     if (payload.variables && Object.keys(payload.variables).length > 0) {
-      (body.template as any).parameters = Object.values(payload.variables).map(v => ({ type: "text", text: v }));
+      (body.template as any).parameters = Object.values(payload.variables).map(
+        (v) => ({ type: "text", text: v }),
+      );
     }
   } else {
     body = { to, type: "text", text: { body: payload.message } };
@@ -314,15 +350,26 @@ async function sendViaWaab(
   if (contentType.includes("application/json")) {
     const result = await response.json();
     console.log("WAAB API response:", JSON.stringify(result));
-    if (response.ok && (result.success || result.messages?.[0]?.id || result.message_id)) {
-      return { success: true, messageId: result.messages?.[0]?.id || result.message_id || result.id, provider: "waab" };
+    if (
+      response.ok &&
+      (result.success || result.messages?.[0]?.id || result.message_id)
+    ) {
+      return {
+        success: true,
+        messageId: result.messages?.[0]?.id || result.message_id || result.id,
+        provider: "waab",
+      };
     }
     return { success: false, error: JSON.stringify(result), provider: "waab" };
   }
 
   const text = await response.text();
   console.error("WAAB non-JSON:", text.substring(0, 300));
-  return { success: false, error: `Non-JSON response (${response.status})`, provider: "waab" };
+  return {
+    success: false,
+    error: `Non-JSON response (${response.status})`,
+    provider: "waab",
+  };
 }
 
 // ── WABB.in Provider (Webhook-based) ──
@@ -338,7 +385,13 @@ async function sendViaWabb(
     Message: message.trim() || "Hello from GrabYourCar!",
   };
 
-  console.log("WABB webhook request:", JSON.stringify({ ...payload, webhookUrl: webhookUrl.substring(0, 40) + "..." }));
+  console.log(
+    "WABB webhook request:",
+    JSON.stringify({
+      ...payload,
+      webhookUrl: webhookUrl.substring(0, 40) + "...",
+    }),
+  );
 
   let lastError = "Unknown WABB error";
 
@@ -355,7 +408,11 @@ async function sendViaWabb(
 
       const responseText = await response.text();
       const trimmedResponse = responseText.trim();
-      console.log(`WABB webhook response attempt ${attempt}:`, response.status, trimmedResponse.substring(0, 300));
+      console.log(
+        `WABB webhook response attempt ${attempt}:`,
+        response.status,
+        trimmedResponse.substring(0, 300),
+      );
 
       if (response.ok) {
         let parsed: Record<string, unknown> | null = null;
@@ -370,54 +427,86 @@ async function sendViaWabb(
         const messageId = typeof parsed?.id === "string"
           ? parsed.id
           : typeof parsed?.message_id === "string"
-            ? parsed.message_id
-            : undefined;
+          ? parsed.message_id
+          : undefined;
 
-        const accepted =
-          typeof parsed?.success === "boolean"
-            ? parsed.success
-            : typeof parsed?.status === "string"
-              ? ["success", "accepted", "queued", "sent"].includes(parsed.status.toLowerCase())
-              : false;
+        const accepted = typeof parsed?.success === "boolean"
+          ? parsed.success
+          : typeof parsed?.status === "string"
+          ? ["success", "accepted", "queued", "sent"].includes(
+            parsed.status.toLowerCase(),
+          )
+          : false;
 
         if (messageId || accepted) {
-          return { success: true, messageId: messageId || `wabb_${Date.now()}`, provider: "wabb" };
+          return {
+            success: true,
+            messageId: messageId || `wabb_${Date.now()}`,
+            provider: "wabb",
+          };
         }
 
         // WABB Catch Webhook uses fire-and-forget model:
         // A 200 response (even empty {} or empty body) means the webhook accepted the payload.
         // The message will be processed and delivered asynchronously.
         if (trimmedResponse.length === 0 || trimmedResponse === "{}") {
-          console.log(`WABB webhook accepted payload (fire-and-forget) on attempt ${attempt}`);
-          return { success: true, messageId: `wabb_${Date.now()}`, provider: "wabb" };
+          console.log(
+            `WABB webhook accepted payload (fire-and-forget) on attempt ${attempt}`,
+          );
+          return {
+            success: true,
+            messageId: `wabb_${Date.now()}`,
+            provider: "wabb",
+          };
         }
 
         // If we got a 200 with unexpected content, still treat as accepted but log warning
-        console.warn(`WABB webhook returned 200 with unexpected body: ${trimmedResponse.substring(0, 200)}`);
-        return { success: true, messageId: `wabb_${Date.now()}`, provider: "wabb" };
+        console.warn(
+          `WABB webhook returned 200 with unexpected body: ${
+            trimmedResponse.substring(0, 200)
+          }`,
+        );
+        return {
+          success: true,
+          messageId: `wabb_${Date.now()}`,
+          provider: "wabb",
+        };
       } else {
-        lastError = `WABB webhook error (${response.status}): ${trimmedResponse.substring(0, 200) || "empty response"}`;
-        const shouldRetry =
-          attempt < 3 && (
-            response.status === 429 ||
-            response.status >= 500 ||
-            ((response.status === 400 || response.status === 405) && trimmedResponse.length === 0)
-          );
+        lastError = `WABB webhook error (${response.status}): ${
+          trimmedResponse.substring(0, 200) || "empty response"
+        }`;
+        const shouldRetry = attempt < 3 && (
+          response.status === 429 ||
+          response.status >= 500 ||
+          ((response.status === 400 || response.status === 405) &&
+            trimmedResponse.length === 0)
+        );
 
         if (!shouldRetry) {
           return { success: false, error: lastError, provider: "wabb" };
         }
 
-        console.warn(`Retrying WABB webhook after attempt ${attempt} failed with status ${response.status}`);
+        console.warn(
+          `Retrying WABB webhook after attempt ${attempt} failed with status ${response.status}`,
+        );
       }
     } catch (error) {
-      lastError = error instanceof Error ? error.message : "Unknown WABB network error";
+      lastError = error instanceof Error
+        ? error.message
+        : "Unknown WABB network error";
 
       if (attempt === 3) {
-        return { success: false, error: `WABB webhook network error: ${lastError}`, provider: "wabb" };
+        return {
+          success: false,
+          error: `WABB webhook network error: ${lastError}`,
+          provider: "wabb",
+        };
       }
 
-      console.warn(`Retrying WABB webhook after network failure on attempt ${attempt}:`, lastError);
+      console.warn(
+        `Retrying WABB webhook after network failure on attempt ${attempt}:`,
+        lastError,
+      );
     }
 
     await sleep(400 * attempt);
@@ -447,10 +536,16 @@ async function sendMessage(
   }
 
   if (providerName === "meta") {
-    const token = providerConfig?.access_token || Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-    const phoneNumberId = providerConfig?.phone_number_id || Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+    const token = providerConfig?.access_token ||
+      Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+    const phoneNumberId = providerConfig?.phone_number_id ||
+      Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
     if (!token || !phoneNumberId) {
-      return { success: false, error: "Meta API credentials not configured", provider: "meta" };
+      return {
+        success: false,
+        error: "Meta API credentials not configured",
+        provider: "meta",
+      };
     }
 
     let payload: Record<string, unknown>;
@@ -458,7 +553,11 @@ async function sendMessage(
       const components: unknown[] = [];
       const varOrder = extractTemplateVariableOrder(templateMeta);
       const templateHasVariables = varOrder.length > 0;
-      const derivedParameters = buildTemplateParameters(templateVars, varOrder, templateHasVariables);
+      const derivedParameters = buildTemplateParameters(
+        templateVars,
+        varOrder,
+        templateHasVariables,
+      );
       const templateLanguage = templateMeta?.language || "en";
       if (templateComponents && templateComponents.length > 0) {
         components.push(...templateComponents);
@@ -478,11 +577,27 @@ async function sendMessage(
         },
       };
     } else if (messageType === "image" && mediaUrl) {
-      payload = { type: "image", image: { link: mediaUrl, caption: message || "" } };
+      payload = {
+        type: "image",
+        image: { link: mediaUrl, caption: message || "" },
+      };
     } else if (messageType === "document" && mediaUrl) {
-      payload = { type: "document", document: { link: mediaUrl, caption: message || "", filename: mediaFileName || "document.pdf" } };
+      payload = {
+        type: "document",
+        document: {
+          link: mediaUrl,
+          caption: message || "",
+          filename: mediaFileName || "document.pdf",
+        },
+      };
     } else {
-      payload = { type: "text", text: { preview_url: false, body: message || "Hello from GrabYourCar!" } };
+      payload = {
+        type: "text",
+        text: {
+          preview_url: false,
+          body: message || "Hello from GrabYourCar!",
+        },
+      };
     }
 
     return sendViaMeta(token, phoneNumberId, phone.full, payload);
@@ -490,42 +605,123 @@ async function sendMessage(
 
   if (providerName === "waab") {
     const apiKey = providerConfig?.api_key || Deno.env.get("WAAB_API_KEY");
-    const baseUrl = providerConfig?.base_url || Deno.env.get("WAAB_BASE_URL") || "";
+    const baseUrl = providerConfig?.base_url || Deno.env.get("WAAB_BASE_URL") ||
+      "";
     if (!apiKey || !baseUrl) {
-      return { success: false, error: "WAAB credentials not configured. Add API Key and Base URL in Channel Providers.", provider: "waab" };
+      return {
+        success: false,
+        error:
+          "WAAB credentials not configured. Add API Key and Base URL in Channel Providers.",
+        provider: "waab",
+      };
     }
 
     if (messageType === "template" && templateName) {
-      return sendViaWaab(apiKey, baseUrl, phone.full, { type: "template", template_name: templateName, variables: templateVars });
+      return sendViaWaab(apiKey, baseUrl, phone.full, {
+        type: "template",
+        template_name: templateName,
+        variables: templateVars,
+      });
     }
-    return sendViaWaab(apiKey, baseUrl, phone.full, { type: "text", message: message || "" });
+    return sendViaWaab(apiKey, baseUrl, phone.full, {
+      type: "text",
+      message: message || "",
+    });
   }
 
   if (providerName === "wabb") {
-    // WABB Catch Webhook doesn't support templates — use Meta API for template sends
-    if (messageType === "template" && templateName) {
+    // WABB Catch Webhook is text-first. Route templates + media via Meta when available.
+    if (
+      (messageType === "template" && templateName) ||
+      ((messageType === "image" || messageType === "document" ||
+        messageType === "video" || messageType === "audio") && mediaUrl)
+    ) {
       const metaToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
       const metaPhoneId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
       if (metaToken && metaPhoneId) {
-        console.log("WABB: Template message — routing via Meta Cloud API");
-        const components: unknown[] = [];
-        if (templateVars && Object.keys(templateVars).length > 0) {
-          components.push({
-            type: "body",
-            parameters: Object.values(templateVars).map(val => ({ type: "text", text: val })),
+        console.log(
+          `WABB: ${messageType} message — routing via Meta Cloud API`,
+        );
+
+        if (messageType === "template" && templateName) {
+          const components: unknown[] = [];
+          if (templateVars && Object.keys(templateVars).length > 0) {
+            components.push({
+              type: "body",
+              parameters: Object.values(templateVars).map((val) => ({
+                type: "text",
+                text: val,
+              })),
+            });
+          }
+          const payload = {
+            type: "template",
+            template: {
+              name: templateName,
+              language: { code: "en" },
+              ...(components.length > 0 ? { components } : {}),
+            },
+          };
+          return sendViaMeta(metaToken, metaPhoneId, phone.full, payload);
+        }
+
+        if (messageType === "image" && mediaUrl) {
+          return sendViaMeta(metaToken, metaPhoneId, phone.full, {
+            type: "image",
+            image: { link: mediaUrl, caption: message || "" },
           });
         }
-        const payload = { type: "template", template: { name: templateName, language: { code: "en" }, ...(components.length > 0 ? { components } : {}) } };
-        return sendViaMeta(metaToken, metaPhoneId, phone.full, payload);
+
+        if (messageType === "document" && mediaUrl) {
+          return sendViaMeta(metaToken, metaPhoneId, phone.full, {
+            type: "document",
+            document: {
+              link: mediaUrl,
+              caption: message || "",
+              filename: mediaFileName || "document.pdf",
+            },
+          });
+        }
+
+        if (messageType === "video" && mediaUrl) {
+          return sendViaMeta(metaToken, metaPhoneId, phone.full, {
+            type: "video",
+            video: { link: mediaUrl, caption: message || "" },
+          });
+        }
+
+        if (messageType === "audio" && mediaUrl) {
+          return sendViaMeta(metaToken, metaPhoneId, phone.full, {
+            type: "audio",
+            audio: { link: mediaUrl },
+          });
+        }
       }
-      console.warn("WABB: Template requested but Meta API credentials missing, falling back to text");
+
+      return {
+        success: false,
+        error:
+          `WABB cannot send ${messageType} messages without Meta media credentials`,
+        provider: "wabb",
+      };
     }
 
-    const webhookUrl = providerConfig?.webhook_url || Deno.env.get("WABB_WEBHOOK_URL");
+    const webhookUrl = providerConfig?.webhook_url ||
+      Deno.env.get("WABB_WEBHOOK_URL");
     if (!webhookUrl) {
-      return { success: false, error: "WABB webhook URL not configured. Add it in Channel Providers or set WABB_WEBHOOK_URL secret.", provider: "wabb" };
+      return {
+        success: false,
+        error:
+          "WABB webhook URL not configured. Add it in Channel Providers or set WABB_WEBHOOK_URL secret.",
+        provider: "wabb",
+      };
     }
-    return sendViaWabb(webhookUrl, phone.full, message || "Hello from GrabYourCar!", name);
+    return sendViaWabb(
+      webhookUrl,
+      phone.full,
+      message || "Hello from GrabYourCar!",
+      name,
+    );
   }
 
   return { success: false, error: `Unknown provider: ${providerName}` };
@@ -541,7 +737,9 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const body = await req.json() as SendMessageRequest & Record<string, unknown>;
+    const body = await req.json() as
+      & SendMessageRequest
+      & Record<string, unknown>;
 
     // Health check
     if (body.action === "health_check") {
@@ -558,22 +756,32 @@ serve(async (req) => {
           configured: !!provider?.is_active,
           provider: provider?.provider_name || "none",
         }),
-        { status: 200, headers: jsonHeaders }
+        { status: 200, headers: jsonHeaders },
       );
     }
 
     // Resolve target phone
     const to = body.to || body.phone;
     if (!to) {
-      return respond({ ok: false, success: false, status: "validation_error", error: "Phone number required (to or phone)" });
+      return respond({
+        ok: false,
+        success: false,
+        status: "validation_error",
+        error: "Phone number required (to or phone)",
+      });
     }
 
     const template_name = body.template_name || body.templateName;
-    const template_variables = body.template_variables || body.templateVariables;
-    const template_components = body.template_components || body.templateComponents;
-    const fallback_template_name = body.fallback_template_name || body.fallbackTemplateName;
-    const fallback_template_variables = body.fallback_template_variables || body.fallbackTemplateVariables;
-    const fallback_template_components = body.fallback_template_components || body.fallbackTemplateComponents;
+    const template_variables = body.template_variables ||
+      body.templateVariables;
+    const template_components = body.template_components ||
+      body.templateComponents;
+    const fallback_template_name = body.fallback_template_name ||
+      body.fallbackTemplateName;
+    const fallback_template_variables = body.fallback_template_variables ||
+      body.fallbackTemplateVariables;
+    const fallback_template_components = body.fallback_template_components ||
+      body.fallbackTemplateComponents;
     const mediaUrl = body.mediaUrl || body.media_url;
     const mediaFileName = body.mediaFileName || body.media_file_name;
     const name = body.name;
@@ -581,8 +789,10 @@ serve(async (req) => {
     const lead_id = body.lead_id || body.leadId;
     const message = body.message || "";
     const vertical = body.vertical;
-    const message_context = body.message_context || body.messageContext || logEvent || "crm_followup";
-    const originalMessageType = body.messageType || body.message_type || (template_name ? "template" : mediaUrl ? "document" : "text");
+    const message_context = body.message_context || body.messageContext ||
+      logEvent || "crm_followup";
+    const originalMessageType = body.messageType || body.message_type ||
+      (template_name ? "template" : mediaUrl ? "document" : "text");
     const phoneNorm = normalizePhone(to);
 
     const { data: convoRows } = await supabase
@@ -593,7 +803,10 @@ serve(async (req) => {
       .limit(1);
 
     const convo = convoRows?.[0];
-    const windowOpen = Boolean(convo?.window_expires_at && new Date(convo.window_expires_at) > new Date());
+    const windowOpen = Boolean(
+      convo?.window_expires_at &&
+        new Date(convo.window_expires_at) > new Date(),
+    );
 
     const { data: categoryRuleRows } = await supabase
       .from("wa_category_rules")
@@ -605,18 +818,26 @@ serve(async (req) => {
     const categoryRule = categoryRuleRows?.[0] as CategoryRule | undefined;
     const fallbackTemplate = buildImplicitFallbackTemplate({
       explicitName: fallback_template_name as string | undefined,
-      explicitVariables: fallback_template_variables as Record<string, string> | undefined,
+      explicitVariables: fallback_template_variables as
+        | Record<string, string>
+        | undefined,
       explicitComponents: fallback_template_components as unknown[] | undefined,
       vertical: typeof vertical === "string" ? vertical : undefined,
-      messageContext: typeof message_context === "string" ? message_context : undefined,
+      messageContext: typeof message_context === "string"
+        ? message_context
+        : undefined,
       name: typeof name === "string" ? name : convo?.customer_name || undefined,
       mediaUrl: typeof mediaUrl === "string" ? mediaUrl : undefined,
     });
 
     let effectiveMessageType = originalMessageType;
     let effectiveTemplateName = template_name as string | undefined;
-    let effectiveTemplateVariables = template_variables as Record<string, string> | undefined;
-    let effectiveTemplateComponents = template_components as unknown[] | undefined;
+    let effectiveTemplateVariables = template_variables as
+      | Record<string, string>
+      | undefined;
+    let effectiveTemplateComponents = template_components as
+      | unknown[]
+      | undefined;
     let templateFallbackUsed = false;
 
     if (FREEFORM_TYPES.has(originalMessageType)) {
@@ -684,7 +905,8 @@ serve(async (req) => {
         success: false,
         fallback: false,
         status: "not_configured",
-        error: "WhatsApp channel is not active. Enable it in Channel Providers settings.",
+        error:
+          "WhatsApp channel is not active. Enable it in Channel Providers settings.",
       });
     }
 
@@ -704,7 +926,10 @@ serve(async (req) => {
       templateMeta,
     );
 
-    if (!result.success && FREEFORM_TYPES.has(originalMessageType) && WINDOW_CLOSED_ERROR.test(result.error || "") && fallbackTemplate?.name) {
+    if (
+      !result.success && FREEFORM_TYPES.has(originalMessageType) &&
+      WINDOW_CLOSED_ERROR.test(result.error || "") && fallbackTemplate?.name
+    ) {
       effectiveMessageType = "template";
       effectiveTemplateName = fallbackTemplate.name;
       effectiveTemplateVariables = fallbackTemplate.variables;
@@ -718,7 +943,9 @@ serve(async (req) => {
           .eq("name", effectiveTemplateName)
           .order("created_at", { ascending: false })
           .limit(1);
-        templateMeta = retryTemplateRows?.[0] as ManagedTemplateMeta | undefined;
+        templateMeta = retryTemplateRows?.[0] as
+          | ManagedTemplateMeta
+          | undefined;
       }
 
       result = await sendMessage(
@@ -765,7 +992,9 @@ serve(async (req) => {
       try {
         // Upsert conversation by phone
         const convoPhone = phoneNorm.full;
-        const msgPreview = message ? message.substring(0, 100) : (template_name ? `[Template: ${template_name}]` : "Message sent");
+        const msgPreview = message
+          ? message.substring(0, 100)
+          : (template_name ? `[Template: ${template_name}]` : "Message sent");
 
         const { data: existingConvo } = await supabase
           .from("wa_conversations")
@@ -784,13 +1013,14 @@ serve(async (req) => {
             updated_at: new Date().toISOString(),
           }).eq("id", convoId);
         } else {
-          const { data: newConvo } = await supabase.from("wa_conversations").insert({
-            phone: convoPhone,
-            customer_name: name || convoPhone,
-            last_message: msgPreview,
-            last_message_at: new Date().toISOString(),
-            status: "active",
-          }).select("id").single();
+          const { data: newConvo } = await supabase.from("wa_conversations")
+            .insert({
+              phone: convoPhone,
+              customer_name: name || convoPhone,
+              last_message: msgPreview,
+              last_message_at: new Date().toISOString(),
+              status: "active",
+            }).select("id").single();
           convoId = newConvo?.id;
         }
 
@@ -798,21 +1028,36 @@ serve(async (req) => {
           await supabase.from("wa_inbox_messages").insert({
             conversation_id: convoId,
             direction: "outbound",
-            message_type: effectiveMessageType === "document" ? "document" : effectiveMessageType === "image" ? "image" : effectiveMessageType === "template" ? "template" : "text",
+            message_type: effectiveMessageType === "document"
+              ? "document"
+              : effectiveMessageType === "image"
+              ? "image"
+              : effectiveMessageType === "template"
+              ? "template"
+              : "text",
             content: message || null,
             media_url: templateFallbackUsed ? null : (mediaUrl || null),
-            media_filename: templateFallbackUsed ? null : (mediaFileName || null),
+            media_filename: templateFallbackUsed
+              ? null
+              : (mediaFileName || null),
             template_name: effectiveTemplateName || null,
-            template_variables: effectiveTemplateVariables ? effectiveTemplateVariables : null,
+            template_variables: effectiveTemplateVariables
+              ? effectiveTemplateVariables
+              : null,
             wa_message_id: result.messageId || null,
             status: "sent",
             sent_by_name: "System",
           });
         }
 
-        console.log(`Logged outbound message to wa_inbox_messages for conversation ${convoId}`);
+        console.log(
+          `Logged outbound message to wa_inbox_messages for conversation ${convoId}`,
+        );
       } catch (inboxErr) {
-        console.error("Failed to log to wa_inbox_messages (non-fatal):", inboxErr);
+        console.error(
+          "Failed to log to wa_inbox_messages (non-fatal):",
+          inboxErr,
+        );
       }
     }
 

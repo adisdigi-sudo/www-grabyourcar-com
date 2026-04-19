@@ -3,7 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 /**
@@ -34,6 +35,17 @@ interface SendTextRequest {
   customer_name?: string;
 }
 
+interface SendMessageRequest {
+  action: "send_message";
+  phone: string;
+  message?: string;
+  messageType?: "text" | "template" | "image" | "document" | "video" | "audio";
+  mediaUrl?: string;
+  mediaFileName?: string;
+  lead_id?: string;
+  customer_name?: string;
+}
+
 interface TriggerEventRequest {
   action: "trigger_event";
   event: string;
@@ -46,25 +58,37 @@ interface TriggerEventRequest {
 function normalizeTemplateVariables(variables?: Record<string, string>) {
   if (!variables) return undefined;
 
-  const entries = Object.entries(variables).filter(([, value]) => value !== undefined && value !== null && String(value).trim().length > 0);
+  const entries = Object.entries(variables).filter(([, value]) =>
+    value !== undefined && value !== null && String(value).trim().length > 0
+  );
   if (entries.length === 0) return undefined;
 
   return entries.reduce<Record<string, string>>((acc, [key, value], index) => {
-    const normalizedKey = /^var_\d+$/.test(key) || /^\d+$/.test(key) ? key.replace(/^\d+$/, (match) => `var_${match}`) : key;
+    const normalizedKey = /^var_\d+$/.test(key) || /^\d+$/.test(key)
+      ? key.replace(/^\d+$/, (match) => `var_${match}`)
+      : key;
     acc[normalizedKey || `var_${index + 1}`] = String(value);
     return acc;
   }, {});
 }
 
-type ServiceRequest = SendTemplateRequest | SendTextRequest | TriggerEventRequest;
+type ServiceRequest =
+  | SendTemplateRequest
+  | SendTextRequest
+  | SendMessageRequest
+  | TriggerEventRequest;
 
 // ── Send via whatsapp-send gateway ──
 async function sendViaGateway(
   supabaseUrl: string,
   serviceRoleKey: string,
   phone: string,
-  payload: { messageType: "text"; message: string } | { messageType: "template"; template_name: string; template_variables?: Record<string, string> },
-  context?: { name?: string; logEvent?: string; lead_id?: string }
+  payload: { messageType: "text"; message: string } | {
+    messageType: "template";
+    template_name: string;
+    template_variables?: Record<string, string>;
+  },
+  context?: { name?: string; logEvent?: string; lead_id?: string },
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const body: Record<string, unknown> = {
     to: phone,
@@ -101,7 +125,8 @@ serve(async (req) => {
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return new Response(JSON.stringify({ error: "Missing backend config" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
@@ -121,9 +146,13 @@ serve(async (req) => {
         .eq("is_active", true);
 
       if (!triggers || triggers.length === 0) {
-        return new Response(JSON.stringify({ triggered: 0, message: "No matching triggers" }), {
-          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ triggered: 0, message: "No matching triggers" }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       // Resolve phone
@@ -143,7 +172,8 @@ serve(async (req) => {
 
       if (!resolvedPhone) {
         return new Response(JSON.stringify({ error: "No phone number" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
@@ -154,7 +184,9 @@ serve(async (req) => {
 
         // Check cooldown
         if (lead_id) {
-          const cooldownCutoff = new Date(Date.now() - (trigger.cooldown_hours || 24) * 3600000).toISOString();
+          const cooldownCutoff = new Date(
+            Date.now() - (trigger.cooldown_hours || 24) * 3600000,
+          ).toISOString();
           const { data: recent } = await supabase
             .from("wa_message_logs")
             .select("id")
@@ -166,7 +198,10 @@ serve(async (req) => {
           if (recent && recent.length > 0) continue;
         }
 
-        const variables: Record<string, string> = { name: resolvedName, ...data };
+        const variables: Record<string, string> = {
+          name: resolvedName,
+          ...data,
+        };
 
         // Send immediately (no delay) or mark as scheduled
         if (trigger.delay_seconds === 0) {
@@ -175,8 +210,12 @@ serve(async (req) => {
             SUPABASE_URL,
             SUPABASE_SERVICE_ROLE_KEY,
             resolvedPhone,
-            { messageType: "template", template_name: template.template_name, template_variables: normalizedVariables },
-            { name: resolvedName, logEvent: `trigger:${event}`, lead_id }
+            {
+              messageType: "template",
+              template_name: template.template_name,
+              template_variables: normalizedVariables,
+            },
+            { name: resolvedName, logEvent: `trigger:${event}`, lead_id },
           );
 
           // whatsapp-send already logs, but update with trigger context if needed
@@ -203,7 +242,8 @@ serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ success: true, triggered, event }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -214,14 +254,25 @@ serve(async (req) => {
         SUPABASE_URL,
         SUPABASE_SERVICE_ROLE_KEY,
         request.phone,
-        { messageType: "template", template_name: request.template_name, template_variables: normalizedVariables },
-        { name: request.customer_name, logEvent: "messaging_service_template", lead_id: request.lead_id }
+        {
+          messageType: "template",
+          template_name: request.template_name,
+          template_variables: normalizedVariables,
+        },
+        {
+          name: request.customer_name,
+          logEvent: "messaging_service_template",
+          lead_id: request.lead_id,
+        },
       );
 
-      return new Response(JSON.stringify({ success: result.success, ...result }), {
-        status: result.success ? 200 : 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ success: result.success, ...result }),
+        {
+          status: result.success ? 200 : 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // ── Route: send_text ──
@@ -231,22 +282,76 @@ serve(async (req) => {
         SUPABASE_SERVICE_ROLE_KEY,
         request.phone,
         { messageType: "text", message: request.message },
-        { name: request.customer_name, logEvent: "messaging_service_text", lead_id: request.lead_id }
+        {
+          name: request.customer_name,
+          logEvent: "messaging_service_text",
+          lead_id: request.lead_id,
+        },
       );
 
-      return new Response(JSON.stringify({ success: result.success, ...result }), {
-        status: result.success ? 200 : 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ success: result.success, ...result }),
+        {
+          status: result.success ? 200 : 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    return new Response(JSON.stringify({ error: "Invalid action. Use: send_template, send_text, trigger_event" }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // ── Route: send_message (generic text/media passthrough) ──
+    if (request.action === "send_message") {
+      const result = await sendViaGateway(
+        SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY,
+        request.phone,
+        request.messageType === "template"
+          ? { messageType: "text", message: request.message || "" }
+          : {
+            messageType: (request.messageType || "text") as "text",
+            message: request.message || "",
+            ...(request.mediaUrl
+              ? {
+                mediaUrl: request.mediaUrl,
+                mediaFileName: request.mediaFileName,
+              }
+              : {}),
+          } as any,
+        {
+          name: request.customer_name,
+          logEvent: "messaging_service_generic",
+          lead_id: request.lead_id,
+        },
+      );
+
+      return new Response(
+        JSON.stringify({ success: result.success, ...result }),
+        {
+          status: result.success ? 200 : 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        error:
+          "Invalid action. Use: send_template, send_text, send_message, trigger_event",
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     console.error("Messaging service error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Unknown",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });
