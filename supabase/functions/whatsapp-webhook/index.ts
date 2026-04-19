@@ -112,12 +112,12 @@ async function detectLeadVertical(supabase: any, phone: string) {
   const genericLeadFilter = buildPhoneMatchFilter(["phone"], phoneVariants);
   const { data: anyLead } = await supabase
     .from("leads")
-    .select("service_category, vertical")
+    .select("service_category")
     .or(genericLeadFilter)
     .limit(1)
     .maybeSingle();
 
-  return normalizeVerticalSlug(anyLead?.service_category || anyLead?.vertical);
+  return normalizeVerticalSlug(anyLead?.service_category);
 }
 
 async function syncDealerInquiryCampaignCounts(supabase: any, campaignId: string) {
