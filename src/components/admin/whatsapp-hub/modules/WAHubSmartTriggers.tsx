@@ -491,6 +491,36 @@ export function WAHubSmartTriggers() {
             <DialogTitle>{editingId ? "Edit Trigger" : "Create New Trigger"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {!editingId && (
+              <div className="rounded-lg border bg-muted/40 p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                  <p className="text-xs font-semibold uppercase tracking-wide">Quick Presets</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {QUICK_PRESETS.map((p) => (
+                    <Button
+                      key={p.label}
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() =>
+                        setForm({
+                          vertical_slug: form.vertical_slug || "_global",
+                          priority: form.priority || 100,
+                          is_active: true,
+                          ...p.apply,
+                        } as TriggerForm)
+                      }
+                    >
+                      {p.label}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-2">Click a preset to auto-fill keywords, intent, and lookup config. You can edit anything after.</p>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Trigger Name</Label>
