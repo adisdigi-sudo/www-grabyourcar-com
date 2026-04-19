@@ -54,20 +54,13 @@ export const isSensitivePreviewRouteWindow = () => {
   return hostname.startsWith("admin.") || isSensitivePreviewRoutePath(pathname);
 };
 
-// Sensitive CRM routes should stabilize only in standalone windows.
-// Editor/embedded previews must fail open so the iframe never gets trapped
-// behind the global startup recovery shell.
-export const shouldStabilizeStartupShellWindow = () => {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  if (isEmbeddedPreviewWindow() || isLovableEditorPreviewHost()) {
-    return false;
-  }
-
-  return isSensitivePreviewRouteWindow();
-};
+// The global startup shell / blank-screen recovery system was causing
+// white-page flickers and trapping the preview behind a recovery overlay.
+// Each sensitive page (Workspace, CRM, Admin) already renders its own
+// loader + timeout + error boundary, so the global shell is no longer needed.
+// We always return false here to disable the global recovery shell entirely.
+// See `.lovable/plan.md` for the full reasoning.
+export const shouldStabilizeStartupShellWindow = () => false;
 
 // Avoid force-reload loops for any sensitive route during dev, including editor previews.
 export const shouldAvoidDevAutoReload = () => import.meta.env.DEV && isSensitivePreviewRouteWindow();
