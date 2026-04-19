@@ -51,6 +51,10 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
     performSafePreviewReload();
   };
 
+  handleGoHome = () => {
+    window.location.href = "/";
+  };
+
   render() {
     if (!this.state.hasError) {
       return this.props.children;
@@ -64,16 +68,21 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl font-semibold">Page failed to load</h1>
+            <h1 className="text-2xl font-semibold">Something went wrong</h1>
             <p className="text-sm text-muted-foreground">
-              We hit a temporary loading issue. Refresh once to load the latest version.
+              We hit a temporary loading issue. Refresh to load the latest version, or go back to the home page.
             </p>
           </div>
 
-          <Button onClick={this.handleReload} className="gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Refresh page
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <Button onClick={this.handleReload} className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Refresh page
+            </Button>
+            <Button onClick={this.handleGoHome} variant="outline">
+              Go to home
+            </Button>
+          </div>
         </div>
       </div>
     );
