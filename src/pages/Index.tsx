@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useState, lazy, Suspense } from "react";
 import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Header } from "@/components/Header";
 import { RivianHero } from "@/components/RivianHero";
@@ -11,31 +11,11 @@ const SectionSkeleton = ({ label }: { label: string }) => (
   </div>
 );
 
-// Clean Rivian layout — fresh build v2
-
 const Index = () => {
   const [loanPrefill, setLoanPrefill] = useState<string>("");
-  const [showDeferredSections, setShowDeferredSections] = useState(false);
-
-  useEffect(() => {
-    let frameId = 0;
-    let timeoutId = 0;
-
-    frameId = window.requestAnimationFrame(() => {
-      timeoutId = window.setTimeout(() => {
-        setShowDeferredSections(true);
-      }, 120);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      window.clearTimeout(timeoutId);
-    };
-  }, []);
 
   const handleGetLoanQuote = (loanDetails: string) => {
     setLoanPrefill(loanDetails);
-    // Scroll to lead form
     document.getElementById("lead-form")?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -57,30 +37,21 @@ const Index = () => {
           ]}
         />
       </SectionErrorBoundary>
-      
+
       <div className="min-h-screen bg-background">
-      {/* Clean Rivian-style layout - no promo banner */}
-      
-      {/* Header */}
-      <SectionErrorBoundary sectionName="header" fallback={null}>
-        <Header />
-      </SectionErrorBoundary>
-      
-      {/* Main Content */}
-      <main>
-         {/* Single Rivian-style full-screen hero carousel — backend managed */}
-        <SectionErrorBoundary sectionName="hero">
-          <RivianHero />
+        <SectionErrorBoundary sectionName="header" fallback={null}>
+          <Header />
         </SectionErrorBoundary>
 
-          {showDeferredSections ? (
-            <Suspense fallback={<SectionSkeleton label="Loading homepage sections..." />}>
-              <HomeDeferredSections loanPrefill={loanPrefill} onGetLoanQuote={handleGetLoanQuote} />
-            </Suspense>
-          ) : (
-            <SectionSkeleton label="Loading homepage sections..." />
-          )}
-      </main>
+        <main>
+          <SectionErrorBoundary sectionName="hero">
+            <RivianHero />
+          </SectionErrorBoundary>
+
+          <Suspense fallback={<SectionSkeleton label="Loading homepage sections..." />}>
+            <HomeDeferredSections loanPrefill={loanPrefill} onGetLoanQuote={handleGetLoanQuote} />
+          </Suspense>
+        </main>
       </div>
     </>
   );
