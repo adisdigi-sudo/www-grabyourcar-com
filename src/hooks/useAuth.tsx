@@ -153,13 +153,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth
       .getSession()
       .then(({ data: { session: activeSession } }) => {
-        finishBootstrap(activeSession ?? readPersistedSession());
+        if (activeSession) {
+          finishBootstrap(activeSession);
+          return;
+        }
+        // Supabase returned no session — purge any stale cache so we don't
+        // keep a corrupt token (missing `sub`) that triggers 403 loops and
+        // a white /workspace screen.
+        clearPersistedSession();
+        finishBootstrap(null);
       })
       .catch((error) => {
         console.warn("[Auth] Failed to restore session during bootstrap", error);
 
         if (!isMounted) return;
-        finishBootstrap(readPersistedSession());
+        // On hard auth failure, do NOT fall back to cache — that's exactly
+        // how a corrupt token keeps the app stuck. Force clean signed-out
+        // state so the user lands on the auth screen instead of a white page.
+        clearPersistedSession();
+        finishBootstrap(null);
       });
 
     return () => {
