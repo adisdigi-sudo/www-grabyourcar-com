@@ -399,11 +399,15 @@ export const ensureStartupShell = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(STARTUP_SHELL_ID)) return;
 
-  // Final safety net: never inject the global white recovery overlay when
-  // stabilization is disabled. The overlay used to trap users on /crm-auth.
-  if (!shouldStabilizeStartupShellWindow()) return;
+  const stabilizationEnabled = shouldStabilizeStartupShellWindow();
+  const shouldRenderMinimalBootShell = stabilizationEnabled || isSensitivePreviewRouteWindow();
+  if (!shouldRenderMinimalBootShell) return;
 
   const fallbackActionLabel = isSensitivePreviewRouteWindow() ? "Open sign in" : "Open home";
+  const defaultShellTitle = isSensitivePreviewRouteWindow() ? "Loading workspace…" : "Loading page…";
+  const defaultShellBody = isSensitivePreviewRouteWindow()
+    ? "Auth aur workspace data verify ho raha hai. White screen ke bajaye loading state dikh rahi hai."
+    : "Page prepare ho rahi hai. Please wait.";
 
   const shell = document.createElement("div");
   shell.id = STARTUP_SHELL_ID;
@@ -422,8 +426,8 @@ export const ensureStartupShell = () => {
   shell.innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px 20px;max-width:460px;text-align:center;">
       <div data-shell-status style="height:44px;width:44px;border-radius:9999px;border:3px solid hsl(220 14% 96%);border-top-color:hsl(221.2 83.2% 53.3%);animation:lovable-spin 1s linear infinite;"></div>
-      <div data-shell-title style="font:600 16px system-ui, sans-serif;">Page reconnect ho raha hai</div>
-      <div data-shell-body style="max-width:420px;text-align:center;font:400 13px system-ui, sans-serif;color:hsl(215.4 16.3% 46.9%);padding:0 20px;">Agar preview update aayi hai to page thodi der stable shell par rahega. White page ke bajaye yeh recovery state dikhni chahiye.</div>
+      <div data-shell-title style="font:600 16px system-ui, sans-serif;">${defaultShellTitle}</div>
+      <div data-shell-body style="max-width:420px;text-align:center;font:400 13px system-ui, sans-serif;color:hsl(215.4 16.3% 46.9%);padding:0 20px;">${defaultShellBody}</div>
       <div data-shell-actions style="display:none;gap:10px;flex-wrap:wrap;justify-content:center;">
         <button type="button" data-shell-reload style="border:0;border-radius:9999px;background:hsl(221.2 83.2% 53.3%);color:white;padding:10px 16px;font:600 13px system-ui,sans-serif;cursor:pointer;">Reload safely</button>
         <button type="button" data-shell-auth style="border:1px solid hsl(214.3 31.8% 91.4%);border-radius:9999px;background:white;color:hsl(222.2 84% 4.9%);padding:10px 16px;font:600 13px system-ui,sans-serif;cursor:pointer;">${fallbackActionLabel}</button>
@@ -463,10 +467,12 @@ export const ensureStartupShell = () => {
     signInButton?.removeEventListener("click", handleOpenSignIn);
   };
 
-  clearStartupShellRecoveryTimer();
-  startupShellRecoveryTimer = window.setTimeout(() => {
-    promoteStartupShellToRecovery();
-  }, STARTUP_SHELL_RECOVERY_DELAY_MS);
+  if (stabilizationEnabled) {
+    clearStartupShellRecoveryTimer();
+    startupShellRecoveryTimer = window.setTimeout(() => {
+      promoteStartupShellToRecovery();
+    }, STARTUP_SHELL_RECOVERY_DELAY_MS);
+  }
 };
 
 export const removeStartupShell = () => {

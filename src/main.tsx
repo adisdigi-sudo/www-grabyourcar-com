@@ -7,10 +7,12 @@ import { BootstrapRuntime } from "@/components/bootstrap/BootstrapRuntime";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { installSensitiveRouteReloadGuard } from "@/lib/devReloadGuard";
 import { ensureAppRootElement } from "@/lib/ensureAppRoot";
+import { ensureStartupShell } from "@/lib/startupShell";
 import { installStartupShellHealthMonitor } from "@/lib/startupShell";
 import { removeStartupShell } from "@/lib/startupShell";
 
 try {
+  ensureStartupShell();
   installSensitiveRouteReloadGuard();
   installStartupShellHealthMonitor();
 
