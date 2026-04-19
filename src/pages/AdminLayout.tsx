@@ -152,6 +152,12 @@ const DealerManagement = lazy(() =>
 const AICofounderDashboard = lazy(() =>
   import("@/components/admin/AICofounderDashboard"),
 );
+const LiveChatsDashboard = lazy(() =>
+  import("@/components/admin/live-chats/LiveChatsDashboard"),
+);
+const LiveChatNotifier = lazy(() =>
+  import("@/components/admin/live-chats/LiveChatNotifier"),
+);
 const SiteSettingsManager = lazy(() => import("@/components/admin/SiteSettingsManager"));
 const BannersManager = lazy(() => import("@/components/admin/BannersManager"));
 const TestimonialsManager = lazy(() => import("@/components/admin/TestimonialsManager"));
@@ -982,6 +988,8 @@ const AdminLayout = () => {
         return <EmployeeDailyReportsDashboard />;
       case "ai-cofounder":
         return <AICofounderDashboard />;
+      case "live-chats":
+        return <LiveChatsDashboard />;
       case "legacy-leads":
         return <LegacyLeadsManager />;
       case "my-hr":
