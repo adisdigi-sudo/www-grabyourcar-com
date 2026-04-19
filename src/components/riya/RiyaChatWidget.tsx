@@ -28,7 +28,32 @@ const AGENT_NAMES = [
   "Sneha", "Vikram", "Tanya", "Rohan", "Meera",
 ];
 
-const pickAgent = () => AGENT_NAMES[Math.floor(Math.random() * AGENT_NAMES.length)];
+const AGENT_KEY = "gyc_agent_name";
+const SESSION_KEY = "gyc_chat_session";
+
+const getOrCreateAgent = (): string => {
+  try {
+    const existing = sessionStorage.getItem(AGENT_KEY);
+    if (existing && AGENT_NAMES.includes(existing)) return existing;
+    const fresh = AGENT_NAMES[Math.floor(Math.random() * AGENT_NAMES.length)];
+    sessionStorage.setItem(AGENT_KEY, fresh);
+    return fresh;
+  } catch {
+    return AGENT_NAMES[Math.floor(Math.random() * AGENT_NAMES.length)];
+  }
+};
+
+const getOrCreateSession = (): string => {
+  try {
+    const existing = sessionStorage.getItem(SESSION_KEY);
+    if (existing) return existing;
+    const fresh = `gyc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    sessionStorage.setItem(SESSION_KEY, fresh);
+    return fresh;
+  } catch {
+    return `gyc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  }
+};
 
 const buildGreeting = (name: string) =>
   `Hi! I'm **${name}** from **GrabYourCar** 👋\n\nKaise help kar sakta hoon? Cars, insurance, loans, HSRP, rentals — sab ki info de dunga 🚗`;
@@ -39,14 +64,14 @@ export const RiyaChatWidget = ({
   initialOpen = false,
   greeting,
 }: RiyaChatWidgetProps) => {
-  const [agentName] = useState(() => pickAgent());
+  const [agentName] = useState(() => getOrCreateAgent());
   const [isOpen, setIsOpen] = useState(initialOpen);
   const [messages, setMessages] = useState<Msg[]>([
     { role: "assistant", content: greeting || buildGreeting(agentName) },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sessionId] = useState(() => `gyc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+  const [sessionId] = useState(() => getOrCreateSession());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
