@@ -33,7 +33,7 @@ import { InsurancePerformance } from "./InsurancePerformance";
 import { OmniChatPanel } from "../shared/OmniChatPanel";
 import { VerticalMessagingTab } from "../shared/VerticalMessagingTab";
 
-type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "renewal_campaign" | "performance" | "conversations";
+type ActiveView = "pipeline" | "calling" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "renewal_campaign" | "performance" | "conversations";
 type KpiType = "total_leads" | "in_pipeline" | "won" | "active_policies" | "conversion" | null;
 
 type LegacyInsuranceLead = {
