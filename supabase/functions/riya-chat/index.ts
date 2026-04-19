@@ -60,10 +60,46 @@ interface ToolCall {
   function: { name: string; arguments: string };
 }
 
+interface SessionContext {
+  sessionId: string;
+  sessionRowId?: string | null;
+  userAgent?: string;
+  agentName?: string;
+  pageUrl?: string;
+}
+
+const MANAGER_PHONE = "9855924442";
+
+async function notifyManagerOfLead(
+  supabase: ReturnType<typeof createClient>,
+  payload: { name: string; phone: string; vertical: string; message: string; agentName: string }
+) {
+  try {
+    await supabase.functions.invoke("whatsapp-send", {
+      body: {
+        to: MANAGER_PHONE,
+        messageType: "text",
+        message:
+          `🔔 *New Riya Chat Lead*\n` +
+          `Name: ${payload.name}\n` +
+          `Phone: ${payload.phone}\n` +
+          `Vertical: ${payload.vertical}\n` +
+          `Agent: ${payload.agentName}\n` +
+          `Note: ${payload.message}`,
+        logEvent: "riya_lead_alert",
+        message_context: "internal_lead_alert",
+        vertical: "sales",
+      },
+    });
+  } catch (e) {
+    console.error("[riya-chat] manager WA notify failed:", e);
+  }
+}
+
 async function executeToolCall(
   toolCall: ToolCall,
   supabase: ReturnType<typeof createClient>,
-  sessionContext: { sessionId: string; userAgent?: string; agentName?: string }
+  sessionContext: SessionContext
 ): Promise<string> {
   const args = JSON.parse(toolCall.function.arguments || "{}");
   const fn = toolCall.function.name;
@@ -75,40 +111,63 @@ async function executeToolCall(
       const cleanPhone = String(phone).replace(/\D/g, "").slice(-10);
       if (cleanPhone.length !== 10) return JSON.stringify({ success: false, error: "Invalid phone (need 10 digits)" });
 
-      // Insert into automation_lead_tracking
       const leadId = crypto.randomUUID();
+      const leadName = name || "Riya Chat Lead";
+      const leadMessage = message || car_interest || "Captured via Riya AI chatbot";
+
       const { error } = await supabase.from("automation_lead_tracking").insert({
         lead_id: leadId,
-        name: name || "Riya Chat Lead",
+        name: leadName,
         phone: cleanPhone,
         vertical,
         source: "riya_chatbot",
         lead_source_type: "ai_chat",
-        message: message || car_interest || "Captured via Riya AI chatbot",
+        message: leadMessage,
         city: city || null,
         status: "new",
-        raw_data: { ...args, session_id: sessionContext.sessionId, user_agent: sessionContext.userAgent, agent_name: sessionContext.agentName } as never,
+        raw_data: { ...args, session_id: sessionContext.sessionId, user_agent: sessionContext.userAgent, agent_name: sessionContext.agentName, page_url: sessionContext.pageUrl } as never,
       });
       if (error) {
         console.error("[riya-chat] capture_lead error:", error);
         return JSON.stringify({ success: false, error: error.message });
       }
 
-      // Fire-and-forget: notify executive/manager via canonical lead-intake-engine
-      // (handles WhatsApp + email alerts and assignment automatically)
+      // Mark chat session as lead-captured
+      if (sessionContext.sessionRowId) {
+        await supabase.from("riya_chat_sessions")
+          .update({
+            lead_captured: true,
+            lead_id: leadId,
+            visitor_name: leadName,
+            visitor_phone: cleanPhone,
+            visitor_city: city || null,
+            vertical_interest: vertical,
+          })
+          .eq("id", sessionContext.sessionRowId);
+      }
+
+      // Fire-and-forget notifications
       supabase.functions.invoke("lead-intake-engine", {
         body: {
           lead_id: leadId,
-          name: name || "Riya Chat Lead",
+          name: leadName,
           phone: cleanPhone,
           vertical,
           source: "riya_chatbot",
-          message: message || car_interest || `Chat lead from ${sessionContext.agentName} bot`,
+          message: leadMessage,
           city: city || null,
           car_interest: car_interest || null,
           notify: true,
         },
       }).catch((e) => console.error("[riya-chat] lead-intake-engine notify failed:", e));
+
+      notifyManagerOfLead(supabase, {
+        name: leadName,
+        phone: cleanPhone,
+        vertical,
+        message: leadMessage,
+        agentName: sessionContext.agentName || "Bot",
+      });
 
       return JSON.stringify({ success: true, lead_id: leadId, message: `Lead saved! Hamari team aapko 15 min me ${cleanPhone} pe call karegi.` });
     }
