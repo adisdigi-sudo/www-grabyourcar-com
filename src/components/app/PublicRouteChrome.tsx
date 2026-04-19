@@ -6,6 +6,7 @@ import { FloatingGetQuote } from "@/components/FloatingGetQuote";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { WhatsAppFloatingButton } from "@/components/WhatsAppCTA";
 import { SiteStructuredData } from "@/components/seo/SiteStructuredData";
+import { RiyaChatWidget } from "@/components/riya/RiyaChatWidget";
 import { normalizeBrandingSettings, useBrandingSettingsQuery } from "@/hooks/useBrandingSettings";
 
 const BrandingHeadSync = () => {
@@ -93,6 +94,9 @@ export const PublicRouteChrome = () => (
     </SectionErrorBoundary>
     <SectionErrorBoundary sectionName="cookie-consent-banner" fallback={null}>
       <CookieConsentBanner />
+    </SectionErrorBoundary>
+    <SectionErrorBoundary sectionName="riya-chat-widget" fallback={null}>
+      <RiyaChatWidget />
     </SectionErrorBoundary>
   </>
 );
