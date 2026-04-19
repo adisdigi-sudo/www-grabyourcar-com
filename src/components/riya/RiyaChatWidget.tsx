@@ -21,21 +21,32 @@ interface RiyaChatWidgetProps {
   greeting?: string;
 }
 
-const DEFAULT_GREETING = `Hi! I'm **Riya** from **GrabYourCar** 👋
+const AGENT_NAMES = [
+  "Prabhjeet", "Anshdeep", "Isha", "Rahul", "Gaurav",
+  "Karan", "Pratham", "Simran", "Aditya", "Neha",
+  "Manpreet", "Riya", "Arjun", "Pooja", "Harshit",
+  "Sneha", "Vikram", "Tanya", "Rohan", "Meera",
+];
 
-Main aapki kaise help kar sakti hoon? Cars, insurance, loans, HSRP, rentals — sab ki info de sakti hoon. Brochure bhi WhatsApp pe bhej dungi 🚗`;
+const pickAgent = () => AGENT_NAMES[Math.floor(Math.random() * AGENT_NAMES.length)];
+
+const buildGreeting = (name: string) =>
+  `Hi! I'm **${name}** from **GrabYourCar** 👋\n\nKaise help kar sakta hoon? Cars, insurance, loans, HSRP, rentals — sab ki info de dunga 🚗`;
 
 export const RiyaChatWidget = ({
   variant = "floating",
   className,
   initialOpen = false,
-  greeting = DEFAULT_GREETING,
+  greeting,
 }: RiyaChatWidgetProps) => {
+  const [agentName] = useState(() => pickAgent());
   const [isOpen, setIsOpen] = useState(initialOpen);
-  const [messages, setMessages] = useState<Msg[]>([{ role: "assistant", content: greeting }]);
+  const [messages, setMessages] = useState<Msg[]>([
+    { role: "assistant", content: greeting || buildGreeting(agentName) },
+  ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sessionId] = useState(() => `riya_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+  const [sessionId] = useState(() => `gyc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -57,6 +68,7 @@ export const RiyaChatWidget = ({
         body: {
           messages: next.map((m) => ({ role: m.role, content: m.content })),
           sessionId,
+          agentName,
         },
       });
 
@@ -71,7 +83,7 @@ export const RiyaChatWidget = ({
         ...prev,
         {
           role: "assistant",
-          content: `Oops, network issue ho raha hai. Aap direct WhatsApp kar sakte hain: [Click here](https://wa.me/919855924442) 📞`,
+          content: `Network issue lag raha hai 😕 Direct WhatsApp karein: [Click here](https://wa.me/919855924442) 📞`,
         },
       ]);
     } finally {
@@ -102,7 +114,7 @@ export const RiyaChatWidget = ({
           <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 border-2 border-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-sm leading-tight">Riya</div>
+          <div className="font-semibold text-sm leading-tight">{agentName}</div>
           <div className="text-xs opacity-90 leading-tight">GrabYourCar Assistant • Online</div>
         </div>
         {variant === "floating" && (
@@ -174,7 +186,7 @@ export const RiyaChatWidget = ({
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-          Powered by Riya AI • GrabYourCar
+          GrabYourCar
         </p>
       </div>
     </div>
