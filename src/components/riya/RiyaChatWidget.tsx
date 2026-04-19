@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, X, Send, Loader2, Minus } from "lucide-react";
+import { X, Send, Loader2, Minus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
+import riyaAvatar from "@/assets/riya-avatar.png";
 
 interface Msg {
   role: "user" | "assistant";
@@ -91,9 +92,14 @@ export const RiyaChatWidget = ({
       {/* Header */}
       <div className="flex items-center gap-3 p-3 border-b bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
         <div className="relative">
-          <div className="w-9 h-9 rounded-full bg-primary-foreground/20 flex items-center justify-center font-bold text-base">
-            R
-          </div>
+          <img
+            src={riyaAvatar}
+            alt="Riya - GrabYourCar Assistant"
+            loading="lazy"
+            width={36}
+            height={36}
+            className="w-9 h-9 rounded-full object-cover border-2 border-primary-foreground/40 bg-background"
+          />
           <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 border-2 border-primary" />
         </div>
         <div className="flex-1 min-w-0">
@@ -193,15 +199,21 @@ export const RiyaChatWidget = ({
           onClick={() => setIsOpen(true)}
           className={cn(
             "fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-40",
-            "w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary/80 text-primary-foreground",
-            "shadow-2xl hover:shadow-primary/40 hover:scale-110 transition-all",
-            "flex items-center justify-center group"
+            "w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary/80 p-0.5",
+            "shadow-2xl hover:shadow-primary/40 hover:scale-110 transition-all group"
           )}
           aria-label="Open Riya chat"
         >
-          <MessageCircle className="h-6 w-6 group-hover:scale-110 transition-transform" />
-          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-green-400 border-2 border-background animate-pulse" />
-          <span className="absolute right-full mr-3 whitespace-nowrap bg-foreground text-background text-xs font-medium px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+          <img
+            src={riyaAvatar}
+            alt="Chat with Riya from GrabYourCar"
+            loading="lazy"
+            width={64}
+            height={64}
+            className="w-full h-full rounded-full object-cover bg-background"
+          />
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-green-400 border-2 border-background animate-pulse" />
+          <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 whitespace-nowrap bg-foreground text-background text-xs font-medium px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
             Chat with Riya
           </span>
         </button>
