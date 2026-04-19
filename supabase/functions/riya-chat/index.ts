@@ -195,8 +195,7 @@ async function executeToolCall(
         status: brochureDelivered ? "contacted" : "new",
         contacted: brochureDelivered,
         contacted_at: brochureDelivered ? new Date().toISOString() : null,
-        priority: brochureDelivered ? null : "high",
-        raw_data: { ...args, brochure_url: car.brochure_url, wa_error: waError } as never,
+        raw_data: { ...args, brochure_url: car.brochure_url, wa_error: waError, priority_hint: brochureDelivered ? null : "high" } as never,
       });
 
       if (brochureDelivered) {
@@ -230,8 +229,7 @@ async function executeToolCall(
         lead_source_type: "human_handoff",
         message: `URGENT — Human agent requested. Reason: ${reason || "Not specified"}`,
         status: "new",
-        priority: "high",
-        raw_data: args as never,
+        raw_data: { ...args, priority_hint: "high" } as never,
       } as never);
 
       return JSON.stringify({
