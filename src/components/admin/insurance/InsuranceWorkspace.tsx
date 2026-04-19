@@ -489,6 +489,7 @@ export function InsuranceWorkspace() {
 
   const TABS = [
     { key: "pipeline" as const, label: "Lead Pipeline", icon: Shield, count: totalLeads, urgent: false },
+    { key: "calling" as const, label: "Calling Queue", icon: PhoneCall, count: 0, urgent: false },
     { key: "policy_book" as const, label: "Policy Book", icon: BookOpen, count: totalRunningPolicies, urgent: false },
     { key: "renewals" as const, label: "Coming Renewals", icon: CalendarClock, count: renewalsDue, urgent: urgentRenewals > 0 },
     { key: "overdue" as const, label: "Overdue", icon: AlertTriangle, count: overdueCount, urgent: overdueCount > 0 },
