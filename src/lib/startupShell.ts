@@ -217,36 +217,13 @@ const resetStartupShellAutoReloadState = () => {
 };
 
 const scheduleStartupShellAutoReload = () => {
-  if (typeof window === "undefined" || !shouldStabilizeStartupShellWindow()) {
-    clearAutoReloadTimer();
-    return;
-  }
-
-  const reloadState = readStartupShellAutoReloadState();
-  if (reloadState.attempts >= STARTUP_SHELL_AUTO_RELOAD_MAX_ATTEMPTS) {
-    clearAutoReloadTimer();
-    return;
-  }
-
+  // Auto-reload disabled: previously the startup shell would silently reload
+  // the page after a few seconds, which the user perceived as the workspace
+  // refreshing on its own. We now keep the loading/recovery state visible and
+  // let the user trigger a reload manually.
+  if (typeof window === "undefined") return;
   clearAutoReloadTimer();
-  startupShellAutoReloadTimer = window.setTimeout(() => {
-    if (isSensitiveRouteAppReady()) {
-      resetStartupShellAutoReloadState();
-      return;
-    }
-
-    const latestState = readStartupShellAutoReloadState();
-    if (latestState.attempts >= STARTUP_SHELL_AUTO_RELOAD_MAX_ATTEMPTS) {
-      return;
-    }
-
-    writeStartupShellAutoReloadState({
-      attempts: latestState.attempts + 1,
-      startedAt: latestState.startedAt,
-    });
-
-    performSafePreviewReload();
-  }, STARTUP_SHELL_AUTO_RELOAD_DELAY_MS);
+  resetStartupShellAutoReloadState();
 };
 
 const recoverStartupShell = (reason: string) => {
