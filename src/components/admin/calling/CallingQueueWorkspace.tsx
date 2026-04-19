@@ -356,21 +356,23 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
   }
 
   async function refreshCampaignStats(campaignId: string) {
-    const cfg: [string, Record<string, string>][] = [
-      ["total",          { campaign_id: campaignId }],
-      ["pending",        { campaign_id: campaignId, call_status: "pending" }],
-      ["completed",      { campaign_id: campaignId, call_status: "completed" }],
-      ["interested",     { campaign_id: campaignId, disposition: "interested" }],
-      ["not_interested", { campaign_id: campaignId, disposition: "not_interested" }],
-      ["no_answer",      { campaign_id: campaignId, disposition: "no_answer" }],
-    ];
-    const counts: Record<string, number> = {};
-    await Promise.all(cfg.map(async ([key, where]) => {
-      let q = supabase.from("auto_dialer_contacts").select("id", { count: "exact", head: true });
-      Object.entries(where).forEach(([k, v]) => { q = q.eq(k, v); });
-      const { count } = await q;
-      counts[key] = count || 0;
-    }));
+    const { data: rows } = await supabase
+      .from("auto_dialer_contacts")
+      .select("call_status, disposition")
+      .eq("campaign_id", campaignId);
+
+    const counts = {
+      total: rows?.length || 0,
+      pending: 0, completed: 0, interested: 0, not_interested: 0, no_answer: 0,
+    };
+    (rows || []).forEach((r: any) => {
+      if (r.call_status === "pending") counts.pending++;
+      if (r.call_status === "completed") counts.completed++;
+      if (r.disposition === "interested") counts.interested++;
+      if (r.disposition === "not_interested") counts.not_interested++;
+      if (r.disposition === "no_answer") counts.no_answer++;
+    });
+
     await supabase
       .from("auto_dialer_campaigns")
       .update({
