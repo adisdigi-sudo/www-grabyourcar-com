@@ -4,7 +4,7 @@ import { DEV_SERVER_STATUS_EVENT } from "@/lib/devReloadGuard";
 import { withPreviewParams } from "@/lib/previewRouting";
 
 const STARTUP_SHELL_ID = "lovable-startup-shell";
-const STARTUP_SHELL_RECOVERY_DELAY_MS = 4500;
+const STARTUP_SHELL_RECOVERY_DELAY_MS = 7000;
 const STARTUP_SHELL_HIDE_WAIT_MS = 2200;
 const ROOT_BLANK_RECOVERY_DELAY_MS = 900;
 const STARTUP_SHELL_READY_CONFIRM_MS = 320;
@@ -400,14 +400,15 @@ export const ensureStartupShell = () => {
   if (document.getElementById(STARTUP_SHELL_ID)) return;
 
   const stabilizationEnabled = shouldStabilizeStartupShellWindow();
-  const shouldRenderMinimalBootShell = stabilizationEnabled || isSensitivePreviewRouteWindow();
+  const shouldRenderMinimalBootShell = true;
   if (!shouldRenderMinimalBootShell) return;
 
-  const fallbackActionLabel = isSensitivePreviewRouteWindow() ? "Open sign in" : "Open home";
-  const defaultShellTitle = isSensitivePreviewRouteWindow() ? "Loading workspace…" : "Loading page…";
-  const defaultShellBody = isSensitivePreviewRouteWindow()
+  const isSensitiveRoute = isSensitivePreviewRouteWindow();
+  const fallbackActionLabel = isSensitiveRoute ? "Open sign in" : "Open home";
+  const defaultShellTitle = isSensitiveRoute ? "Loading workspace…" : "Loading page…";
+  const defaultShellBody = isSensitiveRoute
     ? "Auth aur workspace data verify ho raha hai. White screen ke bajaye loading state dikh rahi hai."
-    : "Page prepare ho rahi hai. Please wait.";
+    : "Page aur data prepare ho rahe hain. Agar thoda time lage to yahin processing state dikhte rahegi, white page nahi.";
 
   const shell = document.createElement("div");
   shell.id = STARTUP_SHELL_ID;
@@ -467,12 +468,14 @@ export const ensureStartupShell = () => {
     signInButton?.removeEventListener("click", handleOpenSignIn);
   };
 
-  if (stabilizationEnabled) {
-    clearStartupShellRecoveryTimer();
-    startupShellRecoveryTimer = window.setTimeout(() => {
-      promoteStartupShellToRecovery();
-    }, STARTUP_SHELL_RECOVERY_DELAY_MS);
-  }
+  clearStartupShellRecoveryTimer();
+  startupShellRecoveryTimer = window.setTimeout(() => {
+    promoteStartupShellToRecovery(
+      isSensitiveRoute
+        ? "Startup expected time se zyada le raha hai. Is waqt auth/workspace ya latest bundle verify ho raha ho sakta hai."
+        : "Page load expected time se zyada le raha hai. Ho sakta hai latest bundle ya page data slow ho — isliye blank screen ke bajaye status dikh raha hai.",
+    );
+  }, STARTUP_SHELL_RECOVERY_DELAY_MS);
 };
 
 export const removeStartupShell = () => {

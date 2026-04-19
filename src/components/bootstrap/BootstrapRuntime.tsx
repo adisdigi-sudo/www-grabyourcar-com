@@ -699,13 +699,20 @@ installBootstrapRuntime();
 
 export const BootstrapRuntime = ({ onReady }: { onReady?: () => void }) => {
   useEffect(() => {
+    let settle: number | null = null;
+
     const frame = window.requestAnimationFrame(() => {
-      removeDevPreviewReconnectOverlay();
-      onReady?.();
+      settle = window.setTimeout(() => {
+        removeDevPreviewReconnectOverlay();
+        onReady?.();
+      }, 120);
     });
 
     return () => {
       window.cancelAnimationFrame(frame);
+      if (settle) {
+        window.clearTimeout(settle);
+      }
     };
   }, [onReady]);
 
