@@ -700,8 +700,14 @@ installBootstrapRuntime();
 export const BootstrapRuntime = ({ onReady }: { onReady?: () => void }) => {
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      removeDevPreviewReconnectOverlay();
-      onReady?.();
+      const settle = window.setTimeout(() => {
+        removeDevPreviewReconnectOverlay();
+        onReady?.();
+      }, 120);
+
+      return () => {
+        window.clearTimeout(settle);
+      };
     });
 
     return () => {
