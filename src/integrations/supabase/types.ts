@@ -12146,6 +12146,33 @@ export type Database = {
           },
         ]
       }
+      lead_followup_state: {
+        Row: {
+          created_at: string
+          id: string
+          last_step_at: string | null
+          lead_id: string
+          step_fired: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_step_at?: string | null
+          lead_id: string
+          step_fired?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_step_at?: string | null
+          lead_id?: string
+          step_fired?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lead_forward_history: {
         Row: {
           action: string
