@@ -152,6 +152,12 @@ const DealerManagement = lazy(() =>
 const AICofounderDashboard = lazy(() =>
   import("@/components/admin/AICofounderDashboard"),
 );
+const LiveChatsDashboard = lazy(() =>
+  import("@/components/admin/live-chats/LiveChatsDashboard"),
+);
+const LiveChatNotifier = lazy(() =>
+  import("@/components/admin/live-chats/LiveChatNotifier"),
+);
 const SiteSettingsManager = lazy(() => import("@/components/admin/SiteSettingsManager"));
 const BannersManager = lazy(() => import("@/components/admin/BannersManager"));
 const TestimonialsManager = lazy(() => import("@/components/admin/TestimonialsManager"));
@@ -982,6 +988,8 @@ const AdminLayout = () => {
         return <EmployeeDailyReportsDashboard />;
       case "ai-cofounder":
         return <AICofounderDashboard />;
+      case "live-chats":
+        return <LiveChatsDashboard />;
       case "legacy-leads":
         return <LegacyLeadsManager />;
       case "my-hr":
@@ -993,6 +1001,9 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-muted/30">
+      <Suspense fallback={null}>
+        <LiveChatNotifier />
+      </Suspense>
       <Suspense fallback={<AdminPanelLoader className="min-h-screen" />}>
         <AdminRenderBoundary contextLabel="CRM sidebar">
             <AdminSidebar activeTab={resolvedActiveTab} setActiveTab={setActiveTab} />

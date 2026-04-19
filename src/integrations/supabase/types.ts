@@ -15959,6 +15959,98 @@ export type Database = {
         }
         Relationships: []
       }
+      riya_chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          meta: Json | null
+          role: string
+          session_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          role: string
+          session_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "riya_chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "riya_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      riya_chat_sessions: {
+        Row: {
+          agent_name: string | null
+          created_at: string
+          id: string
+          last_message_at: string
+          last_message_preview: string | null
+          lead_captured: boolean
+          lead_id: string | null
+          message_count: number
+          page_url: string | null
+          session_key: string
+          updated_at: string
+          user_agent: string | null
+          vertical_interest: string | null
+          visitor_city: string | null
+          visitor_name: string | null
+          visitor_phone: string | null
+        }
+        Insert: {
+          agent_name?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          lead_captured?: boolean
+          lead_id?: string | null
+          message_count?: number
+          page_url?: string | null
+          session_key: string
+          updated_at?: string
+          user_agent?: string | null
+          vertical_interest?: string | null
+          visitor_city?: string | null
+          visitor_name?: string | null
+          visitor_phone?: string | null
+        }
+        Update: {
+          agent_name?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          lead_captured?: boolean
+          lead_id?: string | null
+          message_count?: number
+          page_url?: string | null
+          session_key?: string
+          updated_at?: string
+          user_agent?: string | null
+          vertical_interest?: string | null
+          visitor_city?: string | null
+          visitor_name?: string | null
+          visitor_phone?: string | null
+        }
+        Relationships: []
+      }
       road_tax_rule_history: {
         Row: {
           action: string

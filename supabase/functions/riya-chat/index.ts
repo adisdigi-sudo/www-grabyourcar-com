@@ -42,12 +42,12 @@ Customer ki language ko AUTOMATICALLY detect karke usi me reply karo:
 7. **Accessories** — Genuine + aftermarket, home delivery.
 
 ## Tools (use them PROACTIVELY — yeh sirf decoration nahi hai!)
-- **capture_lead**: JAB BHI customer ne phone number diya AUR koi service/car me interest dikhaya, TURANT yeh tool call karo. Pehle "team contact karegi" mat bolo — pehle tool chalao, fir tool ke success message ko apne reply me use karo.
+- **capture_lead**: JAB BHI customer 10-digit phone number share kare, TURANT yeh tool call karo — bina kisi shart ke. Pehle "team contact karegi" mat bolo.
 - **send_brochure**: Jab customer specific car ka brochure maange. Phone lazmi.
 - **request_human_handoff**: SIRF jab user explicit "human/agent" maange ya frustrated ho.
 
 ## CRITICAL workflow rules
-- Phone + intent mil gaya? → capture_lead TURANT call karo, fir reply me bolo "✅ Aapki request humari team ke paas pahunch gayi, [phone] pe 15 min me call aayegi."
+- Phone number mil gaya (10 digits)? → capture_lead TURANT call karo, fir reply me bolo "✅ Aapki request humari team ke paas pahunch gayi, [phone] pe 15 min me call aayegi."
 - KABHI mat bolo "team contact karegi" bina capture_lead chalaye — warna lead lost ho jaati hai.
 - Brochure ke baad **TOOL ka exact response message use karo** — agar tool success bole "WhatsApp pe bhej diya" tabhi bolo, agar fail ho to honestly bolo "kuch issue aaya, team aapko bhej degi".
 - Phone na mile to politely maango — bina phone ke lead/brochure tool MAT chalao.
@@ -60,10 +60,46 @@ interface ToolCall {
   function: { name: string; arguments: string };
 }
 
+interface SessionContext {
+  sessionId: string;
+  sessionRowId?: string | null;
+  userAgent?: string;
+  agentName?: string;
+  pageUrl?: string;
+}
+
+const MANAGER_PHONE = "9855924442";
+
+async function notifyManagerOfLead(
+  supabase: ReturnType<typeof createClient>,
+  payload: { name: string; phone: string; vertical: string; message: string; agentName: string }
+) {
+  try {
+    await supabase.functions.invoke("whatsapp-send", {
+      body: {
+        to: MANAGER_PHONE,
+        messageType: "text",
+        message:
+          `🔔 *New Riya Chat Lead*\n` +
+          `Name: ${payload.name}\n` +
+          `Phone: ${payload.phone}\n` +
+          `Vertical: ${payload.vertical}\n` +
+          `Agent: ${payload.agentName}\n` +
+          `Note: ${payload.message}`,
+        logEvent: "riya_lead_alert",
+        message_context: "internal_lead_alert",
+        vertical: "sales",
+      },
+    });
+  } catch (e) {
+    console.error("[riya-chat] manager WA notify failed:", e);
+  }
+}
+
 async function executeToolCall(
   toolCall: ToolCall,
   supabase: ReturnType<typeof createClient>,
-  sessionContext: { sessionId: string; userAgent?: string; agentName?: string }
+  sessionContext: SessionContext
 ): Promise<string> {
   const args = JSON.parse(toolCall.function.arguments || "{}");
   const fn = toolCall.function.name;
@@ -75,40 +111,63 @@ async function executeToolCall(
       const cleanPhone = String(phone).replace(/\D/g, "").slice(-10);
       if (cleanPhone.length !== 10) return JSON.stringify({ success: false, error: "Invalid phone (need 10 digits)" });
 
-      // Insert into automation_lead_tracking
       const leadId = crypto.randomUUID();
+      const leadName = name || "Riya Chat Lead";
+      const leadMessage = message || car_interest || "Captured via Riya AI chatbot";
+
       const { error } = await supabase.from("automation_lead_tracking").insert({
         lead_id: leadId,
-        name: name || "Riya Chat Lead",
+        name: leadName,
         phone: cleanPhone,
         vertical,
         source: "riya_chatbot",
         lead_source_type: "ai_chat",
-        message: message || car_interest || "Captured via Riya AI chatbot",
+        message: leadMessage,
         city: city || null,
         status: "new",
-        raw_data: { ...args, session_id: sessionContext.sessionId, user_agent: sessionContext.userAgent, agent_name: sessionContext.agentName } as never,
+        raw_data: { ...args, session_id: sessionContext.sessionId, user_agent: sessionContext.userAgent, agent_name: sessionContext.agentName, page_url: sessionContext.pageUrl } as never,
       });
       if (error) {
         console.error("[riya-chat] capture_lead error:", error);
         return JSON.stringify({ success: false, error: error.message });
       }
 
-      // Fire-and-forget: notify executive/manager via canonical lead-intake-engine
-      // (handles WhatsApp + email alerts and assignment automatically)
+      // Mark chat session as lead-captured
+      if (sessionContext.sessionRowId) {
+        await supabase.from("riya_chat_sessions")
+          .update({
+            lead_captured: true,
+            lead_id: leadId,
+            visitor_name: leadName,
+            visitor_phone: cleanPhone,
+            visitor_city: city || null,
+            vertical_interest: vertical,
+          })
+          .eq("id", sessionContext.sessionRowId);
+      }
+
+      // Fire-and-forget notifications
       supabase.functions.invoke("lead-intake-engine", {
         body: {
           lead_id: leadId,
-          name: name || "Riya Chat Lead",
+          name: leadName,
           phone: cleanPhone,
           vertical,
           source: "riya_chatbot",
-          message: message || car_interest || `Chat lead from ${sessionContext.agentName} bot`,
+          message: leadMessage,
           city: city || null,
           car_interest: car_interest || null,
           notify: true,
         },
       }).catch((e) => console.error("[riya-chat] lead-intake-engine notify failed:", e));
+
+      notifyManagerOfLead(supabase, {
+        name: leadName,
+        phone: cleanPhone,
+        vertical,
+        message: leadMessage,
+        agentName: sessionContext.agentName || "Bot",
+      });
 
       return JSON.stringify({ success: true, lead_id: leadId, message: `Lead saved! Hamari team aapko 15 min me ${cleanPhone} pe call karegi.` });
     }
@@ -195,8 +254,7 @@ async function executeToolCall(
         status: brochureDelivered ? "contacted" : "new",
         contacted: brochureDelivered,
         contacted_at: brochureDelivered ? new Date().toISOString() : null,
-        priority: brochureDelivered ? null : "high",
-        raw_data: { ...args, brochure_url: car.brochure_url, wa_error: waError } as never,
+        raw_data: { ...args, brochure_url: car.brochure_url, wa_error: waError, priority_hint: brochureDelivered ? null : "high" } as never,
       });
 
       if (brochureDelivered) {
@@ -230,8 +288,7 @@ async function executeToolCall(
         lead_source_type: "human_handoff",
         message: `URGENT — Human agent requested. Reason: ${reason || "Not specified"}`,
         status: "new",
-        priority: "high",
-        raw_data: args as never,
+        raw_data: { ...args, priority_hint: "high" } as never,
       } as never);
 
       return JSON.stringify({
@@ -318,10 +375,11 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body = await req.json();
-    const { messages, sessionId, agentName } = body as {
+    const { messages, sessionId, agentName, pageUrl } = body as {
       messages: Array<{ role: string; content: string }>;
       sessionId?: string;
       agentName?: string;
+      pageUrl?: string;
     };
 
     if (!Array.isArray(messages)) {
@@ -332,11 +390,61 @@ serve(async (req) => {
     }
 
     const safeAgent = (agentName && /^[A-Za-z\u0900-\u097F ]{2,20}$/.test(agentName)) ? agentName : "Riya";
+    const userAgent = req.headers.get("user-agent") || undefined;
+    const sessionKey = sessionId || crypto.randomUUID();
 
-    const sessionContext = {
-      sessionId: sessionId || crypto.randomUUID(),
-      userAgent: req.headers.get("user-agent") || undefined,
+    // === Persist / upsert chat session ===
+    let sessionRowId: string | null = null;
+    try {
+      const { data: existing } = await supabase
+        .from("riya_chat_sessions")
+        .select("id")
+        .eq("session_key", sessionKey)
+        .maybeSingle();
+
+      const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+      const preview = (lastUserMsg?.content || "").slice(0, 140);
+
+      if (existing?.id) {
+        sessionRowId = existing.id as string;
+        await supabase.from("riya_chat_sessions").update({
+          agent_name: safeAgent,
+          last_message_preview: preview,
+          last_message_at: new Date().toISOString(),
+          message_count: messages.length,
+          page_url: pageUrl || undefined,
+        }).eq("id", sessionRowId);
+      } else {
+        const { data: created } = await supabase.from("riya_chat_sessions").insert({
+          session_key: sessionKey,
+          agent_name: safeAgent,
+          last_message_preview: preview,
+          last_message_at: new Date().toISOString(),
+          message_count: messages.length,
+          user_agent: userAgent || null,
+          page_url: pageUrl || null,
+        }).select("id").single();
+        sessionRowId = created?.id as string ?? null;
+      }
+
+      // Persist the latest user message (if any) as a transcript row
+      if (sessionRowId && lastUserMsg) {
+        await supabase.from("riya_chat_messages").insert({
+          session_id: sessionRowId,
+          role: "user",
+          content: lastUserMsg.content,
+        });
+      }
+    } catch (persistErr) {
+      console.error("[riya-chat] session persist error:", persistErr);
+    }
+
+    const sessionContext: SessionContext = {
+      sessionId: sessionKey,
+      sessionRowId,
+      userAgent,
       agentName: safeAgent,
+      pageUrl,
     };
 
     // Multi-turn tool loop
@@ -383,7 +491,6 @@ serve(async (req) => {
 
       const toolCalls: ToolCall[] | undefined = choice.tool_calls;
       if (toolCalls && toolCalls.length > 0) {
-        // Execute tools, append, loop again
         conversationMessages.push(choice as Record<string, unknown>);
         for (const tc of toolCalls) {
           const result = await executeToolCall(tc, supabase, sessionContext);
@@ -396,10 +503,29 @@ serve(async (req) => {
         continue;
       }
 
-      // Final response — no tool calls
+      const finalMsg = choice.content || "Sorry, I didn't catch that. Phir se bolenge?";
+
+      // Persist assistant reply
+      if (sessionRowId) {
+        try {
+          await supabase.from("riya_chat_messages").insert({
+            session_id: sessionRowId,
+            role: "assistant",
+            content: finalMsg,
+          });
+          await supabase.from("riya_chat_sessions").update({
+            last_message_preview: finalMsg.slice(0, 140),
+            last_message_at: new Date().toISOString(),
+            message_count: messages.length + 1,
+          }).eq("id", sessionRowId);
+        } catch (e) {
+          console.error("[riya-chat] persist assistant reply failed:", e);
+        }
+      }
+
       return new Response(
         JSON.stringify({
-          message: choice.content || "Sorry, I didn't catch that. Phir se bolenge?",
+          message: finalMsg,
           sessionId: sessionContext.sessionId,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

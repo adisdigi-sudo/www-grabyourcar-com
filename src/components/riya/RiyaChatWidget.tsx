@@ -98,6 +98,7 @@ export const RiyaChatWidget = ({
           messages: next.map((m) => ({ role: m.role, content: m.content })),
           sessionId,
           agentName,
+          pageUrl: typeof window !== "undefined" ? window.location.href : undefined,
         },
       });
 
