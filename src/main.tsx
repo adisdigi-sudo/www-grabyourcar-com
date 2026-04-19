@@ -6,8 +6,9 @@ import { ensureAppRootElement } from "@/lib/ensureAppRoot";
 // Permanently remove the initial HTML loader once React takes over (or on error).
 const removeInitialLoader = () => {
   if (typeof document === "undefined") return;
-  const loader = document.getElementById("gyc-initial-loader");
-  if (loader) loader.remove();
+  ["gyc-initial-loader", "lovable-startup-shell", "lovable-dev-preview-reconnect"].forEach((id) => {
+    document.getElementById(id)?.remove();
+  });
 };
 
 try {
