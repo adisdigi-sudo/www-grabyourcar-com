@@ -95,5 +95,8 @@ export const PublicRouteChrome = () => (
     <SectionErrorBoundary sectionName="cookie-consent-banner" fallback={null}>
       <CookieConsentBanner />
     </SectionErrorBoundary>
+    <SectionErrorBoundary sectionName="riya-chat-widget" fallback={null}>
+      <RiyaChatWidget />
+    </SectionErrorBoundary>
   </>
 );
