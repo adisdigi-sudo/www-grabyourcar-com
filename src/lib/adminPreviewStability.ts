@@ -54,13 +54,10 @@ export const isSensitivePreviewRouteWindow = () => {
   return hostname.startsWith("admin.") || isSensitivePreviewRoutePath(pathname);
 };
 
-// The global startup shell / blank-screen recovery system was causing
-// white-page flickers and trapping the preview behind a recovery overlay.
-// Each sensitive page (Workspace, CRM, Admin) already renders its own
-// loader + timeout + error boundary, so the global shell is no longer needed.
-// We always return false here to disable the global recovery shell entirely.
-// See `.lovable/plan.md` for the full reasoning.
-export const shouldStabilizeStartupShellWindow = () => false;
+// Keep blank-screen recovery enabled for sensitive routes so editor previews
+// and admin surfaces fall back to the startup shell instead of showing a
+// pure white page when runtime/rendering stalls before route-level loaders mount.
+export const shouldStabilizeStartupShellWindow = () => isSensitivePreviewRouteWindow();
 
 // Avoid force-reload loops for any sensitive route during dev, including editor previews.
 export const shouldAvoidDevAutoReload = () => import.meta.env.DEV && isSensitivePreviewRouteWindow();
