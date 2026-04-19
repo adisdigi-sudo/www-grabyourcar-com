@@ -374,6 +374,10 @@ export const promoteStartupShellToRecovery = (
 
 export const ensureStartupShell = () => {
   if (typeof document === "undefined") return;
+  if (!shouldStabilizeStartupShellWindow()) {
+    document.getElementById(STARTUP_SHELL_ID)?.remove();
+    return;
+  }
   if (document.getElementById(STARTUP_SHELL_ID)) return;
 
   const stabilizationEnabled = shouldStabilizeStartupShellWindow();
@@ -604,6 +608,7 @@ export const installStartupShellHealthMonitor = () => {
   // This prevents any path from ever injecting the white "Page startup recovery
   // mode" overlay that was trapping users on /crm-auth and other admin routes.
   if (!shouldStabilizeStartupShellWindow()) {
+    document.getElementById(STARTUP_SHELL_ID)?.remove();
     // Still listen for healthy reconnects so any leftover shell can be cleaned.
     window.addEventListener(DEV_SERVER_STATUS_EVENT, handleGlobalDevServerStatus as EventListener);
     return;
