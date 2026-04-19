@@ -40,7 +40,7 @@ Rules:
 
 Return ONLY the HTML content, nothing else. No markdown, no explanation.`;
 
-      const response = await fetch("https://ai.lovable.dev/api/generate", {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -74,7 +74,7 @@ Return ONLY the HTML content, nothing else. No markdown, no explanation.`;
 
     // Action: generate_subject — AI subject line suggestions
     if (action === "generate_subject") {
-      const response = await fetch("https://ai.lovable.dev/api/generate", {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -117,7 +117,7 @@ Return ONLY a JSON array of 5 strings. No markdown, no explanation. Example: ["S
 
     // Action: improve_email — enhance existing content
     if (action === "improve_email") {
-      const response = await fetch("https://ai.lovable.dev/api/generate", {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
