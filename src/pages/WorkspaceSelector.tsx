@@ -169,9 +169,9 @@ const WorkspaceSelector = () => {
         >
           <Card className="w-full max-w-lg p-8 text-center border-border/60 shadow-xl shadow-primary/5">
             <Shield className="h-12 w-12 mx-auto mb-4 text-primary" />
-            <h1 className="text-2xl font-semibold text-foreground">Workspace load ruk gaya</h1>
+            <h1 className="text-2xl font-semibold text-foreground">Workspace loading paused</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Login ya workspace sync hang ho gaya tha. Blank screen ke bajaye recovery options dikh rahe hain.
+              Sign-in or workspace sync took too long, so recovery options are shown instead of a blank screen.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Button onClick={performSafePreviewReload}>Retry</Button>

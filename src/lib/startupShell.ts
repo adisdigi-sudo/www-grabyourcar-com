@@ -354,7 +354,7 @@ export const isSensitiveRouteAppReady = () => {
 };
 
 export const promoteStartupShellToRecovery = (
-  reason = "Startup expected time se zyada le raha hai. Blank screen ke bajaye yahan se safe recovery use karo.",
+  reason = "Startup is taking longer than expected. Use the recovery actions below instead of a blank screen.",
 ) => {
   if (typeof document === "undefined") return;
 
@@ -470,10 +470,27 @@ export const ensureStartupShell = () => {
 
   clearStartupShellRecoveryTimer();
   startupShellRecoveryTimer = window.setTimeout(() => {
+    if (!stabilizationEnabled) {
+      const title = shell.querySelector<HTMLElement>("[data-shell-title]");
+      const body = shell.querySelector<HTMLElement>("[data-shell-body]");
+
+      if (title) {
+        title.textContent = isSensitiveRoute ? "Still loading workspace…" : "Still loading page…";
+      }
+
+      if (body) {
+        body.textContent = isSensitiveRoute
+          ? "Authentication and workspace data are still being verified. This is a live processing state, not a blank-screen crash."
+          : "The page is still loading. This is a live processing state, not a blank-screen crash.";
+      }
+
+      return;
+    }
+
     promoteStartupShellToRecovery(
       isSensitiveRoute
-        ? "Startup expected time se zyada le raha hai. Is waqt auth/workspace ya latest bundle verify ho raha ho sakta hai."
-        : "Page load expected time se zyada le raha hai. Ho sakta hai latest bundle ya page data slow ho — isliye blank screen ke bajaye status dikh raha hai.",
+        ? "Startup is taking longer than expected. Authentication, workspace access, or the latest bundle may still be loading."
+        : "Page load is taking longer than expected. The latest bundle or page data may still be loading.",
     );
   }, STARTUP_SHELL_RECOVERY_DELAY_MS);
 };

@@ -62,5 +62,5 @@ const bootApplication = async () => {
 bootApplication().catch((error) => {
   console.error("[Bootstrap] App boot failed", error);
   ensureStartupShell();
-  promoteStartupShellToRecovery("App boot start ho gaya tha, but bundle ya startup render fail hua. White screen ke bajaye recovery dikh rahi hai.");
+  promoteStartupShellToRecovery("The app started booting, but the bundle or startup render failed. Recovery is shown instead of a blank screen.");
 });
