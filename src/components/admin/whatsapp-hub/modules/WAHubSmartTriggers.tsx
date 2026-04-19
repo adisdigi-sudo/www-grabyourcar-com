@@ -515,7 +515,25 @@ export function WAHubSmartTriggers() {
                 placeholder="policy, policy copy, send my policy, insurance pdf"
                 rows={2}
               />
-              <p className="text-xs text-muted-foreground mt-1">Match is case-insensitive. Multi-word keywords match if all words present.</p>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {Object.entries(TYPO_VARIANTS).map(([key, list]) => (
+                  <Button
+                    key={key}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-6 text-[10px] px-2"
+                    onClick={() => {
+                      const existing = form.keywords.split(",").map((s) => s.trim()).filter(Boolean);
+                      const merged = Array.from(new Set([...existing, ...list]));
+                      setForm({ ...form, keywords: merged.join(", ") });
+                    }}
+                  >
+                    + {key} typos
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Match is case-insensitive. Click chips above to auto-add common typos / Hinglish variants.</p>
             </div>
 
             <div>
