@@ -6,55 +6,51 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Tum **Riya** ho — GrabYourCar.com ki AI sales assistant. Friendly Hinglish me baat karo (English + Hindi mix, jaise normal Indian customer support karta hai). Concise, warm aur helpful.
+const buildSystemPrompt = (agentName: string) => `Tum **${agentName}** ho — GrabYourCar.com ke sales assistant. Friendly, helpful, concise.
 
 ## Tumhari personality & reply style (BAHUT IMPORTANT)
-- Apna naam hamesha "Riya from GrabYourCar" batao jab koi puchhe.
+- Apna naam hamesha "${agentName} from GrabYourCar" batao jab koi puchhe.
 - Polite, energetic, playful, never pushy. Customer ko apna doost samjho.
 - **Reply HAMESHA chhota rakho — ek ya do line maximum.** Paragraph KABHI mat likho.
 - WhatsApp chat jaisa feel — natural, casual, ek baar me ek hi cheez puchho ya batao.
 - Emojis use karo thoda — 1-2 per message, zyada nahi (🚗 😊 👍 🔥 ✨).
 - Customer ko enjoy karwao — thodi fun, witty, warm vibes do taaki yaad rakhe.
-- Bullet points / lists tabhi do jab user explicitly options maange. Otherwise plain conversational text.
-- Har reply ke end me ek chhota natural follow-up question ya next step suggest karo (jaise "Konsi car pasand hai?" / "Budget kya rakha hai?" / "Phone number share karein, brochure bhej dun?").
+- Bullet points / lists tabhi do jab user explicitly options maange.
+- Har reply ke end me ek chhota natural follow-up question ya next step suggest karo.
 - Boring corporate tone se bacho — friendly local dukaan-wale jaisa warmth lao.
 
 ## CRITICAL — Language matching (bahut zaroori!)
 Customer ki language ko AUTOMATICALLY detect karke usi me reply karo:
-- **Pure English** likhe (e.g. "hello, I want to buy a car") → reply in **clean professional English only**, no Hindi words.
-- **Pure Hindi/Devanagari** likhe (e.g. "मुझे कार चाहिए") → reply in **Hindi (Devanagari script)**.
-- **Hinglish / Roman Hindi** likhe (e.g. "bhai car chahiye", "kitne ka hai") → reply in **friendly Hinglish** (default).
-- **Punjabi/Marathi/Tamil/Bengali/Gujarati** etc. likhe → us regional language me reply karo (Roman script chalega agar customer Roman use kare).
-- Har naye message pe language re-detect karo. Beech me switch karein to tum bhi switch karo immediately.
-- Greeting/intro line bhi customer ki language me hi do.
+- **Pure English** likhe → reply in **clean professional English only**.
+- **Pure Hindi (Devanagari)** likhe → reply in **Hindi (Devanagari)**.
+- **Hinglish / Roman Hindi** likhe → reply in **friendly Hinglish** (default).
+- **Punjabi/Marathi/Tamil/Bengali/Gujarati** etc. → us regional language me.
+- Har naye message pe re-detect karo. Switch karein to tum bhi turant switch karo.
 
-## CRITICAL — Role clarity (bahut zaroori!)
-- Tum **GrabYourCar ki sales assistant** ho — tum customer ko car BECHTI ho, customer nahi ho.
-- **KABHI BHI** customer se mat kehna ki "main car kharidna chahti hoon" ya "meri madad karein". Tum HELPER ho, asker nahi.
-- Hamesha customer ki need samjho aur unko solution do — cars dikhao, price batao, brochure bhejo, EMI calculate karo.
-- Agar user casual/funny baat kare (jaise "hello", "hahaha"), to friendly reply do aur dheere se topic ko car/service pe le aao. Example: "Haha 😄 Waise bataiye, koi car dhundh rahe ho ya insurance/loan ki info chahiye?"
-- Tum AI/assistant ho jo GrabYourCar ki taraf se kaam karti ho — customer apni need batayega, tum solution dogi.
+## CRITICAL — Role clarity
+- Tum **GrabYourCar ke sales assistant** ho — customer ko car BECHTE ho, customer nahi ho.
+- KABHI mat kehna "main car kharidna chahti/chahta hoon". Tum HELPER ho.
+- Casual messages (hello/haha) pe friendly reply do, fir dheere se topic car/service pe lao.
 
-## GrabYourCar kya offer karta hai
-1. **New Car Sales** — All brands (Maruti, Hyundai, Tata, Mahindra, Kia, Toyota, Honda, MG, Skoda, VW, Premium brands). Best on-road price + free home delivery.
-2. **Car Insurance** — Comprehensive, Third-party, Own Damage. 25+ insurers compare. Instant policy.
-3. **Car Loans** — Tie-ups with HDFC, ICICI, SBI, Axis, BoB. Lowest EMI, fast approval.
-4. **HSRP (High Security Number Plates)** — Govt-approved plates with home delivery.
-5. **Self-Drive Car Rentals** — Hourly/daily/monthly rentals across India.
-6. **Dealer Network** — Pan-India dealer connect for test drives & best price negotiation.
-7. **Accessories** — Genuine + aftermarket accessories home delivery.
+## GrabYourCar offerings
+1. **New Car Sales** — All brands, best on-road price, free home delivery.
+2. **Car Insurance** — 25+ insurers compare, instant policy.
+3. **Car Loans** — HDFC/ICICI/SBI/Axis tie-ups, lowest EMI.
+4. **HSRP** — Govt plates with home delivery.
+5. **Self-Drive Rentals** — Hourly/daily/monthly across India.
+6. **Dealer Network** — Pan-India test drives & negotiation.
+7. **Accessories** — Genuine + aftermarket, home delivery.
 
-## Tools tum use kar sakti ho
-- **capture_lead**: Jab user kisi service me interested ho aur naam + phone share kare. Vertical sahi choose karo (sales/insurance/loans/hsrp/rentals/dealer/accessories).
-- **send_brochure**: Jab user kisi specific car ka brochure maange. Phone number lazmi hai.
-- **request_human_handoff**: SIRF jab user explicit bole "human chahiye", "agent se baat karni hai", "talk to person", ya bahut frustrated ho.
+## Tools
+- **capture_lead**: Jab customer interested ho aur naam+phone share kare.
+- **send_brochure**: Jab customer specific car ka brochure maange. Phone lazmi.
+- **request_human_handoff**: SIRF jab user explicit "human/agent" maange ya frustrated ho.
 
 ## Rules
-- Jab tak phone number nahi mile tab tak lead capture mat karo. Politely maango.
-- Brochure ke liye: pehle car name + phone number lo, fir send_brochure call karo.
-- Price exact nahi pata to "approximate range" do aur exact ke liye executive callback offer karo.
-- Kabhi mat bolo ki tum AI/bot ho jab tak user direct na puchhe — bolo "I'm Riya, your assistant".
-- Jhuth mat bolo. Pata nahi to "let me connect you with our expert" bolo.`;
+- Phone number na mile to politely maango — bina phone ke lead/brochure tool MAT chalao.
+- Brochure ke baad **TOOL ka exact response message use karo** — agar tool success bole "WhatsApp pe bhej diya" tabhi bolo, agar fail ho to honestly bolo "kuch issue aaya, team aapko bhej degi".
+- Price exact nahi pata to "approximate range" do, exact ke liye callback offer karo.
+- Jhuth mat bolo. Pata nahi to "team se confirm karwa dunga" bolo.`;
 
 interface ToolCall {
   id: string;
@@ -65,7 +61,7 @@ interface ToolCall {
 async function executeToolCall(
   toolCall: ToolCall,
   supabase: ReturnType<typeof createClient>,
-  sessionContext: { sessionId: string; userAgent?: string }
+  sessionContext: { sessionId: string; userAgent?: string; agentName?: string }
 ): Promise<string> {
   const args = JSON.parse(toolCall.function.arguments || "{}");
   const fn = toolCall.function.name;
@@ -130,41 +126,67 @@ async function executeToolCall(
         });
       }
 
-      // Try sending via WhatsApp
+      // Try sending via WhatsApp using the canonical whatsapp-send function
+      let waSuccess = false;
+      let waError: string | null = null;
       try {
-        await supabase.functions.invoke("wa-send-inbox", {
+        const { data: waData, error: waErr } = await supabase.functions.invoke("whatsapp-send", {
           body: {
-            phone: `91${cleanPhone}`,
-            message_type: "document",
-            content: `Hi ${name || "there"}! Riya here from GrabYourCar 👋\n\n${car.brand} ${car.name} ka brochure attached hai. Koi bhi question ho to reply karein!`,
-            media_url: car.brochure_url,
-            media_filename: `${car.brand}-${car.name}-brochure.pdf`,
-            sent_by_name: "Riya (AI)",
+            to: cleanPhone,
+            messageType: "document",
+            message: `Hi ${name || "there"}! ${(sessionContext as { agentName?: string }).agentName || "Team"} from GrabYourCar 👋 Yahan hai ${car.brand} ${car.name} ka brochure. Koi question ho to reply karein!`,
+            mediaUrl: car.brochure_url,
+            mediaFileName: `${car.brand}-${car.name}-brochure.pdf`,
+            name: name || null,
+            logEvent: "riya_brochure",
           },
         });
+        if (waErr) {
+          waError = waErr.message || "WhatsApp send failed";
+          console.error("[riya-chat] WhatsApp send error:", waErr);
+        } else if (waData && (waData as { success?: boolean }).success === false) {
+          waError = (waData as { error?: string }).error || "WhatsApp delivery failed";
+          console.error("[riya-chat] WhatsApp returned failure:", waData);
+        } else {
+          waSuccess = true;
+        }
       } catch (e) {
-        console.warn("[riya-chat] WhatsApp send failed, brochure URL will be returned:", e);
+        waError = e instanceof Error ? e.message : "WhatsApp send threw";
+        console.error("[riya-chat] WhatsApp send threw:", e);
       }
 
-      // Save lead
+      // Save lead with accurate status
       await supabase.from("automation_lead_tracking").insert({
         lead_id: crypto.randomUUID(),
         name: name || "Brochure Request",
         phone: cleanPhone,
         vertical: "sales",
         source: "riya_chatbot",
-        lead_source_type: "brochure_sent",
-        message: `Brochure sent for ${car.brand} ${car.name}`,
-        status: "contacted",
-        contacted: true,
-        contacted_at: new Date().toISOString(),
-        raw_data: { ...args, brochure_url: car.brochure_url } as never,
+        lead_source_type: waSuccess ? "brochure_sent" : "brochure_failed",
+        message: waSuccess
+          ? `Brochure sent for ${car.brand} ${car.name}`
+          : `Brochure send FAILED for ${car.brand} ${car.name} — ${waError}`,
+        status: waSuccess ? "contacted" : "new",
+        contacted: waSuccess,
+        contacted_at: waSuccess ? new Date().toISOString() : null,
+        priority: waSuccess ? null : "high",
+        raw_data: { ...args, brochure_url: car.brochure_url, wa_error: waError } as never,
       });
 
+      if (waSuccess) {
+        return JSON.stringify({
+          success: true,
+          delivered: true,
+          message: `${car.brand} ${car.name} ka brochure WhatsApp pe ${cleanPhone} pe bhej diya ✅`,
+        });
+      }
+
+      // Fallback: give the customer a direct link AND tell them team will resend
       return JSON.stringify({
         success: true,
+        delivered: false,
         brochure_url: car.brochure_url,
-        message: `${car.brand} ${car.name} ka brochure WhatsApp pe bhej diya (${cleanPhone}). Direct link: ${car.brochure_url}`,
+        message: `WhatsApp pe bhejne me chhota issue aaya 😕 — yeh raha direct link: ${car.brochure_url}\nHamari team ${cleanPhone} pe 5 min me dobara WhatsApp pe bhej degi.`,
       });
     }
 
@@ -270,7 +292,11 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body = await req.json();
-    const { messages, sessionId } = body as { messages: Array<{ role: string; content: string }>; sessionId?: string };
+    const { messages, sessionId, agentName } = body as {
+      messages: Array<{ role: string; content: string }>;
+      sessionId?: string;
+      agentName?: string;
+    };
 
     if (!Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "messages array required" }), {
@@ -279,14 +305,17 @@ serve(async (req) => {
       });
     }
 
+    const safeAgent = (agentName && /^[A-Za-z\u0900-\u097F ]{2,20}$/.test(agentName)) ? agentName : "Riya";
+
     const sessionContext = {
       sessionId: sessionId || crypto.randomUUID(),
       userAgent: req.headers.get("user-agent") || undefined,
+      agentName: safeAgent,
     };
 
-    // Multi-turn tool loop (non-streaming for tool calls, stream final response)
+    // Multi-turn tool loop
     let conversationMessages: Array<Record<string, unknown>> = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: buildSystemPrompt(safeAgent) },
       ...messages,
     ];
 
