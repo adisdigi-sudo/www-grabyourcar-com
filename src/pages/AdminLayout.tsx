@@ -1001,6 +1001,9 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-muted/30">
+      <Suspense fallback={null}>
+        <LiveChatNotifier />
+      </Suspense>
       <Suspense fallback={<AdminPanelLoader className="min-h-screen" />}>
         <AdminRenderBoundary contextLabel="CRM sidebar">
             <AdminSidebar activeTab={resolvedActiveTab} setActiveTab={setActiveTab} />
