@@ -302,6 +302,15 @@ const TaskEscalationView = lazy(() =>
 const EmployeeDailyReportsDashboard = lazy(() =>
   import("@/components/admin/EmployeeDailyReportsDashboard").then((module) => ({ default: module.EmployeeDailyReportsDashboard })),
 );
+const APIStatusDashboard = lazy(() =>
+  import("@/components/admin/api/APIStatusDashboard").then((m) => ({ default: m.APIStatusDashboard })),
+);
+const VisualFlowBuilder = lazy(() =>
+  import("@/components/admin/automation/VisualFlowBuilder").then((m) => ({ default: m.VisualFlowBuilder })),
+);
+const HRLiveDocumentEditor = lazy(() =>
+  import("@/components/admin/hr/HRLiveDocumentEditor").then((m) => ({ default: m.HRLiveDocumentEditor })),
+);
 const AdminPanelLoader = ({ className }: { className?: string }) => (
   <div className={cn("flex min-h-[240px] items-center justify-center", className)}>
     <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
@@ -329,7 +338,8 @@ const VALID_ADMIN_TABS = new Set([
   "dealer-reps", "dealer-inventory", "dealer-broadcast", "accounts-dashboard", "accounts-invoices", "accounts-expenses",
   "accounts-bills", "accounts-banking", "accounts-chart", "accounts-journal", "accounts-reports", "accounts-documents",
   "hr-core", "hr-recruitment", "hr-workforce", "hr-attendance", "hr-payroll", "hr-expense", "hr-performance", "hr-engagement",
-  "hr-assets", "hr-helpdesk", "hr-task-escalation", "hr-daily-reports", "ai-cofounder", "live-chats", "legacy-leads", "my-hr", "my-team"
+  "hr-assets", "hr-helpdesk", "hr-task-escalation", "hr-daily-reports", "hr-live-docs", "ai-cofounder", "live-chats", "legacy-leads", "my-hr", "my-team",
+  "api-status", "flow-builder"
 ]);
 
 const getInitialAdminTab = () => {
@@ -995,6 +1005,12 @@ const AdminLayout = () => {
         return <LegacyLeadsManager />;
       case "my-hr":
         return <MyHRDashboard />;
+      case "hr-live-docs":
+        return <HRLiveDocumentEditor />;
+      case "api-status":
+        return <APIStatusDashboard />;
+      case "flow-builder":
+        return <VisualFlowBuilder />;
       default:
         return <AdminDashboard />;
     }
