@@ -375,10 +375,11 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body = await req.json();
-    const { messages, sessionId, agentName } = body as {
+    const { messages, sessionId, agentName, pageUrl } = body as {
       messages: Array<{ role: string; content: string }>;
       sessionId?: string;
       agentName?: string;
+      pageUrl?: string;
     };
 
     if (!Array.isArray(messages)) {
@@ -389,11 +390,61 @@ serve(async (req) => {
     }
 
     const safeAgent = (agentName && /^[A-Za-z\u0900-\u097F ]{2,20}$/.test(agentName)) ? agentName : "Riya";
+    const userAgent = req.headers.get("user-agent") || undefined;
+    const sessionKey = sessionId || crypto.randomUUID();
 
-    const sessionContext = {
-      sessionId: sessionId || crypto.randomUUID(),
-      userAgent: req.headers.get("user-agent") || undefined,
+    // === Persist / upsert chat session ===
+    let sessionRowId: string | null = null;
+    try {
+      const { data: existing } = await supabase
+        .from("riya_chat_sessions")
+        .select("id")
+        .eq("session_key", sessionKey)
+        .maybeSingle();
+
+      const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+      const preview = (lastUserMsg?.content || "").slice(0, 140);
+
+      if (existing?.id) {
+        sessionRowId = existing.id as string;
+        await supabase.from("riya_chat_sessions").update({
+          agent_name: safeAgent,
+          last_message_preview: preview,
+          last_message_at: new Date().toISOString(),
+          message_count: messages.length,
+          page_url: pageUrl || undefined,
+        }).eq("id", sessionRowId);
+      } else {
+        const { data: created } = await supabase.from("riya_chat_sessions").insert({
+          session_key: sessionKey,
+          agent_name: safeAgent,
+          last_message_preview: preview,
+          last_message_at: new Date().toISOString(),
+          message_count: messages.length,
+          user_agent: userAgent || null,
+          page_url: pageUrl || null,
+        }).select("id").single();
+        sessionRowId = created?.id as string ?? null;
+      }
+
+      // Persist the latest user message (if any) as a transcript row
+      if (sessionRowId && lastUserMsg) {
+        await supabase.from("riya_chat_messages").insert({
+          session_id: sessionRowId,
+          role: "user",
+          content: lastUserMsg.content,
+        });
+      }
+    } catch (persistErr) {
+      console.error("[riya-chat] session persist error:", persistErr);
+    }
+
+    const sessionContext: SessionContext = {
+      sessionId: sessionKey,
+      sessionRowId,
+      userAgent,
       agentName: safeAgent,
+      pageUrl,
     };
 
     // Multi-turn tool loop
@@ -440,7 +491,6 @@ serve(async (req) => {
 
       const toolCalls: ToolCall[] | undefined = choice.tool_calls;
       if (toolCalls && toolCalls.length > 0) {
-        // Execute tools, append, loop again
         conversationMessages.push(choice as Record<string, unknown>);
         for (const tc of toolCalls) {
           const result = await executeToolCall(tc, supabase, sessionContext);
@@ -453,10 +503,29 @@ serve(async (req) => {
         continue;
       }
 
-      // Final response — no tool calls
+      const finalMsg = choice.content || "Sorry, I didn't catch that. Phir se bolenge?";
+
+      // Persist assistant reply
+      if (sessionRowId) {
+        try {
+          await supabase.from("riya_chat_messages").insert({
+            session_id: sessionRowId,
+            role: "assistant",
+            content: finalMsg,
+          });
+          await supabase.from("riya_chat_sessions").update({
+            last_message_preview: finalMsg.slice(0, 140),
+            last_message_at: new Date().toISOString(),
+            message_count: messages.length + 1,
+          }).eq("id", sessionRowId);
+        } catch (e) {
+          console.error("[riya-chat] persist assistant reply failed:", e);
+        }
+      }
+
       return new Response(
         JSON.stringify({
-          message: choice.content || "Sorry, I didn't catch that. Phir se bolenge?",
+          message: finalMsg,
           sessionId: sessionContext.sessionId,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
