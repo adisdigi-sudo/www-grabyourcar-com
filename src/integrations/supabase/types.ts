@@ -1450,11 +1450,15 @@ export type Database = {
         Row: {
           assigned_team_member: string | null
           assigned_user_id: string | null
+          busy_contacts: number | null
+          callback_contacts: number | null
           completed_at: string | null
           completed_contacts: number | null
           created_at: string | null
           created_by: string | null
           description: string | null
+          dnd_contacts: number | null
+          hot_contacts: number | null
           id: string
           import_count: number
           interested_contacts: number | null
@@ -1469,15 +1473,20 @@ export type Database = {
           updated_at: string | null
           vertical: string | null
           vertical_slug: string | null
+          wrong_number_contacts: number | null
         }
         Insert: {
           assigned_team_member?: string | null
           assigned_user_id?: string | null
+          busy_contacts?: number | null
+          callback_contacts?: number | null
           completed_at?: string | null
           completed_contacts?: number | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          dnd_contacts?: number | null
+          hot_contacts?: number | null
           id?: string
           import_count?: number
           interested_contacts?: number | null
@@ -1492,15 +1501,20 @@ export type Database = {
           updated_at?: string | null
           vertical?: string | null
           vertical_slug?: string | null
+          wrong_number_contacts?: number | null
         }
         Update: {
           assigned_team_member?: string | null
           assigned_user_id?: string | null
+          busy_contacts?: number | null
+          callback_contacts?: number | null
           completed_at?: string | null
           completed_contacts?: number | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          dnd_contacts?: number | null
+          hot_contacts?: number | null
           id?: string
           import_count?: number
           interested_contacts?: number | null
@@ -1515,6 +1529,7 @@ export type Database = {
           updated_at?: string | null
           vertical?: string | null
           vertical_slug?: string | null
+          wrong_number_contacts?: number | null
         }
         Relationships: []
       }
@@ -1529,6 +1544,7 @@ export type Database = {
           dial_attempts: number
           dialed_by: string | null
           disposition: string | null
+          disposition_remarks: string | null
           email: string | null
           extra_data: Json | null
           follow_up_date: string | null
@@ -1539,7 +1555,9 @@ export type Database = {
           notes: string | null
           phone: string
           recording_url: string | null
+          status_category: string | null
           updated_at: string | null
+          upload_id: string | null
         }
         Insert: {
           call_duration_seconds?: number | null
@@ -1551,6 +1569,7 @@ export type Database = {
           dial_attempts?: number
           dialed_by?: string | null
           disposition?: string | null
+          disposition_remarks?: string | null
           email?: string | null
           extra_data?: Json | null
           follow_up_date?: string | null
@@ -1561,7 +1580,9 @@ export type Database = {
           notes?: string | null
           phone: string
           recording_url?: string | null
+          status_category?: string | null
           updated_at?: string | null
+          upload_id?: string | null
         }
         Update: {
           call_duration_seconds?: number | null
@@ -1573,6 +1594,7 @@ export type Database = {
           dial_attempts?: number
           dialed_by?: string | null
           disposition?: string | null
+          disposition_remarks?: string | null
           email?: string | null
           extra_data?: Json | null
           follow_up_date?: string | null
@@ -1583,11 +1605,154 @@ export type Database = {
           notes?: string | null
           phone?: string
           recording_url?: string | null
+          status_category?: string | null
           updated_at?: string | null
+          upload_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "auto_dialer_contacts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "auto_dialer_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_dialer_contacts_upload_id_fkey"
+            columns: ["upload_id"]
+            isOneToOne: false
+            referencedRelation: "auto_dialer_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auto_dialer_dispositions: {
+        Row: {
+          attempt_number: number
+          call_duration_seconds: number | null
+          campaign_id: string | null
+          contact_id: string | null
+          created_at: string
+          customer_name: string | null
+          dialed_by: string | null
+          dialed_by_email: string | null
+          disposition: string
+          follow_up_at: string | null
+          id: string
+          phone: string
+          remarks: string | null
+          vertical_slug: string
+        }
+        Insert: {
+          attempt_number?: number
+          call_duration_seconds?: number | null
+          campaign_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          customer_name?: string | null
+          dialed_by?: string | null
+          dialed_by_email?: string | null
+          disposition: string
+          follow_up_at?: string | null
+          id?: string
+          phone: string
+          remarks?: string | null
+          vertical_slug: string
+        }
+        Update: {
+          attempt_number?: number
+          call_duration_seconds?: number | null
+          campaign_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          customer_name?: string | null
+          dialed_by?: string | null
+          dialed_by_email?: string | null
+          disposition?: string
+          follow_up_at?: string | null
+          id?: string
+          phone?: string
+          remarks?: string | null
+          vertical_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_dialer_dispositions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "auto_dialer_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_dialer_dispositions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "auto_dialer_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auto_dialer_uploads: {
+        Row: {
+          campaign_id: string | null
+          converted_leads: number
+          created_at: string
+          duplicate_rows: number
+          file_size_bytes: number | null
+          filename: string
+          id: string
+          imported_rows: number
+          invalid_rows: number
+          notes: string | null
+          storage_path: string | null
+          storage_url: string | null
+          total_rows: number
+          updated_at: string
+          uploaded_by: string | null
+          uploaded_by_email: string | null
+          vertical_slug: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          converted_leads?: number
+          created_at?: string
+          duplicate_rows?: number
+          file_size_bytes?: number | null
+          filename: string
+          id?: string
+          imported_rows?: number
+          invalid_rows?: number
+          notes?: string | null
+          storage_path?: string | null
+          storage_url?: string | null
+          total_rows?: number
+          updated_at?: string
+          uploaded_by?: string | null
+          uploaded_by_email?: string | null
+          vertical_slug: string
+        }
+        Update: {
+          campaign_id?: string | null
+          converted_leads?: number
+          created_at?: string
+          duplicate_rows?: number
+          file_size_bytes?: number | null
+          filename?: string
+          id?: string
+          imported_rows?: number
+          invalid_rows?: number
+          notes?: string | null
+          storage_path?: string | null
+          storage_url?: string | null
+          total_rows?: number
+          updated_at?: string
+          uploaded_by?: string | null
+          uploaded_by_email?: string | null
+          vertical_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_dialer_uploads_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "auto_dialer_campaigns"
