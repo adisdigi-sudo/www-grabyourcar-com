@@ -41,14 +41,16 @@ Customer ki language ko AUTOMATICALLY detect karke usi me reply karo:
 6. **Dealer Network** — Pan-India test drives & negotiation.
 7. **Accessories** — Genuine + aftermarket, home delivery.
 
-## Tools
-- **capture_lead**: Jab customer interested ho aur naam+phone share kare.
+## Tools (use them PROACTIVELY — yeh sirf decoration nahi hai!)
+- **capture_lead**: JAB BHI customer ne phone number diya AUR koi service/car me interest dikhaya, TURANT yeh tool call karo. Pehle "team contact karegi" mat bolo — pehle tool chalao, fir tool ke success message ko apne reply me use karo.
 - **send_brochure**: Jab customer specific car ka brochure maange. Phone lazmi.
 - **request_human_handoff**: SIRF jab user explicit "human/agent" maange ya frustrated ho.
 
-## Rules
-- Phone number na mile to politely maango — bina phone ke lead/brochure tool MAT chalao.
+## CRITICAL workflow rules
+- Phone + intent mil gaya? → capture_lead TURANT call karo, fir reply me bolo "✅ Aapki request humari team ke paas pahunch gayi, [phone] pe 15 min me call aayegi."
+- KABHI mat bolo "team contact karegi" bina capture_lead chalaye — warna lead lost ho jaati hai.
 - Brochure ke baad **TOOL ka exact response message use karo** — agar tool success bole "WhatsApp pe bhej diya" tabhi bolo, agar fail ho to honestly bolo "kuch issue aaya, team aapko bhej degi".
+- Phone na mile to politely maango — bina phone ke lead/brochure tool MAT chalao.
 - Price exact nahi pata to "approximate range" do, exact ke liye callback offer karo.
 - Jhuth mat bolo. Pata nahi to "team se confirm karwa dunga" bolo.`;
 
@@ -85,12 +87,29 @@ async function executeToolCall(
         message: message || car_interest || "Captured via Riya AI chatbot",
         city: city || null,
         status: "new",
-        raw_data: { ...args, session_id: sessionContext.sessionId, user_agent: sessionContext.userAgent } as never,
+        raw_data: { ...args, session_id: sessionContext.sessionId, user_agent: sessionContext.userAgent, agent_name: sessionContext.agentName } as never,
       });
       if (error) {
         console.error("[riya-chat] capture_lead error:", error);
         return JSON.stringify({ success: false, error: error.message });
       }
+
+      // Fire-and-forget: notify executive/manager via canonical lead-intake-engine
+      // (handles WhatsApp + email alerts and assignment automatically)
+      supabase.functions.invoke("lead-intake-engine", {
+        body: {
+          lead_id: leadId,
+          name: name || "Riya Chat Lead",
+          phone: cleanPhone,
+          vertical,
+          source: "riya_chatbot",
+          message: message || car_interest || `Chat lead from ${sessionContext.agentName} bot`,
+          city: city || null,
+          car_interest: car_interest || null,
+          notify: true,
+        },
+      }).catch((e) => console.error("[riya-chat] lead-intake-engine notify failed:", e));
+
       return JSON.stringify({ success: true, lead_id: leadId, message: `Lead saved! Hamari team aapko 15 min me ${cleanPhone} pe call karegi.` });
     }
 
