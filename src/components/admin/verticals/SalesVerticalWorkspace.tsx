@@ -4,13 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Car, CheckCircle2, Target, Handshake, BarChart3, TrendingUp, MessageSquare } from "lucide-react";
+import { Car, CheckCircle2, Target, Handshake, BarChart3, TrendingUp, MessageSquare, PhoneCall } from "lucide-react";
 import { SalesWorkspace } from "../sales/SalesWorkspace";
 import { SalesDealTracker } from "../sales/SalesDealTracker";
 import { SalesRealTimeDashboard } from "../sales/SalesRealTimeDashboard";
 import { SalesPerformanceDashboard } from "../sales/SalesPerformanceDashboard";
 import { VerticalMessagingTab } from "../shared/VerticalMessagingTab";
 import { VerticalReplyAgentsCard } from "../automation/VerticalReplyAgentsCard";
+import { CallingQueueWorkspace } from "../calling/CallingQueueWorkspace";
 
 import { DateFilterBar, type DateFilterValue } from "../shared/DateFilterBar";
 import { startOfDay, subDays, startOfMonth, isWithinInterval } from "date-fns";
@@ -99,9 +100,12 @@ export function SalesVerticalWorkspace() {
       <VerticalReplyAgentsCard verticalSlug="sales" verticalLabel="Automotive Sales" />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full grid grid-cols-5">
+        <TabsList className="w-full grid grid-cols-6">
           <TabsTrigger value="pipeline" className="gap-1.5">
             <Target className="h-3.5 w-3.5" /> Pipeline
+          </TabsTrigger>
+          <TabsTrigger value="calling" className="gap-1.5">
+            <PhoneCall className="h-3.5 w-3.5" /> Calling Queue
           </TabsTrigger>
           <TabsTrigger value="deals" className="gap-1.5">
             <Handshake className="h-3.5 w-3.5" /> Deals
@@ -119,6 +123,9 @@ export function SalesVerticalWorkspace() {
 
         <TabsContent value="pipeline" className="mt-4">
           <SalesWorkspace />
+        </TabsContent>
+        <TabsContent value="calling" className="mt-4">
+          <CallingQueueWorkspace verticalSlug="sales" verticalLabel="Car Sales" accentClass="border-blue-200 dark:border-blue-900" />
         </TabsContent>
 
         <TabsContent value="deals" className="mt-4">

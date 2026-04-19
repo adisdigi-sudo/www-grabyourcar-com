@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, Car, Send, MessageCircle, BarChart3, Zap, Search } from "lucide-react";
+import { Building2, Users, Car, Send, MessageCircle, BarChart3, Zap, Search, PhoneCall } from "lucide-react";
 import DealerCompaniesManager from "./dealer/DealerCompaniesManager";
 import DealerRepresentativesManager from "./dealer/DealerRepresentativesManager";
 import DealerInventoryManager from "./dealer/DealerInventoryManager";
@@ -10,6 +10,7 @@ import DealerAnalytics from "./dealer/DealerAnalytics";
 import DealerAutomationCenter from "./dealer/DealerAutomationCenter";
 import DealerSearchHub from "./dealer/DealerSearchHub";
 import DealerChatCenter from "./dealer/DealerChatCenter";
+import { CallingQueueWorkspace } from "./calling/CallingQueueWorkspace";
 
 interface Props {
   initialTab?: string;
@@ -26,8 +27,9 @@ export const DealerManagement = ({ initialTab = "inquiry" }: Props) => {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid grid-cols-9 w-full max-w-5xl">
+        <TabsList className="grid grid-cols-10 w-full max-w-6xl">
           <TabsTrigger value="inquiry" className="gap-1.5"><MessageCircle className="h-4 w-4" /> Inquiry</TabsTrigger>
+          <TabsTrigger value="calling" className="gap-1.5"><PhoneCall className="h-4 w-4" /> Calling</TabsTrigger>
           <TabsTrigger value="search" className="gap-1.5"><Search className="h-4 w-4" /> Search</TabsTrigger>
           <TabsTrigger value="chat" className="gap-1.5"><MessageCircle className="h-4 w-4" /> Chat</TabsTrigger>
           <TabsTrigger value="automation" className="gap-1.5"><Zap className="h-4 w-4" /> Automation</TabsTrigger>
@@ -39,6 +41,7 @@ export const DealerManagement = ({ initialTab = "inquiry" }: Props) => {
         </TabsList>
 
         <TabsContent value="inquiry"><DealerInquiryHub /></TabsContent>
+        <TabsContent value="calling"><CallingQueueWorkspace verticalSlug="dealer" verticalLabel="Dealer Network" accentClass="border-indigo-200 dark:border-indigo-900" /></TabsContent>
         <TabsContent value="search"><DealerSearchHub /></TabsContent>
         <TabsContent value="chat"><DealerChatCenter /></TabsContent>
         <TabsContent value="automation"><DealerAutomationCenter /></TabsContent>
