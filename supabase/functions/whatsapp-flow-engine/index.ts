@@ -58,13 +58,30 @@ function isLikelyFollowUpIdentifier(message: string): boolean {
   const norm = normalize(message);
   if (!norm) return false;
 
-  const words = norm.split(" ").filter(Boolean);
-  if (words.length <= 4) return true;
+  const commonNonIdentifiers = new Set([
+    "hi",
+    "hello",
+    "hey",
+    "hii",
+    "hlo",
+    "ok",
+    "okay",
+    "thanks",
+    "thank you",
+    "thx",
+  ]);
+  if (commonNonIdentifiers.has(norm)) return false;
 
   const identity = extractIdentity(message);
-  return Boolean(
-    identity.vehicle_number || identity.policy_number || identity.phone,
-  );
+  if (identity.vehicle_number || identity.policy_number || identity.phone) {
+    return true;
+  }
+
+  const words = norm.split(" ").filter(Boolean);
+  if (words.length === 1) return words[0].length >= 3;
+  if (words.length === 2) return words.every((word) => word.length >= 3);
+
+  return false;
 }
 
 // Extract identity from message (vehicle no, policy no, phone)
@@ -308,7 +325,7 @@ async function routeMessage(input: InboundMessage) {
 
   if (
     pendingTrigger &&
-    (!matched ||
+    ((!matched && isLikelyFollowUpIdentifier(message_text)) ||
       (matched.id !== pendingTrigger.id &&
         isLikelyFollowUpIdentifier(message_text)))
   ) {
