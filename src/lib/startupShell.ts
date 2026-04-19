@@ -399,6 +399,10 @@ export const ensureStartupShell = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(STARTUP_SHELL_ID)) return;
 
+  // Final safety net: never inject the global white recovery overlay when
+  // stabilization is disabled. The overlay used to trap users on /crm-auth.
+  if (!shouldStabilizeStartupShellWindow()) return;
+
   const fallbackActionLabel = isSensitivePreviewRouteWindow() ? "Open sign in" : "Open home";
 
   const shell = document.createElement("div");
