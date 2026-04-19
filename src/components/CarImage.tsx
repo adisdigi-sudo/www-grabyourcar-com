@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { forwardRef, useCallback, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Car } from "lucide-react";
 import { isAuthenticImage } from "@/lib/imageUtils";
@@ -15,13 +15,16 @@ interface CarImageProps {
  * Smart car image component - shows authentic images from OEM/Supabase
  * All other sources show "Image Coming Soon" placeholder
  */
-export const CarImage = ({
-  src,
-  alt,
-  className,
-  fallbackClassName,
-  priority = false,
-}: CarImageProps) => {
+export const CarImage = forwardRef<HTMLImageElement, CarImageProps>(function CarImage(
+  {
+    src,
+    alt,
+    className,
+    fallbackClassName,
+    priority = false,
+  },
+  ref,
+) {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -34,7 +37,6 @@ export const CarImage = ({
     setIsLoading(false);
   }, []);
 
-  // Show placeholder if: no source, has error, or not authentic image
   const showPlaceholder = !src || hasError || !isAuthenticImage(src);
 
   if (showPlaceholder) {
@@ -42,7 +44,7 @@ export const CarImage = ({
       <div
         className={cn(
           "flex items-center justify-center bg-gradient-to-br from-muted to-muted/50",
-          fallbackClassName || className
+          fallbackClassName || className,
         )}
       >
         <div className="flex flex-col items-center gap-2 text-muted-foreground/50">
@@ -59,13 +61,14 @@ export const CarImage = ({
         <div
           className={cn(
             "absolute inset-0 flex items-center justify-center bg-muted animate-pulse",
-            className
+            className,
           )}
         >
           <Car className="h-8 w-8 text-muted-foreground/30" />
         </div>
       )}
       <img
+        ref={ref}
         src={src}
         alt={alt}
         className={cn(className, isLoading && "opacity-0")}
@@ -76,6 +79,6 @@ export const CarImage = ({
       />
     </>
   );
-};
+});
 
 export default CarImage;
