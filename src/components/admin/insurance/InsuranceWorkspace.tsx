@@ -998,6 +998,11 @@ export function InsuranceWorkspace() {
           <InsuranceLeadPipeline clients={clients} isLoading={isLoading} onOpenChat={setChatDraft} />
         </AdminRenderBoundary>
       )}
+      {activeView === "calling" && (
+        <AdminRenderBoundary contextLabel="Insurance calling queue">
+          <CallingQueueWorkspace verticalSlug="insurance" verticalLabel="Insurance" accentClass="border-emerald-200 dark:border-emerald-900" />
+        </AdminRenderBoundary>
+      )}
       {activeView === "policy_book" && (
         <AdminRenderBoundary contextLabel="Insurance policy book">
           <InsurancePolicyBook policies={runningPolicies} />
