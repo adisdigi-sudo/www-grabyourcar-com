@@ -502,23 +502,59 @@ async function sendMessage(
   }
 
   if (providerName === "wabb") {
-    // WABB Catch Webhook doesn't support templates — use Meta API for template sends
-    if (messageType === "template" && templateName) {
+    // WABB Catch Webhook is text-first. Route templates + media via Meta when available.
+    if ((messageType === "template" && templateName) || ((messageType === "image" || messageType === "document" || messageType === "video" || messageType === "audio") && mediaUrl)) {
       const metaToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
       const metaPhoneId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
       if (metaToken && metaPhoneId) {
-        console.log("WABB: Template message — routing via Meta Cloud API");
-        const components: unknown[] = [];
-        if (templateVars && Object.keys(templateVars).length > 0) {
-          components.push({
-            type: "body",
-            parameters: Object.values(templateVars).map(val => ({ type: "text", text: val })),
+        console.log(`WABB: ${messageType} message — routing via Meta Cloud API`);
+
+        if (messageType === "template" && templateName) {
+          const components: unknown[] = [];
+          if (templateVars && Object.keys(templateVars).length > 0) {
+            components.push({
+              type: "body",
+              parameters: Object.values(templateVars).map(val => ({ type: "text", text: val })),
+            });
+          }
+          const payload = { type: "template", template: { name: templateName, language: { code: "en" }, ...(components.length > 0 ? { components } : {}) } };
+          return sendViaMeta(metaToken, metaPhoneId, phone.full, payload);
+        }
+
+        if (messageType === "image" && mediaUrl) {
+          return sendViaMeta(metaToken, metaPhoneId, phone.full, {
+            type: "image",
+            image: { link: mediaUrl, caption: message || "" },
           });
         }
-        const payload = { type: "template", template: { name: templateName, language: { code: "en" }, ...(components.length > 0 ? { components } : {}) } };
-        return sendViaMeta(metaToken, metaPhoneId, phone.full, payload);
+
+        if (messageType === "document" && mediaUrl) {
+          return sendViaMeta(metaToken, metaPhoneId, phone.full, {
+            type: "document",
+            document: { link: mediaUrl, caption: message || "", filename: mediaFileName || "document.pdf" },
+          });
+        }
+
+        if (messageType === "video" && mediaUrl) {
+          return sendViaMeta(metaToken, metaPhoneId, phone.full, {
+            type: "video",
+            video: { link: mediaUrl, caption: message || "" },
+          });
+        }
+
+        if (messageType === "audio" && mediaUrl) {
+          return sendViaMeta(metaToken, metaPhoneId, phone.full, {
+            type: "audio",
+            audio: { link: mediaUrl },
+          });
+        }
       }
-      console.warn("WABB: Template requested but Meta API credentials missing, falling back to text");
+
+      return {
+        success: false,
+        error: `WABB cannot send ${messageType} messages without Meta media credentials`,
+        provider: "wabb",
+      };
     }
 
     const webhookUrl = providerConfig?.webhook_url || Deno.env.get("WABB_WEBHOOK_URL");
