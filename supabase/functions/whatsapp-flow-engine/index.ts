@@ -448,6 +448,18 @@ async function routeMessage(input: InboundMessage) {
   }
 
   const nextCollectedVariables = { ...(session?.collected_variables || {}) };
+
+  // If lookup failed, clear the stale identity so the user can retry with a fresh one.
+  // Otherwise the bot keeps re-using bad data (e.g. "EN10TO15") forever.
+  if (action === "document_not_found" || action === "document_missing_file") {
+    delete nextCollectedVariables.vehicle_number;
+    delete nextCollectedVariables.policy_number;
+    delete nextCollectedVariables.phone;
+    // Re-ask the user for identity on next message
+    outbound = `Mujhe aapka record nahi mila. Kripya apna *vehicle number* (e.g. HR26AB1234) ya *policy number* bhejein, taaki main sahi document nikal saku 🙏`;
+    action = "identity_required";
+  }
+
   if (
     matched &&
     [
