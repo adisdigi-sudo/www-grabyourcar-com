@@ -7,6 +7,27 @@ const AUTH_STORAGE_KEY = import.meta.env.VITE_SUPABASE_PROJECT_ID
   ? `sb-${import.meta.env.VITE_SUPABASE_PROJECT_ID}-auth-token`
   : null;
 
+const clearPersistedSession = () => {
+  if (typeof window === "undefined" || !AUTH_STORAGE_KEY) return;
+  try {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+};
+
+const isValidSessionShape = (candidate: unknown): candidate is Session => {
+  if (!candidate || typeof candidate !== "object") return false;
+  const c = candidate as Record<string, unknown>;
+  if (typeof c.access_token !== "string" || !c.access_token) return false;
+  const u = c.user as Record<string, unknown> | undefined;
+  // Supabase requires `sub` (user.id). Without it, the JWT is corrupt and
+  // every /user call returns "invalid claim: missing sub claim" → 403.
+  if (!u || typeof u !== "object") return false;
+  if (typeof u.id !== "string" || !u.id) return false;
+  return true;
+};
+
 const readPersistedSession = (): Session | null => {
   if (typeof window === "undefined" || !AUTH_STORAGE_KEY) {
     return null;
@@ -17,16 +38,24 @@ const readPersistedSession = (): Session | null => {
     if (!raw) return null;
 
     const parsed = JSON.parse(raw);
+    let candidate: unknown = null;
     if (Array.isArray(parsed)) {
-      const candidate = parsed.find((entry) => entry && typeof entry === "object" && "access_token" in entry);
-      return (candidate as Session | undefined) ?? null;
+      candidate = parsed.find((entry) => entry && typeof entry === "object" && "access_token" in entry) ?? null;
+    } else if (parsed && typeof parsed === "object" && "access_token" in parsed) {
+      candidate = parsed;
     }
 
-    if (parsed && typeof parsed === "object" && "access_token" in parsed) {
-      return parsed as Session;
+    if (isValidSessionShape(candidate)) {
+      return candidate;
+    }
+
+    if (candidate) {
+      console.warn("[Auth] Discarding cached session — missing sub/user claims (will force re-auth)");
+      clearPersistedSession();
     }
   } catch (error) {
     console.warn("[Auth] Failed to read persisted session cache", error);
+    clearPersistedSession();
   }
 
   return null;
@@ -110,7 +139,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, AUTH_BOOTSTRAP_TIMEOUT_MS);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      applySession(nextSession ?? readPersistedSession());
+      if (event === "SIGNED_OUT" || (event === "TOKEN_REFRESHED" && !nextSession)) {
+        clearPersistedSession();
+        applySession(null);
+      } else {
+        applySession(nextSession ?? readPersistedSession());
+      }
 
       if (bootstrapResolved || event !== "INITIAL_SESSION") {
         clearBootstrapTimeout();
@@ -124,13 +158,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth
       .getSession()
       .then(({ data: { session: activeSession } }) => {
-        finishBootstrap(activeSession ?? readPersistedSession());
+        if (activeSession) {
+          finishBootstrap(activeSession);
+          return;
+        }
+        // Supabase returned no session — purge any stale cache so we don't
+        // keep a corrupt token (missing `sub`) that triggers 403 loops and
+        // a white /workspace screen.
+        clearPersistedSession();
+        finishBootstrap(null);
       })
       .catch((error) => {
         console.warn("[Auth] Failed to restore session during bootstrap", error);
 
         if (!isMounted) return;
-        finishBootstrap(readPersistedSession());
+        // On hard auth failure, do NOT fall back to cache — that's exactly
+        // how a corrupt token keeps the app stuck. Force clean signed-out
+        // state so the user lands on the auth screen instead of a white page.
+        clearPersistedSession();
+        finishBootstrap(null);
       });
 
     return () => {
