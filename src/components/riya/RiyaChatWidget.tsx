@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { X, Send, Loader2, Minus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
@@ -106,7 +105,6 @@ export const RiyaChatWidget = ({
           <div className="font-semibold text-sm leading-tight">Riya</div>
           <div className="text-xs opacity-90 leading-tight">GrabYourCar Assistant • Online</div>
         </div>
-        <Badge variant="secondary" className="text-[10px] h-5">AI</Badge>
         {variant === "floating" && (
           <>
             <button
