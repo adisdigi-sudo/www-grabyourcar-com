@@ -911,9 +911,10 @@ const AdminLayout = () => {
         return <WebsiteSettings />;
       case "integrations-ad-tracking":
         return <AdTrackingSettings />;
+      case "profile-users":
+        return <UserManagementDashboard />;
       case "profile-business":
       case "profile-logo":
-      case "profile-users":
       case "profile-contact":
       case "profile-otp":
         return <ProfileSettings />;
