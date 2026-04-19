@@ -1,15 +1,11 @@
 import { createRoot } from "react-dom/client";
-import { HelmetProvider } from "react-helmet-async";
 import "./index.css";
-import App from "./App";
-import { AppErrorBoundary } from "@/components/AppErrorBoundary";
-import { BootstrapRuntime } from "@/components/bootstrap/BootstrapRuntime";
-import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { installSensitiveRouteReloadGuard } from "@/lib/devReloadGuard";
 import { ensureAppRootElement } from "@/lib/ensureAppRoot";
 import { ensureStartupShell } from "@/lib/startupShell";
 import { installStartupShellHealthMonitor } from "@/lib/startupShell";
 import { removeStartupShell } from "@/lib/startupShell";
+import { promoteStartupShellToRecovery } from "@/lib/startupShell";
 
 try {
   ensureStartupShell();
@@ -36,13 +32,35 @@ if (!rootElement) {
   throw new Error("Root element #root was not found");
 }
 
-createRoot(rootElement).render(
-  <AppErrorBoundary>
-    <HelmetProvider>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <App />
-        <BootstrapRuntime onReady={removeStartupShell} />
-      </ThemeProvider>
-    </HelmetProvider>
-  </AppErrorBoundary>
-);
+const bootApplication = async () => {
+  const [
+    { HelmetProvider },
+    { AppErrorBoundary },
+    { BootstrapRuntime },
+    { ThemeProvider },
+    { default: App },
+  ] = await Promise.all([
+    import("react-helmet-async"),
+    import("@/components/AppErrorBoundary"),
+    import("@/components/bootstrap/BootstrapRuntime"),
+    import("@/components/theme/ThemeProvider"),
+    import("./App"),
+  ]);
+
+  createRoot(rootElement).render(
+    <AppErrorBoundary>
+      <HelmetProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <App />
+          <BootstrapRuntime onReady={removeStartupShell} />
+        </ThemeProvider>
+      </HelmetProvider>
+    </AppErrorBoundary>
+  );
+};
+
+bootApplication().catch((error) => {
+  console.error("[Bootstrap] App boot failed", error);
+  ensureStartupShell();
+  promoteStartupShellToRecovery("App boot start ho gaya tha, but bundle ya startup render fail hua. White screen ke bajaye recovery dikh rahi hai.");
+});
