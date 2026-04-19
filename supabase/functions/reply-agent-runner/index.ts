@@ -25,6 +25,7 @@ serve(async (req) => {
       customer_email = null,
       customer_name = null,
       test_mode = false,
+      conversation_history = [], // [{role:'user'|'assistant', content:string}]
     } = body || {};
 
     if (!agent_id || !inbound_message) {
