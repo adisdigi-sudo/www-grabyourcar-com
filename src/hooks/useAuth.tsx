@@ -139,7 +139,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, AUTH_BOOTSTRAP_TIMEOUT_MS);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      applySession(nextSession ?? readPersistedSession());
+      if (event === "SIGNED_OUT" || (event === "TOKEN_REFRESHED" && !nextSession)) {
+        clearPersistedSession();
+        applySession(null);
+      } else {
+        applySession(nextSession ?? readPersistedSession());
+      }
 
       if (bootstrapResolved || event !== "INITIAL_SESSION") {
         clearBootstrapTimeout();
