@@ -1449,13 +1449,16 @@ export type Database = {
       auto_dialer_campaigns: {
         Row: {
           assigned_team_member: string | null
+          assigned_user_id: string | null
           completed_at: string | null
           completed_contacts: number | null
           created_at: string | null
           created_by: string | null
           description: string | null
           id: string
+          import_count: number
           interested_contacts: number | null
+          last_import_filename: string | null
           name: string
           no_answer_contacts: number | null
           not_interested_contacts: number | null
@@ -1465,16 +1468,20 @@ export type Database = {
           total_contacts: number | null
           updated_at: string | null
           vertical: string | null
+          vertical_slug: string | null
         }
         Insert: {
           assigned_team_member?: string | null
+          assigned_user_id?: string | null
           completed_at?: string | null
           completed_contacts?: number | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           id?: string
+          import_count?: number
           interested_contacts?: number | null
+          last_import_filename?: string | null
           name: string
           no_answer_contacts?: number | null
           not_interested_contacts?: number | null
@@ -1484,16 +1491,20 @@ export type Database = {
           total_contacts?: number | null
           updated_at?: string | null
           vertical?: string | null
+          vertical_slug?: string | null
         }
         Update: {
           assigned_team_member?: string | null
+          assigned_user_id?: string | null
           completed_at?: string | null
           completed_contacts?: number | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           id?: string
+          import_count?: number
           interested_contacts?: number | null
+          last_import_filename?: string | null
           name?: string
           no_answer_contacts?: number | null
           not_interested_contacts?: number | null
@@ -1503,6 +1514,7 @@ export type Database = {
           total_contacts?: number | null
           updated_at?: string | null
           vertical?: string | null
+          vertical_slug?: string | null
         }
         Relationships: []
       }
@@ -1514,15 +1526,19 @@ export type Database = {
           campaign_id: string
           city: string | null
           created_at: string | null
+          dial_attempts: number
+          dialed_by: string | null
           disposition: string | null
           email: string | null
           extra_data: Json | null
           follow_up_date: string | null
           id: string
+          last_dialed_at: string | null
           lead_id: string | null
           name: string | null
           notes: string | null
           phone: string
+          recording_url: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1532,15 +1548,19 @@ export type Database = {
           campaign_id: string
           city?: string | null
           created_at?: string | null
+          dial_attempts?: number
+          dialed_by?: string | null
           disposition?: string | null
           email?: string | null
           extra_data?: Json | null
           follow_up_date?: string | null
           id?: string
+          last_dialed_at?: string | null
           lead_id?: string | null
           name?: string | null
           notes?: string | null
           phone: string
+          recording_url?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1550,15 +1570,19 @@ export type Database = {
           campaign_id?: string
           city?: string | null
           created_at?: string | null
+          dial_attempts?: number
+          dialed_by?: string | null
           disposition?: string | null
           email?: string | null
           extra_data?: Json | null
           follow_up_date?: string | null
           id?: string
+          last_dialed_at?: string | null
           lead_id?: string | null
           name?: string | null
           notes?: string | null
           phone?: string
+          recording_url?: string | null
           updated_at?: string | null
         }
         Relationships: [
