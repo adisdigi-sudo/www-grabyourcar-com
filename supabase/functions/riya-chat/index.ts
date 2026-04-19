@@ -147,6 +147,7 @@ async function executeToolCall(
 
       // Try sending via WhatsApp using the canonical whatsapp-send function
       let waSuccess = false;
+      let brochureDelivered = false;
       let waError: string | null = null;
       try {
         const { data: waData, error: waErr } = await supabase.functions.invoke("whatsapp-send", {
@@ -158,6 +159,8 @@ async function executeToolCall(
             mediaFileName: `${car.brand}-${car.name}-brochure.pdf`,
             name: name || null,
             logEvent: "riya_brochure",
+            vertical: "sales",
+            message_context: "riya_brochure",
           },
         });
         if (waErr) {
@@ -168,6 +171,10 @@ async function executeToolCall(
           console.error("[riya-chat] WhatsApp returned failure:", waData);
         } else {
           waSuccess = true;
+          brochureDelivered = !Boolean((waData as { fallback?: boolean }).fallback);
+          if (!brochureDelivered) {
+            waError = "WhatsApp approved template sent instead of brochure attachment";
+          }
         }
       } catch (e) {
         waError = e instanceof Error ? e.message : "WhatsApp send threw";
@@ -181,18 +188,18 @@ async function executeToolCall(
         phone: cleanPhone,
         vertical: "sales",
         source: "riya_chatbot",
-        lead_source_type: waSuccess ? "brochure_sent" : "brochure_failed",
-        message: waSuccess
+        lead_source_type: brochureDelivered ? "brochure_sent" : "brochure_failed",
+        message: brochureDelivered
           ? `Brochure sent for ${car.brand} ${car.name}`
           : `Brochure send FAILED for ${car.brand} ${car.name} — ${waError}`,
-        status: waSuccess ? "contacted" : "new",
-        contacted: waSuccess,
-        contacted_at: waSuccess ? new Date().toISOString() : null,
-        priority: waSuccess ? null : "high",
+        status: brochureDelivered ? "contacted" : "new",
+        contacted: brochureDelivered,
+        contacted_at: brochureDelivered ? new Date().toISOString() : null,
+        priority: brochureDelivered ? null : "high",
         raw_data: { ...args, brochure_url: car.brochure_url, wa_error: waError } as never,
       });
 
-      if (waSuccess) {
+      if (brochureDelivered) {
         return JSON.stringify({
           success: true,
           delivered: true,
@@ -205,7 +212,7 @@ async function executeToolCall(
         success: true,
         delivered: false,
         brochure_url: car.brochure_url,
-        message: `WhatsApp pe bhejne me chhota issue aaya 😕 — yeh raha direct link: ${car.brochure_url}\nHamari team ${cleanPhone} pe 5 min me dobara WhatsApp pe bhej degi.`,
+        message: `Brochure attachment WhatsApp pe abhi direct nahi gaya 😕 — yeh raha direct link: ${car.brochure_url}\nHamari team ${cleanPhone} pe proper brochure turant resend karegi.`,
       });
     }
 
