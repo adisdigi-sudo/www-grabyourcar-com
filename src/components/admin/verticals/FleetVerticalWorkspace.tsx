@@ -2,14 +2,14 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, CheckCircle2, Calculator, LayoutDashboard, Layers3, Phone } from "lucide-react";
+import { Building2, CheckCircle2, Calculator, LayoutDashboard, Layers3 } from "lucide-react";
 import {
   CorporatePricingTiers,
   FleetRequirementBuilder,
   LeaseVsBuyCalculator,
 } from "@/components/corporate";
 import { VerticalReplyAgentsCard } from "../automation/VerticalReplyAgentsCard";
-import { CallingQueueWorkspace } from "../calling/CallingQueueWorkspace";
+
 
 export function FleetVerticalWorkspace() {
   const [tab, setTab] = useState("planner");
@@ -25,7 +25,7 @@ export function FleetVerticalWorkspace() {
               </div>
               <div>
                 <h2 className="font-bold text-lg">Corporate Fleet Workspace</h2>
-                <p className="text-xs text-muted-foreground">Fleet planning, pricing tiers, lease vs buy & calling outreach</p>
+                <p className="text-xs text-muted-foreground">Fleet planning, pricing tiers, and lease vs buy evaluation</p>
               </div>
             </div>
             <Badge variant="secondary" className="gap-1.5">
@@ -39,17 +39,25 @@ export function FleetVerticalWorkspace() {
 
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="planner" className="gap-1.5"><LayoutDashboard className="h-4 w-4" /> Fleet Planner</TabsTrigger>
-          <TabsTrigger value="calling" className="gap-1.5"><Phone className="h-4 w-4" /> Calling Queue</TabsTrigger>
-          <TabsTrigger value="calculator" className="gap-1.5"><Calculator className="h-4 w-4" /> TCO Calculator</TabsTrigger>
-          <TabsTrigger value="tiers" className="gap-1.5"><Layers3 className="h-4 w-4" /> Pricing Tiers</TabsTrigger>
+          <TabsTrigger value="planner" className="gap-1.5">
+            <LayoutDashboard className="h-4 w-4" /> Fleet Planner
+          </TabsTrigger>
+          <TabsTrigger value="calculator" className="gap-1.5">
+            <Calculator className="h-4 w-4" /> TCO Calculator
+          </TabsTrigger>
+          <TabsTrigger value="tiers" className="gap-1.5">
+            <Layers3 className="h-4 w-4" /> Pricing Tiers
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="planner"><FleetRequirementBuilder /></TabsContent>
-        <TabsContent value="calling">
-          <CallingQueueWorkspace verticalSlug="fleet" verticalLabel="Corporate Fleet" accentClass="border-primary/20" />
+        <TabsContent value="planner">
+          <FleetRequirementBuilder />
         </TabsContent>
-        <TabsContent value="calculator"><LeaseVsBuyCalculator /></TabsContent>
+
+        <TabsContent value="calculator">
+          <LeaseVsBuyCalculator />
+        </TabsContent>
+
         <TabsContent value="tiers">
           <div className="rounded-xl border border-border bg-card">
             <CorporatePricingTiers />

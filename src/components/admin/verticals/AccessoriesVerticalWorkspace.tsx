@@ -2,18 +2,16 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, CheckCircle2, ShoppingCart, Tags, Phone } from "lucide-react";
+import { Package, CheckCircle2, ShoppingCart, FileText, Tags } from "lucide-react";
 import { AccessoriesManagement } from "../AccessoriesManagement";
 import CrossSellManagement from "../CrossSellManagement";
 import { VerticalReplyAgentsCard } from "../automation/VerticalReplyAgentsCard";
-import { CallingQueueWorkspace } from "../calling/CallingQueueWorkspace";
 
 export function AccessoriesVerticalWorkspace() {
   const [activeTab, setActiveTab] = useState("products");
 
   const tabs = [
     { id: "products", label: "Products & Orders", icon: ShoppingCart },
-    { id: "calling", label: "Calling Queue", icon: Phone },
     { id: "crosssell", label: "Cross-Sell Rules", icon: Tags },
   ];
 
@@ -28,7 +26,7 @@ export function AccessoriesVerticalWorkspace() {
               </div>
               <div>
                 <h2 className="font-bold text-lg">Accessories & E-Commerce</h2>
-                <p className="text-xs text-muted-foreground">Products, Orders, Calling, Cross-Sell & Shipping</p>
+                <p className="text-xs text-muted-foreground">Products, Orders, Cross-Sell & Shipping</p>
               </div>
             </div>
             <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300 border-0">
@@ -54,9 +52,6 @@ export function AccessoriesVerticalWorkspace() {
 
       <div>
         {activeTab === "products" && <AccessoriesManagement />}
-        {activeTab === "calling" && (
-          <CallingQueueWorkspace verticalSlug="accessories" verticalLabel="Accessories" accentClass="border-orange-200 dark:border-orange-900" />
-        )}
         {activeTab === "crosssell" && <CrossSellManagement />}
       </div>
     </div>

@@ -78,6 +78,7 @@ export function OpenAPIPortal() {
     name: "", slug: "", description: "", contact_name: "", contact_email: "",
     contact_phone: "", webhook_url: "", callback_url: "", rate_limit: 60,
     ip_whitelist: "", notes: "", commission: 0, branding: true,
+    logo_url: "", brand_color: "#0EA5E9", tagline: "",
   });
 
   // ─── Queries ────────────────────────────────────────────────
@@ -162,6 +163,10 @@ export function OpenAPIPortal() {
         notes: form.notes || null,
         commission_percentage: form.commission,
         branding_enabled: form.branding,
+        logo_url: form.logo_url || null,
+        custom_branding: form.branding
+          ? { brand_color: form.brand_color, tagline: form.tagline }
+          : null,
         is_active: true,
       } as any);
 
@@ -246,7 +251,7 @@ export function OpenAPIPortal() {
   });
 
   // ─── Helpers ────────────────────────────────────────────────
-  const resetForm = () => setForm({ name: "", slug: "", description: "", contact_name: "", contact_email: "", contact_phone: "", webhook_url: "", callback_url: "", rate_limit: 60, ip_whitelist: "", notes: "", commission: 0, branding: true });
+  const resetForm = () => setForm({ name: "", slug: "", description: "", contact_name: "", contact_email: "", contact_phone: "", webhook_url: "", callback_url: "", rate_limit: 60, ip_whitelist: "", notes: "", commission: 0, branding: true, logo_url: "", brand_color: "#0EA5E9", tagline: "" });
   const copyText = (text: string) => { navigator.clipboard.writeText(text); toast.success("Copied!"); };
   const maskKey = (key: string) => key ? `${key.slice(0, 12)}${"•".repeat(20)}` : "—";
 
@@ -654,6 +659,32 @@ export function OpenAPIPortal() {
             <div>
               <Label>IP Whitelist (comma-separated, optional)</Label>
               <Input placeholder="192.168.1.1, 10.0.0.1" value={form.ip_whitelist} onChange={e => setForm(f => ({ ...f, ip_whitelist: e.target.value }))} />
+            </div>
+
+            {/* Custom branding for partner portal landing page */}
+            <div className="rounded-lg border border-dashed p-3 space-y-3">
+              <div className="text-sm font-semibold flex items-center gap-2">
+                <Globe className="h-4 w-4 text-primary" />
+                Partner Landing Page Branding
+                <span className="text-xs font-normal text-muted-foreground">— /partner/{form.slug || "slug"}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Logo URL</Label>
+                  <Input placeholder="https://cdn.partner.com/logo.png" value={form.logo_url} onChange={e => setForm(f => ({ ...f, logo_url: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Brand Color</Label>
+                  <div className="flex gap-2">
+                    <Input type="color" className="h-10 w-14 p-1" value={form.brand_color} onChange={e => setForm(f => ({ ...f, brand_color: e.target.value }))} />
+                    <Input value={form.brand_color} onChange={e => setForm(f => ({ ...f, brand_color: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <Label>Tagline (optional)</Label>
+                <Input placeholder="Powered by GrabYourCar API" value={form.tagline} onChange={e => setForm(f => ({ ...f, tagline: e.target.value }))} />
+              </div>
             </div>
             <div>
               <Label>Notes</Label>
