@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Send, FileText, Users, GitBranch, BarChart3, Blocks, Star, MousePointer, ShoppingCart, Vote, Sparkles, Zap, Store, Plug, Inbox, Archive, TrendingUp } from "lucide-react";
+import { Mail, Send, FileText, Users, GitBranch, BarChart3, Blocks, Star, MousePointer, ShoppingCart, Vote, Sparkles, Zap, Store, Plug, Inbox, Archive, TrendingUp, MessageSquare } from "lucide-react";
+import { WhatsAppBulkJobsManager } from "../whatsapp/WhatsAppBulkJobsManager";
 import { MetaAdsRoiPanel } from "../whatsapp-hub/modules/analytics/MetaAdsRoiPanel";
 import { EmailInboxDashboard } from "./email/EmailInboxDashboard";
 import { EmailBlockBuilder } from "./email/EmailBlockBuilder";
@@ -39,6 +40,9 @@ export function UnifiedMarketingHub() {
           </TabsTrigger>
           <TabsTrigger value="omni" className="gap-1.5 text-xs sm:text-sm">
             <Zap className="h-3.5 w-3.5" />Omni Campaigns
+          </TabsTrigger>
+          <TabsTrigger value="wa-bulk" className="gap-1.5 text-xs sm:text-sm">
+            <MessageSquare className="h-3.5 w-3.5" />WhatsApp Bulk
           </TabsTrigger>
           <TabsTrigger value="email-campaigns" className="gap-1.5 text-xs sm:text-sm">
             <Send className="h-3.5 w-3.5" />Email Campaigns
@@ -83,6 +87,7 @@ export function UnifiedMarketingHub() {
 
         <TabsContent value="email-inbox"><EmailInboxDashboard /></TabsContent>
         <TabsContent value="omni"><OmniCampaignManager /></TabsContent>
+        <TabsContent value="wa-bulk"><WhatsAppBulkJobsManager /></TabsContent>
         <TabsContent value="email-campaigns"><EmailMarketingManagement /></TabsContent>
         <TabsContent value="builder"><EmailBlockBuilder /></TabsContent>
         <TabsContent value="subscribers"><SubscriberSegmentation /></TabsContent>

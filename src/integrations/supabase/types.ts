@@ -16131,6 +16131,8 @@ export type Database = {
           id: string
           meta: Json | null
           role: string
+          sender_id: string | null
+          sender_name: string | null
           session_id: string
         }
         Insert: {
@@ -16139,6 +16141,8 @@ export type Database = {
           id?: string
           meta?: Json | null
           role: string
+          sender_id?: string | null
+          sender_name?: string | null
           session_id: string
         }
         Update: {
@@ -16147,6 +16151,8 @@ export type Database = {
           id?: string
           meta?: Json | null
           role?: string
+          sender_id?: string | null
+          sender_name?: string | null
           session_id?: string
         }
         Relationships: [
@@ -16162,15 +16168,20 @@ export type Database = {
       riya_chat_sessions: {
         Row: {
           agent_name: string | null
+          assigned_agent_id: string | null
+          assigned_agent_name: string | null
           created_at: string
+          human_taken_over_at: string | null
           id: string
           last_message_at: string
           last_message_preview: string | null
+          last_visitor_message_at: string | null
           lead_captured: boolean
           lead_id: string | null
           message_count: number
           page_url: string | null
           session_key: string
+          takeover_state: string
           updated_at: string
           user_agent: string | null
           vertical_interest: string | null
@@ -16180,15 +16191,20 @@ export type Database = {
         }
         Insert: {
           agent_name?: string | null
+          assigned_agent_id?: string | null
+          assigned_agent_name?: string | null
           created_at?: string
+          human_taken_over_at?: string | null
           id?: string
           last_message_at?: string
           last_message_preview?: string | null
+          last_visitor_message_at?: string | null
           lead_captured?: boolean
           lead_id?: string | null
           message_count?: number
           page_url?: string | null
           session_key: string
+          takeover_state?: string
           updated_at?: string
           user_agent?: string | null
           vertical_interest?: string | null
@@ -16198,15 +16214,20 @@ export type Database = {
         }
         Update: {
           agent_name?: string | null
+          assigned_agent_id?: string | null
+          assigned_agent_name?: string | null
           created_at?: string
+          human_taken_over_at?: string | null
           id?: string
           last_message_at?: string
           last_message_preview?: string | null
+          last_visitor_message_at?: string | null
           lead_captured?: boolean
           lead_id?: string | null
           message_count?: number
           page_url?: string | null
           session_key?: string
+          takeover_state?: string
           updated_at?: string
           user_agent?: string | null
           vertical_interest?: string | null
@@ -18106,6 +18127,131 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      wa_bulk_job_recipients: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          job_id: string
+          name: string | null
+          phone: string
+          sent_at: string | null
+          status: string
+          variables: Json | null
+          wa_message_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_id: string
+          name?: string | null
+          phone: string
+          sent_at?: string | null
+          status?: string
+          variables?: Json | null
+          wa_message_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_id?: string
+          name?: string | null
+          phone?: string
+          sent_at?: string | null
+          status?: string
+          variables?: Json | null
+          wa_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_bulk_job_recipients_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "wa_bulk_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_bulk_jobs: {
+        Row: {
+          audience_filters: Json | null
+          audience_source: string
+          cancel_requested: boolean
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          created_by_email: string | null
+          delivered: number
+          failed: number
+          id: string
+          media_url: string | null
+          message_text: string | null
+          message_type: string | null
+          name: string
+          rate_per_minute: number
+          read_count: number
+          sent: number
+          started_at: string | null
+          status: string
+          template_name: string | null
+          template_variables: Json | null
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          audience_filters?: Json | null
+          audience_source?: string
+          cancel_requested?: boolean
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          delivered?: number
+          failed?: number
+          id?: string
+          media_url?: string | null
+          message_text?: string | null
+          message_type?: string | null
+          name: string
+          rate_per_minute?: number
+          read_count?: number
+          sent?: number
+          started_at?: string | null
+          status?: string
+          template_name?: string | null
+          template_variables?: Json | null
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          audience_filters?: Json | null
+          audience_source?: string
+          cancel_requested?: boolean
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          delivered?: number
+          failed?: number
+          id?: string
+          media_url?: string | null
+          message_text?: string | null
+          message_type?: string | null
+          name?: string
+          rate_per_minute?: number
+          read_count?: number
+          sent?: number
+          started_at?: string | null
+          status?: string
+          template_name?: string | null
+          template_variables?: Json | null
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       wa_campaign_analytics: {
         Row: {
