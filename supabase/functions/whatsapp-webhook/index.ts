@@ -410,6 +410,24 @@ Deno.serve(async (req) => {
                 .maybeSingle();
 
               if (agent) {
+                // Fetch last 10 messages for memory/context
+                let convHistory: Array<{ role: string; content: string }> = [];
+                if (inboxConvo?.id) {
+                  const { data: histRows } = await supabase
+                    .from("wa_inbox_messages")
+                    .select("direction, content, created_at")
+                    .eq("conversation_id", inboxConvo.id)
+                    .order("created_at", { ascending: false })
+                    .limit(10);
+                  convHistory = (histRows || [])
+                    .reverse()
+                    .filter((m: any) => m.content && typeof m.content === "string")
+                    .map((m: any) => ({
+                      role: m.direction === "inbound" ? "user" : "assistant",
+                      content: m.content,
+                    }));
+                }
+
                 const agentResp = await fetch(`${SUPABASE_URL}/functions/v1/reply-agent-runner`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
@@ -418,6 +436,7 @@ Deno.serve(async (req) => {
                     inbound_message: messageText,
                     customer_phone: from,
                     customer_name: contactName,
+                    conversation_history: convHistory,
                   }),
                 });
                 const agentData = await agentResp.json();
