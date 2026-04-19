@@ -21,27 +21,9 @@ interface RiyaChatWidgetProps {
   greeting?: string;
 }
 
-const AGENT_NAMES = [
-  "Prabhjeet", "Anshdeep", "Isha", "Rahul", "Gaurav",
-  "Karan", "Pratham", "Simran", "Aditya", "Neha",
-  "Manpreet", "Riya", "Arjun", "Pooja", "Harshit",
-  "Sneha", "Vikram", "Tanya", "Rohan", "Meera",
-];
-
-const AGENT_KEY = "gyc_agent_name";
+const AGENT_NAME = "Jass";
 const SESSION_KEY = "gyc_chat_session";
-
-const getOrCreateAgent = (): string => {
-  try {
-    const existing = sessionStorage.getItem(AGENT_KEY);
-    if (existing && AGENT_NAMES.includes(existing)) return existing;
-    const fresh = AGENT_NAMES[Math.floor(Math.random() * AGENT_NAMES.length)];
-    sessionStorage.setItem(AGENT_KEY, fresh);
-    return fresh;
-  } catch {
-    return AGENT_NAMES[Math.floor(Math.random() * AGENT_NAMES.length)];
-  }
-};
+const HISTORY_KEY = "gyc_chat_history_v1";
 
 const getOrCreateSession = (): string => {
   try {
@@ -55,8 +37,29 @@ const getOrCreateSession = (): string => {
   }
 };
 
-const buildGreeting = (name: string) =>
-  `Hi! I'm **${name}** from **GrabYourCar** 👋\n\nKaise help kar sakta hoon? Cars, insurance, loans, HSRP, rentals — sab ki info de dunga 🚗`;
+const buildGreeting = () =>
+  `Hi! I'm **${AGENT_NAME}** from **GrabYourCar** 👋\n\nKaise help kar sakta hoon? Cars, insurance, loans, HSRP, rentals — sab ki info de dunga 🚗`;
+
+const loadHistory = (fallback: Msg[]): Msg[] => {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed as Msg[];
+    return fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const saveHistory = (messages: Msg[]) => {
+  try {
+    const trimmed = messages.slice(-100);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
+  } catch {
+    // ignore quota errors
+  }
+};
 
 export const RiyaChatWidget = ({
   variant = "floating",
@@ -64,11 +67,11 @@ export const RiyaChatWidget = ({
   initialOpen = false,
   greeting,
 }: RiyaChatWidgetProps) => {
-  const [agentName] = useState(() => getOrCreateAgent());
+  const agentName = AGENT_NAME;
   const [isOpen, setIsOpen] = useState(initialOpen);
-  const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: greeting || buildGreeting(agentName) },
-  ]);
+  const [messages, setMessages] = useState<Msg[]>(() =>
+    loadHistory([{ role: "assistant", content: greeting || buildGreeting() }])
+  );
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sessionId] = useState(() => getOrCreateSession());
@@ -78,6 +81,7 @@ export const RiyaChatWidget = ({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
+    saveHistory(messages);
   }, [messages, loading]);
 
   const send = async () => {
