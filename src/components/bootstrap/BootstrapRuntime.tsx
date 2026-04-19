@@ -699,17 +699,34 @@ installBootstrapRuntime();
 
 export const BootstrapRuntime = ({ onReady }: { onReady?: () => void }) => {
   useEffect(() => {
+    let settled = false;
     let settle: number | null = null;
+    let frame: number | null = null;
 
-    const frame = window.requestAnimationFrame(() => {
-      settle = window.setTimeout(() => {
+    const releaseWhenAppIsReady = () => {
+      if (settled) {
+        return;
+      }
+
+      if (isSensitiveRouteAppReady()) {
+        settled = true;
         removeDevPreviewReconnectOverlay();
         onReady?.();
+        return;
+      }
+
+      settle = window.setTimeout(() => {
+        frame = window.requestAnimationFrame(releaseWhenAppIsReady);
       }, 120);
-    });
+    };
+
+    frame = window.requestAnimationFrame(releaseWhenAppIsReady);
 
     return () => {
-      window.cancelAnimationFrame(frame);
+      settled = true;
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
       if (settle) {
         window.clearTimeout(settle);
       }
