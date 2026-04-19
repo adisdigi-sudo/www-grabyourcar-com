@@ -61,7 +61,7 @@ interface ToolCall {
 async function executeToolCall(
   toolCall: ToolCall,
   supabase: ReturnType<typeof createClient>,
-  sessionContext: { sessionId: string; userAgent?: string }
+  sessionContext: { sessionId: string; userAgent?: string; agentName?: string }
 ): Promise<string> {
   const args = JSON.parse(toolCall.function.arguments || "{}");
   const fn = toolCall.function.name;
