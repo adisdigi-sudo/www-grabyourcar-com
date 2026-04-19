@@ -25,6 +25,7 @@ serve(async (req) => {
       customer_email = null,
       customer_name = null,
       test_mode = false,
+      conversation_history = [], // [{role:'user'|'assistant', content:string}]
     } = body || {};
 
     if (!agent_id || !inbound_message) {
@@ -63,14 +64,40 @@ serve(async (req) => {
       );
     }
 
-    // Build prompt
+    // Build prompt — human-like WhatsApp style
+    const humanStyleRules = `
+RESPONSE STYLE — FOLLOW STRICTLY:
+- You are a real human sales agent on WhatsApp, NOT a bot. Never say "I am an AI" or "as an assistant".
+- Reply length: 1-2 short lines max (WhatsApp style). Never long paragraphs.
+- LANGUAGE MATCHING: Detect customer's language from their message and reply in the SAME style:
+  • If they write Hinglish (Hindi in English letters like "kitna hai", "batao", "chahiye") → reply Hinglish.
+  • If they write pure Hindi (Devanagari) → reply Hindi.
+  • If they write English → reply English.
+  • If mixed → mirror their mix.
+- Tone: friendly, casual, warm — like a real dost/sales bhai. Use natural fillers: "haan ji", "bilkul", "achha", "sure", "got it".
+- Ask ONE short question at a time, not 3 things at once.
+- Use customer's name occasionally if known, not in every message.
+- Emojis: max 1 per message, only when natural (👍 🙏 ✨). Don't overdo.
+- Never use bullet points, markdown, headings, or formal email language.
+- Never repeat your greeting in every message — greet only the first time.
+- If you don't know something, say "ek minute, check karke batata hu" / "let me check and get back".
+`;
+
     const systemPrompt = [
       agent.system_prompt || "You are a helpful assistant.",
+      humanStyleRules,
       agent.knowledge_base
-        ? `\n\nKNOWLEDGE BASE (use this to answer accurately):\n${agent.knowledge_base}`
+        ? `\n\nKNOWLEDGE BASE (use to answer accurately, but reply in human style):\n${agent.knowledge_base}`
         : "",
       customer_name ? `\n\nCustomer name: ${customer_name}` : "",
     ].join("");
+
+    // Build message array with conversation history (last 10)
+    const history = Array.isArray(conversation_history)
+      ? conversation_history
+          .filter((m: any) => m && typeof m.content === "string" && (m.role === "user" || m.role === "assistant"))
+          .slice(-10)
+      : [];
 
     const startedAt = Date.now();
     const aiResp = await fetch(
@@ -85,9 +112,10 @@ serve(async (req) => {
           model: agent.ai_model || "google/gemini-3-flash-preview",
           messages: [
             { role: "system", content: systemPrompt },
+            ...history,
             { role: "user", content: inbound_message },
           ],
-          temperature: Number(agent.temperature ?? 0.7),
+          temperature: Number(agent.temperature ?? 0.8),
         }),
       }
     );
