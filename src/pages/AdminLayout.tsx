@@ -76,6 +76,9 @@ const WhatsAppManagement = lazy(() =>
 const WhatsAppHub = lazy(() =>
   import("@/components/admin/marketing/WhatsAppMarketingPortal").then((module) => ({ default: module.WhatsAppMarketingPortal })),
 );
+const WAHubSmartTriggersPage = lazy(() =>
+  import("@/components/admin/whatsapp-hub/modules/WAHubSmartTriggers").then((module) => ({ default: module.WAHubSmartTriggers })),
+);
 const WhatsAppBusinessInbox = lazy(() =>
   import("@/components/admin/WhatsAppBusinessInbox"),
 );

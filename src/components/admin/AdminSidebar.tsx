@@ -287,6 +287,7 @@ const navItems: NavItem[] = [
     children: [
       { id: "marketing-command", label: "🎯 Command Center", icon: Rocket },
       { id: "whatsapp-hub", label: "📱 WhatsApp Hub", icon: MessageSquare, badge: "All-in-One" },
+      { id: "wa-smart-triggers", label: "⚡ WhatsApp Auto-Replies", icon: MessageSquare, badge: "🔥" },
       { id: "wa-pdf-automation", label: "📄 WA PDF Auto-Send", icon: FileText, badge: "New" },
       { id: "holi-share", label: "📣 Bulk Broadcast", icon: MessageSquare, badge: "WA+Email" },
       { id: "marketing-automation", label: "📧 Email Automation", icon: Mail },
