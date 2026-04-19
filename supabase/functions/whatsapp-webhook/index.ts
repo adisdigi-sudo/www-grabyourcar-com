@@ -24,6 +24,102 @@ function mergeJsonObject(base: unknown, patch: Record<string, unknown>) {
   };
 }
 
+const VERTICAL_DETECTION_CONFIG = [
+  { table: "insurance_clients", vertical: "insurance", phoneFields: ["phone"] },
+  { table: "loan_applications", vertical: "loans", phoneFields: ["phone"] },
+  { table: "sales_pipeline", vertical: "sales", phoneFields: ["phone"] },
+  { table: "hsrp_bookings", vertical: "hsrp", phoneFields: ["mobile"] },
+  { table: "rental_bookings", vertical: "rentals", phoneFields: ["phone"] },
+  { table: "accessory_orders", vertical: "accessories", phoneFields: ["shipping_phone"] },
+] as const;
+
+const VERTICAL_ALIASES: Record<string, string> = {
+  insurance: "insurance",
+  insure: "insurance",
+  loan: "loans",
+  loans: "loans",
+  finance: "loans",
+  "car loan": "loans",
+  "car loans": "loans",
+  sales: "sales",
+  sale: "sales",
+  car: "sales",
+  "car sales": "sales",
+  "car sale": "sales",
+  "car-sales": "sales",
+  hsrp: "hsrp",
+  fastag: "hsrp",
+  rental: "rentals",
+  rentals: "rentals",
+  "self drive": "rentals",
+  "self-drive": "rentals",
+  accessories: "accessories",
+  accessory: "accessories",
+};
+
+function normalizePhoneVariants(phone: string | null | undefined) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (!digits) return [] as string[];
+
+  const withoutCountry = digits.replace(/^91/, "").replace(/^0+/, "");
+  return Array.from(new Set([
+    digits,
+    withoutCountry,
+    withoutCountry ? `91${withoutCountry}` : "",
+  ].filter(Boolean)));
+}
+
+function buildPhoneMatchFilter(fields: readonly string[], phones: string[]) {
+  return fields.flatMap((field) => phones.map((phone) => `${field}.eq.${phone}`)).join(",");
+}
+
+function normalizeVerticalSlug(value: string | null | undefined) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+
+  if (!normalized) return null;
+  if (VERTICAL_ALIASES[normalized]) return VERTICAL_ALIASES[normalized];
+  if (normalized.includes("insurance")) return "insurance";
+  if (normalized.includes("loan") || normalized.includes("finance")) return "loans";
+  if (normalized.includes("sale") || normalized === "car") return "sales";
+  if (normalized.includes("hsrp") || normalized.includes("fastag")) return "hsrp";
+  if (normalized.includes("rental") || normalized.includes("self drive")) return "rentals";
+  if (normalized.includes("accessor")) return "accessories";
+  return null;
+}
+
+async function detectLeadVertical(supabase: any, phone: string) {
+  const phoneVariants = normalizePhoneVariants(phone);
+  if (!phoneVariants.length) return null;
+
+  for (const config of VERTICAL_DETECTION_CONFIG) {
+    const filter = buildPhoneMatchFilter(config.phoneFields, phoneVariants);
+    if (!filter) continue;
+
+    const { data: hit } = await supabase
+      .from(config.table)
+      .select("id")
+      .or(filter)
+      .limit(1)
+      .maybeSingle();
+
+    if (hit) return config.vertical;
+  }
+
+  const genericLeadFilter = buildPhoneMatchFilter(["phone"], phoneVariants);
+  const { data: anyLead } = await supabase
+    .from("leads")
+    .select("service_category")
+    .or(genericLeadFilter)
+    .limit(1)
+    .maybeSingle();
+
+  return normalizeVerticalSlug(anyLead?.service_category);
+}
+
 async function syncDealerInquiryCampaignCounts(supabase: any, campaignId: string) {
   const { data: recipients } = await supabase
     .from("dealer_inquiry_recipients")
@@ -324,24 +420,7 @@ Deno.serve(async (req) => {
               } else if (engineData?.reason === "no_active_session") {
                 // ─── AUTO-START engine session if lead vertical matches ───
                 try {
-                  let leadVertical: string | null = null;
-                  // Detect vertical from existing lead tables
-                  const phoneVariants = [from, from.replace(/^91/, ""), `91${from.replace(/^91/, "")}`];
-                  const checks: Array<[string, string]> = [
-                    ["insurance_clients", "insurance"],
-                    ["loan_leads", "loans"],
-                    ["hsrp_bookings", "hsrp"],
-                    ["rental_bookings", "rentals"],
-                  ];
-                  for (const [tbl, vert] of checks) {
-                    const { data: hit } = await supabase.from(tbl).select("id").or(phoneVariants.map(p => `phone.eq.${p}`).join(",")).limit(1).maybeSingle();
-                    if (hit) { leadVertical = vert; break; }
-                  }
-                  // Fallback: check generic leads table for service_category
-                  if (!leadVertical) {
-                    const { data: anyLead } = await supabase.from("leads").select("service_category").or(phoneVariants.map(p => `phone.eq.${p}`).join(",")).limit(1).maybeSingle();
-                    if (anyLead?.service_category) leadVertical = String(anyLead.service_category).toLowerCase();
-                  }
+                  const leadVertical = await detectLeadVertical(supabase, from);
 
                   if (leadVertical) {
                     const { data: matchEngine } = await supabase
@@ -399,15 +478,33 @@ Deno.serve(async (req) => {
           // ══════════════════════════════════════════════════════════
           if (!engineHandled && !inboxConvo?.human_takeover) {
             try {
-              const { data: agent } = await supabase
+              const leadVertical = await detectLeadVertical(supabase, from);
+              let agentQuery = supabase
                 .from("reply_agents")
-                .select("id, name")
+                .select("id, name, auto_send, vertical_slug, trigger_type, trigger_keywords")
                 .eq("is_active", true)
                 .eq("channel", "whatsapp")
+                .in("trigger_type", ["inbound_message", "any", "keyword"])
                 .order("priority", { ascending: false })
                 .order("created_at", { ascending: false })
-                .limit(1)
-                .maybeSingle();
+                .limit(20);
+
+              if (leadVertical) {
+                agentQuery = agentQuery.or(`vertical_slug.eq.${leadVertical},vertical_slug.is.null`);
+              }
+
+              const { data: agentCandidates } = await agentQuery;
+              const normalizedInbound = String(messageText || "").toLowerCase();
+              const agent = (agentCandidates || []).find((candidate: any) => {
+                const triggerType = String(candidate.trigger_type || "inbound_message");
+                if (triggerType === "keyword") {
+                  const keywords = Array.isArray(candidate.trigger_keywords)
+                    ? candidate.trigger_keywords.map((keyword: string) => String(keyword).toLowerCase().trim()).filter(Boolean)
+                    : [];
+                  return keywords.some((keyword: string) => normalizedInbound.includes(keyword));
+                }
+                return true;
+              });
 
               if (agent) {
                 // Fetch last 10 messages for memory/context
@@ -440,7 +537,7 @@ Deno.serve(async (req) => {
                   }),
                 });
                 const agentData = await agentResp.json();
-                if (agentData?.reply && agentData?.auto_sent !== false) {
+                if (agentData?.reply && agentData?.status === "sent") {
                   // Send via WhatsApp
                   const WA_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
                   const WA_PHONE_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
