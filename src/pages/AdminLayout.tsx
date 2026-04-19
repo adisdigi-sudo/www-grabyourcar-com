@@ -894,12 +894,11 @@ const AdminLayout = () => {
       case "integrations-whatsapp":
       case "whatsapp-inbox":
       case "marketing-templates":
+      case "marketing-email":
+      case "marketing-automation":
+      case "wa-smart-triggers":
       case "whatsapp-hub":
         return <WhatsAppHub />;
-      case "wa-smart-triggers":
-        return <WAHubSmartTriggersPage />;
-      case "marketing-automation":
-        return <EmailAutomationManager />;
       case "integrations-shipping":
         return <IntegrationsManagement />;
       case "integrations-payments":

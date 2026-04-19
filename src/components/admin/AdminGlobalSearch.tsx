@@ -70,10 +70,10 @@ const allSearchItems: SearchResult[] = [
   { id: "content-intelligence", label: "Auto Intelligence", category: "Content", icon: Sparkles, keywords: ["intelligence", "insights", "data", "ai"] },
   
   // Marketing
-  { id: "whatsapp-hub", label: "WhatsApp Hub", category: "Marketing", icon: MessageSquare, keywords: ["whatsapp", "templates", "message", "broadcast", "campaigns", "inbox", "api"] },
-  { id: "wa-smart-triggers", label: "WhatsApp Auto-Replies", category: "Marketing", icon: MessageSquare, keywords: ["auto reply", "trigger", "keyword", "policy", "invoice", "image", "brochure", "whatsapp bot", "smart trigger"] },
-  { id: "marketing-automation", label: "Email Automation", category: "Marketing", icon: Settings, keywords: ["email", "automation", "drip", "sequence", "campaign"] },
-  { id: "marketing-email", label: "Email Campaigns", category: "Marketing", icon: MessageSquare, keywords: ["email", "campaign", "newsletter", "blast"] },
+  { id: "whatsapp-hub", label: "Comms Hub (WhatsApp + Email)", category: "Marketing", icon: MessageSquare, keywords: ["whatsapp", "wa", "email", "templates", "message", "broadcast", "campaigns", "inbox", "auto reply", "trigger", "keyword", "policy", "invoice", "brochure", "bot", "smart trigger", "drip", "sequence", "newsletter"] },
+  { id: "wa-pdf-automation", label: "WA PDF Auto-Send", category: "Marketing", icon: FileText, keywords: ["pdf", "auto", "send", "policy", "invoice", "agreement"] },
+  { id: "holi-share", label: "Bulk Broadcast", category: "Marketing", icon: MessageSquare, keywords: ["bulk", "broadcast", "wa", "email"] },
+  { id: "smart-excel", label: "Smart Excel Upload", category: "Marketing", icon: Settings, keywords: ["excel", "csv", "upload", "import"] },
   { id: "marketing-bulk", label: "Bulk Data Manager", category: "Marketing", icon: Settings, keywords: ["bulk", "data", "export", "import", "csv"] },
   
   // Integrations
