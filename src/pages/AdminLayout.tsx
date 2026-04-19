@@ -901,7 +901,6 @@ const AdminLayout = () => {
       case "integrations-whatsapp":
       case "whatsapp-inbox":
       case "marketing-templates":
-      case "marketing-email":
       case "marketing-automation":
       case "wa-smart-triggers":
       case "whatsapp-hub":
