@@ -244,17 +244,25 @@ export const LiveChatsDashboard = () => {
                     Started {formatDistanceToNow(new Date(selected.created_at), { addSuffix: true })}
                   </span>
                   <span>Agent: <strong>{selected.agent_name}</strong></span>
-                  {selected.page_url && (
-                    <a
-                      href={selected.page_url}
-                      target="_blank"
-                      rel="noopener"
-                      className="flex items-center gap-1 hover:text-primary truncate max-w-[280px]"
-                    >
-                      <Globe className="h-3 w-3" />
-                      {new URL(selected.page_url).pathname || "/"}
-                    </a>
-                  )}
+                  {selected.page_url && (() => {
+                    let pathLabel = selected.page_url;
+                    try {
+                      pathLabel = new URL(selected.page_url).pathname || "/";
+                    } catch {
+                      // page_url may be a relative path or invalid — fall back to raw string
+                    }
+                    return (
+                      <a
+                        href={selected.page_url}
+                        target="_blank"
+                        rel="noopener"
+                        className="flex items-center gap-1 hover:text-primary truncate max-w-[280px]"
+                      >
+                        <Globe className="h-3 w-3" />
+                        {pathLabel}
+                      </a>
+                    );
+                  })()}
                 </div>
               </CardHeader>
               <ScrollArea className="flex-1 px-4 py-4">
