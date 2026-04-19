@@ -42,6 +42,8 @@ const shouldGuardSensitiveRouteReload = () => {
   return isSensitivePreviewRouteWindow();
 };
 
+const shouldInstallBeforeUnloadGuard = () => false;
+
 const tryPatchReload = (target: object, reload: () => void) => {
   try {
     Object.defineProperty(target, "reload", {
@@ -97,19 +99,20 @@ export const installSensitiveRouteReloadGuard = () => {
       console.warn("[DevReloadGuard] Failed to patch window.location.reload; forced Vite reloads may still occur.");
     }
 
-    // Fallback: intercept beforeunload to catch Vite-triggered navigations
-    window.addEventListener("beforeunload", (e) => {
-      try {
-        if (shouldGuardSensitiveRouteReload()) {
-          markDevServerPendingReload();
-          dispatchUpdateReady();
-          e.preventDefault();
-          e.returnValue = "";
+    if (shouldInstallBeforeUnloadGuard()) {
+      window.addEventListener("beforeunload", (e) => {
+        try {
+          if (shouldGuardSensitiveRouteReload()) {
+            markDevServerPendingReload();
+            dispatchUpdateReady();
+            e.preventDefault();
+            e.returnValue = "";
+          }
+        } catch {
+          // silently ignore
         }
-      } catch {
-        // silently ignore
-      }
-    });
+      });
+    }
   } catch (err) {
     console.warn("[DevReloadGuard] Failed to install reload guard", err);
   }

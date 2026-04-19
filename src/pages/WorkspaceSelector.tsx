@@ -85,10 +85,7 @@ const WorkspaceSelector = () => {
     [availableVerticals],
   );
 
-  const templatesHubVertical = useMemo(
-    () => sortedVerticals.find((vertical) => vertical.slug === "marketing") ?? sortedVerticals[0] ?? null,
-    [sortedVerticals],
-  );
+  const templatesHubVertical = null;
 
   useEffect(() => {
     if (authInitialized && !authLoading && !user) {
@@ -234,14 +231,7 @@ const WorkspaceSelector = () => {
                 Super Admin
               </Badge>
             )}
-            {isAdmin() && templatesHubVertical && (
-              <div className="mt-4">
-                <Button variant="outline" size="sm" className="gap-2" onClick={handleOpenTemplatesHub}>
-                  <MessageSquare className="h-4 w-4" />
-                  Open Templates Hub
-                </Button>
-              </div>
-            )}
+
           </motion.div>
 
           {/* Vertical Grid */}
