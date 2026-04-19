@@ -81,9 +81,9 @@ export const APIStatusDashboard = () => {
   }, [search]);
 
   const dot = (s?: string) => {
-    if (s === "ok") return <span className="inline-block size-2.5 rounded-full bg-emerald-500" />;
-    if (s === "missing") return <span className="inline-block size-2.5 rounded-full bg-red-500" />;
-    if (s === "error") return <span className="inline-block size-2.5 rounded-full bg-amber-500" />;
+    if (s === "ok") return <span className="inline-block size-2.5 rounded-full bg-primary" />;
+    if (s === "missing") return <span className="inline-block size-2.5 rounded-full bg-destructive" />;
+    if (s === "error") return <span className="inline-block size-2.5 rounded-full bg-muted-foreground" />;
     return <Loader2 className="size-3 animate-spin text-muted-foreground" />;
   };
 
