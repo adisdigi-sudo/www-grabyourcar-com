@@ -7,19 +7,14 @@ import { BootstrapRuntime } from "@/components/bootstrap/BootstrapRuntime";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { installSensitiveRouteReloadGuard } from "@/lib/devReloadGuard";
 import { ensureAppRootElement } from "@/lib/ensureAppRoot";
-import { shouldStabilizeStartupShellWindow } from "@/lib/adminPreviewStability";
-import {
-  ensureStartupShell,
-  installStartupShellHealthMonitor,
-  removeStartupShell,
-} from "@/lib/startupShell";
+import { removeStartupShell } from "@/lib/startupShell";
 
 try {
   installSensitiveRouteReloadGuard();
-  if (shouldStabilizeStartupShellWindow()) {
-    installStartupShellHealthMonitor();
-    ensureStartupShell();
-  }
+
+  // NOTE: Global startup shell / blank-screen recovery is intentionally disabled.
+  // Each sensitive route (Workspace, CRM, Admin) renders its own loader + timeout.
+  // See `.lovable/plan.md` and `src/lib/adminPreviewStability.ts` for reasoning.
 
   if (window.location.hostname.endsWith(".lovable.app")) {
     const existingNoindex = document.querySelector('meta[name="robots"]');
