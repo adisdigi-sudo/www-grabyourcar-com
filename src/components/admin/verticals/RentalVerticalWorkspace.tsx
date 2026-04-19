@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, CheckCircle2, Users, Globe, FileText, ShieldCheck } from "lucide-react";
+import { Car, CheckCircle2, Users, Globe, FileText, ShieldCheck, PhoneCall } from "lucide-react";
 import { SelfDriveWorkspace } from "../rentals/SelfDriveWorkspace";
 import DriverBookingsManagement from "../DriverBookingsManagement";
 import APIPartnersManagement from "../APIPartnersManagement";
 import { AgreementManagement } from "../rentals/AgreementManagement";
 import { KYCVerificationPanel } from "../rentals/KYCVerificationPanel";
 import { VerticalReplyAgentsCard } from "../automation/VerticalReplyAgentsCard";
+import { CallingQueueWorkspace } from "../calling/CallingQueueWorkspace";
 
 
 export function RentalVerticalWorkspace() {
@@ -16,6 +17,7 @@ export function RentalVerticalWorkspace() {
 
   const tabs = [
     { id: "rentals", label: "Self-Drive Rentals", icon: Car },
+    { id: "calling", label: "Calling Queue", icon: PhoneCall },
     { id: "drivers", label: "Driver Bookings", icon: Users },
     { id: "agreements", label: "Agreements", icon: FileText },
     { id: "kyc", label: "KYC Verification", icon: ShieldCheck },
@@ -25,6 +27,7 @@ export function RentalVerticalWorkspace() {
   const renderContent = () => {
     switch (activeTab) {
       case "rentals": return <SelfDriveWorkspace />;
+      case "calling": return <CallingQueueWorkspace verticalSlug="rentals" verticalLabel="Self-Drive Rental" accentClass="border-cyan-200 dark:border-cyan-900" />;
       case "drivers": return <DriverBookingsManagement />;
       case "agreements": return <AgreementManagement />;
       case "kyc": return <KYCVerificationPanel />;

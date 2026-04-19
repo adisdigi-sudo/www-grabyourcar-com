@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, CheckCircle2, ShoppingCart, LayoutDashboard, Search, ClipboardCheck, TrendingUp, MessageSquare } from "lucide-react";
+import { Shield, CheckCircle2, ShoppingCart, LayoutDashboard, Search, ClipboardCheck, TrendingUp, MessageSquare, PhoneCall } from "lucide-react";
 import { HSRPWorkspace } from "../hsrp/HSRPWorkspace";
 import { HSRPAbandonedCarts } from "../hsrp/HSRPAbandonedCarts";
 import { HSRPOrderTracker } from "@/components/hsrp/HSRPOrderTracker";
@@ -12,6 +12,7 @@ import { HSRPComplianceChecker } from "@/components/hsrp/HSRPComplianceChecker";
 import { HSRPPerformanceDashboard } from "../hsrp/HSRPPerformanceDashboard";
 import { VerticalMessagingTab } from "../shared/VerticalMessagingTab";
 import { VerticalReplyAgentsCard } from "../automation/VerticalReplyAgentsCard";
+import { CallingQueueWorkspace } from "../calling/CallingQueueWorkspace";
 
 import { DateFilterBar, type DateFilterValue } from "../shared/DateFilterBar";
 import { startOfDay, subDays, startOfMonth, isWithinInterval } from "date-fns";
@@ -90,9 +91,12 @@ export function HSRPVerticalWorkspace() {
       <VerticalReplyAgentsCard verticalSlug="hsrp" verticalLabel="HSRP & FASTag" />
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="w-full grid grid-cols-5">
+        <TabsList className="w-full grid grid-cols-6">
           <TabsTrigger value="pipeline" className="gap-1.5">
             <LayoutDashboard className="h-4 w-4" /> Pipeline
+          </TabsTrigger>
+          <TabsTrigger value="calling" className="gap-1.5">
+            <PhoneCall className="h-4 w-4" /> Calling Queue
           </TabsTrigger>
           <TabsTrigger value="abandoned" className="gap-1.5">
             <ShoppingCart className="h-4 w-4" /> Abandoned
@@ -109,6 +113,9 @@ export function HSRPVerticalWorkspace() {
         </TabsList>
         <TabsContent value="pipeline">
           <HSRPWorkspace />
+        </TabsContent>
+        <TabsContent value="calling">
+          <CallingQueueWorkspace verticalSlug="hsrp" verticalLabel="HSRP & FASTag" accentClass="border-teal-200 dark:border-teal-900" />
         </TabsContent>
         <TabsContent value="abandoned">
           <HSRPAbandonedCarts />
