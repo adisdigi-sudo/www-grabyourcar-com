@@ -54,10 +54,10 @@ export const isSensitivePreviewRouteWindow = () => {
   return hostname.startsWith("admin.") || isSensitivePreviewRoutePath(pathname);
 };
 
-// Keep blank-screen recovery enabled for sensitive routes so editor previews
-// and admin surfaces fall back to the startup shell instead of showing a
-// pure white page when runtime/rendering stalls before route-level loaders mount.
-export const shouldStabilizeStartupShellWindow = () => isSensitivePreviewRouteWindow();
+// Disabled: the recovery overlay was interrupting normal dev HMR on sensitive
+// routes (CRM/admin) and showing a "Page startup recovery mode" prompt to users
+// even when the app was rendering fine. Returning false lets React mount normally.
+export const shouldStabilizeStartupShellWindow = () => false;
 
 // Avoid force-reload loops for any sensitive route during dev, including editor previews.
 export const shouldAvoidDevAutoReload = () => import.meta.env.DEV && isSensitivePreviewRouteWindow();
