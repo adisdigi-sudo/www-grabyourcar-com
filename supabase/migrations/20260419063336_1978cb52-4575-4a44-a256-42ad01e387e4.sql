@@ -1,0 +1,1 @@
+UPDATE whatsapp_flow_sessions SET collected_variables = '{}'::jsonb WHERE customer_phone = '919855924442';
