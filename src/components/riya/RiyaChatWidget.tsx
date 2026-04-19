@@ -191,7 +191,7 @@ export const RiyaChatWidget = ({
             <div className="flex justify-start">
               <div className="bg-muted rounded-2xl rounded-bl-sm px-3.5 py-2.5 flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Riya typing...
+                {agentName} typing...
               </div>
             </div>
           )}
