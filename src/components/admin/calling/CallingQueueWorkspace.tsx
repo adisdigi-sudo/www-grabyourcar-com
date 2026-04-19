@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,50 +7,52 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Plus, Phone, PhoneCall, PhoneOff, Upload, FileSpreadsheet,
-  CheckCircle2, XCircle, SkipForward, Clock, Trash2, UserPlus, ListChecks,
+  SkipForward, Trash2, UserPlus, ListChecks,
 } from "lucide-react";
 import ExcelJS from "exceljs";
+import { CallingFilterSidebar, type CallingFilter } from "./CallingFilterSidebar";
+import { CallingUploadHistory } from "./CallingUploadHistory";
+import { MandatoryDispositionDialog } from "./MandatoryDispositionDialog";
 
 /* ─────────────────────────────────────────────────────────────
-   Unified Calling Queue Workspace
+   Unified Calling Queue Workspace (Sridhar/Knowlarity style)
 
-   - One component, embedded inside every vertical workspace.
-   - Scoped by `verticalSlug`: the queue only shows campaigns for
-     that vertical, and uploaded numbers convert into leads of
-     that vertical when "Create Leads" is pressed.
-   - Dialer pad: shows ONE number at a time, caller dials manually
-     via tel: link (works on mobile + softphones), then marks a
-     disposition. Saving disposition auto-loads the next number.
-   - All call attempts are tracked: dial_attempts, last_dialed_at,
-     disposition, notes, follow-up date.
-
-   Designed to be reusable in: Insurance, Loans, Sales,
-   HSRP, Rentals, Dealer Network, etc.
+   - One number at a time → dial → call ends → MANDATORY blocking
+     disposition modal (Hot / Interested / Callback / Not Interested
+     / No Answer / Busy / Wrong / DND).
+   - Hot/Interested/Callback REQUIRE remarks, Hot+Callback require a
+     follow-up datetime.
+   - After save → 2-second countdown → next pending number auto-loads.
+   - Real-time filter sidebar shows live counts per status with
+     instant click-to-filter.
+   - Permanent upload history (every CSV/Excel saved to Storage with
+     re-download + conversion stats).
    ───────────────────────────────────────────────────────────── */
 
 export interface CallingQueueWorkspaceProps {
-  /** Vertical slug for filtering + lead-creation routing
-   *  (e.g. "insurance", "loans", "sales", "hsrp", "rentals", "dealer"). */
   verticalSlug: string;
-  /** Friendly label shown in the heading. */
   verticalLabel: string;
-  /** Optional accent color class for the header tile. */
   accentClass?: string;
 }
 
-const DISPOSITIONS: { value: string; label: string; tone: string }[] = [
-  { value: "interested",     label: "✅ Interested",     tone: "bg-emerald-500 text-white hover:bg-emerald-600" },
-  { value: "callback",       label: "📅 Callback",        tone: "bg-blue-500 text-white hover:bg-blue-600" },
-  { value: "not_interested", label: "❌ Not Interested",  tone: "bg-rose-500 text-white hover:bg-rose-600" },
-  { value: "no_answer",      label: "📵 No Answer",       tone: "bg-slate-500 text-white hover:bg-slate-600" },
-  { value: "busy",           label: "⏳ Busy",            tone: "bg-amber-500 text-white hover:bg-amber-600" },
-  { value: "wrong_number",   label: "🚫 Wrong Number",    tone: "bg-zinc-500 text-white hover:bg-zinc-600" },
-];
+const STATUS_CATEGORY_MAP: Record<string, string> = {
+  hot: "hot",
+  interested: "interested",
+  callback: "callback",
+  not_interested: "not_interested",
+  no_answer: "no_answer",
+  busy: "busy",
+  wrong_number: "wrong_number",
+  dnd: "dnd",
+};
+
+const COMPLETED_DISPOSITIONS = new Set([
+  "hot", "interested", "not_interested", "wrong_number", "dnd",
+]);
 
 function normalizePhone(raw: unknown): string {
   const digits = String(raw ?? "").replace(/\D/g, "");
@@ -62,7 +64,6 @@ function normalizePhone(raw: unknown): string {
 async function parseSpreadsheet(file: File): Promise<{ phone: string; name?: string; email?: string; city?: string }[]> {
   const buf = await file.arrayBuffer();
   const wb = new ExcelJS.Workbook();
-
   const lower = file.name.toLowerCase();
   if (lower.endsWith(".csv")) {
     const text = new TextDecoder().decode(buf);
@@ -72,39 +73,29 @@ async function parseSpreadsheet(file: File): Promise<{ phone: string; name?: str
     const rows = lines.slice(1).map((line) => line.split(",").map((c) => c.trim()));
     return mapRows(headers, rows);
   }
-
   await wb.xlsx.load(buf);
   const sheet = wb.worksheets[0];
   if (!sheet) return [];
-
   const headerRow = sheet.getRow(1);
   const headers: string[] = [];
-  headerRow.eachCell((cell, col) => {
-    headers[col - 1] = String(cell.value ?? "").trim().toLowerCase();
-  });
-
+  headerRow.eachCell((cell, col) => { headers[col - 1] = String(cell.value ?? "").trim().toLowerCase(); });
   const rows: string[][] = [];
   sheet.eachRow((row, rowIdx) => {
     if (rowIdx === 1) return;
     const r: string[] = [];
-    row.eachCell((cell, col) => {
-      r[col - 1] = String(cell.value ?? "").trim();
-    });
+    row.eachCell((cell, col) => { r[col - 1] = String(cell.value ?? "").trim(); });
     if (r.some(Boolean)) rows.push(r);
   });
-
   return mapRows(headers, rows);
 }
 
 function mapRows(headers: string[], rows: string[][]) {
   const findIdx = (...candidates: string[]) =>
     headers.findIndex((h) => candidates.some((c) => h?.includes(c)));
-
   const idxPhone = findIdx("phone", "mobile", "contact", "number");
   const idxName  = findIdx("name", "customer");
   const idxEmail = findIdx("email", "mail");
   const idxCity  = findIdx("city", "location", "town");
-
   const out: { phone: string; name?: string; email?: string; city?: string }[] = [];
   for (const r of rows) {
     const phone = normalizePhone(r[idxPhone] || r[0]);
@@ -129,14 +120,14 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
   const [pasteText, setPasteText] = useState("");
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
   const [activeContact, setActiveContact] = useState<any>(null);
-  const [disposition, setDisposition] = useState("");
-  const [notes, setNotes] = useState("");
-  const [followUp, setFollowUp] = useState("");
+  const [showDispoModal, setShowDispoModal] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [filter, setFilter] = useState<CallingFilter>("all");
 
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
 
-  /* ── load campaigns scoped to this vertical ── */
+  /* ── load campaigns ── */
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ["calling-queue-campaigns", verticalSlug],
     queryFn: async () => {
@@ -149,6 +140,18 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
       return data || [];
     },
   });
+
+  /* ── live realtime: refetch on any contact change in this vertical ── */
+  useEffect(() => {
+    const ch = supabase
+      .channel(`calling-workspace-${verticalSlug}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "auto_dialer_contacts" },
+        () => qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "auto_dialer_campaigns" },
+        () => qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] }))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [verticalSlug, qc]);
 
   /* ── create campaign ── */
   const createCampaign = useMutation({
@@ -166,8 +169,7 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
           created_by: user?.id ?? null,
           assigned_user_id: user?.id ?? null,
         })
-        .select()
-        .single();
+        .select().single();
       if (error) throw error;
       return data;
     },
@@ -180,7 +182,6 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
     onError: (e: any) => toast.error(e.message),
   });
 
-  /* ── delete campaign ── */
   const deleteCampaign = useMutation({
     mutationFn: async (id: string) => {
       await supabase.from("auto_dialer_contacts").delete().eq("campaign_id", id);
@@ -194,263 +195,311 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
     onError: (e: any) => toast.error(e.message),
   });
 
-  /* ── import contacts (file OR paste) ── */
-  async function importContacts(
-    campaignId: string,
-    rows: { phone: string; name?: string; email?: string; city?: string }[],
-    sourceLabel: string
-  ) {
-    if (!rows.length) {
-      toast.error("No valid phone numbers found");
-      return;
-    }
-    /* dedupe by phone within this campaign */
-    const { data: existing } = await supabase
-      .from("auto_dialer_contacts")
-      .select("phone")
-      .eq("campaign_id", campaignId);
-    const seen = new Set((existing || []).map((r: any) => normalizePhone(r.phone)));
-    const fresh = rows.filter((r) => !seen.has(r.phone) && (seen.add(r.phone) || true));
-
-    if (!fresh.length) {
-      toast.info("All numbers already in this campaign");
-      return;
-    }
-
-    const payload = fresh.map((r) => ({
-      campaign_id: campaignId,
-      phone: r.phone,
-      name: r.name || null,
-      email: r.email || null,
-      city: r.city || null,
-      call_status: "pending",
-      dial_attempts: 0,
-    }));
-
-    const { error } = await supabase.from("auto_dialer_contacts").insert(payload);
-    if (error) { toast.error(error.message); return; }
-
-    /* recount + activate */
-    const { count: total } = await supabase
-      .from("auto_dialer_contacts")
-      .select("id", { count: "exact", head: true })
-      .eq("campaign_id", campaignId);
-    const { count: pending } = await supabase
-      .from("auto_dialer_contacts")
-      .select("id", { count: "exact", head: true })
-      .eq("campaign_id", campaignId)
-      .eq("call_status", "pending");
-
-    await supabase
-      .from("auto_dialer_campaigns")
-      .update({
-        total_contacts: total || 0,
-        pending_contacts: pending || 0,
-        status: "active",
-        last_import_filename: sourceLabel,
-        import_count: (campaigns.find((c: any) => c.id === campaignId)?.import_count || 0) + 1,
-      })
-      .eq("id", campaignId);
-
-    qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
-    toast.success(`Imported ${fresh.length} numbers (skipped ${rows.length - fresh.length} duplicates)`);
-    setShowImportFor(null);
-    setPasteText("");
-  }
-
-  async function handleFileUpload(campaignId: string, file: File) {
+  /* ── import: file → upload to Storage → save upload row → insert contacts ── */
+  async function importContactsFromFile(campaignId: string, file: File) {
     try {
       const rows = await parseSpreadsheet(file);
-      await importContacts(campaignId, rows, file.name);
+      if (!rows.length) {
+        toast.error("No valid phone numbers found");
+        return;
+      }
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // 1. upload original file
+      const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+      const path = `${verticalSlug}/${campaignId}/${Date.now()}_${safeName}`;
+      const up = await supabase.storage.from("calling-uploads").upload(path, file, {
+        upsert: false, contentType: file.type || "application/octet-stream",
+      });
+      let storagePath: string | null = null;
+      let storageUrl: string | null = null;
+      if (!up.error) {
+        storagePath = path;
+        storageUrl = supabase.storage.from("calling-uploads").getPublicUrl(path).data.publicUrl;
+      }
+
+      await importRows(campaignId, rows, file.name, file.size, storagePath, storageUrl, user?.email || null, user?.id || null);
     } catch (e: any) {
       toast.error(`Import failed: ${e.message}`);
     }
   }
 
-  async function handlePasteImport(campaignId: string) {
-    const lines = pasteText
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
+  async function importContactsFromPaste(campaignId: string) {
+    const lines = pasteText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     const rows = lines.map((line) => {
       const parts = line.split(/[,\t]/).map((p) => p.trim());
       const phone = normalizePhone(parts[0]);
       return { phone, name: parts[1] || undefined, email: parts[2] || undefined, city: parts[3] || undefined };
     }).filter((r) => r.phone.length >= 10);
-    await importContacts(campaignId, rows, "Pasted list");
+    if (!rows.length) { toast.error("No valid numbers in paste"); return; }
+    const { data: { user } } = await supabase.auth.getUser();
+    await importRows(campaignId, rows, "Pasted list", null, null, null, user?.email || null, user?.id || null);
   }
 
-  /* ── Pull next pending contact ── */
-  async function pullNextContact(campaignId: string) {
-    const { data, error } = await supabase
+  async function importRows(
+    campaignId: string,
+    rows: { phone: string; name?: string; email?: string; city?: string }[],
+    sourceLabel: string,
+    fileSize: number | null,
+    storagePath: string | null,
+    storageUrl: string | null,
+    userEmail: string | null,
+    userId: string | null,
+  ) {
+    // dedupe within campaign
+    const { data: existing } = await supabase
+      .from("auto_dialer_contacts").select("phone").eq("campaign_id", campaignId);
+    const seen = new Set((existing || []).map((r: any) => normalizePhone(r.phone)));
+    const fresh: typeof rows = [];
+    let dupes = 0;
+    for (const r of rows) {
+      if (seen.has(r.phone)) { dupes++; continue; }
+      seen.add(r.phone);
+      fresh.push(r);
+    }
+
+    // 1. create upload row first
+    const { data: uploadRow, error: uErr } = await supabase
+      .from("auto_dialer_uploads")
+      .insert({
+        campaign_id: campaignId,
+        vertical_slug: verticalSlug,
+        filename: sourceLabel,
+        file_size_bytes: fileSize,
+        storage_path: storagePath,
+        storage_url: storageUrl,
+        total_rows: rows.length,
+        imported_rows: fresh.length,
+        duplicate_rows: dupes,
+        invalid_rows: 0,
+        uploaded_by: userId,
+        uploaded_by_email: userEmail,
+      })
+      .select().single();
+    if (uErr) console.warn("upload row err", uErr);
+
+    if (fresh.length) {
+      const payload = fresh.map((r) => ({
+        campaign_id: campaignId,
+        phone: r.phone,
+        name: r.name || null,
+        email: r.email || null,
+        city: r.city || null,
+        call_status: "pending",
+        status_category: "pending",
+        dial_attempts: 0,
+        upload_id: uploadRow?.id || null,
+      }));
+      const { error } = await supabase.from("auto_dialer_contacts").insert(payload);
+      if (error) { toast.error(error.message); return; }
+    }
+
+    // recount + activate campaign
+    await refreshCampaignStats(campaignId);
+    await supabase.from("auto_dialer_campaigns").update({
+      status: "active",
+      last_import_filename: sourceLabel,
+      import_count: (campaigns.find((c: any) => c.id === campaignId)?.import_count || 0) + 1,
+    }).eq("id", campaignId);
+
+    qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
+    qc.invalidateQueries({ queryKey: ["calling-uploads", verticalSlug] });
+
+    if (fresh.length) {
+      toast.success(`Imported ${fresh.length}${dupes ? ` (skipped ${dupes} dupes)` : ""}`);
+    } else {
+      toast.info("All numbers already in this campaign");
+    }
+    setShowImportFor(null);
+    setPasteText("");
+  }
+
+  /* ── pull next pending contact respecting filter ── */
+  async function pullNextContact(campaignId: string, filterKey: CallingFilter = "pending") {
+    let q = supabase
       .from("auto_dialer_contacts")
       .select("*")
       .eq("campaign_id", campaignId)
-      .in("call_status", ["pending", "retry"])
       .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
 
+    if (filterKey === "pending" || filterKey === "all") {
+      q = q.in("call_status", ["pending", "retry"]);
+    } else if (filterKey === "callback") {
+      q = q.eq("status_category", "callback");
+    } else {
+      q = q.eq("status_category", filterKey);
+    }
+
+    const { data, error } = await q.maybeSingle();
     if (error) { toast.error(error.message); return null; }
     if (!data) {
       setActiveContact(null);
-      toast.success("🎉 Queue complete — no more pending numbers");
+      toast.success("🎉 Queue complete — no more numbers in this filter");
       return null;
     }
-
-    /* mark as calling + bump attempt */
     const { data: { user } } = await supabase.auth.getUser();
-    await supabase
-      .from("auto_dialer_contacts")
-      .update({
-        call_status: "calling",
-        called_at: new Date().toISOString(),
-        last_dialed_at: new Date().toISOString(),
-        dial_attempts: (data.dial_attempts || 0) + 1,
-        dialed_by: user?.id ?? null,
-      })
-      .eq("id", data.id);
-
+    await supabase.from("auto_dialer_contacts").update({
+      call_status: "calling",
+      called_at: new Date().toISOString(),
+      last_dialed_at: new Date().toISOString(),
+      dial_attempts: (data.dial_attempts || 0) + 1,
+      dialed_by: user?.id ?? null,
+    }).eq("id", data.id);
     setActiveContact({ ...data, dial_attempts: (data.dial_attempts || 0) + 1 });
-    setDisposition("");
-    setNotes("");
-    setFollowUp("");
     return data;
   }
 
   function startCalling(campaignId: string) {
     setActiveCampaignId(campaignId);
-    pullNextContact(campaignId);
+    pullNextContact(campaignId, "pending");
   }
 
-  /* ── Save disposition + auto-pull next ── */
-  async function saveDisposition() {
-    if (!activeContact || !activeCampaignId || !disposition) return;
+  /** Called when agent confirms call has ended (button) — opens blocking modal. */
+  function endCallOpenModal() {
+    if (!activeContact) return;
+    setShowDispoModal(true);
+  }
 
-    const statusMap: Record<string, string> = {
-      interested: "completed",
-      not_interested: "completed",
-      wrong_number: "completed",
-      no_answer: "no_answer",
-      busy: "retry",
-      callback: "callback",
-    };
+  /* ── save disposition (BLOCKING) → 2s countdown → auto-load next ── */
+  async function handleSaveDisposition(payload: { disposition: string; remarks: string; followUpAt: string | null }) {
+    if (!activeContact || !activeCampaignId) return;
+    const cat = STATUS_CATEGORY_MAP[payload.disposition] || payload.disposition;
+    const callStatus =
+      payload.disposition === "callback" ? "callback" :
+      payload.disposition === "busy" ? "retry" :
+      payload.disposition === "no_answer" ? "no_answer" :
+      COMPLETED_DISPOSITIONS.has(payload.disposition) ? "completed" : "completed";
 
-    await supabase
-      .from("auto_dialer_contacts")
-      .update({
-        call_status: statusMap[disposition] || "completed",
-        disposition,
-        notes: notes || null,
-        follow_up_date: followUp ? new Date(followUp).toISOString() : null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", activeContact.id);
+    const { data: { user } } = await supabase.auth.getUser();
 
-    /* refresh campaign counters */
+    // 1. update contact
+    await supabase.from("auto_dialer_contacts").update({
+      call_status: callStatus,
+      status_category: cat,
+      disposition: payload.disposition,
+      disposition_remarks: payload.remarks || null,
+      notes: payload.remarks || null,
+      follow_up_date: payload.followUpAt,
+      updated_at: new Date().toISOString(),
+    }).eq("id", activeContact.id);
+
+    // 2. immutable audit row
+    await supabase.from("auto_dialer_dispositions").insert({
+      contact_id: activeContact.id,
+      campaign_id: activeCampaignId,
+      vertical_slug: verticalSlug,
+      phone: activeContact.phone,
+      customer_name: activeContact.name || null,
+      disposition: payload.disposition,
+      remarks: payload.remarks || null,
+      follow_up_at: payload.followUpAt,
+      attempt_number: activeContact.dial_attempts || 1,
+      dialed_by: user?.id ?? null,
+      dialed_by_email: user?.email ?? null,
+    });
+
+    // 3. if HOT/INTERESTED → auto-create vertical lead now
+    if (payload.disposition === "hot" || payload.disposition === "interested") {
+      try {
+        const { data } = await supabase.functions.invoke("submit-lead", {
+          body: {
+            name: activeContact.name || "Calling Lead",
+            phone: activeContact.phone,
+            email: activeContact.email || undefined,
+            city: activeContact.city || undefined,
+            source: "calling_queue",
+            serviceCategory: verticalSlug,
+            vertical: verticalSlug,
+            message: `${payload.disposition === "hot" ? "🔥 HOT — " : ""}${payload.remarks}`,
+          },
+        });
+        const leadId = (data as any)?.lead_id || (data as any)?.id || null;
+        if (leadId) {
+          await supabase.from("auto_dialer_contacts").update({ lead_id: leadId }).eq("id", activeContact.id);
+        }
+      } catch (e) { console.warn("auto-lead failed", e); }
+    }
+
     await refreshCampaignStats(activeCampaignId);
-
     qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
-    toast.success("Saved — pulling next number");
-    await pullNextContact(activeCampaignId);
+
+    setShowDispoModal(false);
+    toast.success("Saved — next number in 2s");
+
+    // 2-second countdown then auto-load next
+    setCountdown(2);
+    let n = 2;
+    const t = setInterval(() => {
+      n -= 1;
+      if (n <= 0) {
+        clearInterval(t);
+        setCountdown(null);
+        pullNextContact(activeCampaignId!, "pending");
+      } else {
+        setCountdown(n);
+      }
+    }, 1000);
   }
 
   async function refreshCampaignStats(campaignId: string) {
     const { data: rows } = await supabase
       .from("auto_dialer_contacts")
-      .select("call_status, disposition")
+      .select("call_status, status_category")
       .eq("campaign_id", campaignId);
-
     const counts = {
       total: rows?.length || 0,
-      pending: 0, completed: 0, interested: 0, not_interested: 0, no_answer: 0,
+      pending: 0, completed: 0, hot: 0, interested: 0, not_interested: 0,
+      no_answer: 0, callback: 0, busy: 0, dnd: 0, wrong_number: 0,
     };
     (rows || []).forEach((r: any) => {
       if (r.call_status === "pending") counts.pending++;
       if (r.call_status === "completed") counts.completed++;
-      if (r.disposition === "interested") counts.interested++;
-      if (r.disposition === "not_interested") counts.not_interested++;
-      if (r.disposition === "no_answer") counts.no_answer++;
+      const c = r.status_category;
+      if (c === "hot") counts.hot++;
+      if (c === "interested") counts.interested++;
+      if (c === "not_interested") counts.not_interested++;
+      if (c === "no_answer") counts.no_answer++;
+      if (c === "callback") counts.callback++;
+      if (c === "busy") counts.busy++;
+      if (c === "dnd") counts.dnd++;
+      if (c === "wrong_number") counts.wrong_number++;
     });
-
-    await supabase
-      .from("auto_dialer_campaigns")
-      .update({
-        total_contacts: counts.total,
-        pending_contacts: counts.pending,
-        completed_contacts: counts.completed,
-        interested_contacts: counts.interested,
-        not_interested_contacts: counts.not_interested,
-        no_answer_contacts: counts.no_answer,
-      })
-      .eq("id", campaignId);
+    await supabase.from("auto_dialer_campaigns").update({
+      total_contacts: counts.total,
+      pending_contacts: counts.pending,
+      completed_contacts: counts.completed,
+      hot_contacts: counts.hot,
+      interested_contacts: counts.interested,
+      not_interested_contacts: counts.not_interested,
+      no_answer_contacts: counts.no_answer,
+      callback_contacts: counts.callback,
+      busy_contacts: counts.busy,
+      dnd_contacts: counts.dnd,
+      wrong_number_contacts: counts.wrong_number,
+    }).eq("id", campaignId);
   }
 
   function endSession() {
+    if (showDispoModal) {
+      toast.error("Save the current disposition first");
+      return;
+    }
     setActiveContact(null);
     setActiveCampaignId(null);
+    setCountdown(null);
   }
 
-  /* ── Convert "interested" contacts into vertical leads ── */
-  const convertLeads = useMutation({
-    mutationFn: async (campaignId: string) => {
-      const { data: hot } = await supabase
-        .from("auto_dialer_contacts")
-        .select("*")
-        .eq("campaign_id", campaignId)
-        .eq("disposition", "interested")
-        .is("lead_id", null);
-
-      if (!hot?.length) return { created: 0 };
-
-      let created = 0;
-      for (const contact of hot) {
-        try {
-          const { data, error } = await supabase.functions.invoke("submit-lead", {
-            body: {
-              name: contact.name || "Calling Lead",
-              phone: contact.phone,
-              email: contact.email || undefined,
-              city: contact.city || undefined,
-              source: "calling_queue",
-              serviceCategory: verticalSlug,
-              vertical: verticalSlug,
-              message: contact.notes || `Hot lead from ${verticalLabel} calling queue`,
-            },
-          });
-          if (!error && (data as any)?.success !== false) {
-            const leadId = (data as any)?.lead_id || (data as any)?.id || null;
-            await supabase
-              .from("auto_dialer_contacts")
-              .update({ lead_id: leadId })
-              .eq("id", contact.id);
-            created++;
-          }
-        } catch (err) {
-          console.warn("convertLead failed", err);
-        }
-      }
-      return { created };
-    },
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
-      toast.success(`${data.created} interested contact${data.created === 1 ? "" : "s"} converted to ${verticalLabel} leads`);
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
-
-  const totals = useMemo(() => {
-    return campaigns.reduce(
-      (acc: any, c: any) => {
-        acc.total       += c.total_contacts || 0;
-        acc.pending     += c.pending_contacts || 0;
-        acc.completed   += c.completed_contacts || 0;
-        acc.interested  += c.interested_contacts || 0;
-        return acc;
-      },
-      { total: 0, pending: 0, completed: 0, interested: 0 }
-    );
-  }, [campaigns]);
+  const totals = useMemo(() => campaigns.reduce(
+    (acc: any, c: any) => {
+      acc.total      += c.total_contacts || 0;
+      acc.pending    += c.pending_contacts || 0;
+      acc.completed  += c.completed_contacts || 0;
+      acc.hot        += c.hot_contacts || 0;
+      acc.interested += c.interested_contacts || 0;
+      return acc;
+    }, { total: 0, pending: 0, completed: 0, hot: 0, interested: 0 }
+  ), [campaigns]);
 
   return (
     <div className="space-y-4">
@@ -465,23 +514,21 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
               <div>
                 <h2 className="font-bold text-lg">Calling Queue — {verticalLabel}</h2>
                 <p className="text-xs text-muted-foreground">
-                  Upload Excel/CSV → numbers queue up → dial one-by-one → mark disposition → auto-next
+                  Sridhar/Knowlarity-style: dial → hang up → mandatory disposition → auto next number
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline">{totals.total} total</Badge>
               <Badge className="bg-amber-500/15 text-amber-700">{totals.pending} pending</Badge>
-              <Badge className="bg-blue-500/15 text-blue-700">{totals.completed} called</Badge>
-              <Badge className="bg-emerald-500/15 text-emerald-700">{totals.interested} interested</Badge>
+              <Badge className="bg-red-500/15 text-red-700">🔥 {totals.hot}</Badge>
+              <Badge className="bg-emerald-500/15 text-emerald-700">{totals.interested} int.</Badge>
               <Dialog open={showCreate} onOpenChange={setShowCreate}>
                 <DialogTrigger asChild>
                   <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> New Campaign</Button>
                 </DialogTrigger>
                 <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>New Calling Campaign — {verticalLabel}</DialogTitle>
-                  </DialogHeader>
+                  <DialogHeader><DialogTitle>New Calling Campaign — {verticalLabel}</DialogTitle></DialogHeader>
                   <div className="space-y-3">
                     <Input placeholder="Campaign name (e.g. April renewals batch)" value={newName} onChange={(e) => setNewName(e.target.value)} />
                     <Textarea placeholder="Description (optional)" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} rows={2} />
@@ -498,31 +545,36 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
         </CardContent>
       </Card>
 
+      {/* LIVE FILTER SIDEBAR (always visible) */}
+      <CallingFilterSidebar
+        campaignId={activeCampaignId}
+        verticalSlug={verticalSlug}
+        active={filter}
+        onChange={setFilter}
+      />
+
       {/* ACTIVE DIALER */}
       {activeContact && (
         <Card className="border-2 border-blue-500 bg-blue-50/40 dark:bg-blue-950/30">
           <CardContent className="p-5 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <PhoneCall className="h-5 w-5 text-blue-600 animate-pulse" />
                 <span className="font-semibold">Now Calling</span>
-                <Badge variant="outline" className="text-[10px]">
-                  Attempt #{activeContact.dial_attempts}
-                </Badge>
+                <Badge variant="outline" className="text-[10px]">Attempt #{activeContact.dial_attempts}</Badge>
+                {countdown !== null && (
+                  <Badge className="bg-emerald-500 text-white">Next in {countdown}s…</Badge>
+                )}
               </div>
-              <Button size="sm" variant="ghost" onClick={endSession}>
+              <Button size="sm" variant="ghost" onClick={endSession} disabled={showDispoModal}>
                 <PhoneOff className="h-4 w-4 mr-1" /> End Session
               </Button>
             </div>
 
             <div className="grid md:grid-cols-2 gap-5">
-              {/* Customer + Dial button */}
               <div className="space-y-2">
                 <p className="text-2xl font-bold">{activeContact.name || "—"}</p>
-                <a
-                  href={`tel:+91${activeContact.phone}`}
-                  className="inline-flex items-center gap-2 text-3xl font-mono font-bold text-blue-700 hover:underline"
-                >
+                <a href={`tel:+91${activeContact.phone}`} className="inline-flex items-center gap-2 text-3xl font-mono font-bold text-blue-700 hover:underline">
                   📞 +91 {activeContact.phone}
                 </a>
                 <div className="text-xs text-muted-foreground space-y-0.5">
@@ -530,53 +582,29 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
                   {activeContact.email && <p>✉️ {activeContact.email}</p>}
                 </div>
                 <Button asChild className="gap-2 bg-emerald-600 hover:bg-emerald-700">
-                  <a href={`tel:+91${activeContact.phone}`}>
-                    <Phone className="h-4 w-4" /> Dial Now
-                  </a>
+                  <a href={`tel:+91${activeContact.phone}`}><Phone className="h-4 w-4" /> Dial Now</a>
                 </Button>
               </div>
 
-              {/* Disposition */}
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  {DISPOSITIONS.map((d) => (
-                    <Button
-                      key={d.value}
-                      type="button"
-                      size="sm"
-                      className={disposition === d.value ? d.tone : "bg-muted text-foreground hover:bg-muted/70"}
-                      onClick={() => setDisposition(d.value)}
-                    >
-                      {d.label}
-                    </Button>
-                  ))}
-                </div>
-                <Textarea
-                  placeholder="Notes (optional)"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={2}
-                  className="text-sm"
-                />
-                {(disposition === "callback" || disposition === "interested") && (
-                  <Input
-                    type="datetime-local"
-                    value={followUp}
-                    onChange={(e) => setFollowUp(e.target.value)}
-                  />
-                )}
-                <Button
-                  className="w-full gap-2"
-                  onClick={saveDisposition}
-                  disabled={!disposition}
-                >
-                  Save & Next Number <SkipForward className="h-4 w-4" />
+              <div className="space-y-2 flex flex-col justify-center">
+                <p className="text-sm text-muted-foreground">
+                  After hanging up, click <strong>Mark Disposition</strong>. You cannot skip — the modal blocks the UI until you save.
+                </p>
+                <Button size="lg" className="w-full bg-amber-600 hover:bg-amber-700 text-white" onClick={endCallOpenModal}>
+                  <SkipForward className="h-4 w-4 mr-1.5" /> Call ended → Mark Disposition
                 </Button>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* MANDATORY MODAL */}
+      <MandatoryDispositionDialog
+        open={showDispoModal}
+        contact={activeContact}
+        onSave={handleSaveDisposition}
+      />
 
       {/* CAMPAIGN LIST */}
       {isLoading ? (
@@ -591,68 +619,62 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {campaigns.map((c: any) => {
-            const total = c.total_contacts || 0;
-            const completed = c.completed_contacts || 0;
-            const pct = total ? Math.round((completed / total) * 100) : 0;
-            return (
-              <Card key={c.id}>
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-3 flex-wrap">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{c.name}</h3>
-                        <Badge variant={c.status === "active" ? "default" : "secondary"} className="text-[10px]">{c.status}</Badge>
-                        {c.last_import_filename && (
-                          <Badge variant="outline" className="text-[10px]">📄 {c.last_import_filename}</Badge>
-                        )}
+        <div className="grid lg:grid-cols-3 gap-3">
+          <div className="lg:col-span-2 space-y-3">
+            {campaigns.map((c: any) => {
+              const total = c.total_contacts || 0;
+              const completed = c.completed_contacts || 0;
+              const pct = total ? Math.round((completed / total) * 100) : 0;
+              return (
+                <Card key={c.id}>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold">{c.name}</h3>
+                          <Badge variant={c.status === "active" ? "default" : "secondary"} className="text-[10px]">{c.status}</Badge>
+                          {c.last_import_filename && (
+                            <Badge variant="outline" className="text-[10px]">📄 {c.last_import_filename}</Badge>
+                          )}
+                        </div>
+                        {c.description && <p className="text-xs text-muted-foreground">{c.description}</p>}
                       </div>
-                      {c.description && <p className="text-xs text-muted-foreground">{c.description}</p>}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" onClick={() => setShowImportFor(c.id)} className="gap-1">
-                        <Upload className="h-3.5 w-3.5" /> Import
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => startCalling(c.id)}
-                        disabled={!c.pending_contacts}
-                        className="gap-1"
-                      >
-                        <PhoneCall className="h-3.5 w-3.5" /> Start Calling
-                      </Button>
-                      {(c.interested_contacts || 0) > 0 && (
-                        <Button size="sm" variant="outline" onClick={() => convertLeads.mutate(c.id)} className="gap-1">
-                          <UserPlus className="h-3.5 w-3.5" /> Convert {c.interested_contacts} → Lead{c.interested_contacts === 1 ? "" : "s"}
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setShowImportFor(c.id)} className="gap-1">
+                          <Upload className="h-3.5 w-3.5" /> Import
                         </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
+                        <Button size="sm" onClick={() => startCalling(c.id)} disabled={!c.pending_contacts} className="gap-1">
+                          <PhoneCall className="h-3.5 w-3.5" /> Start Calling
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => {
                           if (confirm(`Delete campaign "${c.name}" and all its contacts?`)) deleteCampaign.mutate(c.id);
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
+                        }}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
 
-                  <Progress value={pct} className="h-2" />
+                    <Progress value={pct} className="h-2" />
 
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-xs">
-                    <Stat label="Total"        value={total}                          />
-                    <Stat label="Pending"      value={c.pending_contacts || 0}        tone="text-amber-600" />
-                    <Stat label="Called"       value={completed}                      tone="text-blue-600" />
-                    <Stat label="Interested"   value={c.interested_contacts || 0}     tone="text-emerald-600" />
-                    <Stat label="Not Int."     value={c.not_interested_contacts || 0} tone="text-rose-600" />
-                    <Stat label="No Answer"    value={c.no_answer_contacts || 0}      tone="text-slate-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                    <div className="grid grid-cols-3 sm:grid-cols-7 gap-2 text-center text-xs">
+                      <Stat label="Total"     value={total} />
+                      <Stat label="Pending"   value={c.pending_contacts || 0}        tone="text-amber-600" />
+                      <Stat label="Called"    value={completed}                      tone="text-blue-600" />
+                      <Stat label="🔥 Hot"    value={c.hot_contacts || 0}            tone="text-red-600" />
+                      <Stat label="Int."      value={c.interested_contacts || 0}     tone="text-emerald-600" />
+                      <Stat label="Callback"  value={c.callback_contacts || 0}       tone="text-blue-600" />
+                      <Stat label="Not Int."  value={c.not_interested_contacts || 0} tone="text-rose-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* RIGHT: upload history + quick stats */}
+          <div className="space-y-3">
+            <CallingUploadHistory verticalSlug={verticalSlug} campaignId={activeCampaignId} />
+          </div>
         </div>
       )}
 
@@ -666,11 +688,7 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() => fileInputRef.current?.click()}
-              >
+              <Button variant="outline" className="w-full gap-2" onClick={() => fileInputRef.current?.click()}>
                 <Upload className="h-4 w-4" /> Choose Excel / CSV File
               </Button>
               <input
@@ -680,12 +698,13 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
-                  if (f && showImportFor) handleFileUpload(showImportFor, f);
+                  if (f && showImportFor) importContactsFromFile(showImportFor, f);
                   e.target.value = "";
                 }}
               />
               <p className="text-[10px] text-muted-foreground mt-1.5">
                 Expected columns (any order): <code>phone</code>, optional <code>name</code>, <code>email</code>, <code>city</code>.
+                File will be saved permanently and downloadable later.
               </p>
             </div>
 
@@ -701,7 +720,7 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
             <Button
               className="w-full"
               disabled={!pasteText.trim()}
-              onClick={() => showImportFor && handlePasteImport(showImportFor)}
+              onClick={() => showImportFor && importContactsFromPaste(showImportFor)}
             >
               Import {pasteText.trim().split(/\r?\n/).filter(Boolean).length || 0} pasted line{pasteText.trim().split(/\r?\n/).filter(Boolean).length === 1 ? "" : "s"}
             </Button>
@@ -720,3 +739,5 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: str
     </div>
   );
 }
+
+export { type CallingFilter };
