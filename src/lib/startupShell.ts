@@ -250,6 +250,13 @@ const scheduleStartupShellAutoReload = () => {
 };
 
 const recoverStartupShell = (reason: string) => {
+  // Hard-disabled: previously injected a full-screen white overlay on top of the
+  // app whenever Vite reconnected or a non-fatal runtime error fired, which is
+  // what caused the "white page / Page startup recovery mode" trap on /crm-auth.
+  // We now fail open and let React render normally.
+  if (!shouldStabilizeStartupShellWindow()) {
+    return;
+  }
   ensureStartupShell();
   promoteStartupShellToRecovery(reason);
 };
@@ -267,10 +274,18 @@ const handleGlobalDevServerStatus = (event: Event) => {
   const detail = (event as CustomEvent<{ status?: string; reason?: string }>).detail;
   const status = detail?.status;
 
+  // Always clean up the shell on healthy reconnect, even if stabilization is
+  // disabled (it might be left over from a previous session).
   if (status === "connected" || (status === "update_ready" && detail?.reason === "healthy")) {
     if (isSensitiveRouteAppReady()) {
       removeStartupShell();
     }
+    return;
+  }
+
+  // Do NOT inject the recovery overlay when stabilization is disabled — this is
+  // the root cause of the white page on dev-server reconnects.
+  if (!shouldStabilizeStartupShellWindow()) {
     return;
   }
 
@@ -577,6 +592,16 @@ export const installStartupShellHealthMonitor = () => {
   if (typeof window === "undefined" || typeof document === "undefined" || healthMonitorInstalled) return;
 
   healthMonitorInstalled = true;
+
+  // When stabilization is disabled (the default now), make this monitor a no-op.
+  // This prevents any path from ever injecting the white "Page startup recovery
+  // mode" overlay that was trapping users on /crm-auth and other admin routes.
+  if (!shouldStabilizeStartupShellWindow()) {
+    // Still listen for healthy reconnects so any leftover shell can be cleaned.
+    window.addEventListener(DEV_SERVER_STATUS_EVENT, handleGlobalDevServerStatus as EventListener);
+    return;
+  }
+
   installGlobalRecoveryListeners();
 
   const evaluateRootHealth = () => {
