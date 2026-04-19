@@ -87,12 +87,29 @@ async function executeToolCall(
         message: message || car_interest || "Captured via Riya AI chatbot",
         city: city || null,
         status: "new",
-        raw_data: { ...args, session_id: sessionContext.sessionId, user_agent: sessionContext.userAgent } as never,
+        raw_data: { ...args, session_id: sessionContext.sessionId, user_agent: sessionContext.userAgent, agent_name: sessionContext.agentName } as never,
       });
       if (error) {
         console.error("[riya-chat] capture_lead error:", error);
         return JSON.stringify({ success: false, error: error.message });
       }
+
+      // Fire-and-forget: notify executive/manager via canonical lead-intake-engine
+      // (handles WhatsApp + email alerts and assignment automatically)
+      supabase.functions.invoke("lead-intake-engine", {
+        body: {
+          lead_id: leadId,
+          name: name || "Riya Chat Lead",
+          phone: cleanPhone,
+          vertical,
+          source: "riya_chatbot",
+          message: message || car_interest || `Chat lead from ${sessionContext.agentName} bot`,
+          city: city || null,
+          car_interest: car_interest || null,
+          notify: true,
+        },
+      }).catch((e) => console.error("[riya-chat] lead-intake-engine notify failed:", e));
+
       return JSON.stringify({ success: true, lead_id: leadId, message: `Lead saved! Hamari team aapko 15 min me ${cleanPhone} pe call karegi.` });
     }
 
