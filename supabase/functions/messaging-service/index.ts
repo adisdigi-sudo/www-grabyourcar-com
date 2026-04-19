@@ -34,6 +34,17 @@ interface SendTextRequest {
   customer_name?: string;
 }
 
+interface SendMessageRequest {
+  action: "send_message";
+  phone: string;
+  message?: string;
+  messageType?: "text" | "template" | "image" | "document" | "video" | "audio";
+  mediaUrl?: string;
+  mediaFileName?: string;
+  lead_id?: string;
+  customer_name?: string;
+}
+
 interface TriggerEventRequest {
   action: "trigger_event";
   event: string;
@@ -56,7 +67,7 @@ function normalizeTemplateVariables(variables?: Record<string, string>) {
   }, {});
 }
 
-type ServiceRequest = SendTemplateRequest | SendTextRequest | TriggerEventRequest;
+type ServiceRequest = SendTemplateRequest | SendTextRequest | SendMessageRequest | TriggerEventRequest;
 
 // ── Send via whatsapp-send gateway ──
 async function sendViaGateway(
@@ -240,7 +251,29 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ error: "Invalid action. Use: send_template, send_text, trigger_event" }), {
+    // ── Route: send_message (generic text/media passthrough) ──
+    if (request.action === "send_message") {
+      const result = await sendViaGateway(
+        SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY,
+        request.phone,
+        request.messageType === "template"
+          ? { messageType: "text", message: request.message || "" }
+          : {
+              messageType: (request.messageType || "text") as "text",
+              message: request.message || "",
+              ...(request.mediaUrl ? { mediaUrl: request.mediaUrl, mediaFileName: request.mediaFileName } : {}),
+            } as any,
+        { name: request.customer_name, logEvent: "messaging_service_generic", lead_id: request.lead_id }
+      );
+
+      return new Response(JSON.stringify({ success: result.success, ...result }), {
+        status: result.success ? 200 : 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: "Invalid action. Use: send_template, send_text, send_message, trigger_event" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
