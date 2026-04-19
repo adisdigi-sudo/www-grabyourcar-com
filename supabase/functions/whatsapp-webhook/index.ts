@@ -309,6 +309,7 @@ Deno.serve(async (req) => {
           // SALES ENGINE ROUTER — handle active engine sessions FIRST
           // (highest priority, before chatbot rules / AI brain)
           // ══════════════════════════════════════════════════════════
+          let engineHandled = false;
           if (!inboxConvo?.human_takeover) {
             try {
               const engineResp = await fetch(`${SUPABASE_URL}/functions/v1/sales-engine-router`, {
@@ -319,12 +320,140 @@ Deno.serve(async (req) => {
               const engineData = await engineResp.json();
               if (engineData?.handled) {
                 console.log(`Sales engine handled reply for ${from}: action=${engineData.action}, status=${engineData.status}`);
-                continue; // skip chatbot rules + AI brain
+                engineHandled = true;
+              } else if (engineData?.reason === "no_active_session") {
+                // ─── AUTO-START engine session if lead vertical matches ───
+                try {
+                  let leadVertical: string | null = null;
+                  // Detect vertical from existing lead tables
+                  const phoneVariants = [from, from.replace(/^91/, ""), `91${from.replace(/^91/, "")}`];
+                  const checks: Array<[string, string]> = [
+                    ["insurance_clients", "insurance"],
+                    ["loan_leads", "loans"],
+                    ["hsrp_bookings", "hsrp"],
+                    ["rental_bookings", "rentals"],
+                  ];
+                  for (const [tbl, vert] of checks) {
+                    const { data: hit } = await supabase.from(tbl).select("id").or(phoneVariants.map(p => `phone.eq.${p}`).join(",")).limit(1).maybeSingle();
+                    if (hit) { leadVertical = vert; break; }
+                  }
+                  // Fallback: check generic leads table for service_category
+                  if (!leadVertical) {
+                    const { data: anyLead } = await supabase.from("leads").select("service_category").or(phoneVariants.map(p => `phone.eq.${p}`).join(",")).limit(1).maybeSingle();
+                    if (anyLead?.service_category) leadVertical = String(anyLead.service_category).toLowerCase();
+                  }
+
+                  if (leadVertical) {
+                    const { data: matchEngine } = await supabase
+                      .from("sales_engines")
+                      .select("id, name")
+                      .eq("is_active", true)
+                      .eq("vertical", leadVertical)
+                      .order("created_at", { ascending: false })
+                      .limit(1)
+                      .maybeSingle();
+
+                    if (matchEngine) {
+                      // Create a session at the first step so router can take over from next message
+                      const { data: firstStep } = await supabase
+                        .from("sales_engine_steps")
+                        .select("step_key")
+                        .eq("engine_id", matchEngine.id)
+                        .order("order_index", { ascending: true })
+                        .limit(1)
+                        .maybeSingle();
+
+                      if (firstStep) {
+                        await supabase.from("sales_engine_sessions").insert({
+                          engine_id: matchEngine.id,
+                          phone: from,
+                          customer_name: contactName,
+                          current_step_key: firstStep.step_key,
+                          status: "active",
+                          last_reply_at: new Date().toISOString(),
+                        });
+                        console.log(`Auto-started engine "${matchEngine.name}" for ${from} (vertical=${leadVertical})`);
+
+                        // Re-route this same message through the new session
+                        const reroute = await fetch(`${SUPABASE_URL}/functions/v1/sales-engine-router`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+                          body: JSON.stringify({ phone: from, message_text: messageText, customer_name: contactName }),
+                        });
+                        const rerouteData = await reroute.json();
+                        if (rerouteData?.handled) engineHandled = true;
+                      }
+                    }
+                  }
+                } catch (autoErr) {
+                  console.error("auto-start engine failed:", autoErr);
+                }
               }
             } catch (e) {
               console.error("sales-engine-router call failed:", e);
             }
           }
+
+          // ══════════════════════════════════════════════════════════
+          // REPLY AGENT FALLBACK — if no engine handled it, try AI agent
+          // ══════════════════════════════════════════════════════════
+          if (!engineHandled && !inboxConvo?.human_takeover) {
+            try {
+              const { data: agent } = await supabase
+                .from("reply_agents")
+                .select("id, name")
+                .eq("is_active", true)
+                .eq("channel", "whatsapp")
+                .order("priority", { ascending: false })
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (agent) {
+                const agentResp = await fetch(`${SUPABASE_URL}/functions/v1/reply-agent-runner`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+                  body: JSON.stringify({
+                    agent_id: agent.id,
+                    inbound_message: messageText,
+                    customer_phone: from,
+                    customer_name: contactName,
+                  }),
+                });
+                const agentData = await agentResp.json();
+                if (agentData?.reply && agentData?.auto_sent !== false) {
+                  // Send via WhatsApp
+                  const WA_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+                  const WA_PHONE_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+                  if (WA_TOKEN && WA_PHONE_ID) {
+                    const waResp = await fetch(`https://graph.facebook.com/v22.0/${WA_PHONE_ID}/messages`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${WA_TOKEN}` },
+                      body: JSON.stringify({ messaging_product: "whatsapp", to: from, type: "text", text: { body: agentData.reply } }),
+                    });
+                    const waData = await waResp.json();
+                    if (inboxConvo?.id) {
+                      await supabase.from("wa_inbox_messages").insert({
+                        conversation_id: inboxConvo.id,
+                        direction: "outbound",
+                        message_type: "text",
+                        content: agentData.reply,
+                        wa_message_id: waData?.messages?.[0]?.id || null,
+                        status: waData?.messages?.[0]?.id ? "sent" : "failed",
+                        sent_by_name: `Reply Agent: ${agent.name}`,
+                      });
+                    }
+                    console.log(`Reply agent "${agent.name}" auto-replied to ${from}`);
+                    engineHandled = true;
+                  }
+                }
+              }
+            } catch (e) {
+              console.error("reply-agent fallback failed:", e);
+            }
+          }
+
+          if (engineHandled) continue; // skip chatbot rules + AI brain
 
           // ── Check new inbox human_takeover flag ──
           if (inboxConvo?.human_takeover) {
