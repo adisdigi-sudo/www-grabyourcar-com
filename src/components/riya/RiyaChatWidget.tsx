@@ -37,12 +37,40 @@ export const RiyaChatWidget = ({
   const [loading, setLoading] = useState(false);
   const [sessionId] = useState(() => `riya_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const seenRealtimeMessageIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, loading]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`riya-widget-${sessionId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "riya_chat_messages", filter: `session_id=eq.${sessionId}` },
+        (payload) => {
+          const msg = payload.new as { id: string; role: "user" | "assistant"; content: string; sender_name?: string | null };
+          if (
+            seenRealtimeMessageIds.current.has(msg.id) ||
+            msg.role === "user" ||
+            msg.sender_name === "Riya (AI)"
+          ) {
+            return;
+          }
+
+          seenRealtimeMessageIds.current.add(msg.id);
+          setMessages((prev) => [...prev, { role: "assistant", content: msg.content }]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId]);
 
   const send = async () => {
     const text = input.trim();
@@ -128,7 +156,7 @@ export const RiyaChatWidget = ({
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 px-3" ref={scrollRef}>
+      <ScrollArea className="flex-1 min-h-0 px-3" viewportRef={scrollRef}>
         <div className="space-y-3 py-4">
           {messages.map((m, idx) => (
             <div key={idx} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
@@ -140,7 +168,7 @@ export const RiyaChatWidget = ({
                     : "bg-muted rounded-bl-sm"
                 )}
               >
-                <div className="prose prose-sm dark:prose-invert max-w-none [&_p]:my-1 [&_a]:text-primary [&_a]:underline">
+                <div className="prose prose-sm dark:prose-invert max-w-none break-words [&_p]:my-1 [&_a]:text-primary [&_a]:underline [&_*]:break-words">
                   <ReactMarkdown>{m.content}</ReactMarkdown>
                 </div>
               </div>
