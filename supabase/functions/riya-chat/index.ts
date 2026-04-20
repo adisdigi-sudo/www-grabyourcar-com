@@ -6,62 +6,94 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Tum **Riya** ho — GrabYourCar.com ki AI sales assistant. Friendly Hinglish me baat karo (English + Hindi mix, jaise normal Indian customer support karta hai). Concise, warm aur helpful.
+// ── Vertical specialists (Riya pretends these are different experts) ──
+const VERTICAL_PERSONAS: Record<string, { name: string; designation: string; keywords: RegExp }> = {
+  loans: { name: "Bakshi sir", designation: "Loan Expert", keywords: /\b(loan|emi|finance|interest|tenure|kist|kisht|installment|bank|hdfc|icici|sbi|axis|disburse|sanction|cibil|credit\s*score)\b/i },
+  insurance: { name: "Sharma sir", designation: "Insurance Expert", keywords: /\b(insur|policy|premium|renewal|claim|tp|own\s*damage|comprehensive|third\s*party|ncb|idv|expire|expiry)\b/i },
+  sales: { name: "Verma sir", designation: "Sales Manager", keywords: /\b(buy|purchase|new\s*car|swift|creta|nexon|ertiga|fortuner|innova|on[\s-]*road|test\s*drive|booking|delivery|exchange)\b/i },
+  hsrp: { name: "Singh sir", designation: "HSRP Expert", keywords: /\b(hsrp|number\s*plate|high\s*security|registration\s*plate|nameplate)\b/i },
+  rentals: { name: "Kapoor sir", designation: "Self-Drive Manager", keywords: /\b(rent|rental|self[\s-]*drive|hire|kiraye|kiraya|hourly|daily|monthly|weekend\s*car)\b/i },
+  accessories: { name: "Mehra sir", designation: "Accessories Expert", keywords: /\b(accessor|seat\s*cover|car\s*mat|perfume|alloy|wheel|stereo|infotainment|spoiler|protector)\b/i },
+};
 
-## Tumhari personality & reply style (BAHUT IMPORTANT)
-- Apna naam hamesha "Riya from GrabYourCar" batao jab koi puchhe.
+const SYSTEM_PROMPT = `Tum **Riya** ho — GrabYourCar.com ki AI sales assistant. Friendly Hinglish me baat karo (English + Hindi mix). Concise, warm aur helpful.
+
+## Personality & reply style
+- Apna naam hamesha "Riya from GrabYourCar" batao.
 - Polite, energetic, playful, never pushy. Customer ko apna doost samjho.
 - **Reply HAMESHA chhota rakho — ek ya do line maximum.** Paragraph KABHI mat likho.
-- WhatsApp chat jaisa feel — natural, casual, ek baar me ek hi cheez puchho ya batao.
-- Emojis use karo thoda — 1-2 per message, zyada nahi (🚗 😊 👍 🔥 ✨).
-- Customer ko enjoy karwao — thodi fun, witty, warm vibes do taaki yaad rakhe.
-- Bullet points / lists tabhi do jab user explicitly options maange. Otherwise plain conversational text.
-- Har reply ke end me ek chhota natural follow-up question ya next step suggest karo (jaise "Konsi car pasand hai?" / "Budget kya rakha hai?" / "Phone number share karein, brochure bhej dun?").
-- Boring corporate tone se bacho — friendly local dukaan-wale jaisa warmth lao.
+- WhatsApp chat jaisa feel — natural, casual.
+- Emojis use karo thoda — 1-2 per message (🚗 😊 👍 🔥 ✨).
+- Bullet points / lists tabhi do jab user explicitly options maange.
+- Har reply ke end me ek chhota natural follow-up question ya next step suggest karo.
 
-## CRITICAL — Language matching (bahut zaroori!)
-Customer ki language ko AUTOMATICALLY detect karke usi me reply karo:
-- **Pure English** likhe (e.g. "hello, I want to buy a car") → reply in **clean professional English only**, no Hindi words.
-- **Pure Hindi/Devanagari** likhe (e.g. "मुझे कार चाहिए") → reply in **Hindi (Devanagari script)**.
-- **Hinglish / Roman Hindi** likhe (e.g. "bhai car chahiye", "kitne ka hai") → reply in **friendly Hinglish** (default).
-- **Punjabi/Marathi/Tamil/Bengali/Gujarati** etc. likhe → us regional language me reply karo (Roman script chalega agar customer Roman use kare).
-- Har naye message pe language re-detect karo. Beech me switch karein to tum bhi switch karo immediately.
-- Greeting/intro line bhi customer ki language me hi do.
+## CRITICAL — Multi-Vertical Specialist Mode (BAHUT BAHUT IMPORTANT)
+Tum sirf Riya nahi ho — tum poori GrabYourCar team ka face ho. Har vertical ke liye alag specialist hai jisko tum customer ke saamne announce karti ho:
 
-## CRITICAL — Role clarity (bahut zaroori!)
-- Tum **GrabYourCar ki sales assistant** ho — tum customer ko car BECHTI ho, customer nahi ho.
-- **KABHI BHI** customer se mat kehna ki "main car kharidna chahti hoon" ya "meri madad karein". Tum HELPER ho, asker nahi.
-- Hamesha customer ki need samjho aur unko solution do — cars dikhao, price batao, brochure bhejo, EMI calculate karo.
-- Agar user sirf "hello" / "hi" / "hey" / "namaste" likhe → **warm welcome do**, KABHI rude ya direct mat ho. Example: "Hanji, welcome to GrabYourCar! 🙏 Main Riya, bataiye main aapki kaise help karun? 😊" — phir wait karo, unhone batayenge.
-- **KABHI BHI** "Kya chahiye aapko?" jaisa rude tone mat use karo — yeh demanding lagta hai. Hamesha "Bataiye main kaise help karun?" / "How can I help you today?" jaisa polite phrasing use karo.
-- Agar user casual/funny baat kare (jaise "hahaha", "lol"), to friendly reply do aur dheere se topic ko car/service pe le aao. Example: "Haha 😄 Waise bataiye, koi car dhundh rahe ho ya insurance/loan ki info chahiye?"
-- Tum AI/assistant ho jo GrabYourCar ki taraf se kaam karti ho — customer apni need batayega, tum solution dogi.
+- **Car Sales** — "Verma sir" (Sales Manager)
+- **Car Loan / Finance** — "Bakshi sir" (Loan Expert)
+- **Car Insurance** — "Sharma sir" (Insurance Expert)
+- **HSRP Number Plates** — "Singh sir" (HSRP Expert)
+- **Self-Drive Rentals** — "Kapoor sir" (Self-Drive Manager)
+- **Accessories** — "Mehra sir" (Accessories Expert)
 
-## GrabYourCar kya offer karta hai
-1. **New Car Sales** — All brands (Maruti, Hyundai, Tata, Mahindra, Kia, Toyota, Honda, MG, Skoda, VW, Premium brands). Best on-road price + free home delivery.
-2. **Car Insurance** — Comprehensive, Third-party, Own Damage. 25+ insurers compare. Instant policy.
-3. **Car Loans** — Tie-ups with HDFC, ICICI, SBI, Axis, BoB. Lowest EMI, fast approval.
-4. **HSRP (High Security Number Plates)** — Govt-approved plates with home delivery.
-5. **Self-Drive Car Rentals** — Hourly/daily/monthly rentals across India.
-6. **Dealer Network** — Pan-India dealer connect for test drives & best price negotiation.
-7. **Accessories** — Genuine + aftermarket accessories home delivery.
+### Specialist handoff rule:
+Jaise hi customer kisi specific vertical me interest dikhaye (jaise "loan chahiye", "insurance kitne ka hai", "Swift chahiye"), tum turant warmly bolo, EXAMPLE:
 
-## Tools tum use kar sakti ho
-- **capture_lead**: Jab user kisi service me interested ho aur naam + phone share kare. Vertical sahi choose karo (sales/insurance/loans/hsrp/rentals/dealer/accessories).
-- **send_brochure**: Jab user kisi specific car ka brochure maange. Phone number lazmi hai.
-- **request_human_handoff**: SIRF jab user explicit bole "human chahiye", "agent se baat karni hai", "talk to person", ya bahut frustrated ho.
+> "Hanji, **Bakshi sir hamare loan expert hain** — main unse abhi connect karwati hoon, ek second 🙏"
+
+Phir agle reply me khud Bakshi sir ki taraf se information do, EXAMPLE:
+
+> "Hi, Bakshi here from loan team 👋 GrabYourCar pe HDFC, ICICI, SBI sab ke loan available hain. Aapki car kaunsi hai aur kitne ka loan chahiye?"
+
+**KEY**: Customer ko lagna chahiye ki sach me alag expert join hua hai. But backend pe sab tum hi ho. Specialist ke naam pe content/EMI/policy/brochure share karo. Riya wapas tab aaye jab vertical badle ya general chat ho.
+
+## Language matching
+- **English** → reply in clean English only.
+- **Hindi (Devanagari)** → reply in Hindi.
+- **Hinglish / Roman Hindi** → reply in friendly Hinglish (default).
+- **Punjabi/Marathi/Tamil/Bengali/Gujarati** → us regional language me.
+- Har naye message pe language re-detect karo.
+
+## Role clarity
+- Tum **GrabYourCar ki sales assistant** ho — customer ko serve karti ho, customer nahi ho.
+- "main car kharidna chahti hoon" jaisa NEVER.
+- Hello/hi/namaste pe → "Hanji, welcome to GrabYourCar! 🙏 Main Riya, bataiye main aapki kaise help karun? 😊"
+- "Kya chahiye aapko?" jaisa rude tone NEVER. Always polite "Bataiye main kaise help karun?".
+- Casual baat (hahaha/lol) pe friendly reply, then gently topic vapas product pe.
+
+## GrabYourCar services
+1. **New Car Sales** — All brands, best on-road price (Verma sir)
+2. **Car Insurance** — 25+ insurers compare, instant policy (Sharma sir)
+3. **Car Loans** — HDFC, ICICI, SBI, Axis, BoB, lowest EMI (Bakshi sir)
+4. **HSRP** — Govt-approved plates with home delivery (Singh sir)
+5. **Self-Drive Rentals** — Hourly/daily/monthly across India (Kapoor sir)
+6. **Dealer Network** — Pan-India dealer connect for test drives
+7. **Accessories** — Genuine + aftermarket home delivery (Mehra sir)
+
+## Tools
+- **capture_lead**: Jab user kisi service me interested ho aur naam + phone share kare.
+- **send_brochure**: Jab user kisi specific car ka brochure maange. Phone number lazmi.
+- **request_human_handoff**: SIRF jab user explicit bole "real human chahiye" ya bahut frustrated ho.
 
 ## Rules
-- Jab tak phone number nahi mile tab tak lead capture mat karo. Politely maango.
-- Brochure ke liye: pehle car name + phone number lo, fir send_brochure call karo.
+- Jab tak phone nahi mile tab tak lead capture mat karo. Politely maango.
+- Brochure ke liye: pehle car name + phone, fir send_brochure.
 - Price exact nahi pata to "approximate range" do aur exact ke liye executive callback offer karo.
-- Kabhi mat bolo ki tum AI/bot ho jab tak user direct na puchhe — bolo "I'm Riya, your assistant".
-- Jhuth mat bolo. Pata nahi to "let me connect you with our expert" bolo.`;
+- Kabhi mat bolo ki tum AI/bot ho jab tak user direct na puchhe.
+- Jhuth mat bolo. Pata nahi to "let me check with our expert" bolo.`;
 
 interface ToolCall {
   id: string;
   type: "function";
   function: { name: string; arguments: string };
+}
+
+function detectVertical(text: string): string | null {
+  for (const [slug, persona] of Object.entries(VERTICAL_PERSONAS)) {
+    if (persona.keywords.test(text)) return slug;
+  }
+  return null;
 }
 
 async function executeToolCall(
@@ -79,7 +111,6 @@ async function executeToolCall(
       const cleanPhone = String(phone).replace(/\D/g, "").slice(-10);
       if (cleanPhone.length !== 10) return JSON.stringify({ success: false, error: "Invalid phone (need 10 digits)" });
 
-      // Insert into automation_lead_tracking
       const leadId = crypto.randomUUID();
       const { error } = await supabase.from("automation_lead_tracking").insert({
         lead_id: leadId,
@@ -105,7 +136,6 @@ async function executeToolCall(
       if (!phone || !car_name) return JSON.stringify({ success: false, error: "Phone & car_name required" });
       const cleanPhone = String(phone).replace(/\D/g, "").slice(-10);
 
-      // Find brochure
       const { data: cars } = await supabase
         .from("cars")
         .select("id, name, brand, brochure_url, slug")
@@ -114,7 +144,6 @@ async function executeToolCall(
 
       const car = cars?.[0];
       if (!car?.brochure_url) {
-        // Save lead anyway and let team send
         await supabase.from("automation_lead_tracking").insert({
           lead_id: crypto.randomUUID(),
           name: name || "Brochure Request",
@@ -132,23 +161,21 @@ async function executeToolCall(
         });
       }
 
-      // Try sending via WhatsApp
       try {
         await supabase.functions.invoke("wa-send-inbox", {
           body: {
             phone: `91${cleanPhone}`,
             message_type: "document",
-            content: `Hi ${name || "there"}! Riya here from GrabYourCar 👋\n\n${car.brand} ${car.name} ka brochure attached hai. Koi bhi question ho to reply karein!`,
+            content: `Hi ${name || "there"}! Riya here from GrabYourCar 👋\n\n${car.brand} ${car.name} ka brochure attached hai.`,
             media_url: car.brochure_url,
             media_filename: `${car.brand}-${car.name}-brochure.pdf`,
             sent_by_name: "Riya (AI)",
           },
         });
       } catch (e) {
-        console.warn("[riya-chat] WhatsApp send failed, brochure URL will be returned:", e);
+        console.warn("[riya-chat] WhatsApp send failed:", e);
       }
 
-      // Save lead
       await supabase.from("automation_lead_tracking").insert({
         lead_id: crypto.randomUUID(),
         name: name || "Brochure Request",
@@ -182,21 +209,15 @@ async function executeToolCall(
         vertical: "sales",
         source: "riya_chatbot",
         lead_source_type: "human_handoff",
-        message: `URGENT — Human agent requested. Reason: ${reason || "Not specified"}`,
+        message: `Reason: ${reason || "Customer wants human"}`,
         status: "new",
-        priority: "high",
         raw_data: args as never,
-      } as never);
-
-      return JSON.stringify({
-        success: true,
-        message: `Aapki request agent team ko forward kar di hai. 5-10 min me hamari team ${cleanPhone} pe call karegi.`,
       });
+      return JSON.stringify({ success: true, message: `Hamari team aapko ${cleanPhone} pe 5 min me call karegi.` });
     }
 
-    return JSON.stringify({ error: `Unknown tool: ${fn}` });
+    return JSON.stringify({ success: false, error: `Unknown tool: ${fn}` });
   } catch (e) {
-    console.error("[riya-chat] tool error:", fn, e);
     return JSON.stringify({ success: false, error: e instanceof Error ? e.message : "Tool execution failed" });
   }
 }
@@ -210,12 +231,12 @@ const TOOLS = [
       parameters: {
         type: "object",
         properties: {
-          name: { type: "string", description: "Customer name" },
+          name: { type: "string" },
           phone: { type: "string", description: "10-digit Indian phone number" },
-          vertical: { type: "string", enum: ["sales", "insurance", "loans", "hsrp", "rentals", "dealer", "accessories"], description: "Service category" },
+          vertical: { type: "string", enum: ["sales", "insurance", "loans", "hsrp", "rentals", "dealer", "accessories"] },
           city: { type: "string" },
-          message: { type: "string", description: "What customer is looking for" },
-          car_interest: { type: "string", description: "Specific car they asked about" },
+          message: { type: "string" },
+          car_interest: { type: "string" },
         },
         required: ["phone", "vertical"],
       },
@@ -225,13 +246,13 @@ const TOOLS = [
     type: "function",
     function: {
       name: "send_brochure",
-      description: "Send a car brochure PDF to the customer via WhatsApp. Requires car name and phone number.",
+      description: "Send a car brochure PDF to the customer via WhatsApp.",
       parameters: {
         type: "object",
         properties: {
-          car_name: { type: "string", description: "Car model name e.g. Swift, Creta" },
-          phone: { type: "string", description: "10-digit Indian phone number" },
-          name: { type: "string", description: "Customer name" },
+          car_name: { type: "string" },
+          phone: { type: "string" },
+          name: { type: "string" },
         },
         required: ["car_name", "phone"],
       },
@@ -246,14 +267,78 @@ const TOOLS = [
         type: "object",
         properties: {
           name: { type: "string" },
-          phone: { type: "string", description: "10-digit Indian phone number for callback" },
-          reason: { type: "string", description: "Why they want a human" },
+          phone: { type: "string" },
+          reason: { type: "string" },
         },
         required: ["phone"],
       },
     },
   },
 ];
+
+async function persistMessages(
+  supabase: ReturnType<typeof createClient>,
+  sessionKey: string,
+  messages: Array<{ role: string; content: string }>,
+  assistantReply: string,
+  userAgent?: string
+) {
+  try {
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    const lastUserContent = lastUser?.content || "";
+    const phoneMatch = lastUserContent.match(/\b([6-9]\d{9})\b/);
+    const detectedVertical = detectVertical(lastUserContent);
+
+    const { data: existing } = await supabase
+      .from("riya_chat_sessions")
+      .select("id, takeover_state, message_count")
+      .eq("session_key", sessionKey)
+      .maybeSingle();
+
+    let sessionId: string;
+    if (existing) {
+      sessionId = existing.id as string;
+      await supabase
+        .from("riya_chat_sessions")
+        .update({
+          last_message_preview: assistantReply.slice(0, 200),
+          last_message_at: new Date().toISOString(),
+          last_visitor_message_at: new Date().toISOString(),
+          message_count: (existing.message_count as number) + 2,
+          ...(phoneMatch ? { visitor_phone: phoneMatch[1] } : {}),
+          ...(detectedVertical ? { vertical_interest: detectedVertical } : {}),
+        })
+        .eq("id", sessionId);
+    } else {
+      const { data: created } = await supabase
+        .from("riya_chat_sessions")
+        .insert({
+          session_key: sessionKey,
+          last_message_preview: assistantReply.slice(0, 200),
+          last_visitor_message_at: new Date().toISOString(),
+          message_count: 2,
+          visitor_phone: phoneMatch ? phoneMatch[1] : null,
+          vertical_interest: detectedVertical,
+          user_agent: userAgent || null,
+          takeover_state: "ai",
+        })
+        .select("id")
+        .single();
+      sessionId = created?.id as string;
+    }
+
+    if (!sessionId) return;
+
+    const rows: Array<Record<string, unknown>> = [];
+    if (lastUser) {
+      rows.push({ session_id: sessionId, role: "user", content: lastUser.content, sender_name: "Visitor" });
+    }
+    rows.push({ session_id: sessionId, role: "assistant", content: assistantReply, sender_name: "Riya (AI)" });
+    await supabase.from("riya_chat_messages").insert(rows);
+  } catch (e) {
+    console.warn("[riya-chat] persist failed:", e);
+  }
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -281,27 +366,57 @@ serve(async (req) => {
       });
     }
 
-    const sessionContext = {
-      sessionId: sessionId || crypto.randomUUID(),
-      userAgent: req.headers.get("user-agent") || undefined,
-    };
+    const sessionKey = sessionId || crypto.randomUUID();
+    const userAgent = req.headers.get("user-agent") || undefined;
 
-    // Multi-turn tool loop (non-streaming for tool calls, stream final response)
+    // Check takeover state — if a human agent has taken over, do NOT reply
+    const { data: sessionRow } = await supabase
+      .from("riya_chat_sessions")
+      .select("id, takeover_state, assigned_agent_name")
+      .eq("session_key", sessionKey)
+      .maybeSingle();
+
+    if (sessionRow?.takeover_state === "human") {
+      const lastUser = [...messages].reverse().find((m) => m.role === "user");
+      if (lastUser && sessionRow.id) {
+        await supabase.from("riya_chat_messages").insert({
+          session_id: sessionRow.id,
+          role: "user",
+          content: lastUser.content,
+          sender_name: "Visitor",
+        });
+        await supabase
+          .from("riya_chat_sessions")
+          .update({
+            last_message_preview: lastUser.content.slice(0, 200),
+            last_message_at: new Date().toISOString(),
+            last_visitor_message_at: new Date().toISOString(),
+          })
+          .eq("id", sessionRow.id);
+      }
+      return new Response(
+        JSON.stringify({
+          message: `${sessionRow.assigned_agent_name || "Hamare expert"} aapse personally connect ho rahe hain — ek minute 🙏`,
+          sessionId: sessionKey,
+          takeover: true,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const sessionContext = { sessionId: sessionKey, userAgent };
+
     let conversationMessages: Array<Record<string, unknown>> = [
       { role: "system", content: SYSTEM_PROMPT },
       ...messages,
     ];
 
-    // First pass — check for tool calls
     let iterations = 0;
     while (iterations < 4) {
       iterations++;
       const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
           messages: conversationMessages,
@@ -315,7 +430,7 @@ serve(async (req) => {
           return new Response(JSON.stringify({ error: "Rate limit exceeded, try again in a moment." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
         if (aiResp.status === 402) {
-          return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          return new Response(JSON.stringify({ error: "AI credits exhausted." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
         const txt = await aiResp.text();
         console.error("[riya-chat] AI gateway error:", aiResp.status, txt);
@@ -330,34 +445,29 @@ serve(async (req) => {
 
       const toolCalls: ToolCall[] | undefined = choice.tool_calls;
       if (toolCalls && toolCalls.length > 0) {
-        // Execute tools, append, loop again
         conversationMessages.push(choice as Record<string, unknown>);
         for (const tc of toolCalls) {
           const result = await executeToolCall(tc, supabase, sessionContext);
-          conversationMessages.push({
-            role: "tool",
-            tool_call_id: tc.id,
-            content: result,
-          });
+          conversationMessages.push({ role: "tool", tool_call_id: tc.id, content: result });
         }
         continue;
       }
 
-      // Final response — no tool calls
+      const reply = choice.content || "Sorry, I didn't catch that. Phir se bolenge?";
+      persistMessages(supabase, sessionKey, messages, reply, userAgent).catch((e) =>
+        console.warn("[riya-chat] persist error:", e)
+      );
+
       return new Response(
-        JSON.stringify({
-          message: choice.content || "Sorry, I didn't catch that. Phir se bolenge?",
-          sessionId: sessionContext.sessionId,
-        }),
+        JSON.stringify({ message: reply, sessionId: sessionKey }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Hit iteration limit
     return new Response(
       JSON.stringify({
         message: "Lagta hai kuch complex hai. Hamari team aapko call karegi — kya phone number share karenge?",
-        sessionId: sessionContext.sessionId,
+        sessionId: sessionKey,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

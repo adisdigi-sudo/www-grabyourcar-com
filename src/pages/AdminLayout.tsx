@@ -19,7 +19,11 @@ import { LoanCRMDashboard } from "@/components/admin/LoanCRMDashboard";
 import { NotificationCenter } from "@/components/admin/NotificationCenter";
 import { CRMAssistant } from "@/components/admin/CRMAssistant";
 import { AICofounderBanner } from "@/components/admin/AICofounderBanner";
+import { LiveChatsBell } from "@/components/admin/livechats/LiveChatsBell";
 import { Shield } from "lucide-react";
+const LiveChatsDashboard = lazy(() =>
+  import("@/components/admin/livechats/LiveChatsDashboard").then((m) => ({ default: m.LiveChatsDashboard }))
+);
 const PersonalizedWelcomeBanner = lazy(() =>
   import("@/components/admin/PersonalizedWelcomeBanner").then((module) => ({ default: module.PersonalizedWelcomeBanner })),
 );
@@ -986,6 +990,8 @@ const AdminLayout = () => {
         return <LegacyLeadsManager />;
       case "my-hr":
         return <MyHRDashboard />;
+      case "live-chats":
+        return <LiveChatsDashboard />;
       default:
         return <AdminDashboard />;
     }
@@ -999,8 +1005,11 @@ const AdminLayout = () => {
         </AdminRenderBoundary>
       </Suspense>
 
-      <div className={cn("fixed z-50", isMobile ? "top-3 right-3" : "top-4 right-4 md:right-6")}>
+      <div className={cn("fixed z-50 flex items-center gap-2", isMobile ? "top-3 right-3" : "top-4 right-4 md:right-6")}>
         <Suspense fallback={null}>
+          <AdminRenderBoundary fallback={null} contextLabel="Live chats bell">
+            <LiveChatsBell onClick={() => setActiveTab("live-chats")} />
+          </AdminRenderBoundary>
           <AdminRenderBoundary fallback={null} contextLabel="Notifications center">
             <NotificationCenter />
           </AdminRenderBoundary>
