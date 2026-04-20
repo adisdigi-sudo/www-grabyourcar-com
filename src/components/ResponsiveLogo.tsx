@@ -45,10 +45,8 @@ export const ResponsiveLogo = ({
         ? brandingSettings!.logo_url           // use the new uploaded logo everywhere
         : logoDarkDefault;
   
-  // Use dark logo for footer (always on dark bg) or when in dark mode
-  const logoImage = variant === "footer" || effectiveTheme === "dark" 
-    ? logoDark 
-    : logoLight;
+  // Theme-aware: dark logo in dark mode, light logo in light mode (footer follows the theme too)
+  const logoImage = effectiveTheme === "dark" ? logoDark : logoLight;
 
   const brandName = brandingSettings?.brand_name || "Grabyourcar";
 
