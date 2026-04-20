@@ -13,7 +13,10 @@ import { toast } from "sonner";
 import {
   Plus, Phone, PhoneCall, PhoneOff, Upload, FileSpreadsheet,
   CheckCircle2, XCircle, SkipForward, Clock, Trash2, UserPlus, ListChecks,
+  Filter, MessageCircle, Send, Pause, Play,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import ExcelJS from "exceljs";
 
 /* ─────────────────────────────────────────────────────────────
@@ -141,6 +144,11 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
 
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
+
+  /* Filter / Bulk-move sidebar */
+  const [filterCampaignId, setFilterCampaignId] = useState<string | null>(null);
+  const [filterDisposition, setFilterDisposition] = useState<string>("interested");
+  const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
 
   /* ── load campaigns scoped to this vertical ── */
   const { data: campaigns = [], isLoading } = useQuery({
@@ -472,6 +480,109 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
     onError: (e: any) => toast.error(e.message),
   });
 
+  /* ── Filter dialog: load contacts of a campaign by disposition ── */
+  const { data: filteredContacts = [], refetch: refetchFiltered } = useQuery({
+    queryKey: ["calling-filter-contacts", filterCampaignId, filterDisposition],
+    enabled: !!filterCampaignId,
+    queryFn: async () => {
+      if (!filterCampaignId) return [];
+      let q = supabase
+        .from("auto_dialer_contacts")
+        .select("id, phone, name, email, city, disposition, call_status, lead_id, last_auto_followup_at, auto_followup_count, auto_followup_enabled, disposition_remarks, follow_up_date")
+        .eq("campaign_id", filterCampaignId)
+        .order("updated_at", { ascending: false })
+        .limit(1000);
+      if (filterDisposition && filterDisposition !== "all") {
+        q = q.eq("disposition", filterDisposition);
+      }
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  /* ── Bulk move selected contacts → vertical leads (new leads) ── */
+  const bulkMoveLeads = useMutation({
+    mutationFn: async () => {
+      if (!selectedContactIds.size) throw new Error("Nothing selected");
+      const ids = Array.from(selectedContactIds);
+      const { data: rows, error } = await supabase
+        .from("auto_dialer_contacts")
+        .select("*")
+        .in("id", ids);
+      if (error) throw error;
+
+      let created = 0;
+      for (const contact of rows || []) {
+        if (contact.lead_id) continue; // already converted
+        try {
+          const { data, error: invErr } = await supabase.functions.invoke("submit-lead", {
+            body: {
+              name: contact.name || "Calling Lead",
+              phone: contact.phone,
+              email: contact.email || undefined,
+              city: contact.city || undefined,
+              source: "calling_queue_bulk_move",
+              serviceCategory: verticalSlug,
+              vertical: verticalSlug,
+              message: contact.disposition_remarks || contact.notes || `Bulk-moved ${contact.disposition} lead from ${verticalLabel} calling queue`,
+            },
+          });
+          if (!invErr && (data as any)?.success !== false) {
+            const leadId = (data as any)?.lead_id || (data as any)?.id || null;
+            await supabase.from("auto_dialer_contacts").update({ lead_id: leadId }).eq("id", contact.id);
+            created++;
+          }
+        } catch (err) {
+          console.warn("bulk move failed for", contact.id, err);
+        }
+      }
+      return { created };
+    },
+    onSuccess: ({ created }) => {
+      toast.success(`✅ ${created} lead${created === 1 ? "" : "s"} moved to ${verticalLabel} pipeline`);
+      setSelectedContactIds(new Set());
+      refetchFiltered();
+      qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  /* ── Toggle auto follow-up for a contact ── */
+  const toggleAutoFollowup = useMutation({
+    mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
+      const { error } = await supabase
+        .from("auto_dialer_contacts")
+        .update({
+          auto_followup_enabled: enabled,
+          auto_followup_paused_at: enabled ? null : new Date().toISOString(),
+        })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchFiltered();
+      toast.success("Auto follow-up updated");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  /* ── Trigger an immediate auto-followup run (test/manual) ── */
+  const runAutoFollowupNow = useMutation({
+    mutationFn: async (slot: "morning" | "evening") => {
+      const { data, error } = await supabase.functions.invoke("calling-auto-followup", {
+        body: { slot },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: any) => {
+      toast.success(`Sent ${data?.sent || 0} follow-ups (skipped ${data?.skipped || 0})`);
+      refetchFiltered();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const totals = useMemo(() => {
     return campaigns.reduce(
       (acc: any, c: any) => {
@@ -682,6 +793,18 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
                       >
                         <PhoneCall className="h-3.5 w-3.5" /> Start Calling
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setFilterCampaignId(c.id);
+                          setFilterDisposition("interested");
+                          setSelectedContactIds(new Set());
+                        }}
+                        className="gap-1"
+                      >
+                        <Filter className="h-3.5 w-3.5" /> Filter & Bulk Move
+                      </Button>
                       {(c.interested_contacts || 0) > 0 && (
                         <Button size="sm" variant="outline" onClick={() => convertLeads.mutate(c.id)} className="gap-1">
                           <UserPlus className="h-3.5 w-3.5" /> Convert {c.interested_contacts} → Lead{c.interested_contacts === 1 ? "" : "s"}
@@ -765,6 +888,149 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
             >
               Import {pasteText.trim().split(/\r?\n/).filter(Boolean).length || 0} pasted line{pasteText.trim().split(/\r?\n/).filter(Boolean).length === 1 ? "" : "s"}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* FILTER + BULK MOVE DIALOG */}
+      <Dialog open={!!filterCampaignId} onOpenChange={(o) => { if (!o) { setFilterCampaignId(null); setSelectedContactIds(new Set()); } }}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-blue-600" />
+              Filter Contacts &amp; Bulk Move to {verticalLabel} Pipeline
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            {/* Filter chips */}
+            <div className="flex flex-wrap gap-1.5 items-center">
+              <span className="text-xs text-muted-foreground mr-1">Status:</span>
+              {[
+                { v: "interested", lbl: "✅ Interested", tone: "bg-emerald-500/15 text-emerald-700 border-emerald-300" },
+                { v: "hot", lbl: "🔥 Hot", tone: "bg-orange-500/15 text-orange-700 border-orange-300" },
+                { v: "callback", lbl: "📅 Callback", tone: "bg-blue-500/15 text-blue-700 border-blue-300" },
+                { v: "not_interested", lbl: "❌ Not Interested", tone: "bg-rose-500/15 text-rose-700 border-rose-300" },
+                { v: "no_answer", lbl: "📵 No Answer", tone: "bg-slate-500/15 text-slate-700 border-slate-300" },
+                { v: "all", lbl: "All", tone: "bg-muted text-foreground border-border" },
+              ].map(opt => (
+                <Button
+                  key={opt.v}
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { setFilterDisposition(opt.v); setSelectedContactIds(new Set()); }}
+                  className={`h-7 px-2.5 text-xs ${filterDisposition === opt.v ? opt.tone : ""}`}
+                >
+                  {opt.lbl}
+                </Button>
+              ))}
+              <Badge variant="outline" className="ml-auto">{filteredContacts.length} matching</Badge>
+            </div>
+
+            {/* Auto follow-up controls */}
+            <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20">
+              <CardContent className="p-3 flex items-center justify-between gap-2 flex-wrap">
+                <div className="text-xs">
+                  <p className="font-semibold flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5 text-emerald-600" /> Daily Auto Follow-up (2x WhatsApp)</p>
+                  <p className="text-muted-foreground">Interested + Hot leads receive auto WhatsApp at 10 AM &amp; 6 PM IST until converted to a lead.</p>
+                </div>
+                <div className="flex gap-1.5">
+                  <Button size="sm" variant="outline" onClick={() => runAutoFollowupNow.mutate("morning")} disabled={runAutoFollowupNow.isPending} className="h-7 text-xs gap-1">
+                    <Send className="h-3 w-3" /> Run Morning Now
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => runAutoFollowupNow.mutate("evening")} disabled={runAutoFollowupNow.isPending} className="h-7 text-xs gap-1">
+                    <Send className="h-3 w-3" /> Run Evening Now
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Bulk action bar */}
+            <div className="flex items-center justify-between gap-2 px-1">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={filteredContacts.length > 0 && selectedContactIds.size === filteredContacts.length}
+                  onCheckedChange={(checked) => {
+                    if (checked) setSelectedContactIds(new Set(filteredContacts.map((c: any) => c.id)));
+                    else setSelectedContactIds(new Set());
+                  }}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {selectedContactIds.size > 0 ? `${selectedContactIds.size} selected` : "Select all"}
+                </span>
+              </div>
+              <Button
+                size="sm"
+                disabled={!selectedContactIds.size || bulkMoveLeads.isPending}
+                onClick={() => bulkMoveLeads.mutate()}
+                className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                Move {selectedContactIds.size || ""} → New {verticalLabel} Lead{selectedContactIds.size === 1 ? "" : "s"}
+              </Button>
+            </div>
+
+            {/* Contact list */}
+            <ScrollArea className="h-[420px] border rounded-md">
+              {filteredContacts.length === 0 ? (
+                <div className="p-8 text-center text-sm text-muted-foreground">
+                  No contacts with this status yet.
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {filteredContacts.map((c: any) => {
+                    const isSelected = selectedContactIds.has(c.id);
+                    const alreadyLead = !!c.lead_id;
+                    return (
+                      <div
+                        key={c.id}
+                        className={`flex items-center gap-3 p-2.5 hover:bg-muted/40 ${alreadyLead ? "opacity-60" : ""}`}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          disabled={alreadyLead}
+                          onCheckedChange={(checked) => {
+                            const next = new Set(selectedContactIds);
+                            if (checked) next.add(c.id); else next.delete(c.id);
+                            setSelectedContactIds(next);
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm truncate">{c.name || "—"}</span>
+                            <span className="text-xs font-mono text-muted-foreground">+91 {c.phone}</span>
+                            {alreadyLead && <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-700">Already a lead</Badge>}
+                            {c.last_auto_followup_at && (
+                              <Badge variant="outline" className="text-[10px]">
+                                💬 Last sent {new Date(c.last_auto_followup_at).toLocaleString()}
+                              </Badge>
+                            )}
+                            {(c.auto_followup_count || 0) > 0 && (
+                              <Badge variant="outline" className="text-[10px]">{c.auto_followup_count}x sent</Badge>
+                            )}
+                            {!c.auto_followup_enabled && (
+                              <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300">Auto FU paused</Badge>
+                            )}
+                          </div>
+                          {c.disposition_remarks && (
+                            <p className="text-xs text-muted-foreground truncate">📝 {c.disposition_remarks}</p>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0"
+                          title={c.auto_followup_enabled ? "Pause auto follow-up" : "Resume auto follow-up"}
+                          onClick={() => toggleAutoFollowup.mutate({ id: c.id, enabled: !c.auto_followup_enabled })}
+                        >
+                          {c.auto_followup_enabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
           </div>
         </DialogContent>
       </Dialog>
