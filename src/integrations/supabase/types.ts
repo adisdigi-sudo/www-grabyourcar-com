@@ -1865,6 +1865,69 @@ export type Database = {
         }
         Relationships: []
       }
+      auto_pilot_pending_messages: {
+        Row: {
+          agent_type: string
+          approved_at: string | null
+          approved_by: string | null
+          context_snapshot: Json | null
+          created_at: string
+          error_message: string | null
+          id: string
+          message_body: string
+          message_type: string
+          recipient_name: string | null
+          recipient_phone: string
+          scheduled_for: string
+          sent_at: string | null
+          skipped_at: string | null
+          status: string
+          template_name: string | null
+          template_variables: Json | null
+          updated_at: string
+        }
+        Insert: {
+          agent_type: string
+          approved_at?: string | null
+          approved_by?: string | null
+          context_snapshot?: Json | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_body: string
+          message_type?: string
+          recipient_name?: string | null
+          recipient_phone: string
+          scheduled_for?: string
+          sent_at?: string | null
+          skipped_at?: string | null
+          status?: string
+          template_name?: string | null
+          template_variables?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          agent_type?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          context_snapshot?: Json | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_body?: string
+          message_type?: string
+          recipient_name?: string | null
+          recipient_phone?: string
+          scheduled_for?: string
+          sent_at?: string | null
+          skipped_at?: string | null
+          status?: string
+          template_name?: string | null
+          template_variables?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       automation_lead_tracking: {
         Row: {
           ad_campaign_id: string | null

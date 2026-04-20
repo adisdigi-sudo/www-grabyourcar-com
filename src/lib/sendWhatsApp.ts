@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getWhatsAppSignature } from "@/lib/senderSignature";
+import { requestWhatsAppPreview, shouldSkipPreview } from "@/components/whatsapp/WhatsAppPreviewDialog";
 
 interface SendWhatsAppParams {
   phone: string;
@@ -73,6 +74,28 @@ export async function sendWhatsApp({
       }
     }
 
+    // ─── Universal Preview Gate ───
+    // Show preview dialog before sending UNLESS caller is silent (bulk loop) or session-skip is on.
+    if (!silent && !shouldSkipPreview()) {
+      const preview = await requestWhatsAppPreview({
+        phone: fullPhone,
+        message: finalMessage,
+        name,
+        templateName,
+        messageType,
+        mediaUrl,
+        mediaFileName,
+        vertical,
+        logEvent,
+      });
+      if (!preview.confirmed) {
+        return { success: false, error: "Cancelled by user" };
+      }
+      if (preview.editedMessage && !templateName) {
+        finalMessage = preview.editedMessage;
+      }
+    }
+
     const body: Record<string, unknown> = {
       to: fullPhone,
       message: finalMessage,
@@ -132,11 +155,31 @@ export function clearSendModeCache() {
  */
 export async function sendWhatsAppBulk(
   recipients: Array<{ phone: string; message: string; name?: string }>,
-  options?: { delayMs?: number; onProgress?: (sent: number, total: number) => void }
-): Promise<{ sent: number; failed: number }> {
+  options?: { delayMs?: number; onProgress?: (sent: number, total: number) => void; vertical?: string }
+): Promise<{ sent: number; failed: number; cancelled?: boolean }> {
   const delay = options?.delayMs ?? 1500;
   let sent = 0;
   let failed = 0;
+
+  if (recipients.length === 0) return { sent: 0, failed: 0 };
+
+  // ─── Bulk Preview Gate ───
+  // Show first recipient as sample, confirm "Send to N", then loop silently.
+  if (!shouldSkipPreview()) {
+    const sample = recipients[0];
+    const preview = await requestWhatsAppPreview({
+      phone: normalizePhone(sample.phone),
+      message: sample.message,
+      name: sample.name,
+      vertical: options?.vertical,
+      bulkCount: recipients.length,
+      logEvent: "bulk_send",
+    });
+    if (!preview.confirmed) {
+      toast.info("Bulk send cancelled");
+      return { sent: 0, failed: 0, cancelled: true };
+    }
+  }
 
   for (let i = 0; i < recipients.length; i++) {
     const r = recipients[i];
