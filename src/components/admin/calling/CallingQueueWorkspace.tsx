@@ -142,6 +142,10 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
   const [disposition, setDisposition] = useState("");
   const [notes, setNotes] = useState("");
   const [followUp, setFollowUp] = useState("");
+  /* Point 6 — auto-advance state */
+  const [advancing, setAdvancing] = useState(false);
+  const [remainingInQueue, setRemainingInQueue] = useState<number | null>(null);
+  const [calledThisSession, setCalledThisSession] = useState(0);
 
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
@@ -340,10 +344,20 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
       .limit(1)
       .maybeSingle();
 
-    if (error) { toast.error(error.message); return null; }
+    if (error) { toast.error(error.message); setAdvancing(false); return null; }
+
+    /* Compute remaining (Point 6) */
+    const { count: pendingLeft } = await supabase
+      .from("auto_dialer_contacts")
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_id", campaignId)
+      .in("call_status", ["pending", "retry"]);
+    setRemainingInQueue(pendingLeft || 0);
+
     if (!data) {
       setActiveContact(null);
-      toast.success("🎉 Queue complete — no more pending numbers");
+      setAdvancing(false);
+      toast.success(`🎉 Queue complete — ${calledThisSession} call${calledThisSession === 1 ? "" : "s"} this session`);
       return null;
     }
 
@@ -364,17 +378,20 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
     setDisposition("");
     setNotes("");
     setFollowUp("");
+    setAdvancing(false);
     return data;
   }
 
   function startCalling(campaignId: string) {
     setActiveCampaignId(campaignId);
+    setCalledThisSession(0);
     pullNextContact(campaignId);
   }
 
   /* ── Save disposition + auto-pull next ── */
   async function saveDisposition() {
     if (!activeContact || !activeCampaignId || !disposition) return;
+    if (advancing) return; // guard double-click
 
     // Mandatory remarks for serious outcomes
     if (REMARKS_REQUIRED.has(disposition) && !notes.trim()) {
@@ -461,7 +478,42 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
     }
 
     qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
-    toast.success("Saved — pulling next number");
+    setCalledThisSession((n) => n + 1);
+    setAdvancing(true);
+    toast.success("✅ Saved — auto-loading next number…");
+    await pullNextContact(activeCampaignId);
+  }
+
+  /* Point 6 — Skip current number without saving (marks no_answer + advances) */
+  async function skipCurrent() {
+    if (!activeContact || !activeCampaignId || advancing) return;
+    setAdvancing(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase
+      .from("auto_dialer_contacts")
+      .update({
+        call_status: "no_answer",
+        disposition: "no_answer",
+        notes: "Skipped by agent",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", activeContact.id);
+    await supabase.from("auto_dialer_dispositions").insert({
+      campaign_id: activeCampaignId,
+      contact_id: activeContact.id,
+      phone: activeContact.phone,
+      customer_name: activeContact.name || null,
+      vertical_slug: verticalSlug,
+      disposition: "no_answer",
+      remarks: "Skipped by agent",
+      attempt_number: activeContact.dial_attempts || 1,
+      dialed_by: user?.id ?? null,
+      dialed_by_email: user?.email ?? null,
+    });
+    await refreshCampaignStats(activeCampaignId);
+    qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
+    setCalledThisSession((n) => n + 1);
+    toast.message("⏭ Skipped — pulling next number");
     await pullNextContact(activeCampaignId);
   }
 
@@ -499,6 +551,11 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
   function endSession() {
     setActiveContact(null);
     setActiveCampaignId(null);
+    setAdvancing(false);
+    setRemainingInQueue(null);
+    if (calledThisSession > 0) {
+      toast.success(`📊 Session ended — ${calledThisSession} call${calledThisSession === 1 ? "" : "s"} logged`);
+    }
   }
 
   /* ── Convert "interested" contacts into vertical leads ── */
@@ -771,12 +828,22 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
           onInteractOutside={(e) => e.preventDefault()}
         >
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
               <PhoneCall className="h-5 w-5 text-blue-600 animate-pulse" />
               Now Calling — Status required to continue
               {activeContact && (
                 <Badge variant="outline" className="text-[10px] ml-1">
                   Attempt #{activeContact.dial_attempts}
+                </Badge>
+              )}
+              {remainingInQueue !== null && (
+                <Badge className="text-[10px] bg-blue-600 text-white">
+                  📞 {remainingInQueue} left in queue
+                </Badge>
+              )}
+              {calledThisSession > 0 && (
+                <Badge variant="secondary" className="text-[10px]">
+                  ✅ {calledThisSession} done this session
                 </Badge>
               )}
             </DialogTitle>
@@ -845,23 +912,33 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-2 pt-2 border-t">
-                <Button size="sm" variant="ghost" onClick={endSession}>
-                  <PhoneOff className="h-4 w-4 mr-1" /> End Session
-                </Button>
+              <div className="flex items-center justify-between gap-2 pt-2 border-t flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="ghost" onClick={endSession} disabled={advancing}>
+                    <PhoneOff className="h-4 w-4 mr-1" /> End Session
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={skipCurrent} disabled={advancing}>
+                    <SkipForward className="h-4 w-4 mr-1" /> Skip (No Answer)
+                  </Button>
+                </div>
                 <Button
                   className="gap-2"
                   onClick={saveDisposition}
                   disabled={
+                    advancing ||
                     !disposition ||
                     (REMARKS_REQUIRED.has(disposition) && !notes.trim())
                   }
                 >
-                  Save &amp; Next Number <SkipForward className="h-4 w-4" />
+                  {advancing ? (
+                    <>⏳ Loading next…</>
+                  ) : (
+                    <>Save &amp; Auto-Next <SkipForward className="h-4 w-4" /></>
+                  )}
                 </Button>
               </div>
               <p className="text-[11px] text-center text-muted-foreground">
-                💡 Modal locked — save a disposition to load the next number, or "End Session" to exit.
+                💡 Auto-advance ON — saving a disposition immediately loads the next number. Use "Skip" if there's no answer.
               </p>
             </div>
           )}
