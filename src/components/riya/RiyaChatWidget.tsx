@@ -75,6 +75,9 @@ export const RiyaChatWidget = ({
     if (typeof window === "undefined") return null;
     return window.localStorage.getItem(SESSION_UUID_STORAGE);
   });
+  const [aiBusy, setAiBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const seenMessageIds = useRef<Set<string>>(new Set());
   const sessionReadClient = useMemo(() => {
