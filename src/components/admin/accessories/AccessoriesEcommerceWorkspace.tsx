@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Box,
+  PhoneCall,
 } from "lucide-react";
 import { AccessoriesEcomDashboard } from "./AccessoriesEcomDashboard";
 import { AccessoriesProductsPanel } from "./AccessoriesProductsPanel";
@@ -24,6 +25,7 @@ import { AccessoriesCrossSellPanel } from "./AccessoriesCrossSellPanel";
 import { AccessoriesSettingsPanel } from "./AccessoriesSettingsPanel";
 import { AccessoriesTrackingPanel } from "./AccessoriesTrackingPanel";
 import { LogisticsPartnersPanel } from "./LogisticsPartnersPanel";
+import { AccessoriesCallingPanel } from "./AccessoriesCallingPanel";
 import { AdminLivePreview, PreviewToggleButton } from "../shared/AdminLivePreview";
 
 const SIDEBAR_ITEMS = [
@@ -31,6 +33,7 @@ const SIDEBAR_ITEMS = [
   { id: "products", label: "Products", icon: Package },
   { id: "categories", label: "Categories", icon: Grid3X3 },
   { id: "orders", label: "Orders", icon: ShoppingCart },
+  { id: "calling", label: "Calling Queue", icon: PhoneCall },
   { id: "tracking", label: "Tracking", icon: Truck },
   { id: "logistics", label: "Logistics Partners", icon: Box },
   { id: "customers", label: "Customers", icon: Users },
@@ -56,6 +59,8 @@ export function AccessoriesEcommerceWorkspace() {
         return <AccessoriesCategoriesPanel />;
       case "orders":
         return <AccessoriesOrdersPanel />;
+      case "calling":
+        return <AccessoriesCallingPanel />;
       case "tracking":
         return <AccessoriesTrackingPanel />;
       case "logistics":
