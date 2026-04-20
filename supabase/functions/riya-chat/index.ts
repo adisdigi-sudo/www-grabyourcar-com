@@ -375,18 +375,6 @@ async function persistMessages(
       .eq("session_key", sessionKey)
       .maybeSingle();
 
-    if (!existing && cleanPhone) {
-      const { data: phoneSession } = await supabase
-        .from("riya_chat_sessions")
-        .select("id, takeover_state, message_count, session_key")
-        .eq("visitor_phone", cleanPhone)
-        .order("last_message_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      existing = phoneSession ?? null;
-    }
-
     let sessionId: string;
     if (existing) {
       sessionId = existing.id as string;
@@ -516,6 +504,7 @@ serve(async (req) => {
             takeover_state: "ai",
             assigned_agent_id: null,
             assigned_agent_name: null,
+            human_taken_over_at: null,
           })
           .eq("id", sessionRow.id)
           .eq("takeover_state", "human");
