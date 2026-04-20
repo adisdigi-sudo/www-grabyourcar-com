@@ -5,6 +5,7 @@ import App from "./App";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { BootstrapRuntime } from "@/components/bootstrap/BootstrapRuntime";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { shouldStabilizeStartupShellWindow } from "@/lib/adminPreviewStability";
 import { installSensitiveRouteReloadGuard } from "@/lib/devReloadGuard";
 import { ensureAppRootElement } from "@/lib/ensureAppRoot";
 import { installStartupShellHealthMonitor } from "@/lib/startupShell";
@@ -12,7 +13,10 @@ import { removeStartupShell } from "@/lib/startupShell";
 
 try {
   installSensitiveRouteReloadGuard();
-  installStartupShellHealthMonitor();
+
+  if (shouldStabilizeStartupShellWindow()) {
+    installStartupShellHealthMonitor();
+  }
 
   if (window.location.hostname.endsWith(".lovable.app")) {
     const existingNoindex = document.querySelector('meta[name="robots"]');
