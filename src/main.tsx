@@ -14,6 +14,7 @@ import { removeStartupShell } from "@/lib/startupShell";
 
 try {
   installSensitiveRouteReloadGuard();
+  stripInternalTransientParams();
 
   if (shouldStabilizeStartupShellWindow()) {
     installStartupShellHealthMonitor();
