@@ -40,6 +40,11 @@ interface ChatMessage {
 const HUMAN_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 
 const formatPhoneChip = (phone: string | null) => (phone ? `📞 ${phone}` : null);
+const formatSessionTitle = (session: Pick<ChatSession, "visitor_name" | "visitor_phone" | "session_key">) => {
+  if (session.visitor_name?.trim()) return session.visitor_name.trim();
+  if (session.visitor_phone) return `Customer ${session.visitor_phone.slice(-4)}`;
+  return `Visitor ${session.session_key.slice(-6)}`;
+};
 
 export const LiveChatsDashboard = () => {
   const { user } = useAuth();
@@ -140,7 +145,7 @@ export const LiveChatsDashboard = () => {
 
     if (reason === "timeout") {
       toast("Riya resumed automatically", {
-        description: `${session.visitor_name || session.visitor_phone || "Conversation"} par AI wapas active ho gaya.`,
+        description: `${formatSessionTitle(session)} par AI wapas active ho gaya.`,
       });
     } else {
       toast.success("Released to AI");
@@ -157,7 +162,11 @@ export const LiveChatsDashboard = () => {
         if (payload.eventType === "INSERT" && next?.id && !knownSessionIdsRef.current.has(next.id)) {
           knownSessionIdsRef.current.add(next.id);
           toast.success("New live chat started", {
-            description: (next.visitor_name || next.visitor_phone || "Visitor") + " just sent a message.",
+            description: formatSessionTitle({
+              visitor_name: next.visitor_name || null,
+              visitor_phone: next.visitor_phone || null,
+              session_key: next.session_key || "new-chat",
+            }) + " just sent a message.",
             icon: <BellRing className="h-4 w-4" />,
           });
         }
@@ -376,7 +385,7 @@ export const LiveChatsDashboard = () => {
                               <Bot className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                             )}
                             <span className="truncate text-sm font-medium">
-                              {session.visitor_name || session.visitor_phone || `Visitor ${session.session_key.slice(-6)}`}
+                              {formatSessionTitle(session)}
                             </span>
                           </div>
                         </div>
@@ -424,7 +433,7 @@ export const LiveChatsDashboard = () => {
                   <div className="min-w-0">
                     <CardTitle className="flex items-center gap-2 text-sm">
                       <User className="h-4 w-4" />
-                      <span className="truncate">{activeSession.visitor_name || activeSession.visitor_phone || "Anonymous Visitor"}</span>
+                      <span className="truncate">{formatSessionTitle(activeSession)}</span>
                       {activeSession.takeover_state === "human" ? (
                         <Badge className="text-[9px]">MANUAL LIVE</Badge>
                       ) : (
