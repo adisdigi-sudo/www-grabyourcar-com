@@ -361,7 +361,7 @@ async function persistMessages(
   messages: Array<{ role: string; content: string }>,
   assistantReply: string,
   userAgent?: string
-): Promise<string | null> {
+): Promise<{ sessionId: string | null; assistantMessageId: string | null }> {
   try {
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     const lastUserContent = lastUser?.content || "";
@@ -419,18 +419,24 @@ async function persistMessages(
       sessionId = created?.id as string;
     }
 
-    if (!sessionId) return null;
+    if (!sessionId) return { sessionId: null, assistantMessageId: null };
 
     const rows: Array<Record<string, unknown>> = [];
     if (lastUser) {
       rows.push({ session_id: sessionId, role: "user", content: lastUser.content, sender_name: "Visitor" });
     }
     rows.push({ session_id: sessionId, role: "assistant", content: assistantReply, sender_name: "Riya (AI)" });
-    await supabase.from("riya_chat_messages").insert(rows);
-    return sessionId;
+    const { data: insertedRows } = await supabase
+      .from("riya_chat_messages")
+      .insert(rows)
+      .select("id, role");
+    return {
+      sessionId,
+      assistantMessageId: insertedRows?.find((row) => row.role === "assistant")?.id ?? null,
+    };
   } catch (e) {
     console.warn("[riya-chat] persist failed:", e);
-    return null;
+    return { sessionId: null, assistantMessageId: null };
   }
 }
 
@@ -575,12 +581,12 @@ serve(async (req) => {
           conversationMessages.push({ role: "tool", tool_call_id: tc.id, content: result });
         }
         if (forcedReply) {
-          const persistedId = await persistMessages(supabase, sessionKey, messages, forcedReply, userAgent).catch((e) => {
+          const persisted = await persistMessages(supabase, sessionKey, messages, forcedReply, userAgent).catch((e) => {
             console.warn("[riya-chat] persist error:", e);
-            return null;
+            return { sessionId: null, assistantMessageId: null };
           });
           return new Response(
-            JSON.stringify({ message: forcedReply, sessionId: sessionKey, sessionUuid: persistedId || sessionRow?.id || null }),
+            JSON.stringify({ message: forcedReply, sessionId: sessionKey, sessionUuid: persisted.sessionId || sessionRow?.id || null, messageId: persisted.assistantMessageId }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
@@ -588,13 +594,13 @@ serve(async (req) => {
       }
 
       const reply = choice.content || "Sorry, I didn't catch that. Phir se bolenge?";
-      const persistedId = await persistMessages(supabase, sessionKey, messages, reply, userAgent).catch((e) => {
+      const persisted = await persistMessages(supabase, sessionKey, messages, reply, userAgent).catch((e) => {
         console.warn("[riya-chat] persist error:", e);
-        return null;
+        return { sessionId: null, assistantMessageId: null };
       });
 
       return new Response(
-        JSON.stringify({ message: reply, sessionId: sessionKey, sessionUuid: persistedId || sessionRow?.id || null }),
+        JSON.stringify({ message: reply, sessionId: sessionKey, sessionUuid: persisted.sessionId || sessionRow?.id || null, messageId: persisted.assistantMessageId }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

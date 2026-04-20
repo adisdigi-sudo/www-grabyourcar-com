@@ -40,10 +40,16 @@ interface ChatMessage {
 const HUMAN_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 
 const formatPhoneChip = (phone: string | null) => (phone ? `📞 ${phone}` : null);
+const sanitizeAgentName = (value: string | null | undefined) => {
+  const trimmed = value?.trim();
+  if (!trimmed) return "GrabYourCar Team";
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length >= 10) return "GrabYourCar Team";
+  return trimmed;
+};
 const formatSessionTitle = (session: Pick<ChatSession, "visitor_name" | "visitor_phone" | "session_key">) => {
   if (session.visitor_name?.trim()) return session.visitor_name.trim();
-  if (session.visitor_phone) return `Customer ${session.visitor_phone.slice(-4)}`;
-  return `Visitor ${session.session_key.slice(-6)}`;
+  return `Website Visitor ${session.session_key.slice(-4)}`;
 };
 
 export const LiveChatsDashboard = () => {
@@ -70,7 +76,7 @@ export const LiveChatsDashboard = () => {
       .eq("is_active", true)
       .maybeSingle();
 
-    return data?.display_name?.trim() || data?.phone?.trim() || user?.email?.split("@")[0] || "Agent";
+    return sanitizeAgentName(data?.display_name) || user?.email?.split("@")[0] || "GrabYourCar Team";
   };
 
   const loadSessions = async () => {
