@@ -18,6 +18,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ExcelJS from "exceljs";
+import { UploadHistoryPanel } from "./UploadHistoryPanel";
 
 /* ─────────────────────────────────────────────────────────────
    Unified Calling Queue Workspace
@@ -218,6 +219,9 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
       toast.error("No valid phone numbers found");
       return;
     }
+    const totalRows = rows.length;
+    const invalidRows = 0; // already filtered upstream by parseSpreadsheet/handlePasteImport
+
     /* dedupe by phone within this campaign */
     const { data: existing } = await supabase
       .from("auto_dialer_contacts")
@@ -225,8 +229,25 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
       .eq("campaign_id", campaignId);
     const seen = new Set((existing || []).map((r: any) => normalizePhone(r.phone)));
     const fresh = rows.filter((r) => !seen.has(r.phone) && (seen.add(r.phone) || true));
+    const duplicateRows = totalRows - fresh.length;
+
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (!fresh.length) {
+      // Still log the upload attempt — permanent history (Point 5)
+      await supabase.from("auto_dialer_uploads").insert({
+        campaign_id: campaignId,
+        vertical_slug: verticalSlug,
+        filename: sourceLabel,
+        total_rows: totalRows,
+        imported_rows: 0,
+        duplicate_rows: duplicateRows,
+        invalid_rows: invalidRows,
+        uploaded_by: user?.id ?? null,
+        uploaded_by_email: user?.email ?? null,
+        notes: "All numbers already in this campaign",
+      });
+      qc.invalidateQueries({ queryKey: ["calling-upload-history", verticalSlug] });
       toast.info("All numbers already in this campaign");
       return;
     }
@@ -266,8 +287,22 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
       })
       .eq("id", campaignId);
 
+    /* 📜 Permanent upload log — survives even if campaign/contacts deleted (Point 5) */
+    await supabase.from("auto_dialer_uploads").insert({
+      campaign_id: campaignId,
+      vertical_slug: verticalSlug,
+      filename: sourceLabel,
+      total_rows: totalRows,
+      imported_rows: fresh.length,
+      duplicate_rows: duplicateRows,
+      invalid_rows: invalidRows,
+      uploaded_by: user?.id ?? null,
+      uploaded_by_email: user?.email ?? null,
+    });
+
     qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
-    toast.success(`Imported ${fresh.length} numbers (skipped ${rows.length - fresh.length} duplicates)`);
+    qc.invalidateQueries({ queryKey: ["calling-upload-history", verticalSlug] });
+    toast.success(`Imported ${fresh.length} numbers (skipped ${duplicateRows} duplicates) — logged permanently`);
     setShowImportFor(null);
     setPasteText("");
   }
