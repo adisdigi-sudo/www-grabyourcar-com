@@ -1128,3 +1128,12 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: str
     </div>
   );
 }
+
+function CounterTile({ label, value, tone }: { label: string; value: number; tone?: string }) {
+  return (
+    <div className="rounded-md border bg-card px-2 py-1.5 transition-all hover:shadow-sm">
+      <div className={`font-bold text-base leading-tight ${tone || "text-foreground"}`}>{value}</div>
+      <div className="text-[9px] uppercase tracking-wide text-muted-foreground truncate">{label}</div>
+    </div>
+  );
+}
