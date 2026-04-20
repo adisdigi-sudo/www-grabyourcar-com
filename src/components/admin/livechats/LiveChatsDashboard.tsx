@@ -60,6 +60,7 @@ export const LiveChatsDashboard = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "ai" | "human">("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
   const [timeoutTick, setTimeoutTick] = useState(Date.now());
@@ -234,9 +235,26 @@ export const LiveChatsDashboard = () => {
   }, [sessions, timeoutTick]);
 
   const filteredSessions = useMemo(() => {
-    if (filter === "all") return sessions;
-    return sessions.filter((session) => session.takeover_state === filter);
-  }, [sessions, filter]);
+    let list = filter === "all" ? sessions : sessions.filter((session) => session.takeover_state === filter);
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter((session) => {
+        const haystack = [
+          session.visitor_name,
+          session.visitor_phone,
+          session.last_message_preview,
+          session.assigned_agent_name,
+          (session as any).vertical_interest,
+          formatSessionTitle(session),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(q);
+      });
+    }
+    return list;
+  }, [sessions, filter, searchQuery]);
 
   const activeSession = useMemo(() => sessions.find((session) => session.id === activeId) ?? null, [sessions, activeId]);
 
@@ -359,8 +377,27 @@ export const LiveChatsDashboard = () => {
 
       <div className="grid h-[calc(100vh-220px)] min-h-[560px] grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]">
         <Card className="flex min-h-0 flex-col overflow-hidden">
-          <CardHeader className="border-b py-3 px-4">
+          <CardHeader className="border-b py-3 px-4 space-y-2">
             <CardTitle className="text-sm">Conversations ({filteredSessions.length})</CardTitle>
+            <div className="relative">
+              <MessageCircle className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name, phone, message…"
+                className="h-8 pl-8 text-xs"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
+                  aria-label="Clear search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           </CardHeader>
           <ScrollArea className="flex-1">
             {loading ? (
