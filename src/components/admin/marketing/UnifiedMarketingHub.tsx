@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Send, FileText, Users, GitBranch, BarChart3, Blocks, Star, MousePointer, ShoppingCart, Vote, Sparkles, Zap, Store, Plug, Inbox, Archive, TrendingUp } from "lucide-react";
+import { Mail, Send, FileText, Users, GitBranch, BarChart3, Blocks, Star, MousePointer, ShoppingCart, Vote, Sparkles, Zap, Store, Plug, Inbox, Archive, TrendingUp, MessageSquare } from "lucide-react";
+import { WhatsAppBulkSender } from "./WhatsAppBulkSender";
 import { MetaAdsRoiPanel } from "../whatsapp-hub/modules/analytics/MetaAdsRoiPanel";
 import { EmailInboxDashboard } from "./email/EmailInboxDashboard";
 import { EmailBlockBuilder } from "./email/EmailBlockBuilder";
