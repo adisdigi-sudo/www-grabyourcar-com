@@ -16,6 +16,7 @@ import {
   CheckCheck,
   Search,
   RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type OmniChannel } from "@/lib/omniSend";
@@ -50,6 +51,7 @@ interface ChatMessage {
   message_content: string | null;
   message_type: string;
   status: string;
+  error_message?: string | null;
   sent_at: string | null;
   created_at: string;
   channel: string;
@@ -69,6 +71,7 @@ type InboxMessageRow = {
   failed_at: string | null;
   created_at: string | null;
   sent_by_name: string | null;
+  error_message: string | null;
 };
 
 function normalizePhone(value: string): string {
@@ -227,7 +230,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
 
     const { data, error } = await supabase
       .from("wa_inbox_messages")
-      .select("id, direction, content, message_type, status, read_at, delivered_at, failed_at, created_at, sent_by_name")
+      .select("id, direction, content, message_type, status, read_at, delivered_at, failed_at, created_at, sent_by_name, error_message")
       .eq("conversation_id", thread.id)
       .order("created_at", { ascending: true })
       .limit(200);
@@ -243,6 +246,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
       message_content: msg.content,
       message_type: msg.message_type,
       status: mapInboxStatus(msg),
+      error_message: msg.error_message,
       sent_at: msg.created_at,
       created_at: msg.created_at || new Date().toISOString(),
       channel: "whatsapp",
@@ -290,6 +294,11 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
       }, 800);
     } catch (error) {
       console.error("Failed to send reply:", error);
+      toast({
+        title: "Message send failed",
+        description: error instanceof Error ? error.message : "WhatsApp message could not be sent.",
+        variant: "destructive",
+      });
     } finally {
       setSending(false);
     }
@@ -435,10 +444,14 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                                 : ""}
                             </span>
                             {!isInbound && m.status === "queued" && <Clock className="h-3 w-3 text-muted-foreground" />}
+                            {!isInbound && m.status === "failed" && <AlertTriangle className="h-3 w-3 text-destructive" />}
                             {!isInbound && ["sent", "delivered", "read"].includes(m.status) && (
                               <CheckCheck className="h-3 w-3 text-muted-foreground" />
                             )}
                           </div>
+                          {!isInbound && m.status === "failed" && m.error_message && (
+                            <p className="mt-1 text-[10px] text-destructive">Failed: {m.error_message}</p>
+                          )}
                         </div>
                       </div>
                     );
