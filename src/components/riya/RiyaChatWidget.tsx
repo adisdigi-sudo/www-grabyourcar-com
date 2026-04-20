@@ -21,6 +21,9 @@ interface RiyaChatWidgetProps {
   greeting?: string;
 }
 
+const SESSION_KEY_STORAGE = "riya-chat-session-key";
+const SESSION_UUID_STORAGE = "riya-chat-session-uuid";
+
 const DEFAULT_GREETING = `Hanji, welcome to **GrabYourCar**! 🙏
 
 Main **Riya** hoon — bataiye main aapki kaise help kar sakti hoon? 😊`;
@@ -35,8 +38,22 @@ export const RiyaChatWidget = ({
   const [messages, setMessages] = useState<Msg[]>([{ role: "assistant", content: greeting }]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sessionId] = useState(() => `riya_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
-  const [sessionUuid, setSessionUuid] = useState<string | null>(null);
+  const [sessionId] = useState(() => {
+    if (typeof window === "undefined") {
+      return `riya_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    const existing = window.localStorage.getItem(SESSION_KEY_STORAGE);
+    if (existing) return existing;
+
+    const next = `riya_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    window.localStorage.setItem(SESSION_KEY_STORAGE, next);
+    return next;
+  });
+  const [sessionUuid, setSessionUuid] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(SESSION_UUID_STORAGE);
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
   const seenRealtimeMessageIds = useRef<Set<string>>(new Set());
 
@@ -45,6 +62,15 @@ export const RiyaChatWidget = ({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, loading]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (sessionUuid) {
+      window.localStorage.setItem(SESSION_UUID_STORAGE, sessionUuid);
+    } else {
+      window.localStorage.removeItem(SESSION_UUID_STORAGE);
+    }
+  }, [sessionUuid]);
 
   // Subscribe to live agent / system messages once we have the real session UUID.
   useEffect(() => {
