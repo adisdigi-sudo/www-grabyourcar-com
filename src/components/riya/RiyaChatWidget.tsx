@@ -6,7 +6,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
-import { X, Send, Loader2, Minus } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  X,
+  Send,
+  Loader2,
+  Minus,
+  Paperclip,
+  Sparkles,
+  Wand2,
+  Languages,
+  Smile,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import riyaAvatar from "@/assets/riya-avatar.png";
@@ -57,6 +75,9 @@ export const RiyaChatWidget = ({
     if (typeof window === "undefined") return null;
     return window.localStorage.getItem(SESSION_UUID_STORAGE);
   });
+  const [aiBusy, setAiBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const seenMessageIds = useRef<Set<string>>(new Set());
   const sessionReadClient = useMemo(() => {
@@ -188,6 +209,100 @@ export const RiyaChatWidget = ({
     }
   };
 
+  type AiMode =
+    | "polish"
+    | "professional"
+    | "friendly"
+    | "shorten"
+    | "hindi"
+    | "english"
+    | "hinglish"
+    | "emoji";
+
+  const runAi = async (mode: AiMode) => {
+    const text = input.trim();
+    if (!text || aiBusy || loading) return;
+    const instructions: Record<AiMode, string> = {
+      polish: "Fix grammar, spelling and punctuation only. Keep the same meaning, language and tone.",
+      professional: "Rewrite in a polite, professional tone for a customer-facing chat.",
+      friendly: "Rewrite in a warm, friendly conversational tone.",
+      shorten: "Make it crisp and shorter (under 40 words) without losing meaning.",
+      hindi: "Translate to natural Hindi (Devanagari).",
+      english: "Translate to natural professional English.",
+      hinglish: "Rewrite in natural Hinglish (Hindi in Roman/English letters).",
+      emoji: "Add 1-3 relevant emojis at natural places. Keep all original text.",
+    };
+    setAiBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-generate", {
+        body: {
+          systemPrompt: `You are a chat message editor for a customer talking to GrabYourCar support. ${instructions[mode]} Return ONLY the final message text — no quotes, no explanations.`,
+          prompt: text,
+          temperature: 0.4,
+          max_tokens: 400,
+        },
+      });
+      if (error) throw error;
+      const cleaned = String(data?.content || "")
+        .trim()
+        .replace(/^["']|["']$/g, "");
+      if (cleaned) setInput(cleaned);
+    } catch (e) {
+      console.error("[Riya] AI rewrite failed:", e);
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || uploading || loading) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "File 10MB se chhoti honi chahiye 🙏" },
+      ]);
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "bin";
+      const path = `riya-uploads/${sessionId}/${Date.now()}.${ext}`;
+      const { error: upErr } = await sessionReadClient.storage
+        .from("wa-media")
+        .upload(path, file, { upsert: false, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = sessionReadClient.storage.from("wa-media").getPublicUrl(path);
+      const url = pub.publicUrl;
+      const isImg = file.type.startsWith("image/");
+      const userText = isImg ? `![${file.name}](${url})` : `📎 [${file.name}](${url})`;
+      const next: Msg[] = [...messages, { role: "user", content: userText }];
+      setMessages(next);
+      setLoading(true);
+      const { data, error } = await supabase.functions.invoke("riya-chat", {
+        body: {
+          messages: next.map((m) => ({ role: m.role, content: m.content })),
+          sessionId,
+        },
+      });
+      if (error) throw error;
+      if (data?.sessionUuid && data.sessionUuid !== sessionUuid) setSessionUuid(data.sessionUuid);
+      const reply = data?.message || "File mil gayi ✓";
+      if (data?.messageId) seenMessageIds.current.add(data.messageId);
+      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+    } catch (err) {
+      console.error("[Riya] upload failed:", err);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Upload nahi ho paaya, dobara try karein 🙏" },
+      ]);
+    } finally {
+      setUploading(false);
+      setLoading(false);
+    }
+  };
+
   const ChatBody = (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
@@ -261,17 +376,96 @@ export const RiyaChatWidget = ({
 
       {/* Input */}
       <div className="p-3 border-t bg-background">
-        <div className="flex gap-2">
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+          onChange={handleFileSelect}
+        />
+        <div className="flex items-center gap-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading || uploading || aiBusy}
+            title="Attach file"
+            aria-label="Attach file"
+          >
+            {uploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Paperclip className="h-4 w-4" />
+            )}
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0 text-primary"
+            onClick={() => runAi("polish")}
+            disabled={!input.trim() || aiBusy || loading}
+            title="AI Fix — grammar & spelling"
+            aria-label="AI Fix"
+          >
+            {aiBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                disabled={!input.trim() || aiBusy || loading}
+                title="AI Rewrite — tone & translate"
+                aria-label="AI Rewrite"
+              >
+                <Wand2 className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" side="top" className="w-52">
+              <DropdownMenuLabel className="text-xs">Tone</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => runAi("professional")} className="text-xs gap-2">
+                <Wand2 className="h-3.5 w-3.5" /> Professional
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runAi("friendly")} className="text-xs gap-2">
+                <Smile className="h-3.5 w-3.5" /> Friendly
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runAi("shorten")} className="text-xs gap-2">
+                <Sparkles className="h-3.5 w-3.5" /> Shorten
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runAi("emoji")} className="text-xs gap-2">
+                <Smile className="h-3.5 w-3.5" /> Add Emojis
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs">Translate</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => runAi("hindi")} className="text-xs gap-2">
+                <Languages className="h-3.5 w-3.5" /> Hindi (हिंदी)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runAi("hinglish")} className="text-xs gap-2">
+                <Languages className="h-3.5 w-3.5" /> Hinglish
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runAi("english")} className="text-xs gap-2">
+                <Languages className="h-3.5 w-3.5" /> English
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKey}
             placeholder="Apna sawaal likhein..."
-            disabled={loading}
+            disabled={loading || uploading}
             className="flex-1"
             maxLength={500}
           />
-          <Button onClick={send} disabled={loading || !input.trim()} size="icon">
+          <Button onClick={send} disabled={loading || uploading || !input.trim()} size="icon" className="shrink-0">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
