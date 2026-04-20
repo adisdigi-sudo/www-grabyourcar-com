@@ -308,7 +308,7 @@ const AdminPanelLoader = ({ className }: { className?: string }) => (
 
 const ADMIN_ACTIVE_TAB_STORAGE_KEY = "gyc_admin_active_tab";
 const VALID_ADMIN_TABS = new Set([
-  "dashboard", "sales-crm", "loan-crm", "unified-crm", "unified-intelligence", "journey-automation", "revenue-intelligence",
+  "dashboard", "live-chats", "sales-crm", "loan-crm", "unified-crm", "unified-intelligence", "journey-automation", "revenue-intelligence",
   "lead-scoring", "client-management", "lead-import", "data-export", "leads-all", "leads-hot", "leads-whatsapp",
   "cars-workspace", "cars-list", "cars-variants", "cars-specs", "cars-pricing", "cars-compare", "cars-colors", "cars-images",
   "cars-image-sync", "cars-migration", "cars-brands", "cars-ai-entry", "cars-bulk-import", "cars-quick-import", "cars-city-pricing",
@@ -350,6 +350,7 @@ const ADMIN_BOOTSTRAP_TIMEOUT_MS = 12000;
 
 const UNIVERSAL_ADMIN_TABS = new Set([
   DEFAULT_ADMIN_TAB,
+  "live-chats",
   "ai-cofounder",
   "my-hr",
   "my-team",

@@ -448,39 +448,63 @@ serve(async (req) => {
     const sessionKey = sessionId || crypto.randomUUID();
     const userAgent = req.headers.get("user-agent") || undefined;
 
-    // Check takeover state — if a human agent has taken over, do NOT reply
+    // Check takeover state — if a human agent has taken over, pause AI unless the human has been idle for 5+ minutes.
     const { data: sessionRow } = await supabase
       .from("riya_chat_sessions")
-      .select("id, takeover_state, assigned_agent_name")
+      .select("id, takeover_state, assigned_agent_name, human_taken_over_at")
       .eq("session_key", sessionKey)
       .maybeSingle();
 
     if (sessionRow?.takeover_state === "human") {
-      const lastUser = [...messages].reverse().find((m) => m.role === "user");
-      if (lastUser && sessionRow.id) {
-        await supabase.from("riya_chat_messages").insert({
-          session_id: sessionRow.id,
-          role: "user",
-          content: lastUser.content,
-          sender_name: "Visitor",
-        });
+      const humanTakenAt = sessionRow.human_taken_over_at ? new Date(sessionRow.human_taken_over_at).getTime() : null;
+      const humanTimedOut = humanTakenAt ? Date.now() - humanTakenAt >= 5 * 60 * 1000 : false;
+
+      if (!humanTimedOut) {
+        const lastUser = [...messages].reverse().find((m) => m.role === "user");
+        if (lastUser && sessionRow.id) {
+          await supabase.from("riya_chat_messages").insert({
+            session_id: sessionRow.id,
+            role: "user",
+            content: lastUser.content,
+            sender_name: "Visitor",
+          });
+          await supabase
+            .from("riya_chat_sessions")
+            .update({
+              last_message_preview: lastUser.content.slice(0, 200),
+              last_message_at: new Date().toISOString(),
+              last_visitor_message_at: new Date().toISOString(),
+            })
+            .eq("id", sessionRow.id);
+        }
+        return new Response(
+          JSON.stringify({
+            message: `${sessionRow.assigned_agent_name || "Hamare expert"} aapse personally connect ho rahe hain — ek minute 🙏`,
+            sessionId: sessionKey,
+            takeover: true,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (sessionRow.id) {
         await supabase
           .from("riya_chat_sessions")
           .update({
-            last_message_preview: lastUser.content.slice(0, 200),
-            last_message_at: new Date().toISOString(),
-            last_visitor_message_at: new Date().toISOString(),
+            takeover_state: "ai",
+            assigned_agent_id: null,
+            assigned_agent_name: null,
           })
-          .eq("id", sessionRow.id);
+          .eq("id", sessionRow.id)
+          .eq("takeover_state", "human");
+
+        await supabase.from("riya_chat_messages").insert({
+          session_id: sessionRow.id,
+          role: "system",
+          content: "🤖 Human reply 5 minute tak nahi aayi, isliye Riya dobara active ho gayi hai.",
+          sender_name: "System",
+        });
       }
-      return new Response(
-        JSON.stringify({
-          message: `${sessionRow.assigned_agent_name || "Hamare expert"} aapse personally connect ho rahe hain — ek minute 🙏`,
-          sessionId: sessionKey,
-          takeover: true,
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
 
     const sessionContext = { sessionId: sessionKey, userAgent };

@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Bot, Send, User, UserCheck, X, Loader2, MessageCircle, BellRing } from "lucide-react";
+import { Bot, Send, User, UserCheck, X, Loader2, MessageCircle, BellRing, Clock3 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
@@ -25,6 +25,7 @@ interface ChatSession {
   message_count: number;
   takeover_state: string;
   assigned_agent_name: string | null;
+  human_taken_over_at: string | null;
   created_at: string;
 }
 
@@ -36,14 +37,9 @@ interface ChatMessage {
   created_at: string;
 }
 
-const VERTICAL_COLORS: Record<string, string> = {
-  loans: "bg-emerald-500/10 text-emerald-700 border-emerald-300",
-  insurance: "bg-blue-500/10 text-blue-700 border-blue-300",
-  sales: "bg-orange-500/10 text-orange-700 border-orange-300",
-  hsrp: "bg-purple-500/10 text-purple-700 border-purple-300",
-  rentals: "bg-pink-500/10 text-pink-700 border-pink-300",
-  accessories: "bg-amber-500/10 text-amber-700 border-amber-300",
-};
+const HUMAN_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+
+const formatPhoneChip = (phone: string | null) => (phone ? `📞 ${phone}` : null);
 
 export const LiveChatsDashboard = () => {
   const { user } = useAuth();
@@ -54,27 +50,93 @@ export const LiveChatsDashboard = () => {
   const [filter, setFilter] = useState<"all" | "ai" | "human">("all");
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [timeoutTick, setTimeoutTick] = useState(Date.now());
   const scrollViewportRef = useRef<HTMLDivElement | null>(null);
   const knownSessionIdsRef = useRef<Set<string>>(new Set());
   const knownMessageIdsRef = useRef<Set<string>>(new Set());
 
-  // Load sessions + realtime
+  const loadSessions = async () => {
+    const { data } = await supabase
+      .from("riya_chat_sessions")
+      .select("*")
+      .order("last_message_at", { ascending: false })
+      .limit(100);
+
+    const nextSessions = (data as ChatSession[]) || [];
+    knownSessionIdsRef.current = new Set(nextSessions.map((session) => session.id));
+    setSessions(nextSessions);
+    setActiveId((current) => {
+      if (current && nextSessions.some((session) => session.id === current)) return current;
+      return nextSessions[0]?.id ?? null;
+    });
+    setLoading(false);
+  };
+
+  const loadMessages = async (sessionId: string) => {
+    const { data } = await supabase
+      .from("riya_chat_messages")
+      .select("*")
+      .eq("session_id", sessionId)
+      .order("created_at", { ascending: true });
+
+    const nextMessages = (data as ChatMessage[]) || [];
+    knownMessageIdsRef.current = new Set(nextMessages.map((message) => message.id));
+    setMessages(nextMessages);
+  };
+
+  const updateSessionLocally = (sessionId: string, patch: Partial<ChatSession>) => {
+    setSessions((prev) => prev.map((session) => (session.id === sessionId ? { ...session, ...patch } : session)));
+  };
+
+  const releaseSessionToAI = async (sessionId: string, reason: "manual" | "timeout") => {
+    const session = sessions.find((item) => item.id === sessionId);
+    if (!session || session.takeover_state !== "human") return;
+
+    const { error } = await supabase
+      .from("riya_chat_sessions")
+      .update({
+        takeover_state: "ai",
+        assigned_agent_id: null,
+        assigned_agent_name: null,
+      })
+      .eq("id", sessionId)
+      .eq("takeover_state", "human");
+
+    if (error) {
+      toast.error("AI resume failed: " + error.message);
+      return;
+    }
+
+    const content =
+      reason === "timeout"
+        ? "🤖 Human reply 5 minute tak nahi aayi, isliye Riya dobara active ho gayi hai."
+        : "🤖 Chat wapas Riya (AI) ke paas transfer ho gayi.";
+
+    await supabase.from("riya_chat_messages").insert({
+      session_id: sessionId,
+      role: "system",
+      content,
+      sender_name: "System",
+    });
+
+    updateSessionLocally(sessionId, {
+      takeover_state: "ai",
+      assigned_agent_name: null,
+      human_taken_over_at: null,
+    });
+
+    if (reason === "timeout") {
+      toast("Riya resumed automatically", {
+        description: `${session.visitor_name || session.visitor_phone || "Conversation"} par AI wapas active ho gaya.`,
+      });
+    } else {
+      toast.success("Released to AI");
+    }
+  };
+
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      const { data } = await supabase
-        .from("riya_chat_sessions")
-        .select("*")
-        .order("last_message_at", { ascending: false })
-        .limit(100);
-      if (!cancelled) {
-        const nextSessions = (data as ChatSession[]) || [];
-        knownSessionIdsRef.current = new Set(nextSessions.map((session) => session.id));
-        setSessions(nextSessions);
-        setLoading(false);
-      }
-    };
-    load();
+    loadSessions();
+
     const channel = supabase
       .channel("livechats-sessions")
       .on("postgres_changes", { event: "*", schema: "public", table: "riya_chat_sessions" }, (payload) => {
@@ -86,35 +148,26 @@ export const LiveChatsDashboard = () => {
             icon: <BellRing className="h-4 w-4" />,
           });
         }
-        load();
+        loadSessions();
       })
       .subscribe();
+
+    const timeoutInterval = window.setInterval(() => setTimeoutTick(Date.now()), 30_000);
+
     return () => {
-      cancelled = true;
       supabase.removeChannel(channel);
+      window.clearInterval(timeoutInterval);
     };
   }, []);
 
-  // Load messages + realtime for active session
   useEffect(() => {
     if (!activeId) {
       setMessages([]);
       return;
     }
-    let cancelled = false;
-    const load = async () => {
-      const { data } = await supabase
-        .from("riya_chat_messages")
-        .select("*")
-        .eq("session_id", activeId)
-        .order("created_at", { ascending: true });
-      if (!cancelled) {
-        const nextMessages = (data as ChatMessage[]) || [];
-        knownMessageIdsRef.current = new Set(nextMessages.map((message) => message.id));
-        setMessages(nextMessages);
-      }
-    };
-    load();
+
+    loadMessages(activeId);
+
     const channel = supabase
       .channel(`livechats-msgs-${activeId}`)
       .on(
@@ -128,8 +181,8 @@ export const LiveChatsDashboard = () => {
         }
       )
       .subscribe();
+
     return () => {
-      cancelled = true;
       supabase.removeChannel(channel);
     };
   }, [activeId]);
@@ -140,59 +193,77 @@ export const LiveChatsDashboard = () => {
     }
   }, [messages]);
 
+  useEffect(() => {
+    const staleHumanSessions = sessions.filter((session) => {
+      if (session.takeover_state !== "human" || !session.human_taken_over_at) return false;
+      return Date.now() - new Date(session.human_taken_over_at).getTime() >= HUMAN_IDLE_TIMEOUT_MS;
+    });
+
+    staleHumanSessions.forEach((session) => {
+      releaseSessionToAI(session.id, "timeout");
+    });
+  }, [sessions, timeoutTick]);
+
   const filteredSessions = useMemo(() => {
     if (filter === "all") return sessions;
-    return sessions.filter((s) => s.takeover_state === filter);
+    return sessions.filter((session) => session.takeover_state === filter);
   }, [sessions, filter]);
 
-  const activeSession = useMemo(() => sessions.find((s) => s.id === activeId), [sessions, activeId]);
+  const activeSession = useMemo(() => sessions.find((session) => session.id === activeId) ?? null, [sessions, activeId]);
+
+  const humanCountdownLabel = useMemo(() => {
+    if (!activeSession || activeSession.takeover_state !== "human" || !activeSession.human_taken_over_at) return null;
+    const elapsed = Date.now() - new Date(activeSession.human_taken_over_at).getTime();
+    const remaining = Math.max(HUMAN_IDLE_TIMEOUT_MS - elapsed, 0);
+    const minutes = Math.floor(remaining / 60_000);
+    const seconds = Math.floor((remaining % 60_000) / 1000);
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  }, [activeSession, timeoutTick]);
 
   const takeover = async () => {
     if (!activeSession) return;
     const agentName = user?.email?.split("@")[0] || "Agent";
+    const nowIso = new Date().toISOString();
+
     const { error } = await supabase
       .from("riya_chat_sessions")
       .update({
         takeover_state: "human",
         assigned_agent_id: user?.id || null,
         assigned_agent_name: agentName,
-        human_taken_over_at: new Date().toISOString(),
+        human_taken_over_at: nowIso,
       })
       .eq("id", activeSession.id);
+
     if (error) {
       toast.error("Takeover failed: " + error.message);
       return;
     }
-    // System message in chat
-    await supabase.from("riya_chat_messages").insert({
-      session_id: activeSession.id,
-      role: "system",
-      content: `🙋 ${agentName} (real human) ne chat join kar liya hai. Riya pause kar di gayi hai.`,
-      sender_name: "System",
-    });
-    toast.success(`Takeover successful — Riya paused, you're live`);
-  };
 
-  const releaseToAI = async () => {
-    if (!activeSession) return;
-    await supabase
-      .from("riya_chat_sessions")
-      .update({ takeover_state: "ai", assigned_agent_id: null, assigned_agent_name: null })
-      .eq("id", activeSession.id);
     await supabase.from("riya_chat_messages").insert({
       session_id: activeSession.id,
       role: "system",
-      content: "🤖 Chat wapas Riya (AI) ke paas transfer ho gayi.",
+      content: `🙋 ${agentName} ne chat manually join kar li hai. Ab aap WhatsApp-style live reply kar sakte hain.`,
       sender_name: "System",
     });
-    toast.success("Released to AI");
+
+    updateSessionLocally(activeSession.id, {
+      takeover_state: "human",
+      assigned_agent_name: agentName,
+      human_taken_over_at: nowIso,
+    });
+
+    toast.success("Manual chat active");
   };
 
   const sendReply = async () => {
     const text = reply.trim();
     if (!text || !activeSession || sending) return;
+
     setSending(true);
     const agentName = user?.email?.split("@")[0] || "Agent";
+    const nowIso = new Date().toISOString();
+
     const { error } = await supabase.from("riya_chat_messages").insert({
       session_id: activeSession.id,
       role: "assistant",
@@ -200,213 +271,253 @@ export const LiveChatsDashboard = () => {
       sender_name: agentName,
       sender_id: user?.id || null,
     });
+
     if (error) {
       toast.error("Send failed: " + error.message);
       setSending(false);
       return;
     }
+
     await supabase
       .from("riya_chat_sessions")
       .update({
+        takeover_state: "human",
+        assigned_agent_id: user?.id || null,
+        assigned_agent_name: agentName,
+        human_taken_over_at: nowIso,
         last_message_preview: text.slice(0, 200),
-        last_message_at: new Date().toISOString(),
+        last_message_at: nowIso,
       })
       .eq("id", activeSession.id);
+
+    updateSessionLocally(activeSession.id, {
+      takeover_state: "human",
+      assigned_agent_name: agentName,
+      human_taken_over_at: nowIso,
+      last_message_preview: text.slice(0, 200),
+      last_message_at: nowIso,
+    });
+
     setReply("");
     setSending(false);
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="flex items-center gap-2 text-2xl font-bold">
             <MessageCircle className="h-6 w-6 text-primary" />
             Live Chats
             <Badge variant="destructive" className="text-[10px]">LIVE</Badge>
           </h1>
           <p className="text-sm text-muted-foreground">
-            Real-time visitor conversations with Riya. Click any chat to view, takeover, or reply directly.
+            Manual thread bilkul WhatsApp jaisa — human reply rukte hi 5 minute baad Riya wapas active ho jayegi.
           </p>
         </div>
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "ai" | "human")}>
+        <Tabs value={filter} onValueChange={(value) => setFilter(value as "all" | "ai" | "human")}>
           <TabsList>
             <TabsTrigger value="all">All ({sessions.length})</TabsTrigger>
             <TabsTrigger value="ai">
-              <Bot className="h-3 w-3 mr-1" /> AI ({sessions.filter((s) => s.takeover_state === "ai").length})
+              <Bot className="mr-1 h-3 w-3" /> AI ({sessions.filter((session) => session.takeover_state === "ai").length})
             </TabsTrigger>
             <TabsTrigger value="human">
-              <UserCheck className="h-3 w-3 mr-1" /> Live ({sessions.filter((s) => s.takeover_state === "human").length})
+              <UserCheck className="mr-1 h-3 w-3" /> Live ({sessions.filter((session) => session.takeover_state === "human").length})
             </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4 h-[calc(100vh-220px)] min-h-[500px]">
-        {/* Sessions list */}
-        <Card className="flex flex-col overflow-hidden">
-          <CardHeader className="py-3 px-4 border-b">
+      <div className="grid h-[calc(100vh-220px)] min-h-[560px] grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]">
+        <Card className="flex min-h-0 flex-col overflow-hidden">
+          <CardHeader className="border-b py-3 px-4">
             <CardTitle className="text-sm">Conversations ({filteredSessions.length})</CardTitle>
           </CardHeader>
           <ScrollArea className="flex-1">
             {loading ? (
-              <div className="p-8 flex justify-center">
+              <div className="flex justify-center p-8">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
             ) : filteredSessions.length === 0 ? (
               <div className="p-8 text-center text-sm text-muted-foreground">No conversations yet</div>
             ) : (
-              <div className="divide-y">
-                {filteredSessions.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setActiveId(s.id)}
-                    className={cn(
-                      "w-full text-left p-3 hover:bg-muted/50 transition-colors",
-                      activeId === s.id && "bg-muted"
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {s.takeover_state === "human" ? (
-                          <UserCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                        ) : (
-                          <Bot className="h-3.5 w-3.5 text-primary shrink-0" />
-                        )}
-                        <span className="font-medium text-sm truncate">
-                          {s.visitor_name || s.visitor_phone || `Visitor ${s.session_key.slice(-6)}`}
+              <div className="divide-y divide-border">
+                {filteredSessions.map((session) => {
+                  const isHuman = session.takeover_state === "human";
+                  return (
+                    <button
+                      key={session.id}
+                      type="button"
+                      onClick={() => setActiveId(session.id)}
+                      className={cn(
+                        "w-full px-3 py-3 text-left transition-colors hover:bg-muted/50",
+                        activeId === session.id && "bg-muted"
+                      )}
+                    >
+                      <div className="mb-1 flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            {isHuman ? (
+                              <UserCheck className="h-3.5 w-3.5 shrink-0 text-primary" />
+                            ) : (
+                              <Bot className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            )}
+                            <span className="truncate text-sm font-medium">
+                              {session.visitor_name || session.visitor_phone || `Visitor ${session.session_key.slice(-6)}`}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                          {formatDistanceToNow(new Date(session.last_message_at), { addSuffix: false })}
                         </span>
                       </div>
-                      <span className="text-[10px] text-muted-foreground shrink-0">
-                        {formatDistanceToNow(new Date(s.last_message_at), { addSuffix: false })}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-1.5">
-                      {s.last_message_preview || "No messages yet"}
-                    </p>
-                    <div className="flex items-center gap-1 flex-wrap">
-                      {s.vertical_interest && (
-                        <Badge
-                          variant="outline"
-                          className={cn("text-[9px] px-1.5 py-0", VERTICAL_COLORS[s.vertical_interest])}
-                        >
-                          {s.vertical_interest}
+
+                      <p className="mb-2 line-clamp-2 text-xs text-muted-foreground">
+                        {session.last_message_preview || "No messages yet"}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-1">
+                        {session.vertical_interest && (
+                          <Badge variant="outline" className="px-1.5 py-0 text-[9px] uppercase">
+                            {session.vertical_interest}
+                          </Badge>
+                        )}
+                        {formatPhoneChip(session.visitor_phone) && (
+                          <Badge variant="secondary" className="px-1.5 py-0 text-[9px]">
+                            {formatPhoneChip(session.visitor_phone)}
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="px-1.5 py-0 text-[9px]">
+                          {session.message_count} msgs
                         </Badge>
-                      )}
-                      {s.visitor_phone && (
-                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
-                          📞 {s.visitor_phone}
-                        </Badge>
-                      )}
-                      <Badge variant="outline" className="text-[9px] px-1.5 py-0">
-                        {s.message_count} msgs
-                      </Badge>
-                    </div>
-                  </button>
-                ))}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </ScrollArea>
         </Card>
 
-        {/* Chat view */}
-        <Card className="flex flex-col overflow-hidden">
+        <Card className="flex min-h-0 flex-col overflow-hidden">
           {!activeSession ? (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+            <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
               Select a conversation to view
             </div>
           ) : (
             <>
-              <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between gap-2 space-y-0">
-                <div className="min-w-0">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    {activeSession.visitor_name || activeSession.visitor_phone || "Anonymous Visitor"}
-                    {activeSession.takeover_state === "human" && (
-                      <Badge variant="default" className="text-[9px]">YOU LIVE</Badge>
+              <CardHeader className="border-b py-3 px-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0">
+                    <CardTitle className="flex items-center gap-2 text-sm">
+                      <User className="h-4 w-4" />
+                      <span className="truncate">{activeSession.visitor_name || activeSession.visitor_phone || "Anonymous Visitor"}</span>
+                      {activeSession.takeover_state === "human" ? (
+                        <Badge className="text-[9px]">MANUAL LIVE</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-[9px]">RIYA ACTIVE</Badge>
+                      )}
+                    </CardTitle>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      Session: {activeSession.session_key.slice(-12)} • Started {formatDistanceToNow(new Date(activeSession.created_at), { addSuffix: true })}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {activeSession.takeover_state === "human" && humanCountdownLabel && (
+                      <div className="flex items-center gap-1 rounded-md border border-border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+                        <Clock3 className="h-3 w-3" />
+                        AI resumes in {humanCountdownLabel}
+                      </div>
                     )}
-                  </CardTitle>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Session: {activeSession.session_key.slice(-12)} • Started{" "}
-                    {formatDistanceToNow(new Date(activeSession.created_at), { addSuffix: true })}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {activeSession.takeover_state === "ai" ? (
-                    <Button size="sm" variant="default" onClick={takeover}>
-                      <UserCheck className="h-3.5 w-3.5 mr-1" /> Take Over
+                    {activeSession.takeover_state === "ai" ? (
+                      <Button size="sm" onClick={takeover}>
+                        <UserCheck className="mr-1 h-3.5 w-3.5" /> Take Over
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => releaseSessionToAI(activeSession.id, "manual")}>
+                        <Bot className="mr-1 h-3.5 w-3.5" /> Release to Riya
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" onClick={() => setActiveId(null)}>
+                      <X className="h-3.5 w-3.5" />
                     </Button>
-                  ) : (
-                    <Button size="sm" variant="outline" onClick={releaseToAI}>
-                      <Bot className="h-3.5 w-3.5 mr-1" /> Release to Riya
-                    </Button>
-                  )}
-                  <Button size="sm" variant="ghost" onClick={() => setActiveId(null)}>
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
+                  </div>
                 </div>
               </CardHeader>
 
-              <ScrollArea className="flex-1 min-h-0 px-4" viewportRef={scrollViewportRef}>
-                <div className="space-y-3 py-4">
-                  {messages.map((m) => (
-                    <div
-                      key={m.id}
-                      className={cn(
-                        "flex",
-                        m.role === "user" ? "justify-start" : m.role === "system" ? "justify-center" : "justify-end"
-                      )}
-                    >
-                      {m.role === "system" ? (
-                        <div className="text-[10px] text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                          {m.content}
-                        </div>
-                      ) : (
-                        <div
-                          className={cn(
-                            "max-w-[min(85%,42rem)] overflow-hidden rounded-2xl px-3 py-2 text-sm shadow-sm",
-                            m.role === "user"
-                              ? "bg-muted rounded-bl-sm"
-                              : "bg-primary text-primary-foreground rounded-br-sm"
-                          )}
-                        >
-                          <div className="text-[10px] opacity-70 mb-0.5">
-                            {m.sender_name || (m.role === "user" ? "Visitor" : "Riya (AI)")} •{" "}
-                            {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
-                          </div>
-                          <div className="prose prose-sm dark:prose-invert max-w-none break-words [&_p]:my-1 [&_*]:break-words">
-                            <ReactMarkdown>{m.content}</ReactMarkdown>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
+              <div className="flex-1 min-h-0 bg-muted/20">
+                <ScrollArea className="h-full px-3 md:px-5" viewportRef={scrollViewportRef}>
+                  <div className="space-y-3 py-4">
+                    {messages.map((message) => {
+                      const isSystem = message.role === "system";
+                      const isVisitor = message.role === "user";
 
-              <CardContent className="p-3 border-t">
+                      if (isSystem) {
+                        return (
+                          <div key={message.id} className="flex justify-center">
+                            <div className="max-w-[90%] rounded-full bg-background px-3 py-1 text-center text-[10px] text-muted-foreground shadow-sm">
+                              {message.content}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div key={message.id} className={cn("flex", isVisitor ? "justify-start" : "justify-end")}>
+                          <div
+                            className={cn(
+                              "max-w-[min(88%,42rem)] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm",
+                              isVisitor
+                                ? "rounded-bl-sm border border-border bg-background text-foreground"
+                                : "rounded-br-sm bg-primary text-primary-foreground"
+                            )}
+                          >
+                            <div className={cn("mb-1 text-[10px]", isVisitor ? "text-muted-foreground" : "text-primary-foreground/80")}>
+                              {message.sender_name || (isVisitor ? "Visitor" : "Riya (AI)")} • {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
+                            </div>
+                            <div className="prose prose-sm max-w-none break-words dark:prose-invert [&_*]:break-words [&_p]:my-1">
+                              <ReactMarkdown>{message.content}</ReactMarkdown>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </div>
+
+              <CardContent className="border-t p-3">
                 {activeSession.takeover_state !== "human" ? (
-                  <div className="text-xs text-muted-foreground text-center py-2">
-                    🤖 Riya AI is handling this chat. Click <strong>Take Over</strong> above to reply manually.
+                  <div className="py-2 text-center text-xs text-muted-foreground">
+                    Riya abhi handle kar rahi hai — manual WhatsApp-style reply ke liye <strong>Take Over</strong> dabaiye.
                   </div>
                 ) : (
-                  <div className="flex gap-2">
-                    <Input
-                      value={reply}
-                      onChange={(e) => setReply(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          sendReply();
-                        }
-                      }}
-                      placeholder="Type your reply as the human agent..."
-                      disabled={sending}
-                      maxLength={1000}
-                    />
-                    <Button onClick={sendReply} disabled={!reply.trim() || sending} size="icon">
-                      {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    </Button>
+                  <div className="space-y-2">
+                    <div className="rounded-xl border border-border bg-background p-2">
+                      <div className="flex items-end gap-2">
+                        <Input
+                          value={reply}
+                          onChange={(event) => setReply(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" && !event.shiftKey) {
+                              event.preventDefault();
+                              sendReply();
+                            }
+                          }}
+                          placeholder="Type a manual reply..."
+                          disabled={sending}
+                          maxLength={1000}
+                          className="border-0 shadow-none focus-visible:ring-0"
+                        />
+                        <Button onClick={sendReply} disabled={!reply.trim() || sending} size="icon" className="shrink-0 rounded-full">
+                          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Har manual reply ke baad 5 minute timer reset hoga. Agar human silent raha, Riya automatically resume karegi.
+                    </p>
                   </div>
                 )}
               </CardContent>
