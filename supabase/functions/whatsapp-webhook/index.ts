@@ -31,6 +31,8 @@ const VERTICAL_DETECTION_CONFIG = [
   { table: "hsrp_bookings", vertical: "hsrp", phoneFields: ["mobile"] },
   { table: "rental_bookings", vertical: "rentals", phoneFields: ["phone"] },
   { table: "accessory_orders", vertical: "accessories", phoneFields: ["shipping_phone"] },
+  { table: "dealer_inquiry_recipients", vertical: "dealer-network", phoneFields: ["phone"] },
+  { table: "dealer_representatives", vertical: "dealer-network", phoneFields: ["phone", "whatsapp_number"] },
 ] as const;
 
 const VERTICAL_ALIASES: Record<string, string> = {
@@ -55,6 +57,10 @@ const VERTICAL_ALIASES: Record<string, string> = {
   "self-drive": "rentals",
   accessories: "accessories",
   accessory: "accessories",
+  dealer: "dealer-network",
+  dealers: "dealer-network",
+  "dealer network": "dealer-network",
+  "dealer-network": "dealer-network",
 };
 
 function normalizePhoneVariants(phone: string | null | undefined) {
@@ -88,6 +94,7 @@ function normalizeVerticalSlug(value: string | null | undefined) {
   if (normalized.includes("hsrp") || normalized.includes("fastag")) return "hsrp";
   if (normalized.includes("rental") || normalized.includes("self drive")) return "rentals";
   if (normalized.includes("accessor")) return "accessories";
+  if (normalized.includes("dealer")) return "dealer-network";
   return null;
 }
 
@@ -483,7 +490,7 @@ Deno.serve(async (req) => {
                 .from("reply_agents")
                 .select("id, name, auto_send, vertical_slug, trigger_type, trigger_keywords")
                 .eq("is_active", true)
-                .eq("channel", "whatsapp")
+                .in("channel", ["whatsapp", "both"])
                 .in("trigger_type", ["inbound_message", "any", "keyword"])
                 .order("priority", { ascending: false })
                 .order("created_at", { ascending: false })
