@@ -20594,6 +20594,9 @@ export type Database = {
         | "wrong_number"
         | "no_answer"
         | "callback_requested"
+        | "hot"
+        | "interested"
+        | "dnd"
       loan_stage:
         | "new_lead"
         | "contacted"
@@ -20757,6 +20760,9 @@ export const Constants = {
         "wrong_number",
         "no_answer",
         "callback_requested",
+        "hot",
+        "interested",
+        "dnd",
       ],
       loan_stage: [
         "new_lead",

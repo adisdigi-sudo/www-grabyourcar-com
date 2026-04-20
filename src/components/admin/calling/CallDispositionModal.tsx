@@ -13,9 +13,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Phone, PhoneOff, PhoneMissed, Ban, AlertTriangle, CalendarIcon, Loader2, CheckCircle2 } from "lucide-react";
+import { Phone, PhoneOff, PhoneMissed, Ban, AlertTriangle, CalendarIcon, Loader2, CheckCircle2, Flame, ThumbsUp, ThumbsDown, BellOff, PowerOff } from "lucide-react";
 
-export type Disposition = "connected" | "not_connected" | "busy" | "switched_off" | "wrong_number" | "no_answer" | "callback_requested";
+export type Disposition =
+  | "hot"
+  | "interested"
+  | "not_connected"
+  | "callback_requested"
+  | "wrong_number"
+  | "busy"
+  | "dnd"
+  | "switched_off"
+  | "connected"
+  | "no_answer";
 
 interface CallDispositionModalProps {
   open: boolean;
@@ -30,13 +40,14 @@ interface CallDispositionModalProps {
 }
 
 const DISPOSITIONS: { value: Disposition; label: string; icon: React.ReactNode; color: string }[] = [
-  { value: "connected", label: "Connected", icon: <Phone className="h-4 w-4" />, color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
-  { value: "not_connected", label: "Not Connected", icon: <PhoneOff className="h-4 w-4" />, color: "bg-red-500/10 text-red-600 border-red-200" },
-  { value: "busy", label: "Busy", icon: <PhoneMissed className="h-4 w-4" />, color: "bg-amber-500/10 text-amber-600 border-amber-200" },
-  { value: "switched_off", label: "Switched Off", icon: <Ban className="h-4 w-4" />, color: "bg-gray-500/10 text-gray-600 border-gray-200" },
-  { value: "wrong_number", label: "Wrong Number", icon: <AlertTriangle className="h-4 w-4" />, color: "bg-rose-500/10 text-rose-600 border-rose-200" },
-  { value: "no_answer", label: "No Answer", icon: <PhoneOff className="h-4 w-4" />, color: "bg-orange-500/10 text-orange-600 border-orange-200" },
-  { value: "callback_requested", label: "Callback Requested", icon: <CalendarIcon className="h-4 w-4" />, color: "bg-blue-500/10 text-blue-600 border-blue-200" },
+  { value: "hot",                label: "🔥 Hot Lead",      icon: <Flame className="h-4 w-4" />,        color: "bg-orange-500/15 text-orange-700 border-orange-300 dark:text-orange-300" },
+  { value: "interested",         label: "✅ Interested",     icon: <ThumbsUp className="h-4 w-4" />,     color: "bg-emerald-500/15 text-emerald-700 border-emerald-300 dark:text-emerald-300" },
+  { value: "not_connected",      label: "❌ Not Interested", icon: <ThumbsDown className="h-4 w-4" />,   color: "bg-red-500/15 text-red-700 border-red-300 dark:text-red-300" },
+  { value: "callback_requested", label: "📅 Callback",       icon: <CalendarIcon className="h-4 w-4" />, color: "bg-blue-500/15 text-blue-700 border-blue-300 dark:text-blue-300" },
+  { value: "wrong_number",       label: "🚫 Wrong Number",   icon: <AlertTriangle className="h-4 w-4" />,color: "bg-rose-500/15 text-rose-700 border-rose-300 dark:text-rose-300" },
+  { value: "busy",               label: "📵 Busy",           icon: <PhoneMissed className="h-4 w-4" />,  color: "bg-amber-500/15 text-amber-700 border-amber-300 dark:text-amber-300" },
+  { value: "dnd",                label: "🔇 DND",            icon: <BellOff className="h-4 w-4" />,      color: "bg-slate-500/15 text-slate-700 border-slate-300 dark:text-slate-300" },
+  { value: "switched_off",       label: "💬 Switched Off",   icon: <PowerOff className="h-4 w-4" />,     color: "bg-gray-500/15 text-gray-700 border-gray-300 dark:text-gray-300" },
 ];
 
 const LEAD_STAGES = [
@@ -63,7 +74,12 @@ export function CallDispositionModal({
   const [durationMinutes, setDurationMinutes] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const needsFollowUp = disposition === "callback_requested" || disposition === "busy" || disposition === "no_answer";
+  const needsFollowUp =
+    disposition === "callback_requested" ||
+    disposition === "busy" ||
+    disposition === "switched_off" ||
+    disposition === "hot" ||
+    disposition === "interested";
 
   const handleSave = async () => {
     if (!disposition) {
@@ -162,7 +178,7 @@ export function CallDispositionModal({
             <Label className="text-sm font-semibold mb-3 flex items-center gap-1">
               Call Status <span className="text-destructive">*</span>
             </Label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {DISPOSITIONS.map((d) => (
                 <button
                   key={d.value}
