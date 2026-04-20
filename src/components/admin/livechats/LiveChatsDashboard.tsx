@@ -12,6 +12,7 @@ import { Bot, Send, User, UserCheck, X, Loader2, MessageCircle, BellRing, Clock3
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
+import { AIPolishButtons } from "@/components/admin/shared/AIPolishButtons";
 
 interface ChatSession {
   id: string;
@@ -538,13 +539,19 @@ export const LiveChatsDashboard = () => {
                           maxLength={1000}
                           className="border-0 shadow-none focus-visible:ring-0"
                         />
+                        <AIPolishButtons
+                          value={reply}
+                          onChange={setReply}
+                          disabled={sending}
+                          contextHint="Live chat reply to a website visitor on GrabYourCar"
+                        />
                         <Button onClick={sendReply} disabled={!reply.trim() || sending} size="icon" className="shrink-0 rounded-full">
                           {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                         </Button>
                       </div>
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      Har manual reply ke baad 5 minute timer reset hoga. Agar human silent raha, Riya automatically resume karegi.
+                      Har manual reply ke baad 5 minute timer reset hoga. Agar human silent raha, Riya automatically resume karegi. ✨ AI Fix / Rewrite use karke message polish kar sakte hain.
                     </p>
                   </div>
                 )}
