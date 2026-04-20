@@ -21,9 +21,9 @@ interface RiyaChatWidgetProps {
   greeting?: string;
 }
 
-const DEFAULT_GREETING = `Hi! I'm **Riya** from **GrabYourCar** 👋
+const DEFAULT_GREETING = `Hanji, welcome to **GrabYourCar**! 🙏
 
-Main aapki kaise help kar sakti hoon? Cars, insurance, loans, HSRP, rentals — sab ki info de sakti hoon. Brochure bhi WhatsApp pe bhej dungi 🚗`;
+Main **Riya** hoon — bataiye main aapki kaise help kar sakti hoon? 😊`;
 
 export const RiyaChatWidget = ({
   variant = "floating",
