@@ -178,7 +178,7 @@ export function CallDispositionModal({
             <Label className="text-sm font-semibold mb-3 flex items-center gap-1">
               Call Status <span className="text-destructive">*</span>
             </Label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {DISPOSITIONS.map((d) => (
                 <button
                   key={d.value}
