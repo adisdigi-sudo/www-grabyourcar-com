@@ -344,10 +344,20 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
       .limit(1)
       .maybeSingle();
 
-    if (error) { toast.error(error.message); return null; }
+    if (error) { toast.error(error.message); setAdvancing(false); return null; }
+
+    /* Compute remaining (Point 6) */
+    const { count: pendingLeft } = await supabase
+      .from("auto_dialer_contacts")
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_id", campaignId)
+      .in("call_status", ["pending", "retry"]);
+    setRemainingInQueue(pendingLeft || 0);
+
     if (!data) {
       setActiveContact(null);
-      toast.success("🎉 Queue complete — no more pending numbers");
+      setAdvancing(false);
+      toast.success(`🎉 Queue complete — ${calledThisSession} call${calledThisSession === 1 ? "" : "s"} this session`);
       return null;
     }
 
@@ -368,11 +378,13 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
     setDisposition("");
     setNotes("");
     setFollowUp("");
+    setAdvancing(false);
     return data;
   }
 
   function startCalling(campaignId: string) {
     setActiveCampaignId(campaignId);
+    setCalledThisSession(0);
     pullNextContact(campaignId);
   }
 
