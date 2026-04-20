@@ -83,15 +83,6 @@ export const PublicRouteChrome = () => (
     <SectionErrorBoundary sectionName="floating-compare-bar" fallback={null}>
       <FloatingCompareBar />
     </SectionErrorBoundary>
-    <SectionErrorBoundary sectionName="floating-whatsapp-button" fallback={null}>
-      <WhatsAppFloatingButton />
-    </SectionErrorBoundary>
-    <SectionErrorBoundary sectionName="floating-call-button" fallback={null}>
-      <FloatingCallButton />
-    </SectionErrorBoundary>
-    <SectionErrorBoundary sectionName="floating-get-quote" fallback={null}>
-      <FloatingGetQuote />
-    </SectionErrorBoundary>
     <SectionErrorBoundary sectionName="cookie-consent-banner" fallback={null}>
       <CookieConsentBanner />
     </SectionErrorBoundary>
