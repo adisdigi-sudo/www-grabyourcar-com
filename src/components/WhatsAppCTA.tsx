@@ -17,6 +17,8 @@ interface WhatsAppCTAProps extends Omit<ButtonProps, "variant"> {
   variant?: "whatsapp" | "outline" | "ghost";
   /** Context for analytics (car name, page, etc.) */
   context?: string;
+  /** Optional class names */
+  className?: string;
 }
 
 /**
