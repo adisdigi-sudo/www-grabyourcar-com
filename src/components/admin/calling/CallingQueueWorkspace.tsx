@@ -582,6 +582,8 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  const totals = useMemo(() => {
     return campaigns.reduce(
       (acc: any, c: any) => {
         acc.total       += c.total_contacts || 0;
