@@ -828,12 +828,22 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
           onInteractOutside={(e) => e.preventDefault()}
         >
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
               <PhoneCall className="h-5 w-5 text-blue-600 animate-pulse" />
               Now Calling — Status required to continue
               {activeContact && (
                 <Badge variant="outline" className="text-[10px] ml-1">
                   Attempt #{activeContact.dial_attempts}
+                </Badge>
+              )}
+              {remainingInQueue !== null && (
+                <Badge className="text-[10px] bg-blue-600 text-white">
+                  📞 {remainingInQueue} left in queue
+                </Badge>
+              )}
+              {calledThisSession > 0 && (
+                <Badge variant="secondary" className="text-[10px]">
+                  ✅ {calledThisSession} done this session
                 </Badge>
               )}
             </DialogTitle>
