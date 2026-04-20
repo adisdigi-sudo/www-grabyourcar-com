@@ -734,6 +734,9 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
         </CardContent>
       </Card>
 
+      {/* PERMANENT UPLOAD HISTORY — every import logged forever (Point 5) */}
+      <UploadHistoryPanel verticalSlug={verticalSlug} />
+
       {/* LIVE COUNTERS STRIP — all 8 dispositions, real-time (Point 4) */}
       <Card>
         <CardContent className="p-3">
