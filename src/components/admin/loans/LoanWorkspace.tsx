@@ -29,7 +29,6 @@ import {
 } from "lucide-react";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { VerticalMessagingTab } from "../shared/VerticalMessagingTab";
-import { CallingQueueWorkspace } from "../calling/CallingQueueWorkspace";
 import { UnifiedSalesCalculator } from "../shared/UnifiedSalesCalculator";
 import { StageNotificationBanner, buildLoanNotifications } from "../shared/StageNotificationBanner";
 import {
@@ -140,7 +139,7 @@ Warm regards,
 };
 
 // ─── Main Workspace ───
-type LoanWorkspaceView = "pipeline" | "calling" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator" | "performance" | "conversations";
+type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator" | "performance" | "conversations";
 type DateFilter = DateFilterValue;
 type StageFilter = "all" | "in_pipeline" | "disbursed" | "lost";
 interface LoanWorkspaceProps {
@@ -492,7 +491,6 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
       <div className="flex items-center gap-1 overflow-x-auto pb-1">
         {([
           { key: "pipeline", label: "Pipeline", icon: Banknote },
-          { key: "calling", label: "Calling Queue", icon: PhoneCall },
           { key: "disbursement", label: "Disbursement", icon: CheckCircle2 },
           { key: "after_sales", label: "After Sales", icon: HeartHandshake },
           { key: "performance", label: "Performance", icon: BarChart3 },
@@ -674,13 +672,6 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
         )}
 
         {activeView === "disbursement" && <LoanDisbursementBook applications={dateFilteredApps} />}
-        {activeView === "calling" && (
-          <CallingQueueWorkspace
-            verticalSlug="loans"
-            verticalLabel="Car Loans"
-            accentClass="border-emerald-200 dark:border-emerald-900"
-          />
-        )}
         {activeView === "after_sales" && <LoanAfterSales applications={dateFilteredApps} />}
         {activeView === "performance" && <LoanPerformanceDashboard applications={dateFilteredApps} dateFilter={dateFilter} />}
         {activeView === "bulk_tools" && (

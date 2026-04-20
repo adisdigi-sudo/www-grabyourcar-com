@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -41,14 +41,6 @@ export const VerticalPasswordDialog = ({ vertical, open, onClose, onSuccess }: V
   const [showPassword, setShowPassword] = useState(false);
   const [verifying, setVerifying] = useState(false);
 
-  useEffect(() => {
-    if (!open) {
-      setPassword("");
-      setShowPassword(false);
-      setVerifying(false);
-    }
-  }, [open]);
-
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vertical || !password.trim()) {
@@ -79,7 +71,7 @@ export const VerticalPasswordDialog = ({ vertical, open, onClose, onSuccess }: V
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { onClose(); } }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { setPassword(""); onClose(); } }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

@@ -295,36 +295,7 @@
 
   <body>
     <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=XXXXXXXXXXXXXXXXX&amp;ev=PageView&amp;noscript=1"/></noscript>
-    <style>
-      @keyframes gyc-spin { to { transform: rotate(360deg); } }
-      @keyframes gyc-pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
-      #gyc-initial-loader {
-        position: fixed; inset: 0; display: flex; flex-direction: column;
-        align-items: center; justify-content: center; gap: 16px;
-        background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
-        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-        z-index: 9999;
-      }
-      #gyc-initial-loader .spinner {
-        width: 44px; height: 44px; border-radius: 50%;
-        border: 3px solid #e2e8f0; border-top-color: #2563eb;
-        animation: gyc-spin 0.9s linear infinite;
-      }
-      #gyc-initial-loader .label {
-        font-size: 14px; color: #475569; font-weight: 500;
-        animation: gyc-pulse 1.4s ease-in-out infinite;
-      }
-      #gyc-initial-loader .brand {
-        font-size: 18px; font-weight: 700; color: #0f172a; letter-spacing: -0.02em;
-      }
-    </style>
-    <div id="root">
-      <div id="gyc-initial-loader" aria-live="polite" aria-busy="true">
-        <div class="brand">GrabYourCar</div>
-        <div class="spinner"></div>
-        <div class="label">Loading…</div>
-      </div>
-    </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

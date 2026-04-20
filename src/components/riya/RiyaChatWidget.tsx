@@ -21,67 +21,27 @@ interface RiyaChatWidgetProps {
   greeting?: string;
 }
 
-const AGENT_NAME = "Jass";
-const SESSION_KEY = "gyc_chat_session";
-const HISTORY_KEY = "gyc_chat_history_v1";
+const DEFAULT_GREETING = `Hi! I'm **Riya** from **GrabYourCar** 👋
 
-const getOrCreateSession = (): string => {
-  try {
-    const existing = sessionStorage.getItem(SESSION_KEY);
-    if (existing) return existing;
-    const fresh = `gyc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    sessionStorage.setItem(SESSION_KEY, fresh);
-    return fresh;
-  } catch {
-    return `gyc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  }
-};
-
-const buildGreeting = () =>
-  `Hi! I'm **${AGENT_NAME}** from **GrabYourCar** 👋\n\nKaise help kar sakta hoon? Cars, insurance, loans, HSRP, rentals — sab ki info de dunga 🚗`;
-
-const loadHistory = (fallback: Msg[]): Msg[] => {
-  try {
-    const raw = localStorage.getItem(HISTORY_KEY);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) return parsed as Msg[];
-    return fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const saveHistory = (messages: Msg[]) => {
-  try {
-    const trimmed = messages.slice(-100);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
-  } catch {
-    // ignore quota errors
-  }
-};
+Main aapki kaise help kar sakti hoon? Cars, insurance, loans, HSRP, rentals — sab ki info de sakti hoon. Brochure bhi WhatsApp pe bhej dungi 🚗`;
 
 export const RiyaChatWidget = ({
   variant = "floating",
   className,
   initialOpen = false,
-  greeting,
+  greeting = DEFAULT_GREETING,
 }: RiyaChatWidgetProps) => {
-  const agentName = AGENT_NAME;
   const [isOpen, setIsOpen] = useState(initialOpen);
-  const [messages, setMessages] = useState<Msg[]>(() =>
-    loadHistory([{ role: "assistant", content: greeting || buildGreeting() }])
-  );
+  const [messages, setMessages] = useState<Msg[]>([{ role: "assistant", content: greeting }]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sessionId] = useState(() => getOrCreateSession());
+  const [sessionId] = useState(() => `riya_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-    saveHistory(messages);
   }, [messages, loading]);
 
   const send = async () => {
@@ -97,8 +57,6 @@ export const RiyaChatWidget = ({
         body: {
           messages: next.map((m) => ({ role: m.role, content: m.content })),
           sessionId,
-          agentName,
-          pageUrl: typeof window !== "undefined" ? window.location.href : undefined,
         },
       });
 
@@ -113,7 +71,7 @@ export const RiyaChatWidget = ({
         ...prev,
         {
           role: "assistant",
-          content: `Network issue lag raha hai 😕 Direct WhatsApp karein: [Click here](https://wa.me/919855924442) 📞`,
+          content: `Oops, network issue ho raha hai. Aap direct WhatsApp kar sakte hain: [Click here](https://wa.me/919855924442) 📞`,
         },
       ]);
     } finally {
@@ -144,7 +102,7 @@ export const RiyaChatWidget = ({
           <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 border-2 border-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-sm leading-tight">{agentName}</div>
+          <div className="font-semibold text-sm leading-tight">Riya</div>
           <div className="text-xs opacity-90 leading-tight">GrabYourCar Assistant • Online</div>
         </div>
         {variant === "floating" && (
@@ -192,7 +150,7 @@ export const RiyaChatWidget = ({
             <div className="flex justify-start">
               <div className="bg-muted rounded-2xl rounded-bl-sm px-3.5 py-2.5 flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                {agentName} typing...
+                Riya typing...
               </div>
             </div>
           )}
@@ -216,7 +174,7 @@ export const RiyaChatWidget = ({
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-          GrabYourCar
+          Powered by Riya AI • GrabYourCar
         </p>
       </div>
     </div>

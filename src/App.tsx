@@ -60,7 +60,6 @@ const TrackOrder = lazy(() => import("./pages/TrackOrder"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const IntegrationControlCenter = lazy(() => import("./pages/IntegrationControlCenter"));
-const PartnerLanding = lazy(() => import("./pages/PartnerLanding"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -241,7 +240,6 @@ const AppRouterShell = () => {
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/integration-control-center" element={<IntegrationControlCenter />} />
-            <Route path="/partner/:slug" element={<PartnerLanding />} />
             <Route path="*" element={<LegacyRouteHandler />} />
           </Routes>
           <RouteAwareChrome isChromelessExperience={isChromelessExperience} />

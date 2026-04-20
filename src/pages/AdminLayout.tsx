@@ -152,12 +152,6 @@ const DealerManagement = lazy(() =>
 const AICofounderDashboard = lazy(() =>
   import("@/components/admin/AICofounderDashboard"),
 );
-const LiveChatsDashboard = lazy(() =>
-  import("@/components/admin/live-chats/LiveChatsDashboard"),
-);
-const LiveChatNotifier = lazy(() =>
-  import("@/components/admin/live-chats/LiveChatNotifier"),
-);
 const SiteSettingsManager = lazy(() => import("@/components/admin/SiteSettingsManager"));
 const BannersManager = lazy(() => import("@/components/admin/BannersManager"));
 const TestimonialsManager = lazy(() => import("@/components/admin/TestimonialsManager"));
@@ -329,7 +323,7 @@ const VALID_ADMIN_TABS = new Set([
   "dealer-reps", "dealer-inventory", "dealer-broadcast", "accounts-dashboard", "accounts-invoices", "accounts-expenses",
   "accounts-bills", "accounts-banking", "accounts-chart", "accounts-journal", "accounts-reports", "accounts-documents",
   "hr-core", "hr-recruitment", "hr-workforce", "hr-attendance", "hr-payroll", "hr-expense", "hr-performance", "hr-engagement",
-  "hr-assets", "hr-helpdesk", "hr-task-escalation", "hr-daily-reports", "ai-cofounder", "live-chats", "legacy-leads", "my-hr", "my-team"
+  "hr-assets", "hr-helpdesk", "hr-task-escalation", "hr-daily-reports", "ai-cofounder", "legacy-leads", "my-hr", "my-team"
 ]);
 
 const getInitialAdminTab = () => {
@@ -353,7 +347,6 @@ const ADMIN_BOOTSTRAP_TIMEOUT_MS = 12000;
 const UNIVERSAL_ADMIN_TABS = new Set([
   DEFAULT_ADMIN_TAB,
   "ai-cofounder",
-  "live-chats",
   "my-hr",
   "my-team",
   "calling-system",
@@ -901,6 +894,7 @@ const AdminLayout = () => {
       case "integrations-whatsapp":
       case "whatsapp-inbox":
       case "marketing-templates":
+      case "marketing-email":
       case "marketing-automation":
       case "wa-smart-triggers":
       case "whatsapp-hub":
@@ -988,8 +982,6 @@ const AdminLayout = () => {
         return <EmployeeDailyReportsDashboard />;
       case "ai-cofounder":
         return <AICofounderDashboard />;
-      case "live-chats":
-        return <LiveChatsDashboard />;
       case "legacy-leads":
         return <LegacyLeadsManager />;
       case "my-hr":
@@ -1001,9 +993,6 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <Suspense fallback={null}>
-        <LiveChatNotifier />
-      </Suspense>
       <Suspense fallback={<AdminPanelLoader className="min-h-screen" />}>
         <AdminRenderBoundary contextLabel="CRM sidebar">
             <AdminSidebar activeTab={resolvedActiveTab} setActiveTab={setActiveTab} />

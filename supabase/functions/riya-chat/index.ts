@@ -6,53 +6,55 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const buildSystemPrompt = (agentName: string) => `Tum **${agentName}** ho — GrabYourCar.com ke sales assistant. Friendly, helpful, concise.
+const SYSTEM_PROMPT = `Tum **Riya** ho — GrabYourCar.com ki AI sales assistant. Friendly Hinglish me baat karo (English + Hindi mix, jaise normal Indian customer support karta hai). Concise, warm aur helpful.
 
 ## Tumhari personality & reply style (BAHUT IMPORTANT)
-- Apna naam hamesha "${agentName} from GrabYourCar" batao jab koi puchhe.
+- Apna naam hamesha "Riya from GrabYourCar" batao jab koi puchhe.
 - Polite, energetic, playful, never pushy. Customer ko apna doost samjho.
 - **Reply HAMESHA chhota rakho — ek ya do line maximum.** Paragraph KABHI mat likho.
 - WhatsApp chat jaisa feel — natural, casual, ek baar me ek hi cheez puchho ya batao.
 - Emojis use karo thoda — 1-2 per message, zyada nahi (🚗 😊 👍 🔥 ✨).
 - Customer ko enjoy karwao — thodi fun, witty, warm vibes do taaki yaad rakhe.
-- Bullet points / lists tabhi do jab user explicitly options maange.
-- Har reply ke end me ek chhota natural follow-up question ya next step suggest karo.
+- Bullet points / lists tabhi do jab user explicitly options maange. Otherwise plain conversational text.
+- Har reply ke end me ek chhota natural follow-up question ya next step suggest karo (jaise "Konsi car pasand hai?" / "Budget kya rakha hai?" / "Phone number share karein, brochure bhej dun?").
 - Boring corporate tone se bacho — friendly local dukaan-wale jaisa warmth lao.
 
 ## CRITICAL — Language matching (bahut zaroori!)
 Customer ki language ko AUTOMATICALLY detect karke usi me reply karo:
-- **Pure English** likhe → reply in **clean professional English only**.
-- **Pure Hindi (Devanagari)** likhe → reply in **Hindi (Devanagari)**.
-- **Hinglish / Roman Hindi** likhe → reply in **friendly Hinglish** (default).
-- **Punjabi/Marathi/Tamil/Bengali/Gujarati** etc. → us regional language me.
-- Har naye message pe re-detect karo. Switch karein to tum bhi turant switch karo.
+- **Pure English** likhe (e.g. "hello, I want to buy a car") → reply in **clean professional English only**, no Hindi words.
+- **Pure Hindi/Devanagari** likhe (e.g. "मुझे कार चाहिए") → reply in **Hindi (Devanagari script)**.
+- **Hinglish / Roman Hindi** likhe (e.g. "bhai car chahiye", "kitne ka hai") → reply in **friendly Hinglish** (default).
+- **Punjabi/Marathi/Tamil/Bengali/Gujarati** etc. likhe → us regional language me reply karo (Roman script chalega agar customer Roman use kare).
+- Har naye message pe language re-detect karo. Beech me switch karein to tum bhi switch karo immediately.
+- Greeting/intro line bhi customer ki language me hi do.
 
-## CRITICAL — Role clarity
-- Tum **GrabYourCar ke sales assistant** ho — customer ko car BECHTE ho, customer nahi ho.
-- KABHI mat kehna "main car kharidna chahti/chahta hoon". Tum HELPER ho.
-- Casual messages (hello/haha) pe friendly reply do, fir dheere se topic car/service pe lao.
+## CRITICAL — Role clarity (bahut zaroori!)
+- Tum **GrabYourCar ki sales assistant** ho — tum customer ko car BECHTI ho, customer nahi ho.
+- **KABHI BHI** customer se mat kehna ki "main car kharidna chahti hoon" ya "meri madad karein". Tum HELPER ho, asker nahi.
+- Hamesha customer ki need samjho aur unko solution do — cars dikhao, price batao, brochure bhejo, EMI calculate karo.
+- Agar user casual/funny baat kare (jaise "hello", "hahaha"), to friendly reply do aur dheere se topic ko car/service pe le aao. Example: "Haha 😄 Waise bataiye, koi car dhundh rahe ho ya insurance/loan ki info chahiye?"
+- Tum AI/assistant ho jo GrabYourCar ki taraf se kaam karti ho — customer apni need batayega, tum solution dogi.
 
-## GrabYourCar offerings
-1. **New Car Sales** — All brands, best on-road price, free home delivery.
-2. **Car Insurance** — 25+ insurers compare, instant policy.
-3. **Car Loans** — HDFC/ICICI/SBI/Axis tie-ups, lowest EMI.
-4. **HSRP** — Govt plates with home delivery.
-5. **Self-Drive Rentals** — Hourly/daily/monthly across India.
-6. **Dealer Network** — Pan-India test drives & negotiation.
-7. **Accessories** — Genuine + aftermarket, home delivery.
+## GrabYourCar kya offer karta hai
+1. **New Car Sales** — All brands (Maruti, Hyundai, Tata, Mahindra, Kia, Toyota, Honda, MG, Skoda, VW, Premium brands). Best on-road price + free home delivery.
+2. **Car Insurance** — Comprehensive, Third-party, Own Damage. 25+ insurers compare. Instant policy.
+3. **Car Loans** — Tie-ups with HDFC, ICICI, SBI, Axis, BoB. Lowest EMI, fast approval.
+4. **HSRP (High Security Number Plates)** — Govt-approved plates with home delivery.
+5. **Self-Drive Car Rentals** — Hourly/daily/monthly rentals across India.
+6. **Dealer Network** — Pan-India dealer connect for test drives & best price negotiation.
+7. **Accessories** — Genuine + aftermarket accessories home delivery.
 
-## Tools (use them PROACTIVELY — yeh sirf decoration nahi hai!)
-- **capture_lead**: JAB BHI customer 10-digit phone number share kare, TURANT yeh tool call karo — bina kisi shart ke. Pehle "team contact karegi" mat bolo.
-- **send_brochure**: Jab customer specific car ka brochure maange. Phone lazmi.
-- **request_human_handoff**: SIRF jab user explicit "human/agent" maange ya frustrated ho.
+## Tools tum use kar sakti ho
+- **capture_lead**: Jab user kisi service me interested ho aur naam + phone share kare. Vertical sahi choose karo (sales/insurance/loans/hsrp/rentals/dealer/accessories).
+- **send_brochure**: Jab user kisi specific car ka brochure maange. Phone number lazmi hai.
+- **request_human_handoff**: SIRF jab user explicit bole "human chahiye", "agent se baat karni hai", "talk to person", ya bahut frustrated ho.
 
-## CRITICAL workflow rules
-- Phone number mil gaya (10 digits)? → capture_lead TURANT call karo, fir reply me bolo "✅ Aapki request humari team ke paas pahunch gayi, [phone] pe 15 min me call aayegi."
-- KABHI mat bolo "team contact karegi" bina capture_lead chalaye — warna lead lost ho jaati hai.
-- Brochure ke baad **TOOL ka exact response message use karo** — agar tool success bole "WhatsApp pe bhej diya" tabhi bolo, agar fail ho to honestly bolo "kuch issue aaya, team aapko bhej degi".
-- Phone na mile to politely maango — bina phone ke lead/brochure tool MAT chalao.
-- Price exact nahi pata to "approximate range" do, exact ke liye callback offer karo.
-- Jhuth mat bolo. Pata nahi to "team se confirm karwa dunga" bolo.`;
+## Rules
+- Jab tak phone number nahi mile tab tak lead capture mat karo. Politely maango.
+- Brochure ke liye: pehle car name + phone number lo, fir send_brochure call karo.
+- Price exact nahi pata to "approximate range" do aur exact ke liye executive callback offer karo.
+- Kabhi mat bolo ki tum AI/bot ho jab tak user direct na puchhe — bolo "I'm Riya, your assistant".
+- Jhuth mat bolo. Pata nahi to "let me connect you with our expert" bolo.`;
 
 interface ToolCall {
   id: string;
@@ -60,46 +62,10 @@ interface ToolCall {
   function: { name: string; arguments: string };
 }
 
-interface SessionContext {
-  sessionId: string;
-  sessionRowId?: string | null;
-  userAgent?: string;
-  agentName?: string;
-  pageUrl?: string;
-}
-
-const MANAGER_PHONE = "9855924442";
-
-async function notifyManagerOfLead(
-  supabase: ReturnType<typeof createClient>,
-  payload: { name: string; phone: string; vertical: string; message: string; agentName: string }
-) {
-  try {
-    await supabase.functions.invoke("whatsapp-send", {
-      body: {
-        to: MANAGER_PHONE,
-        messageType: "text",
-        message:
-          `🔔 *New Riya Chat Lead*\n` +
-          `Name: ${payload.name}\n` +
-          `Phone: ${payload.phone}\n` +
-          `Vertical: ${payload.vertical}\n` +
-          `Agent: ${payload.agentName}\n` +
-          `Note: ${payload.message}`,
-        logEvent: "riya_lead_alert",
-        message_context: "internal_lead_alert",
-        vertical: "sales",
-      },
-    });
-  } catch (e) {
-    console.error("[riya-chat] manager WA notify failed:", e);
-  }
-}
-
 async function executeToolCall(
   toolCall: ToolCall,
   supabase: ReturnType<typeof createClient>,
-  sessionContext: SessionContext
+  sessionContext: { sessionId: string; userAgent?: string }
 ): Promise<string> {
   const args = JSON.parse(toolCall.function.arguments || "{}");
   const fn = toolCall.function.name;
@@ -111,64 +77,24 @@ async function executeToolCall(
       const cleanPhone = String(phone).replace(/\D/g, "").slice(-10);
       if (cleanPhone.length !== 10) return JSON.stringify({ success: false, error: "Invalid phone (need 10 digits)" });
 
+      // Insert into automation_lead_tracking
       const leadId = crypto.randomUUID();
-      const leadName = name || "Riya Chat Lead";
-      const leadMessage = message || car_interest || "Captured via Riya AI chatbot";
-
       const { error } = await supabase.from("automation_lead_tracking").insert({
         lead_id: leadId,
-        name: leadName,
+        name: name || "Riya Chat Lead",
         phone: cleanPhone,
         vertical,
         source: "riya_chatbot",
         lead_source_type: "ai_chat",
-        message: leadMessage,
+        message: message || car_interest || "Captured via Riya AI chatbot",
         city: city || null,
         status: "new",
-        raw_data: { ...args, session_id: sessionContext.sessionId, user_agent: sessionContext.userAgent, agent_name: sessionContext.agentName, page_url: sessionContext.pageUrl } as never,
+        raw_data: { ...args, session_id: sessionContext.sessionId, user_agent: sessionContext.userAgent } as never,
       });
       if (error) {
         console.error("[riya-chat] capture_lead error:", error);
         return JSON.stringify({ success: false, error: error.message });
       }
-
-      // Mark chat session as lead-captured
-      if (sessionContext.sessionRowId) {
-        await supabase.from("riya_chat_sessions")
-          .update({
-            lead_captured: true,
-            lead_id: leadId,
-            visitor_name: leadName,
-            visitor_phone: cleanPhone,
-            visitor_city: city || null,
-            vertical_interest: vertical,
-          })
-          .eq("id", sessionContext.sessionRowId);
-      }
-
-      // Fire-and-forget notifications
-      supabase.functions.invoke("lead-intake-engine", {
-        body: {
-          lead_id: leadId,
-          name: leadName,
-          phone: cleanPhone,
-          vertical,
-          source: "riya_chatbot",
-          message: leadMessage,
-          city: city || null,
-          car_interest: car_interest || null,
-          notify: true,
-        },
-      }).catch((e) => console.error("[riya-chat] lead-intake-engine notify failed:", e));
-
-      notifyManagerOfLead(supabase, {
-        name: leadName,
-        phone: cleanPhone,
-        vertical,
-        message: leadMessage,
-        agentName: sessionContext.agentName || "Bot",
-      });
-
       return JSON.stringify({ success: true, lead_id: leadId, message: `Lead saved! Hamari team aapko 15 min me ${cleanPhone} pe call karegi.` });
     }
 
@@ -204,73 +130,41 @@ async function executeToolCall(
         });
       }
 
-      // Try sending via WhatsApp using the canonical whatsapp-send function
-      let waSuccess = false;
-      let brochureDelivered = false;
-      let waError: string | null = null;
+      // Try sending via WhatsApp
       try {
-        const { data: waData, error: waErr } = await supabase.functions.invoke("whatsapp-send", {
+        await supabase.functions.invoke("wa-send-inbox", {
           body: {
-            to: cleanPhone,
-            messageType: "document",
-            message: `Hi ${name || "there"}! ${(sessionContext as { agentName?: string }).agentName || "Team"} from GrabYourCar 👋 Yahan hai ${car.brand} ${car.name} ka brochure. Koi question ho to reply karein!`,
-            mediaUrl: car.brochure_url,
-            mediaFileName: `${car.brand}-${car.name}-brochure.pdf`,
-            name: name || null,
-            logEvent: "riya_brochure",
-            vertical: "sales",
-            message_context: "riya_brochure",
+            phone: `91${cleanPhone}`,
+            message_type: "document",
+            content: `Hi ${name || "there"}! Riya here from GrabYourCar 👋\n\n${car.brand} ${car.name} ka brochure attached hai. Koi bhi question ho to reply karein!`,
+            media_url: car.brochure_url,
+            media_filename: `${car.brand}-${car.name}-brochure.pdf`,
+            sent_by_name: "Riya (AI)",
           },
         });
-        if (waErr) {
-          waError = waErr.message || "WhatsApp send failed";
-          console.error("[riya-chat] WhatsApp send error:", waErr);
-        } else if (waData && (waData as { success?: boolean }).success === false) {
-          waError = (waData as { error?: string }).error || "WhatsApp delivery failed";
-          console.error("[riya-chat] WhatsApp returned failure:", waData);
-        } else {
-          waSuccess = true;
-          brochureDelivered = !Boolean((waData as { fallback?: boolean }).fallback);
-          if (!brochureDelivered) {
-            waError = "WhatsApp approved template sent instead of brochure attachment";
-          }
-        }
       } catch (e) {
-        waError = e instanceof Error ? e.message : "WhatsApp send threw";
-        console.error("[riya-chat] WhatsApp send threw:", e);
+        console.warn("[riya-chat] WhatsApp send failed, brochure URL will be returned:", e);
       }
 
-      // Save lead with accurate status
+      // Save lead
       await supabase.from("automation_lead_tracking").insert({
         lead_id: crypto.randomUUID(),
         name: name || "Brochure Request",
         phone: cleanPhone,
         vertical: "sales",
         source: "riya_chatbot",
-        lead_source_type: brochureDelivered ? "brochure_sent" : "brochure_failed",
-        message: brochureDelivered
-          ? `Brochure sent for ${car.brand} ${car.name}`
-          : `Brochure send FAILED for ${car.brand} ${car.name} — ${waError}`,
-        status: brochureDelivered ? "contacted" : "new",
-        contacted: brochureDelivered,
-        contacted_at: brochureDelivered ? new Date().toISOString() : null,
-        raw_data: { ...args, brochure_url: car.brochure_url, wa_error: waError, priority_hint: brochureDelivered ? null : "high" } as never,
+        lead_source_type: "brochure_sent",
+        message: `Brochure sent for ${car.brand} ${car.name}`,
+        status: "contacted",
+        contacted: true,
+        contacted_at: new Date().toISOString(),
+        raw_data: { ...args, brochure_url: car.brochure_url } as never,
       });
 
-      if (brochureDelivered) {
-        return JSON.stringify({
-          success: true,
-          delivered: true,
-          message: `${car.brand} ${car.name} ka brochure WhatsApp pe ${cleanPhone} pe bhej diya ✅`,
-        });
-      }
-
-      // Fallback: give the customer a direct link AND tell them team will resend
       return JSON.stringify({
         success: true,
-        delivered: false,
         brochure_url: car.brochure_url,
-        message: `Brochure attachment WhatsApp pe abhi direct nahi gaya 😕 — yeh raha direct link: ${car.brochure_url}\nHamari team ${cleanPhone} pe proper brochure turant resend karegi.`,
+        message: `${car.brand} ${car.name} ka brochure WhatsApp pe bhej diya (${cleanPhone}). Direct link: ${car.brochure_url}`,
       });
     }
 
@@ -288,7 +182,8 @@ async function executeToolCall(
         lead_source_type: "human_handoff",
         message: `URGENT — Human agent requested. Reason: ${reason || "Not specified"}`,
         status: "new",
-        raw_data: { ...args, priority_hint: "high" } as never,
+        priority: "high",
+        raw_data: args as never,
       } as never);
 
       return JSON.stringify({
@@ -375,12 +270,7 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body = await req.json();
-    const { messages, sessionId, agentName, pageUrl } = body as {
-      messages: Array<{ role: string; content: string }>;
-      sessionId?: string;
-      agentName?: string;
-      pageUrl?: string;
-    };
+    const { messages, sessionId } = body as { messages: Array<{ role: string; content: string }>; sessionId?: string };
 
     if (!Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "messages array required" }), {
@@ -389,67 +279,14 @@ serve(async (req) => {
       });
     }
 
-    const safeAgent = (agentName && /^[A-Za-z\u0900-\u097F ]{2,20}$/.test(agentName)) ? agentName : "Riya";
-    const userAgent = req.headers.get("user-agent") || undefined;
-    const sessionKey = sessionId || crypto.randomUUID();
-
-    // === Persist / upsert chat session ===
-    let sessionRowId: string | null = null;
-    try {
-      const { data: existing } = await supabase
-        .from("riya_chat_sessions")
-        .select("id")
-        .eq("session_key", sessionKey)
-        .maybeSingle();
-
-      const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
-      const preview = (lastUserMsg?.content || "").slice(0, 140);
-
-      if (existing?.id) {
-        sessionRowId = existing.id as string;
-        await supabase.from("riya_chat_sessions").update({
-          agent_name: safeAgent,
-          last_message_preview: preview,
-          last_message_at: new Date().toISOString(),
-          message_count: messages.length,
-          page_url: pageUrl || undefined,
-        }).eq("id", sessionRowId);
-      } else {
-        const { data: created } = await supabase.from("riya_chat_sessions").insert({
-          session_key: sessionKey,
-          agent_name: safeAgent,
-          last_message_preview: preview,
-          last_message_at: new Date().toISOString(),
-          message_count: messages.length,
-          user_agent: userAgent || null,
-          page_url: pageUrl || null,
-        }).select("id").single();
-        sessionRowId = created?.id as string ?? null;
-      }
-
-      // Persist the latest user message (if any) as a transcript row
-      if (sessionRowId && lastUserMsg) {
-        await supabase.from("riya_chat_messages").insert({
-          session_id: sessionRowId,
-          role: "user",
-          content: lastUserMsg.content,
-        });
-      }
-    } catch (persistErr) {
-      console.error("[riya-chat] session persist error:", persistErr);
-    }
-
-    const sessionContext: SessionContext = {
-      sessionId: sessionKey,
-      sessionRowId,
-      userAgent,
-      agentName: safeAgent,
-      pageUrl,
+    const sessionContext = {
+      sessionId: sessionId || crypto.randomUUID(),
+      userAgent: req.headers.get("user-agent") || undefined,
     };
 
-    // Multi-turn tool loop
+    // Multi-turn tool loop (non-streaming for tool calls, stream final response)
     let conversationMessages: Array<Record<string, unknown>> = [
-      { role: "system", content: buildSystemPrompt(safeAgent) },
+      { role: "system", content: SYSTEM_PROMPT },
       ...messages,
     ];
 
@@ -491,6 +328,7 @@ serve(async (req) => {
 
       const toolCalls: ToolCall[] | undefined = choice.tool_calls;
       if (toolCalls && toolCalls.length > 0) {
+        // Execute tools, append, loop again
         conversationMessages.push(choice as Record<string, unknown>);
         for (const tc of toolCalls) {
           const result = await executeToolCall(tc, supabase, sessionContext);
@@ -503,29 +341,10 @@ serve(async (req) => {
         continue;
       }
 
-      const finalMsg = choice.content || "Sorry, I didn't catch that. Phir se bolenge?";
-
-      // Persist assistant reply
-      if (sessionRowId) {
-        try {
-          await supabase.from("riya_chat_messages").insert({
-            session_id: sessionRowId,
-            role: "assistant",
-            content: finalMsg,
-          });
-          await supabase.from("riya_chat_sessions").update({
-            last_message_preview: finalMsg.slice(0, 140),
-            last_message_at: new Date().toISOString(),
-            message_count: messages.length + 1,
-          }).eq("id", sessionRowId);
-        } catch (e) {
-          console.error("[riya-chat] persist assistant reply failed:", e);
-        }
-      }
-
+      // Final response — no tool calls
       return new Response(
         JSON.stringify({
-          message: finalMsg,
+          message: choice.content || "Sorry, I didn't catch that. Phir se bolenge?",
           sessionId: sessionContext.sessionId,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
