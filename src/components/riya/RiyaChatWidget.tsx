@@ -209,6 +209,100 @@ export const RiyaChatWidget = ({
     }
   };
 
+  type AiMode =
+    | "polish"
+    | "professional"
+    | "friendly"
+    | "shorten"
+    | "hindi"
+    | "english"
+    | "hinglish"
+    | "emoji";
+
+  const runAi = async (mode: AiMode) => {
+    const text = input.trim();
+    if (!text || aiBusy || loading) return;
+    const instructions: Record<AiMode, string> = {
+      polish: "Fix grammar, spelling and punctuation only. Keep the same meaning, language and tone.",
+      professional: "Rewrite in a polite, professional tone for a customer-facing chat.",
+      friendly: "Rewrite in a warm, friendly conversational tone.",
+      shorten: "Make it crisp and shorter (under 40 words) without losing meaning.",
+      hindi: "Translate to natural Hindi (Devanagari).",
+      english: "Translate to natural professional English.",
+      hinglish: "Rewrite in natural Hinglish (Hindi in Roman/English letters).",
+      emoji: "Add 1-3 relevant emojis at natural places. Keep all original text.",
+    };
+    setAiBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-generate", {
+        body: {
+          systemPrompt: `You are a chat message editor for a customer talking to GrabYourCar support. ${instructions[mode]} Return ONLY the final message text — no quotes, no explanations.`,
+          prompt: text,
+          temperature: 0.4,
+          max_tokens: 400,
+        },
+      });
+      if (error) throw error;
+      const cleaned = String(data?.content || "")
+        .trim()
+        .replace(/^["']|["']$/g, "");
+      if (cleaned) setInput(cleaned);
+    } catch (e) {
+      console.error("[Riya] AI rewrite failed:", e);
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || uploading || loading) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "File 10MB se chhoti honi chahiye 🙏" },
+      ]);
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "bin";
+      const path = `riya-uploads/${sessionId}/${Date.now()}.${ext}`;
+      const { error: upErr } = await sessionReadClient.storage
+        .from("wa-media")
+        .upload(path, file, { upsert: false, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = sessionReadClient.storage.from("wa-media").getPublicUrl(path);
+      const url = pub.publicUrl;
+      const isImg = file.type.startsWith("image/");
+      const userText = isImg ? `![${file.name}](${url})` : `📎 [${file.name}](${url})`;
+      const next: Msg[] = [...messages, { role: "user", content: userText }];
+      setMessages(next);
+      setLoading(true);
+      const { data, error } = await supabase.functions.invoke("riya-chat", {
+        body: {
+          messages: next.map((m) => ({ role: m.role, content: m.content })),
+          sessionId,
+        },
+      });
+      if (error) throw error;
+      if (data?.sessionUuid && data.sessionUuid !== sessionUuid) setSessionUuid(data.sessionUuid);
+      const reply = data?.message || "File mil gayi ✓";
+      if (data?.messageId) seenMessageIds.current.add(data.messageId);
+      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+    } catch (err) {
+      console.error("[Riya] upload failed:", err);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Upload nahi ho paaya, dobara try karein 🙏" },
+      ]);
+    } finally {
+      setUploading(false);
+      setLoading(false);
+    }
+  };
+
   const ChatBody = (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
