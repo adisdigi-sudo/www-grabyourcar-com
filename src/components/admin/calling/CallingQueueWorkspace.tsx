@@ -699,7 +699,32 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
         </CardContent>
       </Card>
 
-      {/* ACTIVE DIALER — BLOCKING MODAL (Point 1) */}
+      {/* LIVE COUNTERS STRIP — all 8 dispositions, real-time (Point 4) */}
+      <Card>
+        <CardContent className="p-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              <Filter className="h-3 w-3" /> Live Disposition Counters
+            </p>
+            <Badge variant="outline" className="text-[10px] gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Realtime
+            </Badge>
+          </div>
+          <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-11 gap-2 text-center">
+            <CounterTile label="Total"        value={totals.total}          tone="text-foreground" />
+            <CounterTile label="Pending"      value={totals.pending}        tone="text-amber-600" />
+            <CounterTile label="Called"       value={totals.completed}      tone="text-blue-600" />
+            <CounterTile label="🔥 Hot"        value={totals.hot}            tone="text-orange-600" />
+            <CounterTile label="✅ Interested" value={totals.interested}     tone="text-emerald-600" />
+            <CounterTile label="📅 Callback"   value={totals.callback}       tone="text-blue-700" />
+            <CounterTile label="❌ Not Int."   value={totals.not_interested} tone="text-rose-600" />
+            <CounterTile label="📵 No Ans"     value={totals.no_answer}      tone="text-slate-600" />
+            <CounterTile label="⏳ Busy"       value={totals.busy}           tone="text-amber-700" />
+            <CounterTile label="🔇 DND"        value={totals.dnd}            tone="text-purple-600" />
+            <CounterTile label="🚫 Wrong#"     value={totals.wrong_number}   tone="text-zinc-600" />
+          </div>
+        </CardContent>
+      </Card>
       <Dialog open={!!activeContact} onOpenChange={() => { /* blocked: must save disposition */ }}>
         <DialogContent
           className="max-w-2xl"
