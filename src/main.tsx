@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { shouldStabilizeStartupShellWindow } from "@/lib/adminPreviewStability";
 import { installSensitiveRouteReloadGuard } from "@/lib/devReloadGuard";
 import { ensureAppRootElement } from "@/lib/ensureAppRoot";
+import { stripInternalTransientParams } from "@/lib/previewRouting";
 import { installStartupShellHealthMonitor } from "@/lib/startupShell";
 import { removeStartupShell } from "@/lib/startupShell";
 
