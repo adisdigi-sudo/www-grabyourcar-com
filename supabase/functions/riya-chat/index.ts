@@ -562,11 +562,12 @@ serve(async (req) => {
           conversationMessages.push({ role: "tool", tool_call_id: tc.id, content: result });
         }
         if (forcedReply) {
-          persistMessages(supabase, sessionKey, messages, forcedReply, userAgent).catch((e) =>
-            console.warn("[riya-chat] persist error:", e)
-          );
+          const persistedId = await persistMessages(supabase, sessionKey, messages, forcedReply, userAgent).catch((e) => {
+            console.warn("[riya-chat] persist error:", e);
+            return null;
+          });
           return new Response(
-            JSON.stringify({ message: forcedReply, sessionId: sessionKey }),
+            JSON.stringify({ message: forcedReply, sessionId: sessionKey, sessionUuid: persistedId || sessionRow?.id || null }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
@@ -574,12 +575,13 @@ serve(async (req) => {
       }
 
       const reply = choice.content || "Sorry, I didn't catch that. Phir se bolenge?";
-      persistMessages(supabase, sessionKey, messages, reply, userAgent).catch((e) =>
-        console.warn("[riya-chat] persist error:", e)
-      );
+      const persistedId = await persistMessages(supabase, sessionKey, messages, reply, userAgent).catch((e) => {
+        console.warn("[riya-chat] persist error:", e);
+        return null;
+      });
 
       return new Response(
-        JSON.stringify({ message: reply, sessionId: sessionKey }),
+        JSON.stringify({ message: reply, sessionId: sessionKey, sessionUuid: persistedId || sessionRow?.id || null }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -588,6 +590,7 @@ serve(async (req) => {
       JSON.stringify({
         message: "Lagta hai kuch complex hai. Hamari team aapko call karegi — kya phone number share karenge?",
         sessionId: sessionKey,
+        sessionUuid: sessionRow?.id || null,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
