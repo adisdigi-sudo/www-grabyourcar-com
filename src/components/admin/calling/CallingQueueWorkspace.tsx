@@ -480,7 +480,108 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
     onError: (e: any) => toast.error(e.message),
   });
 
-  const totals = useMemo(() => {
+  /* ── Filter dialog: load contacts of a campaign by disposition ── */
+  const { data: filteredContacts = [], refetch: refetchFiltered } = useQuery({
+    queryKey: ["calling-filter-contacts", filterCampaignId, filterDisposition],
+    enabled: !!filterCampaignId,
+    queryFn: async () => {
+      if (!filterCampaignId) return [];
+      let q = supabase
+        .from("auto_dialer_contacts")
+        .select("id, phone, name, email, city, disposition, call_status, lead_id, last_auto_followup_at, auto_followup_count, auto_followup_enabled, disposition_remarks, follow_up_date")
+        .eq("campaign_id", filterCampaignId)
+        .order("updated_at", { ascending: false })
+        .limit(1000);
+      if (filterDisposition && filterDisposition !== "all") {
+        q = q.eq("disposition", filterDisposition);
+      }
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  /* ── Bulk move selected contacts → vertical leads (new leads) ── */
+  const bulkMoveLeads = useMutation({
+    mutationFn: async () => {
+      if (!selectedContactIds.size) throw new Error("Nothing selected");
+      const ids = Array.from(selectedContactIds);
+      const { data: rows, error } = await supabase
+        .from("auto_dialer_contacts")
+        .select("*")
+        .in("id", ids);
+      if (error) throw error;
+
+      let created = 0;
+      for (const contact of rows || []) {
+        if (contact.lead_id) continue; // already converted
+        try {
+          const { data, error: invErr } = await supabase.functions.invoke("submit-lead", {
+            body: {
+              name: contact.name || "Calling Lead",
+              phone: contact.phone,
+              email: contact.email || undefined,
+              city: contact.city || undefined,
+              source: "calling_queue_bulk_move",
+              serviceCategory: verticalSlug,
+              vertical: verticalSlug,
+              message: contact.disposition_remarks || contact.notes || `Bulk-moved ${contact.disposition} lead from ${verticalLabel} calling queue`,
+            },
+          });
+          if (!invErr && (data as any)?.success !== false) {
+            const leadId = (data as any)?.lead_id || (data as any)?.id || null;
+            await supabase.from("auto_dialer_contacts").update({ lead_id: leadId }).eq("id", contact.id);
+            created++;
+          }
+        } catch (err) {
+          console.warn("bulk move failed for", contact.id, err);
+        }
+      }
+      return { created };
+    },
+    onSuccess: ({ created }) => {
+      toast.success(`✅ ${created} lead${created === 1 ? "" : "s"} moved to ${verticalLabel} pipeline`);
+      setSelectedContactIds(new Set());
+      refetchFiltered();
+      qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  /* ── Toggle auto follow-up for a contact ── */
+  const toggleAutoFollowup = useMutation({
+    mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
+      const { error } = await supabase
+        .from("auto_dialer_contacts")
+        .update({
+          auto_followup_enabled: enabled,
+          auto_followup_paused_at: enabled ? null : new Date().toISOString(),
+        })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchFiltered();
+      toast.success("Auto follow-up updated");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  /* ── Trigger an immediate auto-followup run (test/manual) ── */
+  const runAutoFollowupNow = useMutation({
+    mutationFn: async (slot: "morning" | "evening") => {
+      const { data, error } = await supabase.functions.invoke("calling-auto-followup", {
+        body: { slot },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: any) => {
+      toast.success(`Sent ${data?.sent || 0} follow-ups (skipped ${data?.skipped || 0})`);
+      refetchFiltered();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
     return campaigns.reduce(
       (acc: any, c: any) => {
         acc.total       += c.total_contacts || 0;
