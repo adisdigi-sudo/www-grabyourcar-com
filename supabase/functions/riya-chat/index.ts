@@ -481,6 +481,7 @@ serve(async (req) => {
           JSON.stringify({
             message: `${sessionRow.assigned_agent_name || "Hamare expert"} aapse personally connect ho rahe hain — ek minute 🙏`,
             sessionId: sessionKey,
+            sessionUuid: sessionRow.id,
             takeover: true,
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
