@@ -12,6 +12,7 @@ import { Bot, Send, User, UserCheck, X, Loader2, MessageCircle, BellRing, Clock3
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
+import { AIPolishButtons } from "@/components/admin/shared/AIPolishButtons";
 
 interface ChatSession {
   id: string;
