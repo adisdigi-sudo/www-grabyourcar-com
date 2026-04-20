@@ -15,7 +15,17 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Phone, PhoneOff, PhoneMissed, Ban, AlertTriangle, CalendarIcon, Loader2, CheckCircle2 } from "lucide-react";
 
-export type Disposition = "connected" | "not_connected" | "busy" | "switched_off" | "wrong_number" | "no_answer" | "callback_requested";
+export type Disposition =
+  | "hot"
+  | "interested"
+  | "not_connected"
+  | "callback_requested"
+  | "wrong_number"
+  | "busy"
+  | "dnd"
+  | "switched_off"
+  | "connected"
+  | "no_answer";
 
 interface CallDispositionModalProps {
   open: boolean;
