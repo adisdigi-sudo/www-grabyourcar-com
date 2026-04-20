@@ -81,9 +81,17 @@ export function CallDispositionModal({
     disposition === "hot" ||
     disposition === "interested";
 
+  // Mandatory remarks for serious outcomes (Point 3)
+  const REMARKS_REQUIRED = new Set<Disposition>(["hot", "interested", "callback_requested"]);
+  const remarksMissing = REMARKS_REQUIRED.has(disposition as Disposition) && !notes.trim();
+
   const handleSave = async () => {
     if (!disposition) {
       toast.error("You MUST select a call disposition before closing.");
+      return;
+    }
+    if (remarksMissing) {
+      toast.error("📝 Remarks zaroori hain — Hot / Interested / Callback ke liye notes likhna mandatory hai.");
       return;
     }
     if (!user?.id) {
