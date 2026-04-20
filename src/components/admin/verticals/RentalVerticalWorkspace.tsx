@@ -57,7 +57,7 @@ export function RentalVerticalWorkspace() {
         </CardContent>
       </Card>
 
-      <VerticalReplyAgentsCard verticalSlug="rental" verticalLabel="Self-Drive Rental" />
+      <VerticalReplyAgentsCard verticalSlug="rentals" verticalLabel="Self-Drive Rental" />
 
       <div className="flex gap-1 p-1 bg-muted/50 rounded-lg overflow-x-auto">
         {tabs.map(tab => {

@@ -35,7 +35,7 @@ export function FleetVerticalWorkspace() {
         </CardContent>
       </Card>
 
-      <VerticalReplyAgentsCard verticalSlug="rental" verticalLabel="Corporate Fleet" />
+      <VerticalReplyAgentsCard verticalSlug="rentals" verticalLabel="Corporate Fleet" />
 
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
         <TabsList>

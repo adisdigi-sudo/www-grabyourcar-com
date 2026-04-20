@@ -11,6 +11,7 @@ import DealerAutomationCenter from "./dealer/DealerAutomationCenter";
 import DealerSearchHub from "./dealer/DealerSearchHub";
 import DealerChatCenter from "./dealer/DealerChatCenter";
 import { CallingQueueWorkspace } from "./calling/CallingQueueWorkspace";
+import { VerticalReplyAgentsCard } from "./automation/VerticalReplyAgentsCard";
 
 interface Props {
   initialTab?: string;
@@ -25,6 +26,8 @@ export const DealerManagement = ({ initialTab = "inquiry" }: Props) => {
         <h1 className="text-2xl font-bold">🏢 Dealer Network Management</h1>
         <p className="text-muted-foreground">Manage dealer companies, representatives, inventory, automation & analytics</p>
       </div>
+
+      <VerticalReplyAgentsCard verticalSlug="dealer-network" verticalLabel="Dealer Network" />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid grid-cols-10 w-full max-w-6xl">
