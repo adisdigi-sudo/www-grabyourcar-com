@@ -74,7 +74,12 @@ export function CallDispositionModal({
   const [durationMinutes, setDurationMinutes] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const needsFollowUp = disposition === "callback_requested" || disposition === "busy" || disposition === "no_answer";
+  const needsFollowUp =
+    disposition === "callback_requested" ||
+    disposition === "busy" ||
+    disposition === "switched_off" ||
+    disposition === "hot" ||
+    disposition === "interested";
 
   const handleSave = async () => {
     if (!disposition) {
