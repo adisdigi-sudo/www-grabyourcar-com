@@ -139,7 +139,8 @@ Warm regards,
 };
 
 // ─── Main Workspace ───
-type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator" | "performance" | "conversations";
+import { CallingQueueWorkspace } from "../calling/CallingQueueWorkspace";
+type LoanWorkspaceView = "pipeline" | "calling" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator" | "performance" | "conversations";
 type DateFilter = DateFilterValue;
 type StageFilter = "all" | "in_pipeline" | "disbursed" | "lost";
 interface LoanWorkspaceProps {
@@ -491,6 +492,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
       <div className="flex items-center gap-1 overflow-x-auto pb-1">
         {([
           { key: "pipeline", label: "Pipeline", icon: Banknote },
+          { key: "calling", label: "Calling Queue", icon: PhoneCall },
           { key: "disbursement", label: "Disbursement", icon: CheckCircle2 },
           { key: "after_sales", label: "After Sales", icon: HeartHandshake },
           { key: "performance", label: "Performance", icon: BarChart3 },
@@ -671,6 +673,13 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
           </div>
         )}
 
+        {activeView === "calling" && (
+          <CallingQueueWorkspace
+            verticalSlug="loans"
+            verticalLabel="Car Loans"
+            accentClass="border-emerald-200 dark:border-emerald-900"
+          />
+        )}
         {activeView === "disbursement" && <LoanDisbursementBook applications={dateFilteredApps} />}
         {activeView === "after_sales" && <LoanAfterSales applications={dateFilteredApps} />}
         {activeView === "performance" && <LoanPerformanceDashboard applications={dateFilteredApps} dateFilter={dateFilter} />}
