@@ -478,7 +478,42 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
     }
 
     qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
-    toast.success("Saved — pulling next number");
+    setCalledThisSession((n) => n + 1);
+    setAdvancing(true);
+    toast.success("✅ Saved — auto-loading next number…");
+    await pullNextContact(activeCampaignId);
+  }
+
+  /* Point 6 — Skip current number without saving (marks no_answer + advances) */
+  async function skipCurrent() {
+    if (!activeContact || !activeCampaignId || advancing) return;
+    setAdvancing(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase
+      .from("auto_dialer_contacts")
+      .update({
+        call_status: "no_answer",
+        disposition: "no_answer",
+        notes: "Skipped by agent",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", activeContact.id);
+    await supabase.from("auto_dialer_dispositions").insert({
+      campaign_id: activeCampaignId,
+      contact_id: activeContact.id,
+      phone: activeContact.phone,
+      customer_name: activeContact.name || null,
+      vertical_slug: verticalSlug,
+      disposition: "no_answer",
+      remarks: "Skipped by agent",
+      attempt_number: activeContact.dial_attempts || 1,
+      dialed_by: user?.id ?? null,
+      dialed_by_email: user?.email ?? null,
+    });
+    await refreshCampaignStats(activeCampaignId);
+    qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
+    setCalledThisSession((n) => n + 1);
+    toast.message("⏭ Skipped — pulling next number");
     await pullNextContact(activeCampaignId);
   }
 
@@ -516,6 +551,11 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
   function endSession() {
     setActiveContact(null);
     setActiveCampaignId(null);
+    setAdvancing(false);
+    setRemainingInQueue(null);
+    if (calledThisSession > 0) {
+      toast.success(`📊 Session ended — ${calledThisSession} call${calledThisSession === 1 ? "" : "s"} logged`);
+    }
   }
 
   /* ── Convert "interested" contacts into vertical leads ── */
