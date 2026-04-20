@@ -116,34 +116,41 @@ function jsonResponse(data: unknown, status = 200) {
 }
 
 // ===== WhatsApp Helper =====
-async function sendWhatsApp(phone: string, message: string, token?: string | null, phoneId?: string | null): Promise<boolean> {
-  if (!token || !phoneId) {
-    console.log(`[WA SKIP] No credentials. Would send to ${phone}`);
-    return false;
-  }
-
+// Auto-Pilot does NOT send directly anymore — queues into auto_pilot_pending_messages
+// for admin preview & approval inside WhatsApp Hub → Auto-Pilot Preview tab.
+async function sendWhatsApp(
+  phone: string,
+  message: string,
+  _token?: string | null,
+  _phoneId?: string | null,
+  meta?: { agent_type?: string; recipient_name?: string; context?: Record<string, unknown> }
+): Promise<boolean> {
   let cleanPhone = phone.replace(/\D/g, "");
   if (cleanPhone.length === 10) cleanPhone = "91" + cleanPhone;
   if (!cleanPhone.startsWith("91")) cleanPhone = "91" + cleanPhone;
 
   try {
-    const res = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messaging_product: "whatsapp", to: cleanPhone,
-        type: "text", text: { body: message },
-      }),
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { error } = await sb.from("auto_pilot_pending_messages").insert({
+      agent_type: meta?.agent_type || "unknown",
+      recipient_phone: cleanPhone,
+      recipient_name: meta?.recipient_name || null,
+      message_body: message,
+      message_type: "text",
+      context_snapshot: meta?.context || null,
+      status: "pending",
+      scheduled_for: new Date().toISOString(),
     });
-
-    if (!res.ok) {
-      const err = await res.text();
-      console.error(`WA send failed to ${cleanPhone}:`, err);
+    if (error) {
+      console.error("Failed to queue auto-pilot message:", error);
       return false;
     }
+    console.log(`[AUTO-PILOT QUEUED] ${meta?.agent_type} → ${cleanPhone}`);
     return true;
   } catch (e) {
-    console.error(`WA error to ${cleanPhone}:`, e);
+    console.error(`Queue error for ${cleanPhone}:`, e);
     return false;
   }
 }
