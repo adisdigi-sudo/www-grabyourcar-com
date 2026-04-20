@@ -13,7 +13,10 @@ import { toast } from "sonner";
 import {
   Plus, Phone, PhoneCall, PhoneOff, Upload, FileSpreadsheet,
   CheckCircle2, XCircle, SkipForward, Clock, Trash2, UserPlus, ListChecks,
+  Filter, MessageCircle, Send, Pause, Play,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import ExcelJS from "exceljs";
 
 /* ─────────────────────────────────────────────────────────────
