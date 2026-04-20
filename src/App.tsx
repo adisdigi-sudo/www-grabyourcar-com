@@ -112,12 +112,20 @@ const LegacyRouteHandler = () => {
   return <NotFound />;
 };
 
-const PageViewTracker = () => {
-  const location = useLocation();
-  const isAdminExperience =
-    !isDocumentViewerPath(location.pathname) && (isAdminSubdomain() || isAdminRoutePath(location.pathname));
-
-  usePageViewTracking(!isAdminExperience);
+const PageViewTracker = ({
+  isAdminExperience,
+  pathname,
+  search,
+}: {
+  isAdminExperience: boolean;
+  pathname: string;
+  search: string;
+}) => {
+  usePageViewTracking({
+    enabled: !isAdminExperience,
+    pathname,
+    search,
+  });
 
   useEffect(() => {
     const resetTimer = scheduleChunkLoadRecoveryReset();
@@ -176,7 +184,11 @@ const AppRouterShell = () => {
         }
       >
         <RouteAwareStructuredData isChromelessExperience={isChromelessExperience} />
-        <PageViewTracker />
+        <PageViewTracker
+          isAdminExperience={isAdminExperience}
+          pathname={location.pathname}
+          search={location.search}
+        />
         <AdminSubdomainRouter>
           <Routes>
             <Route path="/" element={<Index />} />
