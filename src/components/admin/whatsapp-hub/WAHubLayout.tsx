@@ -7,7 +7,7 @@ import {
   MessageSquare, LayoutTemplate, Megaphone, Workflow, Users, BarChart3,
   UsersRound, ChevronLeft, ChevronRight, Wifi, WifiOff, Search,
   MessageSquareText, ClipboardList, MousePointer,
-  TrendingUp, Sparkles, Zap, Mail, Inbox as InboxIcon,
+  TrendingUp, Sparkles, Zap, Mail, Inbox as InboxIcon, Bot,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -25,12 +25,13 @@ import { WAHubInteractive } from "./modules/WAHubInteractive";
 import { WAHubCampaignROI } from "./modules/WAHubCampaignROI";
 import { WAHubSalesEngines } from "./modules/WAHubSalesEngines";
 import { WAHubSmartTriggers } from "./modules/WAHubSmartTriggers";
+import { WAHubAutoPilotPreview } from "./modules/WAHubAutoPilotPreview";
 import { EmailMarketingHub } from "../marketing/email/EmailMarketingHub";
 
 type Module =
   | "inbox" | "templates" | "broadcasts" | "flows" | "contacts" | "analytics"
   | "team" | "crm-messages" | "surveys" | "interactive" | "campaign-roi"
-  | "sales-engines" | "smart-triggers" | "email-hub";
+  | "sales-engines" | "smart-triggers" | "auto-pilot-preview" | "email-hub";
 
 interface NavItem {
   id: Module;
@@ -57,6 +58,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "smart-triggers", label: "Auto-Replies", icon: Zap, badge: "🔥", section: "Automation", description: "Trigger setup" },
   { id: "flows", label: "Flows", icon: Workflow, section: "Automation" },
   { id: "sales-engines", label: "Sales Engines", icon: Sparkles, section: "Automation" },
+  { id: "auto-pilot-preview", label: "Auto-Pilot Preview", icon: Bot, badge: "NEW", section: "Automation", description: "Approve AI messages before send" },
 
   // Email (consolidated)
   { id: "email-hub", label: "Email Hub", icon: Mail, badge: "All-in-One", section: "Email" },
@@ -90,6 +92,7 @@ export function WAHubLayout() {
       case "campaign-roi": return <WAHubCampaignROI />;
       case "sales-engines": return <WAHubSalesEngines />;
       case "smart-triggers": return <WAHubSmartTriggers />;
+      case "auto-pilot-preview": return <div className="h-full overflow-auto p-4"><WAHubAutoPilotPreview /></div>;
       case "email-hub": return <EmailMarketingHub />;
       default: return <WAHubInbox />;
     }
