@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Phone, PhoneOff, PhoneMissed, Ban, AlertTriangle, CalendarIcon, Loader2, CheckCircle2 } from "lucide-react";
+import { Phone, PhoneOff, PhoneMissed, Ban, AlertTriangle, CalendarIcon, Loader2, CheckCircle2, Flame, ThumbsUp, ThumbsDown, BellOff, PowerOff } from "lucide-react";
 
 export type Disposition =
   | "hot"
