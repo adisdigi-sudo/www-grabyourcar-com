@@ -81,9 +81,17 @@ export function CallDispositionModal({
     disposition === "hot" ||
     disposition === "interested";
 
+  // Mandatory remarks for serious outcomes (Point 3)
+  const REMARKS_REQUIRED = new Set<Disposition>(["hot", "interested", "callback_requested"]);
+  const remarksMissing = REMARKS_REQUIRED.has(disposition as Disposition) && !notes.trim();
+
   const handleSave = async () => {
     if (!disposition) {
       toast.error("You MUST select a call disposition before closing.");
+      return;
+    }
+    if (remarksMissing) {
+      toast.error("📝 Remarks zaroori hain — Hot / Interested / Callback ke liye notes likhna mandatory hai.");
       return;
     }
     if (!user?.id) {
@@ -264,23 +272,40 @@ export function CallDispositionModal({
             </Button>
           )}
 
-          {/* Notes */}
+          {/* Notes — mandatory for Hot / Interested / Callback (Point 3) */}
           <div>
-            <Label className="text-sm font-medium">Call Notes</Label>
+            <Label className="text-sm font-medium flex items-center gap-1">
+              Call Notes
+              {REMARKS_REQUIRED.has(disposition as Disposition) && (
+                <span className="text-destructive">*</span>
+              )}
+              {REMARKS_REQUIRED.has(disposition as Disposition) && (
+                <Badge variant="destructive" className="ml-auto text-[10px]">Required</Badge>
+              )}
+            </Label>
             <Textarea
-              placeholder="Key points from the call..."
+              placeholder={
+                REMARKS_REQUIRED.has(disposition as Disposition)
+                  ? "Remarks REQUIRED — customer ne kya kaha? (e.g. budget, timeline, objection)"
+                  : "Key points from the call..."
+              }
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              className="mt-1"
+              className={`mt-1 ${remarksMissing ? "border-destructive focus-visible:ring-destructive/30" : ""}`}
             />
+            {remarksMissing && (
+              <p className="text-xs text-destructive mt-1">
+                ⚠️ Hot / Interested / Callback ke liye remarks likhna mandatory hai.
+              </p>
+            )}
           </div>
         </div>
 
         <DialogFooter>
           <Button
             onClick={handleSave}
-            disabled={saving || !disposition}
+            disabled={saving || !disposition || remarksMissing}
             className="w-full shadow-lg shadow-primary/25"
             size="lg"
           >
@@ -288,6 +313,8 @@ export function CallDispositionModal({
               <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</>
             ) : !disposition ? (
               <><AlertTriangle className="h-4 w-4 mr-2" /> Select Status to Continue</>
+            ) : remarksMissing ? (
+              <><AlertTriangle className="h-4 w-4 mr-2" /> Remarks Required to Continue</>
             ) : (
               <><CheckCircle2 className="h-4 w-4 mr-2" /> Log Call & Continue</>
             )}
