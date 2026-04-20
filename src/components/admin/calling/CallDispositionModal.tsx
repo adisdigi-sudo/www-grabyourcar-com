@@ -262,17 +262,19 @@ export function CallDispositionModal({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => {
-            if (!disposition) {
-              toast.error("⚠️ You MUST log the call disposition!");
-              return;
-            }
-            onClose();
-          }}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={saving || !disposition} className="shadow-lg shadow-primary/25">
-            {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</> : <><CheckCircle2 className="h-4 w-4 mr-2" /> Log Call</>}
+          <Button
+            onClick={handleSave}
+            disabled={saving || !disposition}
+            className="w-full shadow-lg shadow-primary/25"
+            size="lg"
+          >
+            {saving ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</>
+            ) : !disposition ? (
+              <><AlertTriangle className="h-4 w-4 mr-2" /> Select Status to Continue</>
+            ) : (
+              <><CheckCircle2 className="h-4 w-4 mr-2" /> Log Call & Continue</>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
