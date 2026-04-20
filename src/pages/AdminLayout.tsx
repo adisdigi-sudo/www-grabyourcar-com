@@ -19,7 +19,11 @@ import { LoanCRMDashboard } from "@/components/admin/LoanCRMDashboard";
 import { NotificationCenter } from "@/components/admin/NotificationCenter";
 import { CRMAssistant } from "@/components/admin/CRMAssistant";
 import { AICofounderBanner } from "@/components/admin/AICofounderBanner";
+import { LiveChatsBell } from "@/components/admin/livechats/LiveChatsBell";
 import { Shield } from "lucide-react";
+const LiveChatsDashboard = lazy(() =>
+  import("@/components/admin/livechats/LiveChatsDashboard").then((m) => ({ default: m.LiveChatsDashboard }))
+);
 const PersonalizedWelcomeBanner = lazy(() =>
   import("@/components/admin/PersonalizedWelcomeBanner").then((module) => ({ default: module.PersonalizedWelcomeBanner })),
 );

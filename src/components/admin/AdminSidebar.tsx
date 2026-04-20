@@ -73,6 +73,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   // ── Universal ──
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "live-chats", label: "💬 Live Chats", icon: MessageCircle, badge: "LIVE" },
   { id: "ai-cofounder", label: "🤖 AI Co-Founder", icon: Brain, badge: "AI" },
   { id: "my-hr", label: "📋 My HR", icon: LayoutDashboard },
   { id: "legacy-leads", label: "📦 Legacy Leads", icon: LayoutDashboard, allowedRoles: ["super_admin", "admin"] },
