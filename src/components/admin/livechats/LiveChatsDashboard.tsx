@@ -55,6 +55,19 @@ export const LiveChatsDashboard = () => {
   const knownSessionIdsRef = useRef<Set<string>>(new Set());
   const knownMessageIdsRef = useRef<Set<string>>(new Set());
 
+  const resolveAgentName = async () => {
+    if (!user?.id) return user?.email?.split("@")[0] || "Agent";
+
+    const { data } = await supabase
+      .from("team_members")
+      .select("display_name, phone")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    return data?.display_name?.trim() || data?.phone?.trim() || user?.email?.split("@")[0] || "Agent";
+  };
+
   const loadSessions = async () => {
     const { data } = await supabase
       .from("riya_chat_sessions")
@@ -222,7 +235,7 @@ export const LiveChatsDashboard = () => {
 
   const takeover = async () => {
     if (!activeSession) return;
-    const agentName = user?.email?.split("@")[0] || "Agent";
+    const agentName = await resolveAgentName();
     const nowIso = new Date().toISOString();
 
     const { error } = await supabase
@@ -261,7 +274,7 @@ export const LiveChatsDashboard = () => {
     if (!text || !activeSession || sending) return;
 
     setSending(true);
-    const agentName = user?.email?.split("@")[0] || "Agent";
+    const agentName = await resolveAgentName();
     const nowIso = new Date().toISOString();
 
     const { error } = await supabase.from("riya_chat_messages").insert({
