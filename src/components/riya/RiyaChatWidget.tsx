@@ -401,61 +401,6 @@ export const RiyaChatWidget = ({
             )}
           </Button>
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 shrink-0 text-primary"
-            onClick={() => runAi("polish")}
-            disabled={!input.trim() || aiBusy || loading}
-            title="AI Fix — grammar & spelling"
-            aria-label="AI Fix"
-          >
-            {aiBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 shrink-0"
-                disabled={!input.trim() || aiBusy || loading}
-                title="AI Rewrite — tone & translate"
-                aria-label="AI Rewrite"
-              >
-                <Wand2 className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="top" className="w-52">
-              <DropdownMenuLabel className="text-xs">Tone</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => runAi("professional")} className="text-xs gap-2">
-                <Wand2 className="h-3.5 w-3.5" /> Professional
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => runAi("friendly")} className="text-xs gap-2">
-                <Smile className="h-3.5 w-3.5" /> Friendly
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => runAi("shorten")} className="text-xs gap-2">
-                <Sparkles className="h-3.5 w-3.5" /> Shorten
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => runAi("emoji")} className="text-xs gap-2">
-                <Smile className="h-3.5 w-3.5" /> Add Emojis
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-xs">Translate</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => runAi("hindi")} className="text-xs gap-2">
-                <Languages className="h-3.5 w-3.5" /> Hindi (हिंदी)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => runAi("hinglish")} className="text-xs gap-2">
-                <Languages className="h-3.5 w-3.5" /> Hinglish
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => runAi("english")} className="text-xs gap-2">
-                <Languages className="h-3.5 w-3.5" /> English
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
