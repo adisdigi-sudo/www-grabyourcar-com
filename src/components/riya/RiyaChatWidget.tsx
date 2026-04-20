@@ -1,5 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { createClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,6 +25,7 @@ interface RiyaChatWidgetProps {
 
 const SESSION_KEY_STORAGE = "riya-chat-session-key";
 const SESSION_UUID_STORAGE = "riya-chat-session-uuid";
+const POLL_INTERVAL_MS = 2000;
 
 const DEFAULT_GREETING = `Hanji, welcome to **GrabYourCar**! 🙏
 
@@ -55,7 +58,17 @@ export const RiyaChatWidget = ({
     return window.localStorage.getItem(SESSION_UUID_STORAGE);
   });
   const scrollRef = useRef<HTMLDivElement>(null);
-  const seenRealtimeMessageIds = useRef<Set<string>>(new Set());
+  const seenMessageIds = useRef<Set<string>>(new Set());
+  const sessionReadClient = useMemo(() => {
+    return createClient<Database>(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        headers: {
+          "x-riya-session-key": sessionId,
+        },
+      },
+    });
+  }, [sessionId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -72,43 +85,54 @@ export const RiyaChatWidget = ({
     }
   }, [sessionUuid]);
 
-  // Subscribe to live agent / system messages once we have the real session UUID.
+  // Poll live agent / system messages using the session-key scoped public read policy.
   useEffect(() => {
     if (!sessionUuid) return;
-    const channel = supabase
-      .channel(`riya-widget-${sessionUuid}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "riya_chat_messages", filter: `session_id=eq.${sessionUuid}` },
-        (payload) => {
-          const msg = payload.new as {
-            id: string;
-            role: "user" | "assistant" | "system";
-            content: string;
-            sender_name?: string | null;
-          };
+    let cancelled = false;
 
-          if (seenRealtimeMessageIds.current.has(msg.id)) return;
-          if (msg.role === "user") return;
-          // AI replies already rendered from the direct edge-function response — skip persisted echo.
-          if (msg.role === "assistant" && msg.sender_name === "Riya (AI)") return;
+    const syncMessages = async () => {
+      const { data, error } = await sessionReadClient
+        .from("riya_chat_messages")
+        .select("id, role, content, sender_name")
+        .eq("session_id", sessionUuid)
+        .order("created_at", { ascending: true });
 
-          seenRealtimeMessageIds.current.add(msg.id);
+      if (cancelled || error || !data) return;
+
+      const incoming = data.filter((msg) => {
+        if (seenMessageIds.current.has(msg.id)) return false;
+        if (msg.role === "user") return false;
+        if (msg.role === "assistant" && msg.sender_name === "Riya (AI)") return false;
+        return true;
+      });
+
+      if (!incoming.length) return;
+
+      incoming.forEach((msg) => seenMessageIds.current.add(msg.id));
+      setMessages((prev) => [
+        ...prev,
+        ...incoming.map((msg) => {
           const prefix =
             msg.role === "system"
               ? ""
               : msg.sender_name && msg.sender_name !== "Riya (AI)"
                 ? `**${msg.sender_name}:** `
                 : "";
-          setMessages((prev) => [...prev, { role: "assistant", content: `${prefix}${msg.content}` }]);
-        }
-      )
-      .subscribe();
+          return { role: "assistant" as const, content: `${prefix}${msg.content}` };
+        }),
+      ]);
+    };
+
+    void syncMessages();
+    const interval = window.setInterval(() => {
+      void syncMessages();
+    }, POLL_INTERVAL_MS);
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      window.clearInterval(interval);
     };
-  }, [sessionUuid]);
+  }, [sessionReadClient, sessionUuid]);
 
   const send = async () => {
     const text = input.trim();
@@ -134,6 +158,9 @@ export const RiyaChatWidget = ({
       }
 
       const reply = data?.message || "Sorry, kuch issue hua. Phir se try karein?";
+      if (data?.messageId) {
+        seenMessageIds.current.add(data.messageId);
+      }
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (e) {
       console.error("[Riya] error:", e);
