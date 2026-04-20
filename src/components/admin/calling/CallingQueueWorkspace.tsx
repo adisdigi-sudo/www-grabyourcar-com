@@ -391,6 +391,40 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
     /* refresh campaign counters */
     await refreshCampaignStats(activeCampaignId);
 
+    /* 🎯 Dealer Network — auto-send onboarding kit on Interested / Hot */
+    if (
+      verticalSlug === "dealer" &&
+      (disposition === "interested" || disposition === "hot") &&
+      activeContact.phone
+    ) {
+      try {
+        const dealerName = activeContact.name || "Partner";
+        const onboardingMsg =
+          `🤝 *GrabYourCar Dealer Partnership*\n\n` +
+          `Hi ${dealerName}, thanks for your interest in joining the GrabYourCar dealer network!\n\n` +
+          `🚗 *What you get:*\n` +
+          `• Verified buyer leads in your city\n` +
+          `• Zero subscription fees — pay-per-deal\n` +
+          `• Inventory & discount management dashboard\n` +
+          `• Auto WhatsApp + Email broadcasting to buyers\n` +
+          `• Dedicated onboarding support\n\n` +
+          `📋 *Next steps:*\n` +
+          `1. We'll share the partnership agreement & commission structure\n` +
+          `2. Quick 15-min onboarding call\n` +
+          `3. Inventory upload & go-live within 24 hrs\n\n` +
+          `Reply *YES* to receive the agreement, or call us at +91 95577 00200.\n\n` +
+          `— Team GrabYourCar`;
+
+        await supabase.functions.invoke("whatsapp-send", {
+          body: { to: activeContact.phone, type: "text", message: onboardingMsg },
+        });
+        toast.success("📲 Dealer onboarding kit sent on WhatsApp");
+      } catch (err) {
+        console.error("Dealer onboarding WA send failed:", err);
+        toast.warning("Disposition saved — WhatsApp onboarding kit failed (check WA settings)");
+      }
+    }
+
     qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
     toast.success("Saved — pulling next number");
     await pullNextContact(activeCampaignId);
