@@ -41,6 +41,9 @@ export function UnifiedMarketingHub() {
           <TabsTrigger value="omni" className="gap-1.5 text-xs sm:text-sm">
             <Zap className="h-3.5 w-3.5" />Omni Campaigns
           </TabsTrigger>
+          <TabsTrigger value="wa-bulk" className="gap-1.5 text-xs sm:text-sm">
+            <MessageSquare className="h-3.5 w-3.5" />WA Bulk Sender
+          </TabsTrigger>
           <TabsTrigger value="email-campaigns" className="gap-1.5 text-xs sm:text-sm">
             <Send className="h-3.5 w-3.5" />Email Campaigns
           </TabsTrigger>
