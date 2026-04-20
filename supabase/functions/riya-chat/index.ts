@@ -366,13 +366,26 @@ async function persistMessages(
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     const lastUserContent = lastUser?.content || "";
     const phoneMatch = lastUserContent.match(/\b([6-9]\d{9})\b/);
+    const cleanPhone = phoneMatch?.[1] || null;
     const detectedVertical = detectVertical(lastUserContent);
 
-    const { data: existing } = await supabase
+    let { data: existing } = await supabase
       .from("riya_chat_sessions")
       .select("id, takeover_state, message_count")
       .eq("session_key", sessionKey)
       .maybeSingle();
+
+    if (!existing && cleanPhone) {
+      const { data: phoneSession } = await supabase
+        .from("riya_chat_sessions")
+        .select("id, takeover_state, message_count, session_key")
+        .eq("visitor_phone", cleanPhone)
+        .order("last_message_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      existing = phoneSession ?? null;
+    }
 
     let sessionId: string;
     if (existing) {
@@ -384,7 +397,7 @@ async function persistMessages(
           last_message_at: new Date().toISOString(),
           last_visitor_message_at: new Date().toISOString(),
           message_count: (existing.message_count as number) + 2,
-          ...(phoneMatch ? { visitor_phone: phoneMatch[1] } : {}),
+          ...(cleanPhone ? { visitor_phone: cleanPhone } : {}),
           ...(detectedVertical ? { vertical_interest: detectedVertical } : {}),
         })
         .eq("id", sessionId);
@@ -396,7 +409,7 @@ async function persistMessages(
           last_message_preview: assistantReply.slice(0, 200),
           last_visitor_message_at: new Date().toISOString(),
           message_count: 2,
-          visitor_phone: phoneMatch ? phoneMatch[1] : null,
+          visitor_phone: cleanPhone,
           vertical_interest: detectedVertical,
           user_agent: userAgent || null,
           takeover_state: "ai",
