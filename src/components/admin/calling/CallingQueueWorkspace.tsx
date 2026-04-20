@@ -391,6 +391,7 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
   /* ── Save disposition + auto-pull next ── */
   async function saveDisposition() {
     if (!activeContact || !activeCampaignId || !disposition) return;
+    if (advancing) return; // guard double-click
 
     // Mandatory remarks for serious outcomes
     if (REMARKS_REQUIRED.has(disposition) && !notes.trim()) {
