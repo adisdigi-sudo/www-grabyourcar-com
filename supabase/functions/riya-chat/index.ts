@@ -361,7 +361,7 @@ async function persistMessages(
   messages: Array<{ role: string; content: string }>,
   assistantReply: string,
   userAgent?: string
-) {
+): Promise<string | null> {
   try {
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     const lastUserContent = lastUser?.content || "";
@@ -406,7 +406,7 @@ async function persistMessages(
       sessionId = created?.id as string;
     }
 
-    if (!sessionId) return;
+    if (!sessionId) return null;
 
     const rows: Array<Record<string, unknown>> = [];
     if (lastUser) {
@@ -414,8 +414,10 @@ async function persistMessages(
     }
     rows.push({ session_id: sessionId, role: "assistant", content: assistantReply, sender_name: "Riya (AI)" });
     await supabase.from("riya_chat_messages").insert(rows);
+    return sessionId;
   } catch (e) {
     console.warn("[riya-chat] persist failed:", e);
+    return null;
   }
 }
 
@@ -481,6 +483,7 @@ serve(async (req) => {
           JSON.stringify({
             message: `${sessionRow.assigned_agent_name || "Hamare expert"} aapse personally connect ho rahe hain — ek minute 🙏`,
             sessionId: sessionKey,
+            sessionUuid: sessionRow.id,
             takeover: true,
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -559,11 +562,12 @@ serve(async (req) => {
           conversationMessages.push({ role: "tool", tool_call_id: tc.id, content: result });
         }
         if (forcedReply) {
-          persistMessages(supabase, sessionKey, messages, forcedReply, userAgent).catch((e) =>
-            console.warn("[riya-chat] persist error:", e)
-          );
+          const persistedId = await persistMessages(supabase, sessionKey, messages, forcedReply, userAgent).catch((e) => {
+            console.warn("[riya-chat] persist error:", e);
+            return null;
+          });
           return new Response(
-            JSON.stringify({ message: forcedReply, sessionId: sessionKey }),
+            JSON.stringify({ message: forcedReply, sessionId: sessionKey, sessionUuid: persistedId || sessionRow?.id || null }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
@@ -571,12 +575,13 @@ serve(async (req) => {
       }
 
       const reply = choice.content || "Sorry, I didn't catch that. Phir se bolenge?";
-      persistMessages(supabase, sessionKey, messages, reply, userAgent).catch((e) =>
-        console.warn("[riya-chat] persist error:", e)
-      );
+      const persistedId = await persistMessages(supabase, sessionKey, messages, reply, userAgent).catch((e) => {
+        console.warn("[riya-chat] persist error:", e);
+        return null;
+      });
 
       return new Response(
-        JSON.stringify({ message: reply, sessionId: sessionKey }),
+        JSON.stringify({ message: reply, sessionId: sessionKey, sessionUuid: persistedId || sessionRow?.id || null }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -585,6 +590,7 @@ serve(async (req) => {
       JSON.stringify({
         message: "Lagta hai kuch complex hai. Hamari team aapko call karegi — kya phone number share karenge?",
         sessionId: sessionKey,
+        sessionUuid: sessionRow?.id || null,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
