@@ -333,25 +333,52 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
   async function saveDisposition() {
     if (!activeContact || !activeCampaignId || !disposition) return;
 
+    // Mandatory remarks for serious outcomes
+    if (REMARKS_REQUIRED.has(disposition) && !notes.trim()) {
+      toast.error("Remarks required for Hot / Interested / Callback");
+      return;
+    }
+
     const statusMap: Record<string, string> = {
+      hot: "completed",
       interested: "completed",
       not_interested: "completed",
       wrong_number: "completed",
+      dnd: "completed",
+      switched_off: "no_answer",
       no_answer: "no_answer",
       busy: "retry",
       callback: "callback",
     };
+
+    const { data: { user } } = await supabase.auth.getUser();
 
     await supabase
       .from("auto_dialer_contacts")
       .update({
         call_status: statusMap[disposition] || "completed",
         disposition,
+        disposition_remarks: notes || null,
         notes: notes || null,
         follow_up_date: followUp ? new Date(followUp).toISOString() : null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", activeContact.id);
+
+    /* Audit log — every status change tracked (Point 6 prep) */
+    await supabase.from("auto_dialer_dispositions").insert({
+      campaign_id: activeCampaignId,
+      contact_id: activeContact.id,
+      phone: activeContact.phone,
+      customer_name: activeContact.name || null,
+      vertical_slug: verticalSlug,
+      disposition,
+      remarks: notes || null,
+      attempt_number: activeContact.dial_attempts || 1,
+      dialed_by: user?.id ?? null,
+      dialed_by_email: user?.email ?? null,
+      follow_up_at: followUp ? new Date(followUp).toISOString() : null,
+    });
 
     /* refresh campaign counters */
     await refreshCampaignStats(activeCampaignId);
