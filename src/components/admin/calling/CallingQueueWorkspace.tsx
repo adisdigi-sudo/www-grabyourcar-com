@@ -531,85 +531,112 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
         </CardContent>
       </Card>
 
-      {/* ACTIVE DIALER */}
-      {activeContact && (
-        <Card className="border-2 border-blue-500 bg-blue-50/40 dark:bg-blue-950/30">
-          <CardContent className="p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <PhoneCall className="h-5 w-5 text-blue-600 animate-pulse" />
-                <span className="font-semibold">Now Calling</span>
-                <Badge variant="outline" className="text-[10px]">
+      {/* ACTIVE DIALER — BLOCKING MODAL (Point 1) */}
+      <Dialog open={!!activeContact} onOpenChange={() => { /* blocked: must save disposition */ }}>
+        <DialogContent
+          className="max-w-2xl"
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PhoneCall className="h-5 w-5 text-blue-600 animate-pulse" />
+              Now Calling — Status required to continue
+              {activeContact && (
+                <Badge variant="outline" className="text-[10px] ml-1">
                   Attempt #{activeContact.dial_attempts}
                 </Badge>
-              </div>
-              <Button size="sm" variant="ghost" onClick={endSession}>
-                <PhoneOff className="h-4 w-4 mr-1" /> End Session
-              </Button>
-            </div>
+              )}
+            </DialogTitle>
+          </DialogHeader>
 
-            <div className="grid md:grid-cols-2 gap-5">
-              {/* Customer + Dial button */}
-              <div className="space-y-2">
-                <p className="text-2xl font-bold">{activeContact.name || "—"}</p>
-                <a
-                  href={`tel:+91${activeContact.phone}`}
-                  className="inline-flex items-center gap-2 text-3xl font-mono font-bold text-blue-700 hover:underline"
-                >
-                  📞 +91 {activeContact.phone}
-                </a>
-                <div className="text-xs text-muted-foreground space-y-0.5">
-                  {activeContact.city && <p>📍 {activeContact.city}</p>}
-                  {activeContact.email && <p>✉️ {activeContact.email}</p>}
-                </div>
-                <Button asChild className="gap-2 bg-emerald-600 hover:bg-emerald-700">
-                  <a href={`tel:+91${activeContact.phone}`}>
-                    <Phone className="h-4 w-4" /> Dial Now
+          {activeContact && (
+            <div className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-5">
+                {/* Customer + Dial button */}
+                <div className="space-y-2">
+                  <p className="text-2xl font-bold">{activeContact.name || "—"}</p>
+                  <a
+                    href={`tel:+91${activeContact.phone}`}
+                    className="inline-flex items-center gap-2 text-2xl font-mono font-bold text-blue-700 hover:underline"
+                  >
+                    📞 +91 {activeContact.phone}
                   </a>
-                </Button>
+                  <div className="text-xs text-muted-foreground space-y-0.5">
+                    {activeContact.city && <p>📍 {activeContact.city}</p>}
+                    {activeContact.email && <p>✉️ {activeContact.email}</p>}
+                  </div>
+                  <Button asChild className="gap-2 bg-emerald-600 hover:bg-emerald-700 w-full">
+                    <a href={`tel:+91${activeContact.phone}`}>
+                      <Phone className="h-4 w-4" /> Dial Now
+                    </a>
+                  </Button>
+                </div>
+
+                {/* Disposition */}
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {DISPOSITIONS.map((d) => (
+                      <Button
+                        key={d.value}
+                        type="button"
+                        size="sm"
+                        className={disposition === d.value ? d.tone : "bg-muted text-foreground hover:bg-muted/70"}
+                        onClick={() => setDisposition(d.value)}
+                      >
+                        {d.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <Textarea
+                    placeholder={
+                      REMARKS_REQUIRED.has(disposition)
+                        ? "Remarks REQUIRED — what did the customer say?"
+                        : "Notes (optional)"
+                    }
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                    className={`text-sm ${
+                      REMARKS_REQUIRED.has(disposition) && !notes.trim()
+                        ? "border-rose-400 focus-visible:ring-rose-300"
+                        : ""
+                    }`}
+                  />
+                  {(disposition === "callback" || disposition === "interested" || disposition === "hot") && (
+                    <Input
+                      type="datetime-local"
+                      value={followUp}
+                      onChange={(e) => setFollowUp(e.target.value)}
+                    />
+                  )}
+                </div>
               </div>
 
-              {/* Disposition */}
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  {DISPOSITIONS.map((d) => (
-                    <Button
-                      key={d.value}
-                      type="button"
-                      size="sm"
-                      className={disposition === d.value ? d.tone : "bg-muted text-foreground hover:bg-muted/70"}
-                      onClick={() => setDisposition(d.value)}
-                    >
-                      {d.label}
-                    </Button>
-                  ))}
-                </div>
-                <Textarea
-                  placeholder="Notes (optional)"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={2}
-                  className="text-sm"
-                />
-                {(disposition === "callback" || disposition === "interested") && (
-                  <Input
-                    type="datetime-local"
-                    value={followUp}
-                    onChange={(e) => setFollowUp(e.target.value)}
-                  />
-                )}
+              <div className="flex items-center justify-between gap-2 pt-2 border-t">
+                <Button size="sm" variant="ghost" onClick={endSession}>
+                  <PhoneOff className="h-4 w-4 mr-1" /> End Session
+                </Button>
                 <Button
-                  className="w-full gap-2"
+                  className="gap-2"
                   onClick={saveDisposition}
-                  disabled={!disposition}
+                  disabled={
+                    !disposition ||
+                    (REMARKS_REQUIRED.has(disposition) && !notes.trim())
+                  }
                 >
-                  Save & Next Number <SkipForward className="h-4 w-4" />
+                  Save &amp; Next Number <SkipForward className="h-4 w-4" />
                 </Button>
               </div>
+              <p className="text-[11px] text-center text-muted-foreground">
+                💡 Modal locked — save a disposition to load the next number, or "End Session" to exit.
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
+
 
       {/* CAMPAIGN LIST */}
       {isLoading ? (
