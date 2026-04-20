@@ -96,6 +96,62 @@ function detectVertical(text: string): string | null {
   return null;
 }
 
+function safeParseToolResult(value: string) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeSearchText(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function getBigrams(value: string) {
+  const text = normalizeSearchText(value).replace(/\s+/g, "");
+  if (text.length < 2) return [text];
+  const grams: string[] = [];
+  for (let i = 0; i < text.length - 1; i++) grams.push(text.slice(i, i + 2));
+  return grams;
+}
+
+function diceScore(a: string, b: string) {
+  const aGrams = getBigrams(a);
+  const bGrams = getBigrams(b);
+  if (!aGrams.length || !bGrams.length) return 0;
+  const counts = new Map<string, number>();
+  for (const gram of aGrams) counts.set(gram, (counts.get(gram) || 0) + 1);
+  let overlap = 0;
+  for (const gram of bGrams) {
+    const count = counts.get(gram) || 0;
+    if (count > 0) {
+      overlap += 1;
+      counts.set(gram, count - 1);
+    }
+  }
+  return (2 * overlap) / (aGrams.length + bGrams.length);
+}
+
+function pickBestCarMatch(
+  requestedName: string,
+  cars: Array<{ id: string; name: string; brand: string | null; slug: string | null; brochure_url: string | null }>,
+) {
+  const query = normalizeSearchText(requestedName);
+  const ranked = cars
+    .map((car) => {
+      const name = `${car.brand || ""} ${car.name || ""}`.trim();
+      const slug = car.slug || "";
+      const combined = `${name} ${slug}`.trim();
+      const includesBoost = combined.includes(query) || query.includes(normalizeSearchText(name)) ? 0.25 : 0;
+      const score = Math.max(diceScore(query, name), diceScore(query, slug), diceScore(query, combined)) + includesBoost;
+      return { car, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  return ranked[0] && ranked[0].score >= 0.38 ? ranked[0].car : null;
+}
+
 async function executeToolCall(
   toolCall: ToolCall,
   supabase: ReturnType<typeof createClient>,
@@ -136,13 +192,20 @@ async function executeToolCall(
       if (!phone || !car_name) return JSON.stringify({ success: false, error: "Phone & car_name required" });
       const cleanPhone = String(phone).replace(/\D/g, "").slice(-10);
 
-      const { data: cars } = await supabase
+      const { data: cars, error: carsError } = await supabase
         .from("cars")
         .select("id, name, brand, brochure_url, slug")
-        .or(`name.ilike.%${car_name}%,brand.ilike.%${car_name}%`)
-        .limit(1);
+        .limit(500);
 
-      const car = cars?.[0];
+      if (carsError) {
+        return JSON.stringify({
+          success: false,
+          error: carsError.message,
+          customer_message: "Brochure check karte waqt technical issue aa gaya. Ek minute, main human team se confirm karwati hoon. 🙏",
+        });
+      }
+
+      const car = pickBestCarMatch(car_name, (cars || []) as Array<{ id: string; name: string; brand: string | null; slug: string | null; brochure_url: string | null }>);
       if (!car?.brochure_url) {
         await supabase.from("automation_lead_tracking").insert({
           lead_id: crypto.randomUUID(),
@@ -156,13 +219,16 @@ async function executeToolCall(
           raw_data: args as never,
         });
         return JSON.stringify({
-          success: true,
-          message: `${car_name} ka brochure ready kar rahe hain. 5 min me WhatsApp pe ${cleanPhone} pe pahunch jayega.`,
+          success: false,
+          error: car ? "Brochure not available" : "Car not matched",
+          customer_message: car
+            ? `${car.brand || ""} ${car.name} ka brochure abhi system me available nahi hai. Main details text me share kar sakti hoon ya expert se connect kara du?`
+            : `Mujhe ${car_name} ka exact brochure match nahi mila. Aap spelling confirm kar dein ya car ka full name bhej dein, main turant check karti hoon.`,
         });
       }
 
       try {
-        await supabase.functions.invoke("wa-send-inbox", {
+        const { data: sendData, error: sendError } = await supabase.functions.invoke("wa-send-inbox", {
           body: {
             phone: `91${cleanPhone}`,
             message_type: "document",
@@ -172,8 +238,20 @@ async function executeToolCall(
             sent_by_name: "Riya (AI)",
           },
         });
+        if (sendError || !sendData?.success) {
+          return JSON.stringify({
+            success: false,
+            error: sendError?.message || sendData?.error || "WhatsApp send failed",
+            customer_message: `${car.brand || ""} ${car.name} ka brochure abhi send nahi ho paya. Main dobara try kar sakti hoon ya direct link share kar dun: ${car.brochure_url}`,
+          });
+        }
       } catch (e) {
         console.warn("[riya-chat] WhatsApp send failed:", e);
+        return JSON.stringify({
+          success: false,
+          error: e instanceof Error ? e.message : "WhatsApp send failed",
+          customer_message: `${car.brand || ""} ${car.name} ka brochure abhi send nahi ho paya. Main direct link share kar rahi hoon: ${car.brochure_url}`,
+        });
       }
 
       await supabase.from("automation_lead_tracking").insert({
@@ -193,7 +271,8 @@ async function executeToolCall(
       return JSON.stringify({
         success: true,
         brochure_url: car.brochure_url,
-        message: `${car.brand} ${car.name} ka brochure WhatsApp pe bhej diya (${cleanPhone}). Direct link: ${car.brochure_url}`,
+        customer_message: `${car.brand} ${car.name} ka brochure abhi aapke WhatsApp par share kar diya hai. Agar 1 minute me na aaye toh yahi bata dena — main link bhi share kar dungi. 👍`,
+        message: `${car.brand} ${car.name} brochure sent to ${cleanPhone}`,
       });
     }
 
@@ -446,9 +525,23 @@ serve(async (req) => {
       const toolCalls: ToolCall[] | undefined = choice.tool_calls;
       if (toolCalls && toolCalls.length > 0) {
         conversationMessages.push(choice as Record<string, unknown>);
+        let forcedReply: string | null = null;
         for (const tc of toolCalls) {
           const result = await executeToolCall(tc, supabase, sessionContext);
+          const parsed = safeParseToolResult(result);
+          if (parsed?.customer_message && typeof parsed.customer_message === "string") {
+            forcedReply = parsed.customer_message;
+          }
           conversationMessages.push({ role: "tool", tool_call_id: tc.id, content: result });
+        }
+        if (forcedReply) {
+          persistMessages(supabase, sessionKey, messages, forcedReply, userAgent).catch((e) =>
+            console.warn("[riya-chat] persist error:", e)
+          );
+          return new Response(
+            JSON.stringify({ message: forcedReply, sessionId: sessionKey }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
         }
         continue;
       }

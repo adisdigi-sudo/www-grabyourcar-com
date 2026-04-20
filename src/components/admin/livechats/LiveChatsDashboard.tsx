@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Bot, Send, User, UserCheck, X, Loader2, MessageCircle } from "lucide-react";
+import { Bot, Send, User, UserCheck, X, Loader2, MessageCircle, BellRing } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
@@ -54,7 +54,9 @@ export const LiveChatsDashboard = () => {
   const [filter, setFilter] = useState<"all" | "ai" | "human">("all");
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement | null>(null);
+  const knownSessionIdsRef = useRef<Set<string>>(new Set());
+  const knownMessageIdsRef = useRef<Set<string>>(new Set());
 
   // Load sessions + realtime
   useEffect(() => {
@@ -66,14 +68,26 @@ export const LiveChatsDashboard = () => {
         .order("last_message_at", { ascending: false })
         .limit(100);
       if (!cancelled) {
-        setSessions((data as ChatSession[]) || []);
+        const nextSessions = (data as ChatSession[]) || [];
+        knownSessionIdsRef.current = new Set(nextSessions.map((session) => session.id));
+        setSessions(nextSessions);
         setLoading(false);
       }
     };
     load();
     const channel = supabase
       .channel("livechats-sessions")
-      .on("postgres_changes", { event: "*", schema: "public", table: "riya_chat_sessions" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "riya_chat_sessions" }, (payload) => {
+        const next = payload.new as Partial<ChatSession> | null;
+        if (payload.eventType === "INSERT" && next?.id && !knownSessionIdsRef.current.has(next.id)) {
+          knownSessionIdsRef.current.add(next.id);
+          toast.success("New live chat started", {
+            description: (next.visitor_name || next.visitor_phone || "Visitor") + " just sent a message.",
+            icon: <BellRing className="h-4 w-4" />,
+          });
+        }
+        load();
+      })
       .subscribe();
     return () => {
       cancelled = true;
@@ -94,7 +108,11 @@ export const LiveChatsDashboard = () => {
         .select("*")
         .eq("session_id", activeId)
         .order("created_at", { ascending: true });
-      if (!cancelled) setMessages((data as ChatMessage[]) || []);
+      if (!cancelled) {
+        const nextMessages = (data as ChatMessage[]) || [];
+        knownMessageIdsRef.current = new Set(nextMessages.map((message) => message.id));
+        setMessages(nextMessages);
+      }
     };
     load();
     const channel = supabase
@@ -103,7 +121,10 @@ export const LiveChatsDashboard = () => {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "riya_chat_messages", filter: `session_id=eq.${activeId}` },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as ChatMessage]);
+          const nextMessage = payload.new as ChatMessage;
+          if (knownMessageIdsRef.current.has(nextMessage.id)) return;
+          knownMessageIdsRef.current.add(nextMessage.id);
+          setMessages((prev) => [...prev, nextMessage]);
         }
       )
       .subscribe();
@@ -114,8 +135,8 @@ export const LiveChatsDashboard = () => {
   }, [activeId]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (scrollViewportRef.current) {
+      scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -326,7 +347,7 @@ export const LiveChatsDashboard = () => {
                 </div>
               </CardHeader>
 
-              <ScrollArea className="flex-1 px-4" ref={scrollRef}>
+              <ScrollArea className="flex-1 min-h-0 px-4" viewportRef={scrollViewportRef}>
                 <div className="space-y-3 py-4">
                   {messages.map((m) => (
                     <div
@@ -343,7 +364,7 @@ export const LiveChatsDashboard = () => {
                       ) : (
                         <div
                           className={cn(
-                            "max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-sm",
+                            "max-w-[min(85%,42rem)] overflow-hidden rounded-2xl px-3 py-2 text-sm shadow-sm",
                             m.role === "user"
                               ? "bg-muted rounded-bl-sm"
                               : "bg-primary text-primary-foreground rounded-br-sm"
@@ -353,7 +374,7 @@ export const LiveChatsDashboard = () => {
                             {m.sender_name || (m.role === "user" ? "Visitor" : "Riya (AI)")} •{" "}
                             {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
                           </div>
-                          <div className="prose prose-sm dark:prose-invert max-w-none [&_p]:my-1">
+                          <div className="prose prose-sm dark:prose-invert max-w-none break-words [&_p]:my-1 [&_*]:break-words">
                             <ReactMarkdown>{m.content}</ReactMarkdown>
                           </div>
                         </div>
