@@ -793,6 +793,18 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
                       >
                         <PhoneCall className="h-3.5 w-3.5" /> Start Calling
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setFilterCampaignId(c.id);
+                          setFilterDisposition("interested");
+                          setSelectedContactIds(new Set());
+                        }}
+                        className="gap-1"
+                      >
+                        <Filter className="h-3.5 w-3.5" /> Filter & Bulk Move
+                      </Button>
                       {(c.interested_contacts || 0) > 0 && (
                         <Button size="sm" variant="outline" onClick={() => convertLeads.mutate(c.id)} className="gap-1">
                           <UserPlus className="h-3.5 w-3.5" /> Convert {c.interested_contacts} → Lead{c.interested_contacts === 1 ? "" : "s"}
