@@ -145,6 +145,11 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
 
+  /* Filter / Bulk-move sidebar */
+  const [filterCampaignId, setFilterCampaignId] = useState<string | null>(null);
+  const [filterDisposition, setFilterDisposition] = useState<string>("interested");
+  const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
+
   /* ── load campaigns scoped to this vertical ── */
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ["calling-queue-campaigns", verticalSlug],
