@@ -473,7 +473,11 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
                   human_takeover: checked,
                   human_takeover_at: checked ? new Date().toISOString() : null,
                 }).eq("id", conversation.id);
-                toast(checked ? "🖐 Human takeover ON — AI paused" : "🤖 AI resumed for this chat");
+                toast(
+                  checked
+                    ? "🖐 Human takeover ON — AI paused. 5 min tak agar reply na aaya to AI wapas resume ho jayegi."
+                    : "🤖 AI resumed for this chat",
+                );
               }}
               className="scale-75"
             />
