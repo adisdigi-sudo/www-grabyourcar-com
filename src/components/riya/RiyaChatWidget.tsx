@@ -60,7 +60,12 @@ export const RiyaChatWidget = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const seenMessageIds = useRef<Set<string>>(new Set());
   const sessionReadClient = useMemo(() => {
-    return createClient<Database>(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, {
+    const url =
+      import.meta.env.VITE_SUPABASE_URL || "https://ynoiwioypxpurwdbjvyt.supabase.co";
+    const key =
+      import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlub2l3aW95cHhwdXJ3ZGJqdnl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1ODAyNDUsImV4cCI6MjA4MjE1NjI0NX0.LzN8OsDp2g0eSQcRLsunUKgCaWuZ4LWImnrMR_2onTU";
+    return createClient<Database>(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
       global: {
         headers: {
