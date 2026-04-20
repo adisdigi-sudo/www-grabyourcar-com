@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 interface LiveChatsBellProps {
   onClick: () => void;
@@ -41,6 +42,9 @@ export const LiveChatsBell = ({ onClick, className }: LiveChatsBellProps) => {
           refresh();
           setPulse(true);
           setTimeout(() => setPulse(false), 2000);
+          toast.success("New live chat activity", {
+            description: "Kisi customer ne live chat start ya update ki hai.",
+          });
           // Subtle chime
           try {
             if (!audioRef.current) {
@@ -62,6 +66,9 @@ export const LiveChatsBell = ({ onClick, className }: LiveChatsBellProps) => {
           refresh();
           setPulse(true);
           setTimeout(() => setPulse(false), 2000);
+          toast.success("Customer message received", {
+            description: "Live Chats me naya customer message aaya hai.",
+          });
         }
       )
       .subscribe();
