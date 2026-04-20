@@ -44,13 +44,19 @@ export interface CallingQueueWorkspaceProps {
 }
 
 const DISPOSITIONS: { value: string; label: string; tone: string }[] = [
-  { value: "interested",     label: "✅ Interested",     tone: "bg-emerald-500 text-white hover:bg-emerald-600" },
-  { value: "callback",       label: "📅 Callback",        tone: "bg-blue-500 text-white hover:bg-blue-600" },
-  { value: "not_interested", label: "❌ Not Interested",  tone: "bg-rose-500 text-white hover:bg-rose-600" },
-  { value: "no_answer",      label: "📵 No Answer",       tone: "bg-slate-500 text-white hover:bg-slate-600" },
-  { value: "busy",           label: "⏳ Busy",            tone: "bg-amber-500 text-white hover:bg-amber-600" },
-  { value: "wrong_number",   label: "🚫 Wrong Number",    tone: "bg-zinc-500 text-white hover:bg-zinc-600" },
+  { value: "hot",            label: "🔥 Hot",             tone: "bg-orange-600 text-white hover:bg-orange-700" },
+  { value: "interested",     label: "✅ Interested",      tone: "bg-emerald-500 text-white hover:bg-emerald-600" },
+  { value: "callback",       label: "📅 Callback",         tone: "bg-blue-500 text-white hover:bg-blue-600" },
+  { value: "not_interested", label: "❌ Not Interested",   tone: "bg-rose-500 text-white hover:bg-rose-600" },
+  { value: "no_answer",      label: "📵 No Answer",        tone: "bg-slate-500 text-white hover:bg-slate-600" },
+  { value: "busy",           label: "⏳ Busy",             tone: "bg-amber-500 text-white hover:bg-amber-600" },
+  { value: "wrong_number",   label: "🚫 Wrong Number",     tone: "bg-zinc-500 text-white hover:bg-zinc-600" },
+  { value: "dnd",            label: "🔇 DND",              tone: "bg-purple-600 text-white hover:bg-purple-700" },
+  { value: "switched_off",   label: "💬 Switched Off",     tone: "bg-gray-600 text-white hover:bg-gray-700" },
 ];
+
+/** Dispositions where free-text remarks are MANDATORY before saving. */
+const REMARKS_REQUIRED = new Set(["hot", "interested", "callback"]);
 
 function normalizePhone(raw: unknown): string {
   const digits = String(raw ?? "").replace(/\D/g, "");
@@ -327,25 +333,52 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
   async function saveDisposition() {
     if (!activeContact || !activeCampaignId || !disposition) return;
 
+    // Mandatory remarks for serious outcomes
+    if (REMARKS_REQUIRED.has(disposition) && !notes.trim()) {
+      toast.error("Remarks required for Hot / Interested / Callback");
+      return;
+    }
+
     const statusMap: Record<string, string> = {
+      hot: "completed",
       interested: "completed",
       not_interested: "completed",
       wrong_number: "completed",
+      dnd: "completed",
+      switched_off: "no_answer",
       no_answer: "no_answer",
       busy: "retry",
       callback: "callback",
     };
+
+    const { data: { user } } = await supabase.auth.getUser();
 
     await supabase
       .from("auto_dialer_contacts")
       .update({
         call_status: statusMap[disposition] || "completed",
         disposition,
+        disposition_remarks: notes || null,
         notes: notes || null,
         follow_up_date: followUp ? new Date(followUp).toISOString() : null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", activeContact.id);
+
+    /* Audit log — every status change tracked (Point 6 prep) */
+    await supabase.from("auto_dialer_dispositions").insert({
+      campaign_id: activeCampaignId,
+      contact_id: activeContact.id,
+      phone: activeContact.phone,
+      customer_name: activeContact.name || null,
+      vertical_slug: verticalSlug,
+      disposition,
+      remarks: notes || null,
+      attempt_number: activeContact.dial_attempts || 1,
+      dialed_by: user?.id ?? null,
+      dialed_by_email: user?.email ?? null,
+      follow_up_at: followUp ? new Date(followUp).toISOString() : null,
+    });
 
     /* refresh campaign counters */
     await refreshCampaignStats(activeCampaignId);
@@ -498,85 +531,112 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
         </CardContent>
       </Card>
 
-      {/* ACTIVE DIALER */}
-      {activeContact && (
-        <Card className="border-2 border-blue-500 bg-blue-50/40 dark:bg-blue-950/30">
-          <CardContent className="p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <PhoneCall className="h-5 w-5 text-blue-600 animate-pulse" />
-                <span className="font-semibold">Now Calling</span>
-                <Badge variant="outline" className="text-[10px]">
+      {/* ACTIVE DIALER — BLOCKING MODAL (Point 1) */}
+      <Dialog open={!!activeContact} onOpenChange={() => { /* blocked: must save disposition */ }}>
+        <DialogContent
+          className="max-w-2xl"
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PhoneCall className="h-5 w-5 text-blue-600 animate-pulse" />
+              Now Calling — Status required to continue
+              {activeContact && (
+                <Badge variant="outline" className="text-[10px] ml-1">
                   Attempt #{activeContact.dial_attempts}
                 </Badge>
-              </div>
-              <Button size="sm" variant="ghost" onClick={endSession}>
-                <PhoneOff className="h-4 w-4 mr-1" /> End Session
-              </Button>
-            </div>
+              )}
+            </DialogTitle>
+          </DialogHeader>
 
-            <div className="grid md:grid-cols-2 gap-5">
-              {/* Customer + Dial button */}
-              <div className="space-y-2">
-                <p className="text-2xl font-bold">{activeContact.name || "—"}</p>
-                <a
-                  href={`tel:+91${activeContact.phone}`}
-                  className="inline-flex items-center gap-2 text-3xl font-mono font-bold text-blue-700 hover:underline"
-                >
-                  📞 +91 {activeContact.phone}
-                </a>
-                <div className="text-xs text-muted-foreground space-y-0.5">
-                  {activeContact.city && <p>📍 {activeContact.city}</p>}
-                  {activeContact.email && <p>✉️ {activeContact.email}</p>}
-                </div>
-                <Button asChild className="gap-2 bg-emerald-600 hover:bg-emerald-700">
-                  <a href={`tel:+91${activeContact.phone}`}>
-                    <Phone className="h-4 w-4" /> Dial Now
+          {activeContact && (
+            <div className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-5">
+                {/* Customer + Dial button */}
+                <div className="space-y-2">
+                  <p className="text-2xl font-bold">{activeContact.name || "—"}</p>
+                  <a
+                    href={`tel:+91${activeContact.phone}`}
+                    className="inline-flex items-center gap-2 text-2xl font-mono font-bold text-blue-700 hover:underline"
+                  >
+                    📞 +91 {activeContact.phone}
                   </a>
-                </Button>
+                  <div className="text-xs text-muted-foreground space-y-0.5">
+                    {activeContact.city && <p>📍 {activeContact.city}</p>}
+                    {activeContact.email && <p>✉️ {activeContact.email}</p>}
+                  </div>
+                  <Button asChild className="gap-2 bg-emerald-600 hover:bg-emerald-700 w-full">
+                    <a href={`tel:+91${activeContact.phone}`}>
+                      <Phone className="h-4 w-4" /> Dial Now
+                    </a>
+                  </Button>
+                </div>
+
+                {/* Disposition */}
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {DISPOSITIONS.map((d) => (
+                      <Button
+                        key={d.value}
+                        type="button"
+                        size="sm"
+                        className={disposition === d.value ? d.tone : "bg-muted text-foreground hover:bg-muted/70"}
+                        onClick={() => setDisposition(d.value)}
+                      >
+                        {d.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <Textarea
+                    placeholder={
+                      REMARKS_REQUIRED.has(disposition)
+                        ? "Remarks REQUIRED — what did the customer say?"
+                        : "Notes (optional)"
+                    }
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                    className={`text-sm ${
+                      REMARKS_REQUIRED.has(disposition) && !notes.trim()
+                        ? "border-rose-400 focus-visible:ring-rose-300"
+                        : ""
+                    }`}
+                  />
+                  {(disposition === "callback" || disposition === "interested" || disposition === "hot") && (
+                    <Input
+                      type="datetime-local"
+                      value={followUp}
+                      onChange={(e) => setFollowUp(e.target.value)}
+                    />
+                  )}
+                </div>
               </div>
 
-              {/* Disposition */}
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  {DISPOSITIONS.map((d) => (
-                    <Button
-                      key={d.value}
-                      type="button"
-                      size="sm"
-                      className={disposition === d.value ? d.tone : "bg-muted text-foreground hover:bg-muted/70"}
-                      onClick={() => setDisposition(d.value)}
-                    >
-                      {d.label}
-                    </Button>
-                  ))}
-                </div>
-                <Textarea
-                  placeholder="Notes (optional)"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={2}
-                  className="text-sm"
-                />
-                {(disposition === "callback" || disposition === "interested") && (
-                  <Input
-                    type="datetime-local"
-                    value={followUp}
-                    onChange={(e) => setFollowUp(e.target.value)}
-                  />
-                )}
+              <div className="flex items-center justify-between gap-2 pt-2 border-t">
+                <Button size="sm" variant="ghost" onClick={endSession}>
+                  <PhoneOff className="h-4 w-4 mr-1" /> End Session
+                </Button>
                 <Button
-                  className="w-full gap-2"
+                  className="gap-2"
                   onClick={saveDisposition}
-                  disabled={!disposition}
+                  disabled={
+                    !disposition ||
+                    (REMARKS_REQUIRED.has(disposition) && !notes.trim())
+                  }
                 >
-                  Save & Next Number <SkipForward className="h-4 w-4" />
+                  Save &amp; Next Number <SkipForward className="h-4 w-4" />
                 </Button>
               </div>
+              <p className="text-[11px] text-center text-muted-foreground">
+                💡 Modal locked — save a disposition to load the next number, or "End Session" to exit.
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
+
 
       {/* CAMPAIGN LIST */}
       {isLoading ? (
