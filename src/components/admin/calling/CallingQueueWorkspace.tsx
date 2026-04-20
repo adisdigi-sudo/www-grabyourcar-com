@@ -142,6 +142,10 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
   const [disposition, setDisposition] = useState("");
   const [notes, setNotes] = useState("");
   const [followUp, setFollowUp] = useState("");
+  /* Point 6 — auto-advance state */
+  const [advancing, setAdvancing] = useState(false);
+  const [remainingInQueue, setRemainingInQueue] = useState<number | null>(null);
+  const [calledThisSession, setCalledThisSession] = useState(0);
 
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
