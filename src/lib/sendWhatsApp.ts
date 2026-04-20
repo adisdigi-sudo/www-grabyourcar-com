@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getWhatsAppSignature } from "@/lib/senderSignature";
+import { requestWhatsAppPreview, shouldSkipPreview } from "@/components/whatsapp/WhatsAppPreviewDialog";
 
 interface SendWhatsAppParams {
   phone: string;
@@ -70,6 +71,28 @@ export async function sendWhatsApp({
       if (!finalMessage.includes("Regards,\n*")) {
         const sig = await getWhatsAppSignature();
         finalMessage += sig;
+      }
+    }
+
+    // ─── Universal Preview Gate ───
+    // Show preview dialog before sending UNLESS caller is silent (bulk loop) or session-skip is on.
+    if (!silent && !shouldSkipPreview()) {
+      const preview = await requestWhatsAppPreview({
+        phone: fullPhone,
+        message: finalMessage,
+        name,
+        templateName,
+        messageType,
+        mediaUrl,
+        mediaFileName,
+        vertical,
+        logEvent,
+      });
+      if (!preview.confirmed) {
+        return { success: false, error: "Cancelled by user" };
+      }
+      if (preview.editedMessage && !templateName) {
+        finalMessage = preview.editedMessage;
       }
     }
 

@@ -277,12 +277,15 @@ const RouteAwareChrome = ({ isChromelessExperience }: { isChromelessExperience: 
   return <PublicRouteChrome />;
 };
 
+import { WhatsAppPreviewProvider } from "@/components/whatsapp/WhatsAppPreviewDialog";
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <WhatsAppPreviewProvider />
         <BrowserRouter>
           <AppRouterShell />
         </BrowserRouter>
