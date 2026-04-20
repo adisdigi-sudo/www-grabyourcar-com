@@ -2,8 +2,17 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Hardcoded fallbacks (publishable keys are safe to ship in client bundles).
+// These guarantee the app boots even if VITE_* env injection fails in a stale build.
+const FALLBACK_SUPABASE_URL = "https://ynoiwioypxpurwdbjvyt.supabase.co";
+const FALLBACK_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlub2l3aW95cHhwdXJ3ZGJqdnl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1ODAyNDUsImV4cCI6MjA4MjE1NjI0NX0.LzN8OsDp2g0eSQcRLsunUKgCaWuZ4LWImnrMR_2onTU";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || FALLBACK_SUPABASE_PUBLISHABLE_KEY;
+
+if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) {
+  console.warn("[Supabase] VITE env vars missing — using hardcoded fallback to keep app alive.");
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
