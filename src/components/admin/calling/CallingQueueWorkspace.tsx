@@ -912,23 +912,33 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-2 pt-2 border-t">
-                <Button size="sm" variant="ghost" onClick={endSession}>
-                  <PhoneOff className="h-4 w-4 mr-1" /> End Session
-                </Button>
+              <div className="flex items-center justify-between gap-2 pt-2 border-t flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="ghost" onClick={endSession} disabled={advancing}>
+                    <PhoneOff className="h-4 w-4 mr-1" /> End Session
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={skipCurrent} disabled={advancing}>
+                    <SkipForward className="h-4 w-4 mr-1" /> Skip (No Answer)
+                  </Button>
+                </div>
                 <Button
                   className="gap-2"
                   onClick={saveDisposition}
                   disabled={
+                    advancing ||
                     !disposition ||
                     (REMARKS_REQUIRED.has(disposition) && !notes.trim())
                   }
                 >
-                  Save &amp; Next Number <SkipForward className="h-4 w-4" />
+                  {advancing ? (
+                    <>⏳ Loading next…</>
+                  ) : (
+                    <>Save &amp; Auto-Next <SkipForward className="h-4 w-4" /></>
+                  )}
                 </Button>
               </div>
               <p className="text-[11px] text-center text-muted-foreground">
-                💡 Modal locked — save a disposition to load the next number, or "End Session" to exit.
+                💡 Auto-advance ON — saving a disposition immediately loads the next number. Use "Skip" if there's no answer.
               </p>
             </div>
           )}
