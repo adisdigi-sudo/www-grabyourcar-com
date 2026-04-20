@@ -49,6 +49,7 @@ import { useAdminAuth, AppRole } from "@/hooks/useAdminAuth";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ResponsiveLogo } from "@/components/ResponsiveLogo";
 import { performSafePreviewReload } from "@/lib/chunkLoadRecovery";
 import { withPreviewParams } from "@/lib/previewRouting";
 
@@ -611,9 +612,13 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
         >
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
-        <div className="flex-1 min-w-0">
+        <div className="flex flex-1 items-center gap-3 min-w-0">
+          <ResponsiveLogo variant="compact" className="max-w-[132px] hover:scale-100" />
+
+          <div className="min-w-0">
           <h1 className="font-semibold text-sm truncate">{getActiveLabel()}</h1>
           <p className="text-[10px] text-muted-foreground">Admin Panel</p>
+          </div>
         </div>
       </div>
 
@@ -638,12 +643,14 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
             collapsed ? "p-3 justify-center" : "p-4 justify-between",
             isMobile && "mt-14"
           )}>
-            {!collapsed && (
-              <div className="min-w-0">
-                <h2 className="font-bold text-lg truncate">
+            {collapsed ? (
+              <ResponsiveLogo variant="compact" className="max-w-[38px] hover:scale-100" />
+            ) : (
+              <div className="min-w-0 flex-1 pr-3">
+                <ResponsiveLogo variant="sidebar" className="max-w-[190px] hover:scale-100" />
+                <p className="text-xs text-muted-foreground mt-1 truncate">
                   {activeVertical?.name || "Admin Panel"}
-                </h2>
-                <p className="text-xs text-muted-foreground">Grabyourcar.com</p>
+                </p>
               </div>
             )}
             {!isMobile && (
