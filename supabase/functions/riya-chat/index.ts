@@ -361,7 +361,7 @@ async function persistMessages(
   messages: Array<{ role: string; content: string }>,
   assistantReply: string,
   userAgent?: string
-) {
+): Promise<string | null> {
   try {
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     const lastUserContent = lastUser?.content || "";
@@ -406,7 +406,7 @@ async function persistMessages(
       sessionId = created?.id as string;
     }
 
-    if (!sessionId) return;
+    if (!sessionId) return null;
 
     const rows: Array<Record<string, unknown>> = [];
     if (lastUser) {
@@ -414,8 +414,10 @@ async function persistMessages(
     }
     rows.push({ session_id: sessionId, role: "assistant", content: assistantReply, sender_name: "Riya (AI)" });
     await supabase.from("riya_chat_messages").insert(rows);
+    return sessionId;
   } catch (e) {
     console.warn("[riya-chat] persist failed:", e);
+    return null;
   }
 }
 
