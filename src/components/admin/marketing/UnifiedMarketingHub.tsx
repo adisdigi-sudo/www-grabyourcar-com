@@ -87,6 +87,7 @@ export function UnifiedMarketingHub() {
 
         <TabsContent value="email-inbox"><EmailInboxDashboard /></TabsContent>
         <TabsContent value="omni"><OmniCampaignManager /></TabsContent>
+        <TabsContent value="wa-bulk"><WhatsAppBulkSender /></TabsContent>
         <TabsContent value="email-campaigns"><EmailMarketingManagement /></TabsContent>
         <TabsContent value="builder"><EmailBlockBuilder /></TabsContent>
         <TabsContent value="subscribers"><SubscriberSegmentation /></TabsContent>
