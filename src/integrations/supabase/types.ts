@@ -1535,6 +1535,9 @@ export type Database = {
       }
       auto_dialer_contacts: {
         Row: {
+          auto_followup_count: number | null
+          auto_followup_enabled: boolean | null
+          auto_followup_paused_at: string | null
           call_duration_seconds: number | null
           call_status: string | null
           called_at: string | null
@@ -1549,6 +1552,7 @@ export type Database = {
           extra_data: Json | null
           follow_up_date: string | null
           id: string
+          last_auto_followup_at: string | null
           last_dialed_at: string | null
           lead_id: string | null
           name: string | null
@@ -1560,6 +1564,9 @@ export type Database = {
           upload_id: string | null
         }
         Insert: {
+          auto_followup_count?: number | null
+          auto_followup_enabled?: boolean | null
+          auto_followup_paused_at?: string | null
           call_duration_seconds?: number | null
           call_status?: string | null
           called_at?: string | null
@@ -1574,6 +1581,7 @@ export type Database = {
           extra_data?: Json | null
           follow_up_date?: string | null
           id?: string
+          last_auto_followup_at?: string | null
           last_dialed_at?: string | null
           lead_id?: string | null
           name?: string | null
@@ -1585,6 +1593,9 @@ export type Database = {
           upload_id?: string | null
         }
         Update: {
+          auto_followup_count?: number | null
+          auto_followup_enabled?: boolean | null
+          auto_followup_paused_at?: string | null
           call_duration_seconds?: number | null
           call_status?: string | null
           called_at?: string | null
@@ -1599,6 +1610,7 @@ export type Database = {
           extra_data?: Json | null
           follow_up_date?: string | null
           id?: string
+          last_auto_followup_at?: string | null
           last_dialed_at?: string | null
           lead_id?: string | null
           name?: string | null
@@ -2581,6 +2593,72 @@ export type Database = {
             columns: ["vertical_id"]
             isOneToOne: false
             referencedRelation: "business_verticals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calling_auto_followup_log: {
+        Row: {
+          campaign_id: string | null
+          channel: string | null
+          contact_id: string | null
+          created_at: string
+          customer_name: string | null
+          disposition: string
+          error_message: string | null
+          id: string
+          message_sent: string | null
+          phone: string
+          send_slot: string | null
+          sent_at: string
+          status: string | null
+          vertical_slug: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          channel?: string | null
+          contact_id?: string | null
+          created_at?: string
+          customer_name?: string | null
+          disposition: string
+          error_message?: string | null
+          id?: string
+          message_sent?: string | null
+          phone: string
+          send_slot?: string | null
+          sent_at?: string
+          status?: string | null
+          vertical_slug: string
+        }
+        Update: {
+          campaign_id?: string | null
+          channel?: string | null
+          contact_id?: string | null
+          created_at?: string
+          customer_name?: string | null
+          disposition?: string
+          error_message?: string | null
+          id?: string
+          message_sent?: string | null
+          phone?: string
+          send_slot?: string | null
+          sent_at?: string
+          status?: string | null
+          vertical_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calling_auto_followup_log_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "auto_dialer_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calling_auto_followup_log_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "auto_dialer_contacts"
             referencedColumns: ["id"]
           },
         ]
