@@ -617,16 +617,39 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
     onError: (e: any) => toast.error(e.message),
   });
 
+  /* ── Realtime: auto-refresh counters when contacts/campaigns change (Point 4) ── */
+  useEffect(() => {
+    const channel = supabase
+      .channel(`calling-queue-${verticalSlug}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "auto_dialer_contacts" }, () => {
+        qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
+        qc.invalidateQueries({ queryKey: ["filtered-contacts"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "auto_dialer_campaigns", filter: `vertical_slug=eq.${verticalSlug}` }, () => {
+        qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [verticalSlug, qc]);
+
   const totals = useMemo(() => {
     return campaigns.reduce(
       (acc: any, c: any) => {
-        acc.total       += c.total_contacts || 0;
-        acc.pending     += c.pending_contacts || 0;
-        acc.completed   += c.completed_contacts || 0;
-        acc.interested  += c.interested_contacts || 0;
+        acc.total          += c.total_contacts || 0;
+        acc.pending        += c.pending_contacts || 0;
+        acc.completed      += c.completed_contacts || 0;
+        acc.hot            += c.hot_contacts || 0;
+        acc.interested     += c.interested_contacts || 0;
+        acc.callback       += c.callback_contacts || 0;
+        acc.not_interested += c.not_interested_contacts || 0;
+        acc.no_answer      += c.no_answer_contacts || 0;
+        acc.busy           += c.busy_contacts || 0;
+        acc.dnd            += c.dnd_contacts || 0;
+        acc.wrong_number   += c.wrong_number_contacts || 0;
         return acc;
       },
-      { total: 0, pending: 0, completed: 0, interested: 0 }
+      { total: 0, pending: 0, completed: 0, hot: 0, interested: 0, callback: 0,
+        not_interested: 0, no_answer: 0, busy: 0, dnd: 0, wrong_number: 0 }
     );
   }, [campaigns]);
 
