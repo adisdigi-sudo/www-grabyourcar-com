@@ -172,6 +172,14 @@ export default function WhatsAppBusinessInbox() {
       return false;
     }
 
+    // 🖐 Reset the 5-min idle timer whenever a human agent replies in takeover mode
+    if (selectedConvo.human_takeover) {
+      await supabase
+        .from("wa_conversations")
+        .update({ human_takeover_at: new Date().toISOString() })
+        .eq("id", selectedConvo.id);
+    }
+
     if (data?.cost_saved) {
       toast({ title: "Message sent ✓ 💰", description: "Sent as free text (window open) — template cost saved!" });
     } else {
@@ -179,6 +187,25 @@ export default function WhatsAppBusinessInbox() {
     }
     return true;
   };
+
+  // Auto-release stale human takeovers after 5 minutes of agent silence — Riya (AI) resumes automatically.
+  useEffect(() => {
+    const HUMAN_IDLE_MS = 5 * 60 * 1000;
+    const tick = async () => {
+      const stale = conversations.filter((c) => {
+        if (!c.human_takeover || !c.human_takeover_at) return false;
+        return Date.now() - new Date(c.human_takeover_at).getTime() >= HUMAN_IDLE_MS;
+      });
+      if (stale.length === 0) return;
+      await supabase
+        .from("wa_conversations")
+        .update({ human_takeover: false, human_takeover_at: null })
+        .in("id", stale.map((c) => c.id));
+    };
+    tick();
+    const iv = setInterval(tick, 30_000);
+    return () => clearInterval(iv);
+  }, [conversations]);
 
   const isWindowOpen = selectedConvo?.window_expires_at
     ? new Date(selectedConvo.window_expires_at) > new Date()
