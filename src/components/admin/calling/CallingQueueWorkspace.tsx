@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -617,16 +617,39 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
     onError: (e: any) => toast.error(e.message),
   });
 
+  /* ── Realtime: auto-refresh counters when contacts/campaigns change (Point 4) ── */
+  useEffect(() => {
+    const channel = supabase
+      .channel(`calling-queue-${verticalSlug}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "auto_dialer_contacts" }, () => {
+        qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
+        qc.invalidateQueries({ queryKey: ["filtered-contacts"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "auto_dialer_campaigns", filter: `vertical_slug=eq.${verticalSlug}` }, () => {
+        qc.invalidateQueries({ queryKey: ["calling-queue-campaigns", verticalSlug] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [verticalSlug, qc]);
+
   const totals = useMemo(() => {
     return campaigns.reduce(
       (acc: any, c: any) => {
-        acc.total       += c.total_contacts || 0;
-        acc.pending     += c.pending_contacts || 0;
-        acc.completed   += c.completed_contacts || 0;
-        acc.interested  += c.interested_contacts || 0;
+        acc.total          += c.total_contacts || 0;
+        acc.pending        += c.pending_contacts || 0;
+        acc.completed      += c.completed_contacts || 0;
+        acc.hot            += c.hot_contacts || 0;
+        acc.interested     += c.interested_contacts || 0;
+        acc.callback       += c.callback_contacts || 0;
+        acc.not_interested += c.not_interested_contacts || 0;
+        acc.no_answer      += c.no_answer_contacts || 0;
+        acc.busy           += c.busy_contacts || 0;
+        acc.dnd            += c.dnd_contacts || 0;
+        acc.wrong_number   += c.wrong_number_contacts || 0;
         return acc;
       },
-      { total: 0, pending: 0, completed: 0, interested: 0 }
+      { total: 0, pending: 0, completed: 0, hot: 0, interested: 0, callback: 0,
+        not_interested: 0, no_answer: 0, busy: 0, dnd: 0, wrong_number: 0 }
     );
   }, [campaigns]);
 
@@ -676,7 +699,32 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
         </CardContent>
       </Card>
 
-      {/* ACTIVE DIALER — BLOCKING MODAL (Point 1) */}
+      {/* LIVE COUNTERS STRIP — all 8 dispositions, real-time (Point 4) */}
+      <Card>
+        <CardContent className="p-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              <Filter className="h-3 w-3" /> Live Disposition Counters
+            </p>
+            <Badge variant="outline" className="text-[10px] gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Realtime
+            </Badge>
+          </div>
+          <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-11 gap-2 text-center">
+            <CounterTile label="Total"        value={totals.total}          tone="text-foreground" />
+            <CounterTile label="Pending"      value={totals.pending}        tone="text-amber-600" />
+            <CounterTile label="Called"       value={totals.completed}      tone="text-blue-600" />
+            <CounterTile label="🔥 Hot"        value={totals.hot}            tone="text-orange-600" />
+            <CounterTile label="✅ Interested" value={totals.interested}     tone="text-emerald-600" />
+            <CounterTile label="📅 Callback"   value={totals.callback}       tone="text-blue-700" />
+            <CounterTile label="❌ Not Int."   value={totals.not_interested} tone="text-rose-600" />
+            <CounterTile label="📵 No Ans"     value={totals.no_answer}      tone="text-slate-600" />
+            <CounterTile label="⏳ Busy"       value={totals.busy}           tone="text-amber-700" />
+            <CounterTile label="🔇 DND"        value={totals.dnd}            tone="text-purple-600" />
+            <CounterTile label="🚫 Wrong#"     value={totals.wrong_number}   tone="text-zinc-600" />
+          </div>
+        </CardContent>
+      </Card>
       <Dialog open={!!activeContact} onOpenChange={() => { /* blocked: must save disposition */ }}>
         <DialogContent
           className="max-w-2xl"
@@ -858,10 +906,11 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
 
                   <Progress value={pct} className="h-2" />
 
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-xs">
+                  <div className="grid grid-cols-3 sm:grid-cols-7 gap-2 text-center text-xs">
                     <Stat label="Total"        value={total}                          />
                     <Stat label="Pending"      value={c.pending_contacts || 0}        tone="text-amber-600" />
                     <Stat label="Called"       value={completed}                      tone="text-blue-600" />
+                    <Stat label="🔥 Hot"        value={c.hot_contacts || 0}            tone="text-orange-600" />
                     <Stat label="Interested"   value={c.interested_contacts || 0}     tone="text-emerald-600" />
                     <Stat label="Not Int."     value={c.not_interested_contacts || 0} tone="text-rose-600" />
                     <Stat label="No Answer"    value={c.no_answer_contacts || 0}      tone="text-slate-600" />
@@ -1077,6 +1126,15 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: str
     <div>
       <div className={`font-bold text-lg ${tone || ""}`}>{value}</div>
       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function CounterTile({ label, value, tone }: { label: string; value: number; tone?: string }) {
+  return (
+    <div className="rounded-md border bg-card px-2 py-1.5 transition-all hover:shadow-sm">
+      <div className={`font-bold text-base leading-tight ${tone || "text-foreground"}`}>{value}</div>
+      <div className="text-[9px] uppercase tracking-wide text-muted-foreground truncate">{label}</div>
     </div>
   );
 }
