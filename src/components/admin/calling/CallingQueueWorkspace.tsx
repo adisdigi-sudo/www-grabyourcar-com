@@ -906,10 +906,11 @@ export function CallingQueueWorkspace({ verticalSlug, verticalLabel, accentClass
 
                   <Progress value={pct} className="h-2" />
 
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-xs">
+                  <div className="grid grid-cols-3 sm:grid-cols-7 gap-2 text-center text-xs">
                     <Stat label="Total"        value={total}                          />
                     <Stat label="Pending"      value={c.pending_contacts || 0}        tone="text-amber-600" />
                     <Stat label="Called"       value={completed}                      tone="text-blue-600" />
+                    <Stat label="🔥 Hot"        value={c.hot_contacts || 0}            tone="text-orange-600" />
                     <Stat label="Interested"   value={c.interested_contacts || 0}     tone="text-emerald-600" />
                     <Stat label="Not Int."     value={c.not_interested_contacts || 0} tone="text-rose-600" />
                     <Stat label="No Answer"    value={c.no_answer_contacts || 0}      tone="text-slate-600" />
