@@ -44,13 +44,19 @@ export interface CallingQueueWorkspaceProps {
 }
 
 const DISPOSITIONS: { value: string; label: string; tone: string }[] = [
-  { value: "interested",     label: "✅ Interested",     tone: "bg-emerald-500 text-white hover:bg-emerald-600" },
-  { value: "callback",       label: "📅 Callback",        tone: "bg-blue-500 text-white hover:bg-blue-600" },
-  { value: "not_interested", label: "❌ Not Interested",  tone: "bg-rose-500 text-white hover:bg-rose-600" },
-  { value: "no_answer",      label: "📵 No Answer",       tone: "bg-slate-500 text-white hover:bg-slate-600" },
-  { value: "busy",           label: "⏳ Busy",            tone: "bg-amber-500 text-white hover:bg-amber-600" },
-  { value: "wrong_number",   label: "🚫 Wrong Number",    tone: "bg-zinc-500 text-white hover:bg-zinc-600" },
+  { value: "hot",            label: "🔥 Hot",             tone: "bg-orange-600 text-white hover:bg-orange-700" },
+  { value: "interested",     label: "✅ Interested",      tone: "bg-emerald-500 text-white hover:bg-emerald-600" },
+  { value: "callback",       label: "📅 Callback",         tone: "bg-blue-500 text-white hover:bg-blue-600" },
+  { value: "not_interested", label: "❌ Not Interested",   tone: "bg-rose-500 text-white hover:bg-rose-600" },
+  { value: "no_answer",      label: "📵 No Answer",        tone: "bg-slate-500 text-white hover:bg-slate-600" },
+  { value: "busy",           label: "⏳ Busy",             tone: "bg-amber-500 text-white hover:bg-amber-600" },
+  { value: "wrong_number",   label: "🚫 Wrong Number",     tone: "bg-zinc-500 text-white hover:bg-zinc-600" },
+  { value: "dnd",            label: "🔇 DND",              tone: "bg-purple-600 text-white hover:bg-purple-700" },
+  { value: "switched_off",   label: "💬 Switched Off",     tone: "bg-gray-600 text-white hover:bg-gray-700" },
 ];
+
+/** Dispositions where free-text remarks are MANDATORY before saving. */
+const REMARKS_REQUIRED = new Set(["hot", "interested", "callback"]);
 
 function normalizePhone(raw: unknown): string {
   const digits = String(raw ?? "").replace(/\D/g, "");
