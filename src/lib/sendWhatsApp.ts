@@ -155,11 +155,31 @@ export function clearSendModeCache() {
  */
 export async function sendWhatsAppBulk(
   recipients: Array<{ phone: string; message: string; name?: string }>,
-  options?: { delayMs?: number; onProgress?: (sent: number, total: number) => void }
-): Promise<{ sent: number; failed: number }> {
+  options?: { delayMs?: number; onProgress?: (sent: number, total: number) => void; vertical?: string }
+): Promise<{ sent: number; failed: number; cancelled?: boolean }> {
   const delay = options?.delayMs ?? 1500;
   let sent = 0;
   let failed = 0;
+
+  if (recipients.length === 0) return { sent: 0, failed: 0 };
+
+  // ─── Bulk Preview Gate ───
+  // Show first recipient as sample, confirm "Send to N", then loop silently.
+  if (!shouldSkipPreview()) {
+    const sample = recipients[0];
+    const preview = await requestWhatsAppPreview({
+      phone: normalizePhone(sample.phone),
+      message: sample.message,
+      name: sample.name,
+      vertical: options?.vertical,
+      bulkCount: recipients.length,
+      logEvent: "bulk_send",
+    });
+    if (!preview.confirmed) {
+      toast.info("Bulk send cancelled");
+      return { sent: 0, failed: 0, cancelled: true };
+    }
+  }
 
   for (let i = 0; i < recipients.length; i++) {
     const r = recipients[i];
