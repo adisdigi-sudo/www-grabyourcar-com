@@ -23,6 +23,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { type OmniChannel } from "@/lib/omniSend";
 import { AIPolishButtons } from "@/components/admin/shared/AIPolishButtons";
+import { QuickReplyChips } from "@/components/admin/shared/QuickReplyChips";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
@@ -575,6 +576,10 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
               </ScrollArea>
 
               <div className="space-y-1.5 border-t pt-2">
+                <QuickReplyChips
+                  onPick={(body) => setReplyMessage((cur) => (cur.trim() ? `${cur} ${body}` : body))}
+                  customerName={selectedThread.customer_name}
+                />
                 <div className="flex gap-1">
                   {(["whatsapp", "email", "rcs"] as OmniChannel[]).map((ch) => (
                     <Button
