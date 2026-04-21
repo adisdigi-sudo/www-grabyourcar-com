@@ -155,7 +155,7 @@ export function FounderCommandCenter() {
             Founder Command Center
             <Badge variant="outline" className="ml-2 text-xs">{periodMeta.label}</Badge>
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
               <TabsList className="h-8">
                 <TabsTrigger value="week" className="text-xs">Weekly</TabsTrigger>
@@ -163,6 +163,37 @@ export function FounderCommandCenter() {
                 <TabsTrigger value="quarter" className="text-xs">Quarterly</TabsTrigger>
               </TabsList>
             </Tabs>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8"
+              onClick={() => {
+                downloadFounderReportPDF({
+                  period,
+                  periodLabel: periodMeta.label,
+                  dateRange: { from: periodMeta.from, to: periodMeta.to },
+                  totals,
+                  verticalStats: verticalStats.map((v) => ({
+                    verticalName: v.vertical.name,
+                    targetRevenue: v.targetRevenue,
+                    achievedRevenue: v.achievedRevenue,
+                    targetCount: v.targetCount,
+                    achievedCount: v.achievedCount,
+                    achievement: v.achievement,
+                  })),
+                  topPerformers: topPerformers.map((p: any) => ({
+                    employee_name: p.employee_name,
+                    vertical_name: p.vertical_name,
+                    total_deals: p.total_deals,
+                    total_incentive: Number(p.total_incentive || 0),
+                  })),
+                });
+                toast.success("Founder report PDF downloaded");
+              }}
+            >
+              <Download className="h-3.5 w-3.5 mr-1" /> Export PDF
+            </Button>
+            <BriefingConfigDialog />
             <SetTargetDialog
               open={dialogOpen}
               onOpenChange={setDialogOpen}
