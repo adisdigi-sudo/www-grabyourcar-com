@@ -1555,9 +1555,12 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
               </TableBody>
             </Table>
           </div>
-          {filtered.length > 0 && (
+          {visibleFiltered.length > 0 && (
             <div className="flex items-center justify-between px-4 py-2 border-t text-xs text-muted-foreground bg-muted/20">
-              <span>Showing {filtered.length} leads</span>
+              <span>
+                Showing {visibleFiltered.length} {onlySelectedView ? "selected" : ""} leads
+                {onlySelectedView && filtered.length !== visibleFiltered.length && ` (of ${filtered.length} total)`}
+              </span>
               <span>{stageCounts["won"] || 0} won • {stageCounts["lost"] || 0} lost</span>
             </div>
           )}
