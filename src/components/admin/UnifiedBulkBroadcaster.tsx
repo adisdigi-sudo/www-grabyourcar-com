@@ -49,6 +49,8 @@ interface Contact {
   vertical: string;
   source_table: string;
   stage?: string;
+  /** Per-row template variable values (key = variable name without braces) */
+  vars?: Record<string, string>;
 }
 
 // ─── Audience source mapping (verified live tables) ───
