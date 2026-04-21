@@ -517,7 +517,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
           </ScrollArea>
         </div>
 
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col min-w-0">
           {!selectedThread ? (
             <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
               <div className="text-center">
@@ -537,12 +537,15 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
               </div>
 
               <ScrollArea className="flex-1 px-2">
-                <div className="space-y-2 py-2">
+                <div className={prefs.density === "comfortable" ? "space-y-3 py-2" : "space-y-2 py-2"}>
                   {messages.map((m) => {
                     const isInbound = m.direction === "inbound";
                     return (
                       <div key={m.id} className={`flex flex-col ${isInbound ? "items-start" : "items-end"}`}>
-                        <div className={`max-w-[80%] rounded-lg p-2 ${isInbound ? "bg-muted" : "bg-primary/10"}`}>
+                        <div
+                          className={`rounded-lg p-2 ${isInbound ? "bg-muted" : "bg-primary/10"} ${prefs.wrapLongUrls ? "break-all" : "break-words"}`}
+                          style={{ maxWidth: `${prefs.bubbleMaxPct}%` }}
+                        >
                           <p className="whitespace-pre-wrap text-xs">{m.message_content}</p>
                           <div className="mt-1 flex items-center justify-end gap-1">
                             {channelIcon(m.channel || "whatsapp")}
