@@ -267,6 +267,10 @@ export const UnifiedBulkBroadcaster = () => {
   const [selectedContacts, setSelectedContacts] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoadingAudience, setIsLoadingAudience] = useState(false);
+  // Per-vertical stage filter (empty string = all stages)
+  const [stageFilter, setStageFilter] = useState<Record<string, string>>({});
+  // Discovered stage values per vertical (auto-populated after load)
+  const [stageOptions, setStageOptions] = useState<Record<string, string[]>>({});
 
   // WhatsApp config
   const [useMetaTemplate, setUseMetaTemplate] = useState(true);
