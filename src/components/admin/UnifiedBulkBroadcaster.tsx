@@ -694,6 +694,8 @@ export const UnifiedBulkBroadcaster = () => {
       try {
         if (useMetaTemplate && metaTemplateName) {
           const params = templateVars.map((v) => {
+            const key = v.toLowerCase();
+            if (c.vars && c.vars[key]) return c.vars[key];
             if (v === "name" || v === "customer_name" || v === "1") return c.name;
             if (v === "phone") return c.phone;
             return c.name;
