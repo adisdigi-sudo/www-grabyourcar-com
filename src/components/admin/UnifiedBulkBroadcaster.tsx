@@ -306,7 +306,9 @@ export const UnifiedBulkBroadcaster = () => {
     }
     setIsLoadingAudience(true);
     const merged: Contact[] = [];
-    const seenPhones = new Set<string>();
+    // Dedup by phone+name+vertical so the same phone with different client names
+    // (e.g., personal + business policies on one mobile) loads as separate contacts.
+    const seenKeys = new Set<string>();
     const perVerticalCounts: Record<string, number> = {};
     const errors: string[] = [];
 
@@ -328,10 +330,12 @@ export const UnifiedBulkBroadcaster = () => {
         (data || []).forEach((r: any) => {
           const phone = normaliseIndianPhone(r[v.phoneField]);
           if (!phone) return;
-          if (seenPhones.has(phone)) return;
-          seenPhones.add(phone);
+          const name = String(r[v.nameField] || "Customer").trim() || "Customer";
+          const key = `${v.id}|${phone}|${name.toLowerCase()}`;
+          if (seenKeys.has(key)) return;
+          seenKeys.add(key);
           merged.push({
-            name: String(r[v.nameField] || "Customer").trim() || "Customer",
+            name,
             phone,
             email: v.emailField ? String(r[v.emailField] || "").trim() : "",
             vertical: v.label,
