@@ -100,8 +100,8 @@ export function WorkspaceHealthDialog({ open, onOpenChange }: WorkspaceHealthDia
 
     for (const t of dbTargets) {
       updateCheck(t.id, { status: "running" });
-      const resp = await timed(() =>
-        supabase.from(t.table).select("*", { count: "exact", head: true })
+      const resp = await timed(async () =>
+        await supabase.from(t.table).select("*", { count: "exact", head: true }),
       );
       if (resp.error) {
         updateCheck(t.id, {
