@@ -1036,6 +1036,18 @@ export const UnifiedBulkBroadcaster = () => {
                     {selectedContacts.size === contacts.length ? "Deselect All" : "Select All"}
                   </Button>
                 </div>
+
+                <SelectionFilterToolbar
+                  selectedCount={selectedContacts.size}
+                  totalCount={contacts.length}
+                  onlySelected={onlySelectedView}
+                  onToggleOnlySelected={() => setOnlySelectedView((v) => !v)}
+                  onClearSelection={() => {
+                    setSelectedContacts(new Set());
+                    setOnlySelectedView(false);
+                  }}
+                  itemNoun="contacts"
+                />
                 <ScrollArea className="h-[320px] border rounded-lg">
                   <Table>
                     <TableHeader>
