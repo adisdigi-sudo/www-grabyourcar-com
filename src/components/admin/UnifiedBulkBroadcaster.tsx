@@ -686,7 +686,7 @@ export const UnifiedBulkBroadcaster = () => {
                           <SelectContent>
                             <SelectItem value="__all__">All stages</SelectItem>
                             {opts.length === 0 && (
-                              <SelectItem value="__hint__" disabled>Load contacts first to see stages</SelectItem>
+                              <SelectItem value="__hint__" disabled>Loading stages…</SelectItem>
                             )}
                             {opts.map((s) => (
                               <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -697,7 +697,7 @@ export const UnifiedBulkBroadcaster = () => {
                     );
                   })}
                 </div>
-                <p className="text-[10px] text-muted-foreground">Tip: pehli baar "Load contacts" dabao, fir stages dropdown me aa jayenge — stage chunke dobara load karo.</p>
+                <p className="text-[10px] text-muted-foreground">Stage chuno → "Load contacts" dabao → sirf usi stage ke clients aayenge → Select All → Send.</p>
               </div>
             )}
 
