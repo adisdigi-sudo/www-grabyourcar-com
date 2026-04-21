@@ -267,6 +267,7 @@ export const UnifiedBulkBroadcaster = () => {
   const [selectedVerticals, setSelectedVerticals] = useState<Set<string>>(new Set());
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<Set<number>>(new Set());
+  const [onlySelectedView, setOnlySelectedView] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoadingAudience, setIsLoadingAudience] = useState(false);
   // Per-vertical stage filter (empty string = all stages)
