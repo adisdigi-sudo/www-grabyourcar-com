@@ -17,10 +17,16 @@ import {
   Search,
   RefreshCw,
   AlertTriangle,
+  Settings2,
+  RotateCcw,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type OmniChannel } from "@/lib/omniSend";
 import { AIPolishButtons } from "@/components/admin/shared/AIPolishButtons";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 interface OmniChatPanelProps {
   phone?: string;
@@ -93,6 +99,32 @@ function mapInboxStatus(message: {
   return message.status || "received";
 }
 
+interface ChatPrefs {
+  listWidthPct: number; // 20-50
+  bubbleMaxPct: number; // 60-100
+  density: "compact" | "comfortable";
+  wrapLongUrls: boolean;
+}
+
+const DEFAULT_PREFS: ChatPrefs = {
+  listWidthPct: 33,
+  bubbleMaxPct: 80,
+  density: "compact",
+  wrapLongUrls: true,
+};
+
+const PREFS_KEY = "omni-chat-prefs-v1";
+
+function loadPrefs(): ChatPrefs {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    if (!raw) return DEFAULT_PREFS;
+    return { ...DEFAULT_PREFS, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_PREFS;
+  }
+}
+
 export function OmniChatPanel({ phone, email, context, initialMessage, initialName, allowedPhones, scopeLabel }: OmniChatPanelProps) {
   const { toast } = useToast();
   const [threads, setThreads] = useState<ChatThread[]>([]);
@@ -103,7 +135,15 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [prefs, setPrefs] = useState<ChatPrefs>(() => loadPrefs());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    } catch {}
+  }, [prefs]);
+
 
   useEffect(() => {
     loadThreads();
@@ -344,14 +384,85 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
               </Badge>
             )}
           </CardTitle>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={loadThreads}>
-            <RefreshCw className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" title="Customise layout">
+                  <Settings2 className="h-3.5 w-3.5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-72 space-y-3 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold">Customise chat</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[10px]"
+                    onClick={() => setPrefs(DEFAULT_PREFS)}
+                  >
+                    <RotateCcw className="mr-1 h-3 w-3" /> Reset
+                  </Button>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs flex justify-between">
+                    <span>List width</span>
+                    <span className="text-muted-foreground">{prefs.listWidthPct}%</span>
+                  </Label>
+                  <Slider
+                    min={20}
+                    max={50}
+                    step={1}
+                    value={[prefs.listWidthPct]}
+                    onValueChange={([v]) => setPrefs((p) => ({ ...p, listWidthPct: v }))}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs flex justify-between">
+                    <span>Message bubble max</span>
+                    <span className="text-muted-foreground">{prefs.bubbleMaxPct}%</span>
+                  </Label>
+                  <Slider
+                    min={60}
+                    max={100}
+                    step={5}
+                    value={[prefs.bubbleMaxPct]}
+                    onValueChange={([v]) => setPrefs((p) => ({ ...p, bubbleMaxPct: v }))}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Comfortable spacing</Label>
+                  <Switch
+                    checked={prefs.density === "comfortable"}
+                    onCheckedChange={(c) =>
+                      setPrefs((p) => ({ ...p, density: c ? "comfortable" : "compact" }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Wrap long URLs</Label>
+                  <Switch
+                    checked={prefs.wrapLongUrls}
+                    onCheckedChange={(c) => setPrefs((p) => ({ ...p, wrapLongUrls: c }))}
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={loadThreads} title="Refresh">
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
-      <CardContent className="flex flex-1 gap-2 overflow-hidden p-2">
-        <div className="flex w-1/3 flex-col gap-1.5 border-r pr-2">
+      <CardContent className="flex flex-1 gap-2 overflow-hidden p-2 min-w-0">
+        <div
+          className="flex shrink-0 flex-col gap-1.5 border-r pr-2 min-w-0"
+          style={{ width: `${prefs.listWidthPct}%` }}
+        >
           <div className="relative">
             <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -406,7 +517,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
           </ScrollArea>
         </div>
 
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col min-w-0">
           {!selectedThread ? (
             <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
               <div className="text-center">
@@ -426,12 +537,15 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
               </div>
 
               <ScrollArea className="flex-1 px-2">
-                <div className="space-y-2 py-2">
+                <div className={prefs.density === "comfortable" ? "space-y-3 py-2" : "space-y-2 py-2"}>
                   {messages.map((m) => {
                     const isInbound = m.direction === "inbound";
                     return (
                       <div key={m.id} className={`flex flex-col ${isInbound ? "items-start" : "items-end"}`}>
-                        <div className={`max-w-[80%] rounded-lg p-2 ${isInbound ? "bg-muted" : "bg-primary/10"}`}>
+                        <div
+                          className={`rounded-lg p-2 ${isInbound ? "bg-muted" : "bg-primary/10"} ${prefs.wrapLongUrls ? "break-all" : "break-words"}`}
+                          style={{ maxWidth: `${prefs.bubbleMaxPct}%` }}
+                        >
                           <p className="whitespace-pre-wrap text-xs">{m.message_content}</p>
                           <div className="mt-1 flex items-center justify-end gap-1">
                             {channelIcon(m.channel || "whatsapp")}
