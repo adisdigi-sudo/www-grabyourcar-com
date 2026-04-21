@@ -121,7 +121,9 @@ interface LeadManagementProps {
 
 export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) => {
   const { user } = useAuth();
+  const { isSuperAdmin } = useAdminAuth();
   const queryClient = useQueryClient();
+  const [isExporting, setIsExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>(verticalCategory || "all");
