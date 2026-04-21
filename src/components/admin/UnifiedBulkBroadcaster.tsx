@@ -272,6 +272,30 @@ export const UnifiedBulkBroadcaster = () => {
   // Discovered stage values per vertical (auto-populated after load)
   const [stageOptions, setStageOptions] = useState<Record<string, string[]>>({});
 
+  // ─── Diagnostics (per-vertical breakdown of last load) ───
+  interface VerticalDiag {
+    label: string;
+    table: string;
+    columns: string[];
+    stageField?: string;
+    appliedStage?: string;
+    fetched: number;        // raw rows from DB before any filtering
+    invalidPhone: number;   // dropped (phone normalisation failed)
+    duplicates: number;     // dropped within-vertical duplicates (by id)
+    accepted: number;       // contributed to merged list
+    error?: string;
+  }
+  const [diagnostics, setDiagnostics] = useState<VerticalDiag[]>([]);
+  const [loadSummary, setLoadSummary] = useState<{
+    totalFetched: number;
+    totalAccepted: number;
+    afterDedup: number;
+    afterChannelFilter: number;
+    stageFilterActive: boolean;
+    runAt: string;
+  } | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+
   // WhatsApp config
   const [useMetaTemplate, setUseMetaTemplate] = useState(true);
   const [metaTemplateName, setMetaTemplateName] = useState("");
@@ -354,15 +378,29 @@ export const UnifiedBulkBroadcaster = () => {
     const perVerticalCounts: Record<string, number> = {};
     const stagesPerVertical: Record<string, Set<string>> = {};
     const errors: string[] = [];
+    const diags: VerticalDiag[] = [];
+    let stageFilterActive = false;
 
     try {
       for (const v of VERTICAL_SOURCES) {
         if (!selectedVerticals.has(v.id)) continue;
         // Always include id so we can keep TRUE record count (no false dedupe within a vertical)
-        const cols = ["id", v.nameField, v.phoneField, v.emailField, v.stageField]
-          .filter(Boolean)
-          .join(", ");
+        const colsArr = ["id", v.nameField, v.phoneField, v.emailField, v.stageField].filter(Boolean) as string[];
+        const cols = colsArr.join(", ");
         const wantedStage = stageFilter[v.id]?.trim();
+        if (wantedStage) stageFilterActive = true;
+
+        const diag: VerticalDiag = {
+          label: v.label,
+          table: v.table,
+          columns: colsArr,
+          stageField: v.stageField,
+          appliedStage: wantedStage || undefined,
+          fetched: 0,
+          invalidPhone: 0,
+          duplicates: 0,
+          accepted: 0,
+        };
 
         let allRows: any[] = [];
         try {
@@ -377,22 +415,24 @@ export const UnifiedBulkBroadcaster = () => {
         } catch (err: any) {
           console.warn(`[${v.label}] load failed:`, err?.message || err);
           errors.push(`${v.label}: ${err?.message || "load failed"}`);
+          diag.error = err?.message || "load failed";
+          diags.push(diag);
           continue;
         }
 
+        diag.fetched = allRows.length;
         let added = 0;
         const stageSet: Set<string> = stagesPerVertical[v.id] || new Set<string>();
         allRows.forEach((r: any) => {
           const phone = normaliseIndianPhone(r[v.phoneField]);
-          if (!phone) return;
+          if (!phone) { diag.invalidPhone++; return; }
           const name = String(r[v.nameField] || "Customer").trim() || "Customer";
           const stage = v.stageField ? String(r[v.stageField] || "").trim() : "";
           if (stage) stageSet.add(stage);
           // STRICT: only dedupe by row ID within a vertical → TRUE count preserved.
-          // Across verticals we still allow same phone (different vertical context).
           const rowId = r.id ? String(r.id) : `${phone}|${name.toLowerCase()}|${added}`;
           const key = `${v.id}|${rowId}`;
-          if (seenKeys.has(key)) return;
+          if (seenKeys.has(key)) { diag.duplicates++; return; }
           seenKeys.add(key);
           merged.push({
             name,
@@ -404,13 +444,27 @@ export const UnifiedBulkBroadcaster = () => {
           });
           added++;
         });
+        diag.accepted = added;
         stagesPerVertical[v.id] = stageSet;
         perVerticalCounts[v.label] = added;
+        diags.push(diag);
       }
 
+      const totalFetched = diags.reduce((s, d) => s + d.fetched, 0);
+      const totalAccepted = merged.length;
       const filtered = merged.filter((c) => (channel === "email" ? !!c.email : c.phone.length === 10));
+
       setContacts(filtered);
       setSelectedContacts(new Set(filtered.map((_, i) => i)));
+      setDiagnostics(diags);
+      setLoadSummary({
+        totalFetched,
+        totalAccepted,
+        afterDedup: totalAccepted,
+        afterChannelFilter: filtered.length,
+        stageFilterActive,
+        runAt: new Date().toLocaleTimeString(),
+      });
       // Save discovered stages for each loaded vertical
       setStageOptions((prev) => {
         const next = { ...prev };
@@ -420,7 +474,10 @@ export const UnifiedBulkBroadcaster = () => {
         return next;
       });
       const breakdown = Object.entries(perVerticalCounts).map(([k, v]) => `${k}: ${v}`).join(" • ");
-      toast.success(`✅ Loaded ${filtered.length} contacts (full DB)`, { description: breakdown || undefined });
+      toast.success(
+        `✅ Loaded ${filtered.length} contacts (fetched ${totalFetched} from DB)`,
+        { description: breakdown || undefined }
+      );
       if (errors.length) toast.warning(`${errors.length} source(s) had errors`, { description: errors.join("; ") });
     } catch (err: any) {
       toast.error("Audience load failed: " + (err.message || ""));
@@ -725,6 +782,91 @@ export const UnifiedBulkBroadcaster = () => {
               </Button>
               <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleCSVUpload} />
             </div>
+
+            {/* ─── Load Summary + Diagnostics ─── */}
+            {loadSummary && (
+              <div className="rounded-md border bg-muted/30 p-2.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground flex items-center gap-1.5">
+                    <BarChart3 className="h-3.5 w-3.5 text-primary" />
+                    Last load summary
+                    <span className="text-[10px] font-normal text-muted-foreground">@ {loadSummary.runAt}</span>
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[10px]"
+                    onClick={() => setShowDiagnostics((s) => !s)}
+                  >
+                    {showDiagnostics ? "Hide" : "Show"} diagnostics
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  <div className="bg-card border rounded p-1.5">
+                    <p className="text-[9px] text-muted-foreground uppercase">Fetched (DB)</p>
+                    <p className="text-sm font-bold">{loadSummary.totalFetched}</p>
+                  </div>
+                  <div className="bg-card border rounded p-1.5">
+                    <p className="text-[9px] text-muted-foreground uppercase">After dedupe</p>
+                    <p className="text-sm font-bold">{loadSummary.afterDedup}</p>
+                  </div>
+                  <div className="bg-card border rounded p-1.5">
+                    <p className="text-[9px] text-muted-foreground uppercase">{loadSummary.stageFilterActive ? "Stage filtered" : "Stage filter"}</p>
+                    <p className="text-sm font-bold">{loadSummary.stageFilterActive ? loadSummary.afterDedup : "—"}</p>
+                  </div>
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded p-1.5">
+                    <p className="text-[9px] text-emerald-700 dark:text-emerald-300 uppercase">Ready to send</p>
+                    <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{loadSummary.afterChannelFilter}</p>
+                  </div>
+                </div>
+
+                {showDiagnostics && diagnostics.length > 0 && (
+                  <div className="border rounded bg-background overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-[10px] h-7">Vertical</TableHead>
+                          <TableHead className="text-[10px] h-7">Table</TableHead>
+                          <TableHead className="text-[10px] h-7">Columns</TableHead>
+                          <TableHead className="text-[10px] h-7">Stage</TableHead>
+                          <TableHead className="text-[10px] h-7 text-right">Fetched</TableHead>
+                          <TableHead className="text-[10px] h-7 text-right">Bad ph</TableHead>
+                          <TableHead className="text-[10px] h-7 text-right">Dup</TableHead>
+                          <TableHead className="text-[10px] h-7 text-right">Kept</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {diagnostics.map((d) => (
+                          <TableRow key={d.label} className={d.error ? "bg-destructive/10" : ""}>
+                            <TableCell className="text-[10px] py-1 font-medium">{d.label}</TableCell>
+                            <TableCell className="text-[10px] py-1 font-mono text-muted-foreground">{d.table}</TableCell>
+                            <TableCell className="text-[10px] py-1 font-mono text-muted-foreground">{d.columns.join(", ")}</TableCell>
+                            <TableCell className="text-[10px] py-1">
+                              {d.appliedStage ? (
+                                <Badge variant="outline" className="text-[9px] h-4">{d.appliedStage}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground">all</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-[10px] py-1 text-right font-bold">{d.fetched}</TableCell>
+                            <TableCell className="text-[10px] py-1 text-right text-amber-600">{d.invalidPhone || "—"}</TableCell>
+                            <TableCell className="text-[10px] py-1 text-right text-muted-foreground">{d.duplicates || "—"}</TableCell>
+                            <TableCell className="text-[10px] py-1 text-right font-bold text-emerald-600">{d.accepted}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    {diagnostics.some((d) => d.error) && (
+                      <div className="p-1.5 bg-destructive/10 border-t">
+                        {diagnostics.filter((d) => d.error).map((d) => (
+                          <p key={d.label} className="text-[10px] text-destructive">⚠ {d.label}: {d.error}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Search + table */}
             {contacts.length > 0 && (
