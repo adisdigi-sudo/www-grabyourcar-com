@@ -99,6 +99,32 @@ function mapInboxStatus(message: {
   return message.status || "received";
 }
 
+interface ChatPrefs {
+  listWidthPct: number; // 20-50
+  bubbleMaxPct: number; // 60-100
+  density: "compact" | "comfortable";
+  wrapLongUrls: boolean;
+}
+
+const DEFAULT_PREFS: ChatPrefs = {
+  listWidthPct: 33,
+  bubbleMaxPct: 80,
+  density: "compact",
+  wrapLongUrls: true,
+};
+
+const PREFS_KEY = "omni-chat-prefs-v1";
+
+function loadPrefs(): ChatPrefs {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    if (!raw) return DEFAULT_PREFS;
+    return { ...DEFAULT_PREFS, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_PREFS;
+  }
+}
+
 export function OmniChatPanel({ phone, email, context, initialMessage, initialName, allowedPhones, scopeLabel }: OmniChatPanelProps) {
   const { toast } = useToast();
   const [threads, setThreads] = useState<ChatThread[]>([]);
@@ -109,7 +135,15 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [prefs, setPrefs] = useState<ChatPrefs>(() => loadPrefs());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    } catch {}
+  }, [prefs]);
+
 
   useEffect(() => {
     loadThreads();
