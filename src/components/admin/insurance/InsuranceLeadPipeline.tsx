@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Megaphone } from "lucide-react";
 import { toast } from "sonner";
+import { SelectionFilterToolbar } from "@/components/shared/SelectionFilterToolbar";
 import { cn } from "@/lib/utils";
 import { getClientIdentityKey, normalizePolicyNumber } from "@/lib/insuranceIdentity";
 import {
@@ -627,6 +628,7 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
   const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSending, setBulkSending] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ sent: 0, total: 0 });
+  const [onlySelectedView, setOnlySelectedView] = useState(false);
 
   const toggleBulkSelect = useCallback((id: string) => {
     setBulkSelectedIds(prev => {
