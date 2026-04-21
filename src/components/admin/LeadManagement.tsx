@@ -391,20 +391,17 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
     return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
 
-  const downloadLeadsCsv = (rows: Lead[], filenameSuffix: string) => {
+  const downloadLeadsCsv = (rows: Lead[], filenameSuffix: string, columns: (keyof Lead)[]) => {
     if (!rows.length) {
       toast.error("No leads to export");
       return;
     }
-    const columns: (keyof Lead)[] = [
-      "id", "customer_name", "phone", "email", "city",
-      "service_category", "lead_type", "source", "status", "priority",
-      "team_assigned", "assigned_to", "car_brand", "car_model", "car_variant",
-      "budget_min", "budget_max", "buying_timeline", "follow_up_count",
-      "last_contacted_at", "next_followup_at", "tags", "notes",
-      "created_at", "updated_at",
-    ];
-    const header = columns.join(",");
+    if (!columns.length) {
+      toast.error("Select at least one column to export");
+      return;
+    }
+    const labelByKey = new Map(EXPORT_COLUMNS.map(c => [c.key, c.label] as const));
+    const header = columns.map(c => csvCell(labelByKey.get(c) || String(c))).join(",");
     const body = rows.map((r) => columns.map((c) => csvCell((r as any)[c])).join(",")).join("\n");
     const csv = "\ufeff" + header + "\n" + body;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -419,27 +416,48 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
     URL.revokeObjectURL(url);
   };
 
-  const handleExportFiltered = () => {
+  const openExportPicker = (scope: "filtered" | "all") => {
     if (!isSuperAdmin()) {
       toast.error("Only Super Admin can export lead data");
       return;
     }
-    downloadLeadsCsv(leads || [], "filtered");
-    toast.success(`Exported ${leads?.length || 0} leads (filtered view)`);
+    setExportScope(scope);
+    setIsExportPickerOpen(true);
   };
 
-  const handleExportAll = async () => {
-    if (!isSuperAdmin()) {
-      toast.error("Only Super Admin can export lead data");
+  const toggleExportColumn = (key: keyof Lead) => {
+    setSelectedExportColumns(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
+
+  const setAllExportColumns = (mode: "all" | "none" | "default") => {
+    if (mode === "all") setSelectedExportColumns(EXPORT_COLUMNS.map(c => c.key));
+    else if (mode === "none") setSelectedExportColumns([]);
+    else setSelectedExportColumns(DEFAULT_EXPORT_KEYS);
+  };
+
+  const runExport = async () => {
+    if (!isSuperAdmin()) return;
+    if (!selectedExportColumns.length) {
+      toast.error("Select at least one column to export");
       return;
     }
+    // Preserve catalog order regardless of click order
+    const ordered = EXPORT_COLUMNS.map(c => c.key).filter(k => selectedExportColumns.includes(k));
+
+    if (exportScope === "filtered") {
+      downloadLeadsCsv(leads || [], "filtered", ordered);
+      toast.success(`Exported ${leads?.length || 0} leads · ${ordered.length} columns`);
+      setIsExportPickerOpen(false);
+      return;
+    }
+
     setIsExporting(true);
     try {
-      // Page through to bypass the 1000-row default cap
       const pageSize = 1000;
       let from = 0;
       const all: Lead[] = [];
-      // Hard cap at 50k rows for safety
       while (from < 50000) {
         let q = supabase
           .from("leads")
@@ -455,8 +473,9 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
         if (data.length < pageSize) break;
         from += pageSize;
       }
-      downloadLeadsCsv(all, verticalCategory ? `all-${verticalCategory}` : "all");
-      toast.success(`Exported ${all.length} leads (full list)`);
+      downloadLeadsCsv(all, verticalCategory ? `all-${verticalCategory}` : "all", ordered);
+      toast.success(`Exported ${all.length} leads · ${ordered.length} columns`);
+      setIsExportPickerOpen(false);
     } catch (err) {
       console.error(err);
       toast.error("Failed to export leads");
