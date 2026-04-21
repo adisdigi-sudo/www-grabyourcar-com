@@ -236,14 +236,23 @@ const WorkspaceSelector = () => {
                 Super Admin
               </Badge>
             )}
-            {isAdmin() && templatesHubVertical && (
-              <div className="mt-4">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              {isAdmin() && templatesHubVertical && (
                 <Button variant="outline" size="sm" className="gap-2" onClick={handleOpenTemplatesHub}>
                   <MessageSquare className="h-4 w-4" />
                   Open Templates Hub
                 </Button>
-              </div>
-            )}
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setHealthOpen(true)}
+              >
+                <Activity className="h-4 w-4" />
+                Workspace Health
+              </Button>
+            </div>
           </motion.div>
 
           {/* Vertical Grid */}
