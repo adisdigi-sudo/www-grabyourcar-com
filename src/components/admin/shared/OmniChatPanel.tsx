@@ -17,10 +17,16 @@ import {
   Search,
   RefreshCw,
   AlertTriangle,
+  Settings2,
+  RotateCcw,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type OmniChannel } from "@/lib/omniSend";
 import { AIPolishButtons } from "@/components/admin/shared/AIPolishButtons";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 interface OmniChatPanelProps {
   phone?: string;
