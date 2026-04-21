@@ -171,6 +171,7 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [newTag, setNewTag] = useState("");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<(keyof Lead)[]>(DEFAULT_EXPORT_KEYS);
   const [newLeadForm, setNewLeadForm] = useState({
     customer_name: "",
     phone: "",
