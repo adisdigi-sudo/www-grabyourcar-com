@@ -15,8 +15,10 @@ import {
   Plus, Edit, Trash2, Copy, Zap, LayoutTemplate, Save, CheckCircle, Clock, XCircle,
   AlertTriangle, Eye, Send, MessageSquare, Shield, Megaphone,
   FileText, Image, Video, Globe, Search, Filter, RefreshCw, BarChart3,
-  GitBranch, TrendingUp, Phone, Link, Reply, PhoneCall, X, Upload, Loader2
+  GitBranch, TrendingUp, Phone, Link, Reply, PhoneCall, X, Upload, Loader2,
+  Download, FileSpreadsheet
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
