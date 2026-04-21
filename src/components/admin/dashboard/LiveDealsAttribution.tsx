@@ -58,12 +58,12 @@ export function LiveDealsAttribution() {
   const { data: customers = [] } = useQuery({
     queryKey: ["live-deals-customers", customerIds.join(",")],
     queryFn: async () => {
-      if (customerIds.length === 0) return [];
-      const { data } = await supabase
+      if (customerIds.length === 0) return [] as any[];
+      const { data } = await (supabase as any)
         .from("customers")
         .select("id,name,phone,source")
-        .in("id", customerIds as string[]);
-      return data || [];
+        .in("id", customerIds);
+      return (data || []) as any[];
     },
     enabled: customerIds.length > 0,
   });
