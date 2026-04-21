@@ -715,7 +715,10 @@ export function WaTemplateManager() {
   const [editButtons, setEditButtons] = useState<MetaButton[]>([]);
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterVertical, setFilterVertical] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [statsOpen, setStatsOpen] = useState(false);
