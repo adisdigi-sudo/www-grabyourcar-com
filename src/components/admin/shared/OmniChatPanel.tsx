@@ -148,8 +148,11 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   const [searchQuery, setSearchQuery] = useState("");
   const [prefs, setPrefs] = useState<ChatPrefs>(() => loadPrefs());
   const [uploading, setUploading] = useState(false);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -242,8 +245,33 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   }, [selectedThread]);
 
   useEffect(() => {
+    if (autoScroll) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      setShowJumpToLatest(false);
+    } else if (messages.length) {
+      setShowJumpToLatest(true);
+    }
+  }, [messages, autoScroll]);
+
+  // Reset autoscroll when switching threads
+  useEffect(() => {
+    setAutoScroll(true);
+    setShowJumpToLatest(false);
+  }, [selectedThread?.id]);
+
+  function handleScrollAreaScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distanceFromBottom < 80;
+    setAutoScroll(atBottom);
+    if (atBottom) setShowJumpToLatest(false);
+  }
+
+  function jumpToLatest() {
+    setAutoScroll(true);
+    setShowJumpToLatest(false);
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }
 
   async function loadThreads() {
     setLoading(true);
@@ -612,7 +640,12 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                 {channelIcon(selectedThread.channel)}
               </div>
 
-              <ScrollArea className="flex-1 px-2">
+              <div className="relative flex-1 min-h-0">
+                <div
+                  ref={scrollAreaRef}
+                  onScroll={handleScrollAreaScroll}
+                  className="absolute inset-0 overflow-y-auto px-2"
+                >
                 <div className={prefs.density === "comfortable" ? "space-y-3 py-2" : "space-y-2 py-2"}>
                   {messages.map((m) => {
                     const isInbound = m.direction === "inbound";
@@ -680,7 +713,18 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                   })}
                   <div ref={messagesEndRef} />
                 </div>
-              </ScrollArea>
+                </div>
+                {showJumpToLatest && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={jumpToLatest}
+                    className="absolute bottom-2 left-1/2 z-10 h-7 -translate-x-1/2 rounded-full px-3 text-[11px] shadow-md"
+                  >
+                    ↓ Jump to latest
+                  </Button>
+                )}
+              </div>
 
               <div className="space-y-1.5 border-t pt-2">
                 <QuickReplyChips
