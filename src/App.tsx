@@ -223,9 +223,16 @@ const AppRouterShell = () => {
             />
             <Route path="/crm-auth" element={<AdminAuth />} />
             <Route path="/crm-reset-password" element={<AdminResetPassword />} />
-            <Route path="/admin" element={<Navigate to={withPreviewParams("/crm")} replace />} />
-            <Route path="/admin-auth" element={<Navigate to={withPreviewParams("/crm-auth")} replace />} />
-            <Route path="/admin-reset-password" element={<Navigate to={withPreviewParams("/crm-reset-password")} replace />} />
+            <Route
+              path="/admin"
+              element={
+                <AdminRenderBoundary contextLabel="Admin route shell">
+                  <AdminLayout />
+                </AdminRenderBoundary>
+              }
+            />
+            <Route path="/admin-auth" element={<AdminAuth />} />
+            <Route path="/admin-reset-password" element={<AdminResetPassword />} />
             <Route
               path="/workspace"
               element={
