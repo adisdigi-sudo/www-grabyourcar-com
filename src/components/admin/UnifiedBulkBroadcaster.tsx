@@ -528,7 +528,7 @@ export const UnifiedBulkBroadcaster = () => {
         toast.error(`File me kam se kam header + 1 data row chahiye (mila: ${rows.length})`);
         return;
       }
-      const hdrs = rows[0].map((h) => h.toLowerCase().trim());
+      const hdrs = rows[0].map((h) => String(h ?? "").toLowerCase().trim());
       const nameIdx = hdrs.findIndex((h) => h === "name" || h.includes("name") || h.includes("customer"));
       const phoneIdx = hdrs.findIndex(
         (h) => h.includes("phone") || h.includes("mobile") || h.includes("contact") || h.includes("whatsapp") || h === "no" || h === "number"
