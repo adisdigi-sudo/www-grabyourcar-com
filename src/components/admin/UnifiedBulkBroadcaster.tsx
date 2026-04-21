@@ -667,22 +667,25 @@ export const UnifiedBulkBroadcaster = () => {
   };
 
   const filteredContacts = useMemo(() => {
-    let list = contacts;
+    // Use original indices from `contacts` so selection-based filtering stays correct
+    // even after search narrows the visible list.
+    let list = contacts.map((c, originalIdx) => ({ c, originalIdx }));
+
     // 1) Show-only-selected filter (current view)
     if (onlySelectedView) {
-      list = list.filter((_, i) => selectedContacts.has(i));
+      list = list.filter(({ originalIdx }) => selectedContacts.has(originalIdx));
     }
     // 2) Search term
     if (searchTerm) {
       const t = searchTerm.toLowerCase();
-      list = list.filter((c) =>
+      list = list.filter(({ c }) =>
         c.name.toLowerCase().includes(t) ||
         c.phone.includes(t) ||
         (c.email || "").toLowerCase().includes(t) ||
         c.vertical.toLowerCase().includes(t),
       );
     }
-    return list;
+    return list.map(({ c }) => c);
   }, [contacts, searchTerm, onlySelectedView, selectedContacts]);
 
   const selectedList = contacts.filter((_, i) => selectedContacts.has(i));
