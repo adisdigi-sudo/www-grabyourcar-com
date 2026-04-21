@@ -300,6 +300,9 @@ const TaskEscalationView = lazy(() =>
 const EmployeeDailyReportsDashboard = lazy(() =>
   import("@/components/admin/EmployeeDailyReportsDashboard").then((module) => ({ default: module.EmployeeDailyReportsDashboard })),
 );
+const FounderCockpitPage = lazy(() =>
+  import("@/components/admin/dashboard/FounderCockpitPage").then((module) => ({ default: module.FounderCockpitPage })),
+);
 const AdminPanelLoader = ({ className }: { className?: string }) => (
   <div className={cn("flex min-h-[240px] items-center justify-center", className)}>
     <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
@@ -327,7 +330,8 @@ const VALID_ADMIN_TABS = new Set([
   "dealer-reps", "dealer-inventory", "dealer-broadcast", "accounts-dashboard", "accounts-invoices", "accounts-expenses",
   "accounts-bills", "accounts-banking", "accounts-chart", "accounts-journal", "accounts-reports", "accounts-documents",
   "hr-core", "hr-recruitment", "hr-workforce", "hr-attendance", "hr-payroll", "hr-expense", "hr-performance", "hr-engagement",
-  "hr-assets", "hr-helpdesk", "hr-task-escalation", "hr-daily-reports", "ai-cofounder", "legacy-leads", "my-hr", "my-team"
+  "hr-assets", "hr-helpdesk", "hr-task-escalation", "hr-daily-reports", "ai-cofounder", "legacy-leads", "my-hr", "my-team",
+  "founder-cockpit"
 ]);
 
 const getInitialAdminTab = () => {
@@ -350,6 +354,7 @@ const ADMIN_BOOTSTRAP_TIMEOUT_MS = 12000;
 
 const UNIVERSAL_ADMIN_TABS = new Set([
   DEFAULT_ADMIN_TAB,
+  "founder-cockpit",
   "live-chats",
   "ai-cofounder",
   "my-hr",
@@ -728,6 +733,8 @@ const AdminLayout = () => {
       }
       case "sales-crm":
         return <SalesVerticalWorkspace />;
+      case "founder-cockpit":
+        return <FounderCockpitPage />;
       case "loan-crm":
         return <LoanCRMDashboard />;
       case "unified-crm":
