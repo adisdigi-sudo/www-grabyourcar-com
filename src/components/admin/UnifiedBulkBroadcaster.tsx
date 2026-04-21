@@ -666,15 +666,23 @@ export const UnifiedBulkBroadcaster = () => {
   };
 
   const filteredContacts = useMemo(() => {
-    if (!searchTerm) return contacts;
-    const t = searchTerm.toLowerCase();
-    return contacts.filter((c) =>
-      c.name.toLowerCase().includes(t) ||
-      c.phone.includes(t) ||
-      (c.email || "").toLowerCase().includes(t) ||
-      c.vertical.toLowerCase().includes(t),
-    );
-  }, [contacts, searchTerm]);
+    let list = contacts;
+    // 1) Show-only-selected filter (current view)
+    if (onlySelectedView) {
+      list = list.filter((_, i) => selectedContacts.has(i));
+    }
+    // 2) Search term
+    if (searchTerm) {
+      const t = searchTerm.toLowerCase();
+      list = list.filter((c) =>
+        c.name.toLowerCase().includes(t) ||
+        c.phone.includes(t) ||
+        (c.email || "").toLowerCase().includes(t) ||
+        c.vertical.toLowerCase().includes(t),
+      );
+    }
+    return list;
+  }, [contacts, searchTerm, onlySelectedView, selectedContacts]);
 
   const selectedList = contacts.filter((_, i) => selectedContacts.has(i));
 
