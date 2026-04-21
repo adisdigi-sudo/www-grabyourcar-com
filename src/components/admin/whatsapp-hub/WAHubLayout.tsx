@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { WAHubInbox } from "./modules/WAHubInbox";
 import { WAHubTemplates } from "./modules/WAHubTemplates";
 import { WAHubBroadcasts } from "./modules/WAHubBroadcasts";
+import { WAHubBulkBroadcaster } from "./modules/WAHubBulkBroadcaster";
 import { WAHubFlows } from "./modules/WAHubFlows";
 import { WAHubContacts } from "./modules/WAHubContacts";
 import { WAHubAnalytics } from "./modules/WAHubAnalytics";
@@ -29,7 +30,7 @@ import { WAHubAutoPilotPreview } from "./modules/WAHubAutoPilotPreview";
 import { EmailMarketingHub } from "../marketing/email/EmailMarketingHub";
 
 type Module =
-  | "inbox" | "templates" | "broadcasts" | "flows" | "contacts" | "analytics"
+  | "inbox" | "templates" | "broadcasts" | "bulk-broadcaster" | "flows" | "contacts" | "analytics"
   | "team" | "crm-messages" | "surveys" | "interactive" | "campaign-roi"
   | "sales-engines" | "smart-triggers" | "auto-pilot-preview" | "email-hub";
 
@@ -51,6 +52,7 @@ const NAV_ITEMS: NavItem[] = [
   // Content
   { id: "templates", label: "Templates", icon: LayoutTemplate, section: "Content" },
   { id: "broadcasts", label: "Broadcasts", icon: Megaphone, section: "Content" },
+  { id: "bulk-broadcaster", label: "Bulk Broadcaster Pro", icon: Sparkles, badge: "PRO", section: "Content", description: "All 11 verticals · Live Meta limits" },
   { id: "interactive", label: "Interactive", icon: MousePointer, section: "Content" },
   { id: "surveys", label: "Surveys", icon: ClipboardList, section: "Content" },
 
@@ -82,6 +84,7 @@ export function WAHubLayout() {
       case "inbox": return <WAHubInbox />;
       case "templates": return <WAHubTemplates />;
       case "broadcasts": return <WAHubBroadcasts />;
+      case "bulk-broadcaster": return <WAHubBulkBroadcaster />;
       case "flows": return <WAHubFlows />;
       case "contacts": return <WAHubContacts />;
       case "analytics": return <WAHubAnalytics />;
