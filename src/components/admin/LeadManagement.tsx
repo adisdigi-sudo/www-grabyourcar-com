@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { sendCrmWhatsAppMessage } from "@/lib/crmWhatsApp";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -116,6 +118,37 @@ const quickTags = [
   'Test Drive Done', 'Finance Approved', 'Insurance Quoted', 'Ready to Buy'
 ];
 
+// CSV export column catalog — Super Admin column picker
+const EXPORT_COLUMNS: { key: keyof Lead; label: string; group: string; default?: boolean }[] = [
+  { key: "id", label: "Lead ID", group: "Identity" },
+  { key: "customer_name", label: "Customer Name", group: "Identity", default: true },
+  { key: "phone", label: "Phone", group: "Identity", default: true },
+  { key: "email", label: "Email", group: "Identity", default: true },
+  { key: "city", label: "City", group: "Identity", default: true },
+  { key: "service_category", label: "Service Category", group: "Classification", default: true },
+  { key: "lead_type", label: "Lead Type", group: "Classification" },
+  { key: "source", label: "Source", group: "Classification", default: true },
+  { key: "status", label: "Status", group: "Classification", default: true },
+  { key: "priority", label: "Priority", group: "Classification" },
+  { key: "team_assigned", label: "Team Assigned", group: "Assignment", default: true },
+  { key: "assigned_to", label: "Assigned To (User)", group: "Assignment" },
+  { key: "car_brand", label: "Car Brand", group: "Vehicle Interest", default: true },
+  { key: "car_model", label: "Car Model", group: "Vehicle Interest", default: true },
+  { key: "car_variant", label: "Car Variant", group: "Vehicle Interest" },
+  { key: "budget_min", label: "Budget Min", group: "Vehicle Interest" },
+  { key: "budget_max", label: "Budget Max", group: "Vehicle Interest" },
+  { key: "buying_timeline", label: "Buying Timeline", group: "Vehicle Interest" },
+  { key: "follow_up_count", label: "Follow-up Count", group: "Engagement" },
+  { key: "last_contacted_at", label: "Last Contacted", group: "Engagement" },
+  { key: "next_followup_at", label: "Next Follow-up", group: "Engagement" },
+  { key: "tags", label: "Tags", group: "Engagement" },
+  { key: "notes", label: "Notes", group: "Engagement" },
+  { key: "created_at", label: "Created At", group: "Timestamps", default: true },
+  { key: "updated_at", label: "Updated At", group: "Timestamps" },
+];
+
+const DEFAULT_EXPORT_KEYS = EXPORT_COLUMNS.filter(c => c.default).map(c => c.key);
+
 interface LeadManagementProps {
   verticalCategory?: string;
 }
@@ -125,6 +158,8 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
   const { isSuperAdmin } = useAdminAuth();
   const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportPickerOpen, setIsExportPickerOpen] = useState(false);
+  const [exportScope, setExportScope] = useState<"filtered" | "all">("filtered");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>(verticalCategory || "all");
@@ -136,6 +171,7 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [newTag, setNewTag] = useState("");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<(keyof Lead)[]>(DEFAULT_EXPORT_KEYS);
   const [newLeadForm, setNewLeadForm] = useState({
     customer_name: "",
     phone: "",
@@ -355,20 +391,17 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
     return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
 
-  const downloadLeadsCsv = (rows: Lead[], filenameSuffix: string) => {
+  const downloadLeadsCsv = (rows: Lead[], filenameSuffix: string, columns: (keyof Lead)[]) => {
     if (!rows.length) {
       toast.error("No leads to export");
       return;
     }
-    const columns: (keyof Lead)[] = [
-      "id", "customer_name", "phone", "email", "city",
-      "service_category", "lead_type", "source", "status", "priority",
-      "team_assigned", "assigned_to", "car_brand", "car_model", "car_variant",
-      "budget_min", "budget_max", "buying_timeline", "follow_up_count",
-      "last_contacted_at", "next_followup_at", "tags", "notes",
-      "created_at", "updated_at",
-    ];
-    const header = columns.join(",");
+    if (!columns.length) {
+      toast.error("Select at least one column to export");
+      return;
+    }
+    const labelByKey = new Map(EXPORT_COLUMNS.map(c => [c.key, c.label] as const));
+    const header = columns.map(c => csvCell(labelByKey.get(c) || String(c))).join(",");
     const body = rows.map((r) => columns.map((c) => csvCell((r as any)[c])).join(",")).join("\n");
     const csv = "\ufeff" + header + "\n" + body;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -383,27 +416,48 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
     URL.revokeObjectURL(url);
   };
 
-  const handleExportFiltered = () => {
+  const openExportPicker = (scope: "filtered" | "all") => {
     if (!isSuperAdmin()) {
       toast.error("Only Super Admin can export lead data");
       return;
     }
-    downloadLeadsCsv(leads || [], "filtered");
-    toast.success(`Exported ${leads?.length || 0} leads (filtered view)`);
+    setExportScope(scope);
+    setIsExportPickerOpen(true);
   };
 
-  const handleExportAll = async () => {
-    if (!isSuperAdmin()) {
-      toast.error("Only Super Admin can export lead data");
+  const toggleExportColumn = (key: keyof Lead) => {
+    setSelectedExportColumns(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
+
+  const setAllExportColumns = (mode: "all" | "none" | "default") => {
+    if (mode === "all") setSelectedExportColumns(EXPORT_COLUMNS.map(c => c.key));
+    else if (mode === "none") setSelectedExportColumns([]);
+    else setSelectedExportColumns(DEFAULT_EXPORT_KEYS);
+  };
+
+  const runExport = async () => {
+    if (!isSuperAdmin()) return;
+    if (!selectedExportColumns.length) {
+      toast.error("Select at least one column to export");
       return;
     }
+    // Preserve catalog order regardless of click order
+    const ordered = EXPORT_COLUMNS.map(c => c.key).filter(k => selectedExportColumns.includes(k));
+
+    if (exportScope === "filtered") {
+      downloadLeadsCsv(leads || [], "filtered", ordered);
+      toast.success(`Exported ${leads?.length || 0} leads · ${ordered.length} columns`);
+      setIsExportPickerOpen(false);
+      return;
+    }
+
     setIsExporting(true);
     try {
-      // Page through to bypass the 1000-row default cap
       const pageSize = 1000;
       let from = 0;
       const all: Lead[] = [];
-      // Hard cap at 50k rows for safety
       while (from < 50000) {
         let q = supabase
           .from("leads")
@@ -419,8 +473,9 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
         if (data.length < pageSize) break;
         from += pageSize;
       }
-      downloadLeadsCsv(all, verticalCategory ? `all-${verticalCategory}` : "all");
-      toast.success(`Exported ${all.length} leads (full list)`);
+      downloadLeadsCsv(all, verticalCategory ? `all-${verticalCategory}` : "all", ordered);
+      toast.success(`Exported ${all.length} leads · ${ordered.length} columns`);
+      setIsExportPickerOpen(false);
     } catch (err) {
       console.error(err);
       toast.error("Failed to export leads");
@@ -541,18 +596,18 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
             <>
               <Button
                 variant="outline"
-                onClick={handleExportFiltered}
+                onClick={() => openExportPicker("filtered")}
                 disabled={isExporting || !leads?.length}
-                title="Download the leads currently visible after filters/search"
+                title="Choose columns and download the leads currently visible after filters/search"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export Filtered ({leads?.length || 0})
               </Button>
               <Button
                 variant="outline"
-                onClick={handleExportAll}
+                onClick={() => openExportPicker("all")}
                 disabled={isExporting}
-                title="Download every lead in this workspace, ignoring filters"
+                title="Choose columns and download every lead in this workspace"
               >
                 <Download className="h-4 w-4 mr-2" />
                 {isExporting ? "Exporting…" : "Export All"}
@@ -1184,6 +1239,76 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
               </code>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Column Picker (Super Admin only) */}
+      <Dialog open={isExportPickerOpen} onOpenChange={setIsExportPickerOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Export Leads — Choose Columns
+            </DialogTitle>
+            <DialogDescription>
+              {exportScope === "filtered"
+                ? `Export the ${leads?.length || 0} leads currently visible after filters/search.`
+                : "Export every lead in this workspace (paginated, up to 50,000 rows)."}
+              {" "}Pick the fields you want included in the CSV.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-center justify-between gap-2 border-b pb-3">
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{selectedExportColumns.length}</span> of {EXPORT_COLUMNS.length} columns selected
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setAllExportColumns("default")}>Defaults</Button>
+              <Button size="sm" variant="ghost" onClick={() => setAllExportColumns("all")}>Select all</Button>
+              <Button size="sm" variant="ghost" onClick={() => setAllExportColumns("none")}>Clear</Button>
+            </div>
+          </div>
+
+          <div className="max-h-[55vh] overflow-y-auto pr-1 space-y-4">
+            {Array.from(new Set(EXPORT_COLUMNS.map(c => c.group))).map(group => (
+              <div key={group}>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">{group}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {EXPORT_COLUMNS.filter(c => c.group === group).map(col => {
+                    const checked = selectedExportColumns.includes(col.key);
+                    const id = `export-col-${col.key}`;
+                    return (
+                      <label
+                        key={col.key}
+                        htmlFor={id}
+                        className="flex items-center gap-2 rounded-md border border-border px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                      >
+                        <Checkbox
+                          id={id}
+                          checked={checked}
+                          onCheckedChange={() => toggleExportColumn(col.key)}
+                        />
+                        <span className="text-sm">{col.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsExportPickerOpen(false)} disabled={isExporting}>
+              Cancel
+            </Button>
+            <Button
+              onClick={runExport}
+              disabled={isExporting || !selectedExportColumns.length || (exportScope === "filtered" && !leads?.length)}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {isExporting ? "Exporting…" : `Download CSV (${selectedExportColumns.length} cols)`}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
