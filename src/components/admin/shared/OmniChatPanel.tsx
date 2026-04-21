@@ -284,7 +284,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
 
     const { data, error } = await supabase
       .from("wa_inbox_messages")
-      .select("id, direction, content, message_type, status, read_at, delivered_at, failed_at, created_at, sent_by_name, error_message")
+      .select("id, direction, content, message_type, status, read_at, delivered_at, failed_at, created_at, sent_by_name, error_message, media_url, media_filename, media_mime_type")
       .eq("conversation_id", thread.id)
       .order("created_at", { ascending: true })
       .limit(200);
@@ -307,8 +307,71 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
       provider: "meta",
       customer_name: msg.direction === "inbound" ? thread.customer_name || null : msg.sent_by_name,
       direction: msg.direction,
+      media_url: msg.media_url,
+      media_filename: msg.media_filename,
+      media_mime_type: msg.media_mime_type,
     })));
   }
+
+  async function handleAttachmentUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !selectedThread || selectedThread.isDraft) return;
+    e.target.value = "";
+
+    if (file.size > 16 * 1024 * 1024) {
+      toast({ title: "File too large", description: "WhatsApp limit is 16MB.", variant: "destructive" });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const path = `inbox/${selectedThread.phone}/${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from("broadcast-media").upload(path, file);
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("broadcast-media").getPublicUrl(path);
+      const publicUrl = urlData?.publicUrl;
+      if (!publicUrl) throw new Error("Failed to get public URL");
+
+      const isImage = file.type.startsWith("image/");
+      const isVideo = file.type.startsWith("video/");
+      const messageType = isImage ? "image" : isVideo ? "video" : "document";
+
+      const { data: userData } = await supabase.auth.getUser();
+      const { data, error } = await supabase.functions.invoke("wa-send-inbox", {
+        body: {
+          conversation_id: selectedThread.id,
+          phone: selectedThread.phone,
+          message_type: messageType,
+          content: replyMessage.trim() || "",
+          media_url: publicUrl,
+          media_filename: file.name,
+          sent_by: userData?.user?.id,
+          sent_by_name: userData?.user?.email?.split("@")[0] || "Agent",
+        },
+      });
+
+      if (error || !data?.success) {
+        if (data?.window_expired) {
+          toast({ title: "⏰ 24hr Window Expired", description: "Send an approved template to re-open.", variant: "destructive" });
+          return;
+        }
+        throw new Error(data?.error || error?.message || "Send failed");
+      }
+
+      setReplyMessage("");
+      toast({ title: `${isImage ? "📷" : isVideo ? "🎥" : "📄"} ${file.name} sent` });
+      setTimeout(() => { loadMessages(selectedThread); loadThreads(); }, 600);
+    } catch (err) {
+      toast({
+        title: "Upload failed",
+        description: err instanceof Error ? err.message : "Could not send attachment",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  }
+
 
   async function handleReply() {
     if (!replyMessage.trim() || !selectedThread) return;
