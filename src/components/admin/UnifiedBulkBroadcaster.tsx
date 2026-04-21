@@ -377,7 +377,7 @@ export const UnifiedBulkBroadcaster = () => {
       const emailIdx = hdrs.findIndex((h) => h.includes("email"));
       const mapped: Contact[] = rows.slice(1).filter((r) => r.some((c) => c.trim())).map((r) => ({
         name: nameIdx >= 0 ? r[nameIdx] || "Customer" : "Customer",
-        phone: phoneIdx >= 0 ? (r[phoneIdx] || "").replace(/\D/g, "").replace(/^91/, "") : "",
+        phone: phoneIdx >= 0 ? normaliseIndianPhone(r[phoneIdx]) : "",
         email: emailIdx >= 0 ? r[emailIdx] || "" : "",
         vertical: "Custom Upload",
         source_table: "custom_upload",
