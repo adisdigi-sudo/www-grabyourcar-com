@@ -641,7 +641,39 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                           className={`rounded-lg p-2 ${isInbound ? "bg-muted" : "bg-primary/10"} ${prefs.wrapLongUrls ? "break-all" : "break-words"}`}
                           style={{ maxWidth: `${prefs.bubbleMaxPct}%` }}
                         >
-                          <p className="whitespace-pre-wrap text-xs">{m.message_content}</p>
+                          {m.media_url && (() => {
+                            const src = resolveWaMediaUrl(m.media_url);
+                            const dl = resolveWaMediaUrl(m.media_url, { download: true, filename: m.media_filename });
+                            const isImg = isImageMime(m.media_mime_type, m.message_type);
+                            if (!src) return null;
+                            if (isImg) {
+                              return (
+                                <a href={src} target="_blank" rel="noopener noreferrer" className="block mb-1">
+                                  <img
+                                    src={src}
+                                    alt={m.media_filename || "image"}
+                                    className="max-h-48 rounded object-cover"
+                                    loading="lazy"
+                                  />
+                                </a>
+                              );
+                            }
+                            return (
+                              <a
+                                href={dl || src}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mb-1 flex items-center gap-2 rounded border bg-background/60 p-2 text-[11px] hover:bg-background"
+                              >
+                                <FileText className="h-4 w-4 shrink-0 text-primary" />
+                                <span className="flex-1 truncate">{m.media_filename || "Document"}</span>
+                                <Download className="h-3 w-3 shrink-0 text-muted-foreground" />
+                              </a>
+                            );
+                          })()}
+                          {m.message_content && (
+                            <p className="whitespace-pre-wrap text-xs">{m.message_content}</p>
+                          )}
                           <div className="mt-1 flex items-center justify-end gap-1">
                             {channelIcon(m.channel || "whatsapp")}
                             <span className="text-[9px] text-muted-foreground">
