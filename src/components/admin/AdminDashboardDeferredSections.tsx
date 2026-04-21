@@ -1,6 +1,9 @@
 import { lazy, Suspense } from "react";
 import { type DateRange } from "./dashboard";
 
+const FounderCommandCenter = lazy(() =>
+  import("./dashboard/FounderCommandCenter").then((module) => ({ default: module.FounderCommandCenter })),
+);
 const TeamPerformanceComparison = lazy(() =>
   import("./dashboard/TeamPerformanceComparison").then((module) => ({ default: module.TeamPerformanceComparison })),
 );
@@ -28,6 +31,7 @@ export const AdminDashboardDeferredSections = ({ dateRange }: AdminDashboardDefe
   return (
     <Suspense fallback={<DeferredSectionFallback />}>
       <div className="space-y-6">
+        <FounderCommandCenter />
         <TeamPerformanceComparison dateRange={dateRange} />
         <TaskEscalationView />
         <EmployeeDailyReportsDashboard />
