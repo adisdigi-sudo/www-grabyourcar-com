@@ -542,13 +542,13 @@ export const UnifiedBulkBroadcaster = () => {
 
       let invalidPhones = 0;
       const mapped: Contact[] = rows.slice(1).map((r) => {
-        const rawPhone = phoneIdx >= 0 ? r[phoneIdx] : "";
+        const rawPhone = phoneIdx >= 0 ? String(r[phoneIdx] ?? "") : "";
         const phone = normaliseIndianPhone(rawPhone);
         if (!phone && rawPhone) invalidPhones++;
         return {
-          name: (nameIdx >= 0 ? r[nameIdx] : "")?.trim() || "Customer",
+          name: String((nameIdx >= 0 ? r[nameIdx] : "") ?? "").trim() || "Customer",
           phone,
-          email: emailIdx >= 0 ? (r[emailIdx] || "").trim() : "",
+          email: emailIdx >= 0 ? String(r[emailIdx] ?? "").trim() : "",
           vertical: "Custom Upload",
           source_table: "custom_upload",
         };
