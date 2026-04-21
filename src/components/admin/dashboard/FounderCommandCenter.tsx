@@ -10,9 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Crown, Target, TrendingUp, Trophy, Plus, IndianRupee, Calendar } from "lucide-react";
+import { Crown, Target, TrendingUp, Trophy, Plus, IndianRupee, Calendar, Download, MessageSquare, Settings2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, startOfQuarter, startOfWeek, endOfMonth, endOfQuarter, endOfWeek } from "date-fns";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { downloadFounderReportPDF } from "@/lib/founderReportPDF";
 
 type Period = "week" | "month" | "quarter";
 
