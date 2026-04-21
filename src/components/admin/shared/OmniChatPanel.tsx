@@ -19,6 +19,9 @@ import {
   AlertTriangle,
   Settings2,
   RotateCcw,
+  Paperclip,
+  FileText,
+  Download,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type OmniChannel } from "@/lib/omniSend";
@@ -28,6 +31,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { resolveWaMediaUrl, isImageMime } from "@/components/admin/inbox/waMedia";
 
 interface OmniChatPanelProps {
   phone?: string;
@@ -65,6 +69,9 @@ interface ChatMessage {
   provider: string;
   customer_name: string | null;
   direction?: "inbound" | "outbound";
+  media_url?: string | null;
+  media_filename?: string | null;
+  media_mime_type?: string | null;
 }
 
 type InboxMessageRow = {
@@ -79,6 +86,9 @@ type InboxMessageRow = {
   created_at: string | null;
   sent_by_name: string | null;
   error_message: string | null;
+  media_url: string | null;
+  media_filename: string | null;
+  media_mime_type: string | null;
 };
 
 function normalizePhone(value: string): string {
@@ -137,6 +147,8 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [prefs, setPrefs] = useState<ChatPrefs>(() => loadPrefs());
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -271,7 +283,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
 
     const { data, error } = await supabase
       .from("wa_inbox_messages")
-      .select("id, direction, content, message_type, status, read_at, delivered_at, failed_at, created_at, sent_by_name, error_message")
+      .select("id, direction, content, message_type, status, read_at, delivered_at, failed_at, created_at, sent_by_name, error_message, media_url, media_filename, media_mime_type")
       .eq("conversation_id", thread.id)
       .order("created_at", { ascending: true })
       .limit(200);
@@ -294,8 +306,71 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
       provider: "meta",
       customer_name: msg.direction === "inbound" ? thread.customer_name || null : msg.sent_by_name,
       direction: msg.direction,
+      media_url: msg.media_url,
+      media_filename: msg.media_filename,
+      media_mime_type: msg.media_mime_type,
     })));
   }
+
+  async function handleAttachmentUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !selectedThread || selectedThread.isDraft) return;
+    e.target.value = "";
+
+    if (file.size > 16 * 1024 * 1024) {
+      toast({ title: "File too large", description: "WhatsApp limit is 16MB.", variant: "destructive" });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const path = `inbox/${selectedThread.phone}/${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from("broadcast-media").upload(path, file);
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("broadcast-media").getPublicUrl(path);
+      const publicUrl = urlData?.publicUrl;
+      if (!publicUrl) throw new Error("Failed to get public URL");
+
+      const isImage = file.type.startsWith("image/");
+      const isVideo = file.type.startsWith("video/");
+      const messageType = isImage ? "image" : isVideo ? "video" : "document";
+
+      const { data: userData } = await supabase.auth.getUser();
+      const { data, error } = await supabase.functions.invoke("wa-send-inbox", {
+        body: {
+          conversation_id: selectedThread.id,
+          phone: selectedThread.phone,
+          message_type: messageType,
+          content: replyMessage.trim() || "",
+          media_url: publicUrl,
+          media_filename: file.name,
+          sent_by: userData?.user?.id,
+          sent_by_name: userData?.user?.email?.split("@")[0] || "Agent",
+        },
+      });
+
+      if (error || !data?.success) {
+        if (data?.window_expired) {
+          toast({ title: "⏰ 24hr Window Expired", description: "Send an approved template to re-open.", variant: "destructive" });
+          return;
+        }
+        throw new Error(data?.error || error?.message || "Send failed");
+      }
+
+      setReplyMessage("");
+      toast({ title: `${isImage ? "📷" : isVideo ? "🎥" : "📄"} ${file.name} sent` });
+      setTimeout(() => { loadMessages(selectedThread); loadThreads(); }, 600);
+    } catch (err) {
+      toast({
+        title: "Upload failed",
+        description: err instanceof Error ? err.message : "Could not send attachment",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  }
+
 
   async function handleReply() {
     if (!replyMessage.trim() || !selectedThread) return;
@@ -547,7 +622,39 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                           className={`rounded-lg p-2 ${isInbound ? "bg-muted" : "bg-primary/10"} ${prefs.wrapLongUrls ? "break-all" : "break-words"}`}
                           style={{ maxWidth: `${prefs.bubbleMaxPct}%` }}
                         >
-                          <p className="whitespace-pre-wrap text-xs">{m.message_content}</p>
+                          {m.media_url && (() => {
+                            const src = resolveWaMediaUrl(m.media_url);
+                            const dl = resolveWaMediaUrl(m.media_url, { download: true, filename: m.media_filename });
+                            const isImg = isImageMime(m.media_mime_type, m.message_type);
+                            if (!src) return null;
+                            if (isImg) {
+                              return (
+                                <a href={src} target="_blank" rel="noopener noreferrer" className="block mb-1">
+                                  <img
+                                    src={src}
+                                    alt={m.media_filename || "image"}
+                                    className="max-h-48 rounded object-cover"
+                                    loading="lazy"
+                                  />
+                                </a>
+                              );
+                            }
+                            return (
+                              <a
+                                href={dl || src}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mb-1 flex items-center gap-2 rounded border bg-background/60 p-2 text-[11px] hover:bg-background"
+                              >
+                                <FileText className="h-4 w-4 shrink-0 text-primary" />
+                                <span className="flex-1 truncate">{m.media_filename || "Document"}</span>
+                                <Download className="h-3 w-3 shrink-0 text-muted-foreground" />
+                              </a>
+                            );
+                          })()}
+                          {m.message_content && (
+                            <p className="whitespace-pre-wrap text-xs">{m.message_content}</p>
+                          )}
                           <div className="mt-1 flex items-center justify-end gap-1">
                             {channelIcon(m.channel || "whatsapp")}
                             <span className="text-[9px] text-muted-foreground">
@@ -594,6 +701,24 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                   ))}
                 </div>
                 <div className="flex gap-1.5">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                    className="hidden"
+                    onChange={handleAttachmentUpload}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading || sending || selectedThread.isDraft}
+                    title="Attach image or PDF"
+                  >
+                    {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Paperclip className="h-3.5 w-3.5" />}
+                  </Button>
                   <Input
                     placeholder={`Reply via ${replyChannel}...`}
                     value={replyMessage}
