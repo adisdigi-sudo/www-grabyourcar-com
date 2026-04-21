@@ -78,7 +78,6 @@ const navItems: NavItem[] = [
   { id: "live-chats", label: "💬 Live Chats", icon: MessageCircle, badge: "LIVE" },
   { id: "ai-cofounder", label: "🤖 AI Co-Founder", icon: Brain, badge: "AI" },
   { id: "my-hr", label: "📋 My HR", icon: LayoutDashboard },
-  { id: "legacy-leads", label: "📦 Legacy Leads", icon: LayoutDashboard, allowedRoles: ["super_admin", "admin"] },
 
   // ── Sales CRM — sales vertical ──
   { id: "sales-crm", label: "🚗 Sales CRM", icon: Car, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
