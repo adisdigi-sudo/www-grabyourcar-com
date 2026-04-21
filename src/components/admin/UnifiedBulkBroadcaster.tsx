@@ -22,6 +22,24 @@ import {
   Gauge, TrendingUp, Eye, CheckCheck, Ban, Clock, BarChart3, Sparkles, X,
 } from "lucide-react";
 import { parseCSV } from "@/lib/spreadsheetUtils";
+import { fetchAllPages } from "@/lib/fetchAllPages";
+
+// ─── Excel cell value → clean string (handles rich-text, formulas, hyperlinks, dates) ───
+const excelCellToString = (v: any): string => {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") return String(v).trim();
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === "object") {
+    if ("text" in v && typeof (v as any).text === "string") return String((v as any).text).trim();
+    if ("result" in v && (v as any).result !== undefined) return excelCellToString((v as any).result);
+    if ("hyperlink" in v && (v as any).text) return String((v as any).text).trim();
+    if ("richText" in v && Array.isArray((v as any).richText)) {
+      return (v as any).richText.map((r: any) => r.text || "").join("").trim();
+    }
+    if (Array.isArray(v)) return v.map(excelCellToString).join(" ").trim();
+  }
+  return String(v).trim();
+};
 
 // ─── Types ───
 interface Contact {
@@ -30,6 +48,7 @@ interface Contact {
   email?: string;
   vertical: string;
   source_table: string;
+  stage?: string;
 }
 
 // ─── Audience source mapping (verified live tables) ───
@@ -41,19 +60,23 @@ const VERTICAL_SOURCES: {
   nameField: string;
   phoneField: string;
   emailField?: string;
+  stageField?: string;
 }[] = [
-  { id: "sales_leads",     label: "Sales Leads",         emoji: "🚗", table: "leads",                     nameField: "name",          phoneField: "phone",          emailField: "email" },
-  { id: "sales_pipeline",  label: "Sales Pipeline",      emoji: "📈", table: "sales_pipeline",            nameField: "customer_name", phoneField: "phone",          emailField: "email" },
-  { id: "loan_leads",      label: "Loan Leads",          emoji: "💰", table: "car_loan_leads",            nameField: "customer_name", phoneField: "phone",          emailField: "email" },
-  { id: "loan_apps",       label: "Loan Applications",   emoji: "📝", table: "loan_applications",         nameField: "customer_name", phoneField: "phone",          emailField: "email" },
-  { id: "insurance_c",     label: "Insurance Clients",   emoji: "🛡️", table: "insurance_clients",         nameField: "customer_name", phoneField: "phone",          emailField: "email" },
-  { id: "insurance_p",     label: "Insurance Prospects", emoji: "📋", table: "insurance_prospects",       nameField: "customer_name", phoneField: "phone",          emailField: "email" },
-  { id: "hsrp",            label: "HSRP / FASTag",       emoji: "🪪", table: "hsrp_bookings",             nameField: "owner_name",    phoneField: "mobile",         emailField: "email" },
-  { id: "rental",          label: "Self-Drive Rental",   emoji: "🔑", table: "rental_bookings",           nameField: "customer_name", phoneField: "phone",          emailField: "email" },
-  { id: "accessories",     label: "Accessories Orders",  emoji: "🛍️", table: "accessory_orders",          nameField: "shipping_name", phoneField: "shipping_phone",emailField: "shipping_email" },
+  { id: "sales_leads",     label: "Sales Leads",         emoji: "🚗", table: "leads",                     nameField: "name",          phoneField: "phone",          emailField: "email", stageField: "status" },
+  { id: "sales_pipeline",  label: "Sales Pipeline",      emoji: "📈", table: "sales_pipeline",            nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "stage" },
+  { id: "loan_leads",      label: "Loan Leads",          emoji: "💰", table: "car_loan_leads",            nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "pipeline_stage" },
+  { id: "loan_apps",       label: "Loan Applications",   emoji: "📝", table: "loan_applications",         nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "status" },
+  { id: "insurance_c",     label: "Insurance Clients",   emoji: "🛡️", table: "insurance_clients",         nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "pipeline_stage" },
+  { id: "insurance_p",     label: "Insurance Prospects", emoji: "📋", table: "insurance_prospects",       nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "prospect_status" },
+  { id: "hsrp",            label: "HSRP / FASTag",       emoji: "🪪", table: "hsrp_bookings",             nameField: "owner_name",    phoneField: "mobile",         emailField: "email", stageField: "booking_status" },
+  { id: "rental",          label: "Self-Drive Rental",   emoji: "🔑", table: "rental_bookings",           nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "booking_status" },
+  { id: "accessories",     label: "Accessories Orders",  emoji: "🛍️", table: "accessory_orders",          nameField: "shipping_name", phoneField: "shipping_phone",emailField: "shipping_email", stageField: "order_status" },
   { id: "dealer",          label: "Dealer Network",      emoji: "🏢", table: "dealer_inquiry_recipients", nameField: "name",          phoneField: "phone",          emailField: "email" },
-  { id: "unified",         label: "Unified Customers",   emoji: "👥", table: "unified_customers",         nameField: "full_name",     phoneField: "phone",          emailField: "email" },
+  { id: "unified",         label: "Unified Customers",   emoji: "👥", table: "unified_customers",         nameField: "full_name",     phoneField: "phone",          emailField: "email", stageField: "lifecycle_stage" },
 ];
+
+// Type augmentation for stage support
+type VerticalSource = (typeof VERTICAL_SOURCES)[number] & { stageField?: string };
 
 // ─── Strict 10-digit Indian phone normalizer (preserves leading-9 numbers) ───
 const normaliseIndianPhone = (raw: any): string => {
@@ -244,6 +267,10 @@ export const UnifiedBulkBroadcaster = () => {
   const [selectedContacts, setSelectedContacts] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoadingAudience, setIsLoadingAudience] = useState(false);
+  // Per-vertical stage filter (empty string = all stages)
+  const [stageFilter, setStageFilter] = useState<Record<string, string>>({});
+  // Discovered stage values per vertical (auto-populated after load)
+  const [stageOptions, setStageOptions] = useState<Record<string, string[]>>({});
 
   // WhatsApp config
   const [useMetaTemplate, setUseMetaTemplate] = useState(true);
@@ -298,7 +325,7 @@ export const UnifiedBulkBroadcaster = () => {
     });
   };
 
-  // ─── Bulk-load contacts from all selected verticals ───
+  // ─── Bulk-load ALL contacts (paginated, no cap) from selected verticals ───
   const loadAllSelected = async () => {
     if (selectedVerticals.size === 0) {
       toast.error("Pehle ek ya zyada vertical select karo");
@@ -306,31 +333,41 @@ export const UnifiedBulkBroadcaster = () => {
     }
     setIsLoadingAudience(true);
     const merged: Contact[] = [];
-    // Dedup by phone+name+vertical so the same phone with different client names
-    // (e.g., personal + business policies on one mobile) loads as separate contacts.
     const seenKeys = new Set<string>();
     const perVerticalCounts: Record<string, number> = {};
+    const stagesPerVertical: Record<string, Set<string>> = {};
     const errors: string[] = [];
 
     try {
       for (const v of VERTICAL_SOURCES) {
         if (!selectedVerticals.has(v.id)) continue;
-        const cols = [v.nameField, v.phoneField, v.emailField].filter(Boolean).join(", ");
-        const { data, error } = await (supabase as any)
-          .from(v.table)
-          .select(cols)
-          .not(v.phoneField, "is", null)
-          .limit(10000);
-        if (error) {
-          console.warn(`[${v.label}] load failed:`, error.message);
-          errors.push(`${v.label}: ${error.message}`);
+        const cols = [v.nameField, v.phoneField, v.emailField, v.stageField].filter(Boolean).join(", ");
+        const wantedStage = stageFilter[v.id]?.trim();
+
+        let allRows: any[] = [];
+        try {
+          allRows = await fetchAllPages<any>(async (from, to) => {
+            let q = (supabase as any)
+              .from(v.table)
+              .select(cols)
+              .not(v.phoneField, "is", null);
+            if (wantedStage && v.stageField) q = q.eq(v.stageField, wantedStage);
+            return q.range(from, to);
+          });
+        } catch (err: any) {
+          console.warn(`[${v.label}] load failed:`, err?.message || err);
+          errors.push(`${v.label}: ${err?.message || "load failed"}`);
           continue;
         }
+
         let added = 0;
-        (data || []).forEach((r: any) => {
+        const stageSet: Set<string> = stagesPerVertical[v.id] || new Set<string>();
+        allRows.forEach((r: any) => {
           const phone = normaliseIndianPhone(r[v.phoneField]);
           if (!phone) return;
           const name = String(r[v.nameField] || "Customer").trim() || "Customer";
+          const stage = v.stageField ? String(r[v.stageField] || "").trim() : "";
+          if (stage) stageSet.add(stage);
           const key = `${v.id}|${phone}|${name.toLowerCase()}`;
           if (seenKeys.has(key)) return;
           seenKeys.add(key);
@@ -340,16 +377,27 @@ export const UnifiedBulkBroadcaster = () => {
             email: v.emailField ? String(r[v.emailField] || "").trim() : "",
             vertical: v.label,
             source_table: v.table,
+            stage: stage || undefined,
           });
           added++;
         });
+        stagesPerVertical[v.id] = stageSet;
         perVerticalCounts[v.label] = added;
       }
+
       const filtered = merged.filter((c) => (channel === "email" ? !!c.email : c.phone.length === 10));
       setContacts(filtered);
       setSelectedContacts(new Set(filtered.map((_, i) => i)));
+      // Save discovered stages for each loaded vertical
+      setStageOptions((prev) => {
+        const next = { ...prev };
+        Object.entries(stagesPerVertical).forEach(([id, set]) => {
+          next[id] = Array.from(set).sort();
+        });
+        return next;
+      });
       const breakdown = Object.entries(perVerticalCounts).map(([k, v]) => `${k}: ${v}`).join(" • ");
-      toast.success(`✅ Loaded ${filtered.length} unique contacts`, { description: breakdown || undefined });
+      toast.success(`✅ Loaded ${filtered.length} contacts (full DB)`, { description: breakdown || undefined });
       if (errors.length) toast.warning(`${errors.length} source(s) had errors`, { description: errors.join("; ") });
     } catch (err: any) {
       toast.error("Audience load failed: " + (err.message || ""));
@@ -358,39 +406,68 @@ export const UnifiedBulkBroadcaster = () => {
     }
   };
 
-  // ─── CSV upload ───
+  // ─── CSV / Excel upload (robust) ───
   const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       let rows: string[][] = [];
-      if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+      const lower = file.name.toLowerCase();
+      if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
         const ExcelJS = await import("exceljs");
         const wb = new ExcelJS.Workbook();
         await wb.xlsx.load(await file.arrayBuffer());
         const ws = wb.worksheets[0];
-        if (!ws) throw new Error("No worksheet found");
-        ws.eachRow((row) => rows.push((row.values as any[]).slice(1).map((v) => String(v ?? ""))));
+        if (!ws) throw new Error("No worksheet in workbook");
+        // includeEmpty:false skips fully blank rows; iterate ALL rows including header
+        ws.eachRow({ includeEmpty: false }, (row) => {
+          const vals = row.values as any[];
+          // ExcelJS row.values is 1-indexed; index 0 is undefined
+          const cells = vals.slice(1).map(excelCellToString);
+          if (cells.some((c) => c !== "")) rows.push(cells);
+        });
+        console.log(`[Excel] Parsed ${rows.length} rows from ${file.name}`);
       } else {
-        rows = parseCSV(await file.text());
+        rows = parseCSV(await file.text()).filter((r) => r.some((c) => c.trim()));
       }
-      if (rows.length < 2) { toast.error("Need header + data"); return; }
+      if (rows.length < 2) {
+        toast.error(`File me kam se kam header + 1 data row chahiye (mila: ${rows.length})`);
+        return;
+      }
       const hdrs = rows[0].map((h) => h.toLowerCase().trim());
-      const nameIdx = hdrs.findIndex((h) => h.includes("name"));
-      const phoneIdx = hdrs.findIndex((h) => h.includes("phone") || h.includes("mobile"));
-      const emailIdx = hdrs.findIndex((h) => h.includes("email"));
-      const mapped: Contact[] = rows.slice(1).filter((r) => r.some((c) => c.trim())).map((r) => ({
-        name: nameIdx >= 0 ? r[nameIdx] || "Customer" : "Customer",
-        phone: phoneIdx >= 0 ? normaliseIndianPhone(r[phoneIdx]) : "",
-        email: emailIdx >= 0 ? r[emailIdx] || "" : "",
-        vertical: "Custom Upload",
-        source_table: "custom_upload",
-      })).filter((c) => c.phone.length === 10 || (channel === "email" && c.email));
+      const nameIdx = hdrs.findIndex((h) => h === "name" || h.includes("name") || h.includes("customer"));
+      const phoneIdx = hdrs.findIndex(
+        (h) => h.includes("phone") || h.includes("mobile") || h.includes("contact") || h.includes("whatsapp") || h === "no" || h === "number"
+      );
+      const emailIdx = hdrs.findIndex((h) => h.includes("email") || h.includes("mail"));
+
+      if (phoneIdx < 0 && channel !== "email") {
+        toast.error(`Phone column nahi mila. Headers: ${hdrs.join(", ")}`);
+        return;
+      }
+
+      let invalidPhones = 0;
+      const mapped: Contact[] = rows.slice(1).map((r) => {
+        const rawPhone = phoneIdx >= 0 ? r[phoneIdx] : "";
+        const phone = normaliseIndianPhone(rawPhone);
+        if (!phone && rawPhone) invalidPhones++;
+        return {
+          name: (nameIdx >= 0 ? r[nameIdx] : "")?.trim() || "Customer",
+          phone,
+          email: emailIdx >= 0 ? (r[emailIdx] || "").trim() : "",
+          vertical: "Custom Upload",
+          source_table: "custom_upload",
+        };
+      }).filter((c) => c.phone.length === 10 || (channel === "email" && c.email));
+
       setContacts(mapped);
       setSelectedContacts(new Set(mapped.map((_, i) => i)));
-      toast.success(`✅ Loaded ${mapped.length} contacts from file`);
+      toast.success(`✅ Loaded ${mapped.length} contacts from ${file.name}`, {
+        description: invalidPhones > 0 ? `${invalidPhones} rows skipped (invalid phone)` : undefined,
+      });
     } catch (err: any) {
-      toast.error("Parse failed: " + err.message);
+      console.error("[Upload] Parse failed:", err);
+      toast.error("Parse failed: " + (err?.message || "unknown error"));
     }
   };
 
@@ -570,7 +647,43 @@ export const UnifiedBulkBroadcaster = () => {
               })}
             </div>
 
-            {/* Action row */}
+            {/* Stage filter — only for selected verticals that have a stage column */}
+            {Array.from(selectedVerticals).some((id) => VERTICAL_SOURCES.find((v) => v.id === id)?.stageField) && (
+              <div className="rounded-md border bg-muted/30 p-2 space-y-1.5">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Stage filter (optional)</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {VERTICAL_SOURCES.filter((v) => selectedVerticals.has(v.id) && v.stageField).map((v) => {
+                    const opts = stageOptions[v.id] || [];
+                    return (
+                      <div key={v.id} className="flex items-center gap-1.5">
+                        <span className="text-[10px] truncate w-24">{v.emoji} {v.label}</span>
+                        <Select
+                          value={stageFilter[v.id] || "__all__"}
+                          onValueChange={(val) =>
+                            setStageFilter((prev) => ({ ...prev, [v.id]: val === "__all__" ? "" : val }))
+                          }
+                        >
+                          <SelectTrigger className="h-7 text-[10px] flex-1">
+                            <SelectValue placeholder="All stages" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__all__">All stages</SelectItem>
+                            {opts.length === 0 && (
+                              <SelectItem value="__hint__" disabled>Load contacts first to see stages</SelectItem>
+                            )}
+                            {opts.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-muted-foreground">Tip: pehli baar "Load contacts" dabao, fir stages dropdown me aa jayenge — stage chunke dobara load karo.</p>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <Button
                 onClick={loadAllSelected}
