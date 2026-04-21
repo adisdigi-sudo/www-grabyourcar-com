@@ -953,9 +953,128 @@ export function WaTemplateManager() {
   const filteredTemplates = templates.filter(t => {
     if (filterCategory !== "all" && t.category !== filterCategory) return false;
     if (filterVertical !== "all" && t.vertical !== filterVertical) return false;
+    if (filterStatus !== "all" && t.status !== filterStatus) return false;
     if (searchQuery && !t.name.includes(searchQuery.toLowerCase()) && !(t.display_name || "").toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
+
+  const allSelected = filteredTemplates.length > 0 && filteredTemplates.every(t => selectedIds.has(t.id));
+  const someSelected = filteredTemplates.some(t => selectedIds.has(t.id));
+  const toggleAll = () => {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredTemplates.map(t => t.id)));
+  };
+  const toggleOne = (id: string) => {
+    const next = new Set(selectedIds);
+    next.has(id) ? next.delete(id) : next.add(id);
+    setSelectedIds(next);
+  };
+
+  const exportToExcel = async () => {
+    try {
+      const ExcelJS = (await import("exceljs")).default;
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet("WhatsApp Templates");
+      ws.columns = [
+        { header: "Name", key: "name", width: 30 },
+        { header: "Display Name", key: "display_name", width: 30 },
+        { header: "Category", key: "category", width: 15 },
+        { header: "Vertical", key: "vertical", width: 15 },
+        { header: "Status", key: "status", width: 12 },
+        { header: "Language", key: "language", width: 10 },
+        { header: "Body", key: "body", width: 60 },
+        { header: "Header", key: "header_content", width: 30 },
+        { header: "Footer", key: "footer", width: 30 },
+        { header: "Buttons", key: "buttons", width: 30 },
+        { header: "Sent", key: "sent_count", width: 10 },
+        { header: "Delivered", key: "delivered_count", width: 10 },
+        { header: "Read", key: "read_count", width: 10 },
+        { header: "Failed", key: "failed_count", width: 10 },
+        { header: "Created", key: "created_at", width: 20 },
+      ];
+      ws.getRow(1).font = { bold: true };
+      const source = selectedIds.size > 0
+        ? filteredTemplates.filter(t => selectedIds.has(t.id))
+        : filteredTemplates;
+      source.forEach(t => {
+        const btns = Array.isArray(t.buttons) ? t.buttons.map((b: any) => `${b.type}:${b.text}`).join(" | ") : "";
+        ws.addRow({
+          name: t.name,
+          display_name: t.display_name || "",
+          category: t.category,
+          vertical: t.vertical || "",
+          status: t.status,
+          language: t.language,
+          body: t.body,
+          header_content: t.header_content || "",
+          footer: t.footer || "",
+          buttons: btns,
+          sent_count: t.sent_count || 0,
+          delivered_count: t.delivered_count || 0,
+          read_count: t.read_count || 0,
+          failed_count: t.failed_count || 0,
+          created_at: t.created_at ? new Date(t.created_at).toLocaleString() : "",
+        });
+      });
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `whatsapp-templates-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${source.length} templates`);
+    } catch (err: any) {
+      toast.error(err.message || "Export failed");
+    }
+  };
+
+  const bulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Delete ${selectedIds.size} template(s) from local + Meta?`)) return;
+    setBulkBusy(true);
+    let ok = 0, fail = 0;
+    const ids = Array.from(selectedIds);
+    for (const id of ids) {
+      const tmpl = templates.find(t => t.id === id);
+      if (!tmpl) continue;
+      try {
+        if (tmpl.meta_template_id) {
+          await supabase.functions.invoke("meta-templates", { body: { action: "delete_template", template_name: tmpl.name } });
+        }
+        await supabase.from("wa_templates").delete().eq("id", id);
+        ok++;
+      } catch { fail++; }
+    }
+    setBulkBusy(false);
+    setSelectedIds(new Set());
+    await fetchAll();
+    toast.success(`Deleted ${ok} template(s)${fail ? `, ${fail} failed` : ""}`);
+  };
+
+  const bulkSubmit = async () => {
+    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds).filter(id => {
+      const t = templates.find(x => x.id === id);
+      return t && (t.status === "draft" || t.status === "rejected");
+    });
+    if (ids.length === 0) { toast.info("No draft/rejected templates selected"); return; }
+    if (!confirm(`Submit ${ids.length} template(s) to Meta for approval?`)) return;
+    setBulkBusy(true);
+    let ok = 0, fail = 0;
+    for (const id of ids) {
+      try {
+        const { data, error } = await supabase.functions.invoke("meta-templates", { body: { action: "submit_template", template_id: id } });
+        if (error || data?.error) fail++; else ok++;
+      } catch { fail++; }
+    }
+    setBulkBusy(false);
+    setSelectedIds(new Set());
+    await fetchAll();
+    toast.success(`Submitted ${ok}${fail ? `, ${fail} failed` : ""}`);
+  };
+
 
   const getCatMeta = (cat: string) => META_CATEGORIES[cat as MetaCategory] || META_CATEGORIES.utility;
   const getStatusIcon = (s: string) => {
