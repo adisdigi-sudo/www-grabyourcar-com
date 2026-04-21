@@ -783,6 +783,91 @@ export const UnifiedBulkBroadcaster = () => {
               <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleCSVUpload} />
             </div>
 
+            {/* ─── Load Summary + Diagnostics ─── */}
+            {loadSummary && (
+              <div className="rounded-md border bg-muted/30 p-2.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground flex items-center gap-1.5">
+                    <BarChart3 className="h-3.5 w-3.5 text-primary" />
+                    Last load summary
+                    <span className="text-[10px] font-normal text-muted-foreground">@ {loadSummary.runAt}</span>
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[10px]"
+                    onClick={() => setShowDiagnostics((s) => !s)}
+                  >
+                    {showDiagnostics ? "Hide" : "Show"} diagnostics
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  <div className="bg-card border rounded p-1.5">
+                    <p className="text-[9px] text-muted-foreground uppercase">Fetched (DB)</p>
+                    <p className="text-sm font-bold">{loadSummary.totalFetched}</p>
+                  </div>
+                  <div className="bg-card border rounded p-1.5">
+                    <p className="text-[9px] text-muted-foreground uppercase">After dedupe</p>
+                    <p className="text-sm font-bold">{loadSummary.afterDedup}</p>
+                  </div>
+                  <div className="bg-card border rounded p-1.5">
+                    <p className="text-[9px] text-muted-foreground uppercase">{loadSummary.stageFilterActive ? "Stage filtered" : "Stage filter"}</p>
+                    <p className="text-sm font-bold">{loadSummary.stageFilterActive ? loadSummary.afterDedup : "—"}</p>
+                  </div>
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded p-1.5">
+                    <p className="text-[9px] text-emerald-700 dark:text-emerald-300 uppercase">Ready to send</p>
+                    <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{loadSummary.afterChannelFilter}</p>
+                  </div>
+                </div>
+
+                {showDiagnostics && diagnostics.length > 0 && (
+                  <div className="border rounded bg-background overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-[10px] h-7">Vertical</TableHead>
+                          <TableHead className="text-[10px] h-7">Table</TableHead>
+                          <TableHead className="text-[10px] h-7">Columns</TableHead>
+                          <TableHead className="text-[10px] h-7">Stage</TableHead>
+                          <TableHead className="text-[10px] h-7 text-right">Fetched</TableHead>
+                          <TableHead className="text-[10px] h-7 text-right">Bad ph</TableHead>
+                          <TableHead className="text-[10px] h-7 text-right">Dup</TableHead>
+                          <TableHead className="text-[10px] h-7 text-right">Kept</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {diagnostics.map((d) => (
+                          <TableRow key={d.label} className={d.error ? "bg-destructive/10" : ""}>
+                            <TableCell className="text-[10px] py-1 font-medium">{d.label}</TableCell>
+                            <TableCell className="text-[10px] py-1 font-mono text-muted-foreground">{d.table}</TableCell>
+                            <TableCell className="text-[10px] py-1 font-mono text-muted-foreground">{d.columns.join(", ")}</TableCell>
+                            <TableCell className="text-[10px] py-1">
+                              {d.appliedStage ? (
+                                <Badge variant="outline" className="text-[9px] h-4">{d.appliedStage}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground">all</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-[10px] py-1 text-right font-bold">{d.fetched}</TableCell>
+                            <TableCell className="text-[10px] py-1 text-right text-amber-600">{d.invalidPhone || "—"}</TableCell>
+                            <TableCell className="text-[10px] py-1 text-right text-muted-foreground">{d.duplicates || "—"}</TableCell>
+                            <TableCell className="text-[10px] py-1 text-right font-bold text-emerald-600">{d.accepted}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    {diagnostics.some((d) => d.error) && (
+                      <div className="p-1.5 bg-destructive/10 border-t">
+                        {diagnostics.filter((d) => d.error).map((d) => (
+                          <p key={d.label} className="text-[10px] text-destructive">⚠ {d.label}: {d.error}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Search + table */}
             {contacts.length > 0 && (
               <>
