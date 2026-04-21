@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { parseCSV } from "@/lib/spreadsheetUtils";
 import { fetchAllPages } from "@/lib/fetchAllPages";
+import { SelectionFilterToolbar } from "@/components/shared/SelectionFilterToolbar";
 
 // ─── Excel cell value → clean string (handles rich-text, formulas, hyperlinks, dates) ───
 const excelCellToString = (v: any): string => {
@@ -267,6 +268,7 @@ export const UnifiedBulkBroadcaster = () => {
   const [selectedVerticals, setSelectedVerticals] = useState<Set<string>>(new Set());
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<Set<number>>(new Set());
+  const [onlySelectedView, setOnlySelectedView] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoadingAudience, setIsLoadingAudience] = useState(false);
   // Per-vertical stage filter (empty string = all stages)
@@ -665,15 +667,23 @@ export const UnifiedBulkBroadcaster = () => {
   };
 
   const filteredContacts = useMemo(() => {
-    if (!searchTerm) return contacts;
-    const t = searchTerm.toLowerCase();
-    return contacts.filter((c) =>
-      c.name.toLowerCase().includes(t) ||
-      c.phone.includes(t) ||
-      (c.email || "").toLowerCase().includes(t) ||
-      c.vertical.toLowerCase().includes(t),
-    );
-  }, [contacts, searchTerm]);
+    let list = contacts;
+    // 1) Show-only-selected filter (current view)
+    if (onlySelectedView) {
+      list = list.filter((_, i) => selectedContacts.has(i));
+    }
+    // 2) Search term
+    if (searchTerm) {
+      const t = searchTerm.toLowerCase();
+      list = list.filter((c) =>
+        c.name.toLowerCase().includes(t) ||
+        c.phone.includes(t) ||
+        (c.email || "").toLowerCase().includes(t) ||
+        c.vertical.toLowerCase().includes(t),
+      );
+    }
+    return list;
+  }, [contacts, searchTerm, onlySelectedView, selectedContacts]);
 
   const selectedList = contacts.filter((_, i) => selectedContacts.has(i));
 
@@ -1027,6 +1037,18 @@ export const UnifiedBulkBroadcaster = () => {
                     {selectedContacts.size === contacts.length ? "Deselect All" : "Select All"}
                   </Button>
                 </div>
+
+                <SelectionFilterToolbar
+                  selectedCount={selectedContacts.size}
+                  totalCount={contacts.length}
+                  onlySelected={onlySelectedView}
+                  onToggleOnlySelected={() => setOnlySelectedView((v) => !v)}
+                  onClearSelection={() => {
+                    setSelectedContacts(new Set());
+                    setOnlySelectedView(false);
+                  }}
+                  itemNoun="contacts"
+                />
                 <ScrollArea className="h-[320px] border rounded-lg">
                   <Table>
                     <TableHeader>
