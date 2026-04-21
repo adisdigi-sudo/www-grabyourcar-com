@@ -48,6 +48,7 @@ interface Contact {
   email?: string;
   vertical: string;
   source_table: string;
+  stage?: string;
 }
 
 // ─── Audience source mapping (verified live tables) ───
