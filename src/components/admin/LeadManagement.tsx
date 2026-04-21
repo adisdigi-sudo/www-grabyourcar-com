@@ -1241,6 +1241,76 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Export Column Picker (Super Admin only) */}
+      <Dialog open={isExportPickerOpen} onOpenChange={setIsExportPickerOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Export Leads — Choose Columns
+            </DialogTitle>
+            <DialogDescription>
+              {exportScope === "filtered"
+                ? `Export the ${leads?.length || 0} leads currently visible after filters/search.`
+                : "Export every lead in this workspace (paginated, up to 50,000 rows)."}
+              {" "}Pick the fields you want included in the CSV.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-center justify-between gap-2 border-b pb-3">
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{selectedExportColumns.length}</span> of {EXPORT_COLUMNS.length} columns selected
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setAllExportColumns("default")}>Defaults</Button>
+              <Button size="sm" variant="ghost" onClick={() => setAllExportColumns("all")}>Select all</Button>
+              <Button size="sm" variant="ghost" onClick={() => setAllExportColumns("none")}>Clear</Button>
+            </div>
+          </div>
+
+          <div className="max-h-[55vh] overflow-y-auto pr-1 space-y-4">
+            {Array.from(new Set(EXPORT_COLUMNS.map(c => c.group))).map(group => (
+              <div key={group}>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">{group}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {EXPORT_COLUMNS.filter(c => c.group === group).map(col => {
+                    const checked = selectedExportColumns.includes(col.key);
+                    const id = `export-col-${col.key}`;
+                    return (
+                      <label
+                        key={col.key}
+                        htmlFor={id}
+                        className="flex items-center gap-2 rounded-md border border-border px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                      >
+                        <Checkbox
+                          id={id}
+                          checked={checked}
+                          onCheckedChange={() => toggleExportColumn(col.key)}
+                        />
+                        <span className="text-sm">{col.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsExportPickerOpen(false)} disabled={isExporting}>
+              Cancel
+            </Button>
+            <Button
+              onClick={runExport}
+              disabled={isExporting || !selectedExportColumns.length || (exportScope === "filtered" && !leads?.length)}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {isExporting ? "Exporting…" : `Download CSV (${selectedExportColumns.length} cols)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
