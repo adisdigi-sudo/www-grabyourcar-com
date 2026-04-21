@@ -148,6 +148,8 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [prefs, setPrefs] = useState<ChatPrefs>(() => loadPrefs());
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
