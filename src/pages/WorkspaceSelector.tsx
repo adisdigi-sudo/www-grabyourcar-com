@@ -6,10 +6,11 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Shield, Banknote, Car, Key, CreditCard, ShoppingBag, Megaphone, LogOut, Crown, Lock, MessageSquare } from "lucide-react";
+import { Loader2, Shield, Banknote, Car, Key, CreditCard, ShoppingBag, Megaphone, LogOut, Crown, Lock, MessageSquare, Activity } from "lucide-react";
 import { motion } from "framer-motion";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { VerticalPasswordDialog, getVerifiedVerticals } from "@/components/admin/VerticalPasswordDialog";
+import { WorkspaceHealthDialog } from "@/components/admin/WorkspaceHealthDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { performSafePreviewReload } from "@/lib/chunkLoadRecovery";
@@ -37,6 +38,7 @@ const WorkspaceSelector = () => {
 
   const [passwordTarget, setPasswordTarget] = useState<BusinessVertical | null>(null);
   const [bootstrapTimedOut, setBootstrapTimedOut] = useState(false);
+  const [healthOpen, setHealthOpen] = useState(false);
   const isBootstrapping = !authInitialized || authLoading || verticalLoading;
 
   useEffect(() => {
@@ -234,14 +236,23 @@ const WorkspaceSelector = () => {
                 Super Admin
               </Badge>
             )}
-            {isAdmin() && templatesHubVertical && (
-              <div className="mt-4">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              {isAdmin() && templatesHubVertical && (
                 <Button variant="outline" size="sm" className="gap-2" onClick={handleOpenTemplatesHub}>
                   <MessageSquare className="h-4 w-4" />
                   Open Templates Hub
                 </Button>
-              </div>
-            )}
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setHealthOpen(true)}
+              >
+                <Activity className="h-4 w-4" />
+                Workspace Health
+              </Button>
+            </div>
           </motion.div>
 
           {/* Vertical Grid */}
@@ -316,6 +327,8 @@ const WorkspaceSelector = () => {
         onClose={() => setPasswordTarget(null)}
         onSuccess={handlePasswordSuccess}
       />
+
+      <WorkspaceHealthDialog open={healthOpen} onOpenChange={setHealthOpen} />
     </main>
   );
 };
