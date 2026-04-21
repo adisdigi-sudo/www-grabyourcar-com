@@ -32,7 +32,7 @@ interface Contact {
   source_table: string;
 }
 
-// ─── 11 Verticals → audience source mapping ───
+// ─── Audience source mapping (verified live tables) ───
 const VERTICAL_SOURCES: {
   id: string;
   label: string;
@@ -41,20 +41,33 @@ const VERTICAL_SOURCES: {
   nameField: string;
   phoneField: string;
   emailField?: string;
-  extra?: Record<string, string>;
 }[] = [
-  { id: "sales",        label: "Automotive Sales",   emoji: "🚗", table: "leads",                nameField: "name",          phoneField: "phone", emailField: "email" },
-  { id: "loans",        label: "Car Loans",          emoji: "💰", table: "car_loan_leads",       nameField: "customer_name", phoneField: "phone", emailField: "email" },
-  { id: "insurance_c",  label: "Insurance Clients",  emoji: "🛡️", table: "insurance_clients",    nameField: "customer_name", phoneField: "phone", emailField: "email" },
-  { id: "insurance_p",  label: "Insurance Prospects",emoji: "📋", table: "insurance_prospects",  nameField: "customer_name", phoneField: "phone", emailField: "email" },
-  { id: "hsrp",         label: "HSRP / FASTag",      emoji: "🪪", table: "hsrp_bookings",        nameField: "owner_name",    phoneField: "mobile",emailField: "email" },
-  { id: "rental",       label: "Self-Drive Rental",  emoji: "🔑", table: "rental_bookings",      nameField: "customer_name", phoneField: "phone", emailField: "email" },
-  { id: "accessories",  label: "Accessories Orders", emoji: "🛍️", table: "accessory_orders",     nameField: "shipping_name", phoneField: "shipping_phone", emailField: "shipping_email" },
-  { id: "dealer",       label: "Dealer Network",     emoji: "🏢", table: "dealer_inquiry_recipients", nameField: "name",     phoneField: "phone", emailField: "email" },
-  { id: "fleet",        label: "Corporate Fleet",    emoji: "🚐", table: "corporate_clients",    nameField: "company_name",  phoneField: "phone", emailField: "email" },
-  { id: "customers",    label: "All CRM Customers",  emoji: "👥", table: "customers",            nameField: "name",          phoneField: "phone", emailField: "email" },
-  { id: "all_leads",    label: "All Leads (master)", emoji: "🎯", table: "leads",                nameField: "name",          phoneField: "phone", emailField: "email" },
+  { id: "sales_leads",     label: "Sales Leads",         emoji: "🚗", table: "leads",                     nameField: "name",          phoneField: "phone",          emailField: "email" },
+  { id: "sales_pipeline",  label: "Sales Pipeline",      emoji: "📈", table: "sales_pipeline",            nameField: "customer_name", phoneField: "phone",          emailField: "email" },
+  { id: "loan_leads",      label: "Loan Leads",          emoji: "💰", table: "car_loan_leads",            nameField: "customer_name", phoneField: "phone",          emailField: "email" },
+  { id: "loan_apps",       label: "Loan Applications",   emoji: "📝", table: "loan_applications",         nameField: "customer_name", phoneField: "phone",          emailField: "email" },
+  { id: "insurance_c",     label: "Insurance Clients",   emoji: "🛡️", table: "insurance_clients",         nameField: "customer_name", phoneField: "phone",          emailField: "email" },
+  { id: "insurance_p",     label: "Insurance Prospects", emoji: "📋", table: "insurance_prospects",       nameField: "customer_name", phoneField: "phone",          emailField: "email" },
+  { id: "hsrp",            label: "HSRP / FASTag",       emoji: "🪪", table: "hsrp_bookings",             nameField: "owner_name",    phoneField: "mobile",         emailField: "email" },
+  { id: "rental",          label: "Self-Drive Rental",   emoji: "🔑", table: "rental_bookings",           nameField: "customer_name", phoneField: "phone",          emailField: "email" },
+  { id: "accessories",     label: "Accessories Orders",  emoji: "🛍️", table: "accessory_orders",          nameField: "shipping_name", phoneField: "shipping_phone",emailField: "shipping_email" },
+  { id: "dealer",          label: "Dealer Network",      emoji: "🏢", table: "dealer_inquiry_recipients", nameField: "name",          phoneField: "phone",          emailField: "email" },
+  { id: "unified",         label: "Unified Customers",   emoji: "👥", table: "unified_customers",         nameField: "full_name",     phoneField: "phone",          emailField: "email" },
 ];
+
+// ─── Strict 10-digit Indian phone normalizer (preserves leading-9 numbers) ───
+const normaliseIndianPhone = (raw: any): string => {
+  if (raw === null || raw === undefined) return "";
+  let s = String(raw).replace(/\D/g, "");
+  if (!s) return "";
+  // Strip country code ONLY if length > 10 and starts with 91
+  if (s.length === 12 && s.startsWith("91")) s = s.slice(2);
+  else if (s.length === 11 && s.startsWith("0")) s = s.slice(1);
+  else if (s.length === 13 && s.startsWith("091")) s = s.slice(3);
+  // Final guard: must be 10 digits starting with 6-9
+  if (s.length !== 10 || !/^[6-9]/.test(s)) return "";
+  return s;
+};
 
 // ─── Live Meta Limits Card ───
 function MetaLimitsCard({ onRefresh }: { onRefresh: () => void }) {
@@ -294,6 +307,8 @@ export const UnifiedBulkBroadcaster = () => {
     setIsLoadingAudience(true);
     const merged: Contact[] = [];
     const seenPhones = new Set<string>();
+    const perVerticalCounts: Record<string, number> = {};
+    const errors: string[] = [];
 
     try {
       for (const v of VERTICAL_SOURCES) {
@@ -303,29 +318,35 @@ export const UnifiedBulkBroadcaster = () => {
           .from(v.table)
           .select(cols)
           .not(v.phoneField, "is", null)
-          .limit(5000);
+          .limit(10000);
         if (error) {
-          console.warn(`[${v.label}]`, error.message);
+          console.warn(`[${v.label}] load failed:`, error.message);
+          errors.push(`${v.label}: ${error.message}`);
           continue;
         }
+        let added = 0;
         (data || []).forEach((r: any) => {
-          const phone = String(r[v.phoneField] || "").replace(/\D/g, "").replace(/^91/, "");
-          if (phone.length !== 10) return;
+          const phone = normaliseIndianPhone(r[v.phoneField]);
+          if (!phone) return;
           if (seenPhones.has(phone)) return;
           seenPhones.add(phone);
           merged.push({
-            name: String(r[v.nameField] || "Customer"),
+            name: String(r[v.nameField] || "Customer").trim() || "Customer",
             phone,
-            email: v.emailField ? String(r[v.emailField] || "") : "",
+            email: v.emailField ? String(r[v.emailField] || "").trim() : "",
             vertical: v.label,
             source_table: v.table,
           });
+          added++;
         });
+        perVerticalCounts[v.label] = added;
       }
-      const filtered = merged.filter((c) => (channel === "email" ? !!c.email : c.phone.length >= 10));
+      const filtered = merged.filter((c) => (channel === "email" ? !!c.email : c.phone.length === 10));
       setContacts(filtered);
       setSelectedContacts(new Set(filtered.map((_, i) => i)));
-      toast.success(`✅ Loaded ${filtered.length} unique contacts across ${selectedVerticals.size} verticals`);
+      const breakdown = Object.entries(perVerticalCounts).map(([k, v]) => `${k}: ${v}`).join(" • ");
+      toast.success(`✅ Loaded ${filtered.length} unique contacts`, { description: breakdown || undefined });
+      if (errors.length) toast.warning(`${errors.length} source(s) had errors`, { description: errors.join("; ") });
     } catch (err: any) {
       toast.error("Audience load failed: " + (err.message || ""));
     } finally {
@@ -356,7 +377,7 @@ export const UnifiedBulkBroadcaster = () => {
       const emailIdx = hdrs.findIndex((h) => h.includes("email"));
       const mapped: Contact[] = rows.slice(1).filter((r) => r.some((c) => c.trim())).map((r) => ({
         name: nameIdx >= 0 ? r[nameIdx] || "Customer" : "Customer",
-        phone: phoneIdx >= 0 ? (r[phoneIdx] || "").replace(/\D/g, "").replace(/^91/, "") : "",
+        phone: phoneIdx >= 0 ? normaliseIndianPhone(r[phoneIdx]) : "",
         email: emailIdx >= 0 ? r[emailIdx] || "" : "",
         vertical: "Custom Upload",
         source_table: "custom_upload",
