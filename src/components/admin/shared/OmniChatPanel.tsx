@@ -70,6 +70,9 @@ interface ChatMessage {
   provider: string;
   customer_name: string | null;
   direction?: "inbound" | "outbound";
+  media_url?: string | null;
+  media_filename?: string | null;
+  media_mime_type?: string | null;
 }
 
 type InboxMessageRow = {
@@ -84,6 +87,9 @@ type InboxMessageRow = {
   created_at: string | null;
   sent_by_name: string | null;
   error_message: string | null;
+  media_url: string | null;
+  media_filename: string | null;
+  media_mime_type: string | null;
 };
 
 function normalizePhone(value: string): string {
