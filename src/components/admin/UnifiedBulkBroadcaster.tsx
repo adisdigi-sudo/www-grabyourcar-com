@@ -647,7 +647,43 @@ export const UnifiedBulkBroadcaster = () => {
               })}
             </div>
 
-            {/* Action row */}
+            {/* Stage filter — only for selected verticals that have a stage column */}
+            {Array.from(selectedVerticals).some((id) => VERTICAL_SOURCES.find((v) => v.id === id)?.stageField) && (
+              <div className="rounded-md border bg-muted/30 p-2 space-y-1.5">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Stage filter (optional)</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {VERTICAL_SOURCES.filter((v) => selectedVerticals.has(v.id) && v.stageField).map((v) => {
+                    const opts = stageOptions[v.id] || [];
+                    return (
+                      <div key={v.id} className="flex items-center gap-1.5">
+                        <span className="text-[10px] truncate w-24">{v.emoji} {v.label}</span>
+                        <Select
+                          value={stageFilter[v.id] || "__all__"}
+                          onValueChange={(val) =>
+                            setStageFilter((prev) => ({ ...prev, [v.id]: val === "__all__" ? "" : val }))
+                          }
+                        >
+                          <SelectTrigger className="h-7 text-[10px] flex-1">
+                            <SelectValue placeholder="All stages" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__all__">All stages</SelectItem>
+                            {opts.length === 0 && (
+                              <SelectItem value="__hint__" disabled>Load contacts first to see stages</SelectItem>
+                            )}
+                            {opts.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-muted-foreground">Tip: pehli baar "Load contacts" dabao, fir stages dropdown me aa jayenge — stage chunke dobara load karo.</p>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <Button
                 onClick={loadAllSelected}
