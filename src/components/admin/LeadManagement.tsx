@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +43,7 @@ import {
   Building2,
   X,
   UserCheck,
+  Download,
 } from "lucide-react";
 
 interface Lead {
@@ -119,7 +122,9 @@ interface LeadManagementProps {
 
 export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) => {
   const { user } = useAuth();
+  const { isSuperAdmin } = useAdminAuth();
   const queryClient = useQueryClient();
+  const [isExporting, setIsExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>(verticalCategory || "all");
@@ -343,6 +348,87 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
     }
   };
 
+  // CSV export helpers — Super Admin only (per platform data export policy)
+  const csvCell = (v: unknown): string => {
+    if (v === null || v === undefined) return "";
+    const s = Array.isArray(v) ? v.join("; ") : typeof v === "object" ? JSON.stringify(v) : String(v);
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const downloadLeadsCsv = (rows: Lead[], filenameSuffix: string) => {
+    if (!rows.length) {
+      toast.error("No leads to export");
+      return;
+    }
+    const columns: (keyof Lead)[] = [
+      "id", "customer_name", "phone", "email", "city",
+      "service_category", "lead_type", "source", "status", "priority",
+      "team_assigned", "assigned_to", "car_brand", "car_model", "car_variant",
+      "budget_min", "budget_max", "buying_timeline", "follow_up_count",
+      "last_contacted_at", "next_followup_at", "tags", "notes",
+      "created_at", "updated_at",
+    ];
+    const header = columns.join(",");
+    const body = rows.map((r) => columns.map((c) => csvCell((r as any)[c])).join(",")).join("\n");
+    const csv = "\ufeff" + header + "\n" + body;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const stamp = format(new Date(), "yyyyMMdd-HHmm");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `leads-${filenameSuffix}-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportFiltered = () => {
+    if (!isSuperAdmin()) {
+      toast.error("Only Super Admin can export lead data");
+      return;
+    }
+    downloadLeadsCsv(leads || [], "filtered");
+    toast.success(`Exported ${leads?.length || 0} leads (filtered view)`);
+  };
+
+  const handleExportAll = async () => {
+    if (!isSuperAdmin()) {
+      toast.error("Only Super Admin can export lead data");
+      return;
+    }
+    setIsExporting(true);
+    try {
+      // Page through to bypass the 1000-row default cap
+      const pageSize = 1000;
+      let from = 0;
+      const all: Lead[] = [];
+      // Hard cap at 50k rows for safety
+      while (from < 50000) {
+        let q = supabase
+          .from("leads")
+          .select("*")
+          .eq("is_legacy", false)
+          .order("created_at", { ascending: false })
+          .range(from, from + pageSize - 1);
+        if (verticalCategory) q = q.eq("service_category", verticalCategory);
+        const { data, error } = await q;
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...(data as Lead[]));
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      downloadLeadsCsv(all, verticalCategory ? `all-${verticalCategory}` : "all");
+      toast.success(`Exported ${all.length} leads (full list)`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to export leads");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleAddLead = () => {
     if (!newLeadForm.customer_name || !newLeadForm.phone) {
       toast.error('Please fill in customer name and phone');
@@ -450,7 +536,29 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
             Manage, tag, and assign leads across all services
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {isSuperAdmin() && (
+            <>
+              <Button
+                variant="outline"
+                onClick={handleExportFiltered}
+                disabled={isExporting || !leads?.length}
+                title="Download the leads currently visible after filters/search"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export Filtered ({leads?.length || 0})
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleExportAll}
+                disabled={isExporting}
+                title="Download every lead in this workspace, ignoring filters"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {isExporting ? "Exporting…" : "Export All"}
+              </Button>
+            </>
+          )}
           <Button variant="outline" onClick={() => setIsBulkUploadOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Bulk Import
