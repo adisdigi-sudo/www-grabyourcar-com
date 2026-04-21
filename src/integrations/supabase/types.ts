@@ -1356,6 +1356,84 @@ export type Database = {
           },
         ]
       }
+      approvals_queue: {
+        Row: {
+          amount: number | null
+          created_at: string
+          customer_name: string | null
+          customer_phone: string | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          priority: string
+          reason: string | null
+          request_payload: Json | null
+          request_type: string
+          requested_by: string | null
+          requested_by_name: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_name: string | null
+          source_record_id: string | null
+          source_table: string | null
+          status: string
+          title: string
+          updated_at: string
+          vertical_name: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          priority?: string
+          reason?: string | null
+          request_payload?: Json | null
+          request_type: string
+          requested_by?: string | null
+          requested_by_name?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          source_record_id?: string | null
+          source_table?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          vertical_name?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          priority?: string
+          reason?: string | null
+          request_payload?: Json | null
+          request_type?: string
+          requested_by?: string | null
+          requested_by_name?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          source_record_id?: string | null
+          source_table?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          vertical_name?: string | null
+        }
+        Relationships: []
+      }
       attendance_records: {
         Row: {
           attendance_date: string
