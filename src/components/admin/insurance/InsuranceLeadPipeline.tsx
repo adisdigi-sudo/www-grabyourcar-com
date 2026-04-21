@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Megaphone } from "lucide-react";
 import { toast } from "sonner";
+import { SelectionFilterToolbar } from "@/components/shared/SelectionFilterToolbar";
 import { cn } from "@/lib/utils";
 import { getClientIdentityKey, normalizePolicyNumber } from "@/lib/insuranceIdentity";
 import {
@@ -627,6 +628,7 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
   const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSending, setBulkSending] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ sent: 0, total: 0 });
+  const [onlySelectedView, setOnlySelectedView] = useState(false);
 
   const toggleBulkSelect = useCallback((id: string) => {
     setBulkSelectedIds(prev => {
@@ -910,6 +912,14 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
       return bTime - aTime;
     });
   }, [pipelineClients, wonClients, selectedStage, search, sourceFilter, priorityFilter, expiryPreset, expiryFrom, expiryTo, executiveFilter, wonDatePreset, wonDateFrom, wonDateTo, getWonDateBounds, getWonEffectiveDate, applyExpiryFilter]);
+
+  // Apply "show only selected" filter on top of all other filters
+  const visibleFiltered = useMemo(() => {
+    if (onlySelectedView && bulkSelectedIds.size > 0) {
+      return filtered.filter(c => bulkSelectedIds.has(c.id));
+    }
+    return filtered;
+  }, [filtered, onlySelectedView, bulkSelectedIds]);
 
   const toggleSelectAll = useCallback(() => {
     const validIds = filtered.filter(c => c.phone && !c.phone.startsWith("IB_")).map(c => c.id);
@@ -1342,6 +1352,16 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
         </div>
       )}
 
+      {/* Selection Filter Toolbar — show only selected rows */}
+      <SelectionFilterToolbar
+        selectedCount={bulkSelectedIds.size}
+        totalCount={filtered.length}
+        onlySelected={onlySelectedView}
+        onToggleOnlySelected={() => setOnlySelectedView(v => !v)}
+        onClearSelection={() => { setBulkSelectedIds(new Set()); setOnlySelectedView(false); }}
+        itemNoun="leads"
+      />
+
       {/* Lead Table */}
       <Card>
         <CardContent className="p-0">
@@ -1351,7 +1371,7 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
                <TableRow className="bg-muted/30">
                   <TableHead className="w-8" onClick={e => e.stopPropagation()}>
                     <Checkbox
-                      checked={filtered.length > 0 && bulkSelectedIds.size === filtered.filter(c => c.phone && !c.phone.startsWith("IB_")).length}
+                      checked={visibleFiltered.length > 0 && bulkSelectedIds.size === visibleFiltered.filter(c => c.phone && !c.phone.startsWith("IB_")).length}
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
@@ -1372,12 +1392,12 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
               <TableBody>
                 {isLoading ? (
                   <TableRow><TableCell colSpan={12} className="text-center py-12 text-muted-foreground">Loading...</TableCell></TableRow>
-                ) : filtered.length === 0 ? (
+                ) : visibleFiltered.length === 0 ? (
                   <TableRow><TableCell colSpan={12} className="text-center py-12 text-muted-foreground">
                     <Shield className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                    <p className="text-sm">No leads found</p>
+                    <p className="text-sm">{onlySelectedView ? "No selected leads to show" : "No leads found"}</p>
                   </TableCell></TableRow>
-                ) : filtered.map((client, idx) => {
+                ) : visibleFiltered.map((client, idx) => {
                   const normStage = normalizeStage(client.pipeline_stage, client.lead_status, client);
                   const stage = ALL_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
                   const phone = displayPhone(client.phone);
@@ -1535,9 +1555,12 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
               </TableBody>
             </Table>
           </div>
-          {filtered.length > 0 && (
+          {visibleFiltered.length > 0 && (
             <div className="flex items-center justify-between px-4 py-2 border-t text-xs text-muted-foreground bg-muted/20">
-              <span>Showing {filtered.length} leads</span>
+              <span>
+                Showing {visibleFiltered.length} {onlySelectedView ? "selected" : ""} leads
+                {onlySelectedView && filtered.length !== visibleFiltered.length && ` (of ${filtered.length} total)`}
+              </span>
               <span>{stageCounts["won"] || 0} won • {stageCounts["lost"] || 0} lost</span>
             </div>
           )}
