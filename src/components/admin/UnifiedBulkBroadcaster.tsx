@@ -59,6 +59,7 @@ const VERTICAL_SOURCES: {
   nameField: string;
   phoneField: string;
   emailField?: string;
+  stageField?: string;
 }[] = [
   { id: "sales_leads",     label: "Sales Leads",         emoji: "🚗", table: "leads",                     nameField: "name",          phoneField: "phone",          emailField: "email", stageField: "status" },
   { id: "sales_pipeline",  label: "Sales Pipeline",      emoji: "📈", table: "sales_pipeline",            nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "stage" },
