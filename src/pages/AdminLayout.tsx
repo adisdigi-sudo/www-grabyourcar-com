@@ -300,6 +300,9 @@ const TaskEscalationView = lazy(() =>
 const EmployeeDailyReportsDashboard = lazy(() =>
   import("@/components/admin/EmployeeDailyReportsDashboard").then((module) => ({ default: module.EmployeeDailyReportsDashboard })),
 );
+const FounderCockpitPage = lazy(() =>
+  import("@/components/admin/dashboard/FounderCockpitPage").then((module) => ({ default: module.FounderCockpitPage })),
+);
 const AdminPanelLoader = ({ className }: { className?: string }) => (
   <div className={cn("flex min-h-[240px] items-center justify-center", className)}>
     <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
@@ -730,6 +733,8 @@ const AdminLayout = () => {
       }
       case "sales-crm":
         return <SalesVerticalWorkspace />;
+      case "founder-cockpit":
+        return <FounderCockpitPage />;
       case "loan-crm":
         return <LoanCRMDashboard />;
       case "unified-crm":
