@@ -358,7 +358,10 @@ export const UnifiedBulkBroadcaster = () => {
     try {
       for (const v of VERTICAL_SOURCES) {
         if (!selectedVerticals.has(v.id)) continue;
-        const cols = [v.nameField, v.phoneField, v.emailField, v.stageField].filter(Boolean).join(", ");
+        // Always include id so we can keep TRUE record count (no false dedupe within a vertical)
+        const cols = ["id", v.nameField, v.phoneField, v.emailField, v.stageField]
+          .filter(Boolean)
+          .join(", ");
         const wantedStage = stageFilter[v.id]?.trim();
 
         let allRows: any[] = [];
@@ -385,7 +388,10 @@ export const UnifiedBulkBroadcaster = () => {
           const name = String(r[v.nameField] || "Customer").trim() || "Customer";
           const stage = v.stageField ? String(r[v.stageField] || "").trim() : "";
           if (stage) stageSet.add(stage);
-          const key = `${v.id}|${phone}|${name.toLowerCase()}`;
+          // STRICT: only dedupe by row ID within a vertical → TRUE count preserved.
+          // Across verticals we still allow same phone (different vertical context).
+          const rowId = r.id ? String(r.id) : `${phone}|${name.toLowerCase()}|${added}`;
+          const key = `${v.id}|${rowId}`;
           if (seenKeys.has(key)) return;
           seenKeys.add(key);
           merged.push({
@@ -676,9 +682,12 @@ export const UnifiedBulkBroadcaster = () => {
                         <span className="text-[10px] truncate w-24">{v.emoji} {v.label}</span>
                         <Select
                           value={stageFilter[v.id] || "__all__"}
-                          onValueChange={(val) =>
-                            setStageFilter((prev) => ({ ...prev, [v.id]: val === "__all__" ? "" : val }))
-                          }
+                          onValueChange={(val) => {
+                            const newVal = val === "__all__" ? "" : val;
+                            setStageFilter((prev) => ({ ...prev, [v.id]: newVal }));
+                            // Auto-reload so user instantly sees the filtered set (no "stuck" feeling)
+                            setTimeout(() => { loadAllSelected(); }, 50);
+                          }}
                         >
                           <SelectTrigger className="h-7 text-[10px] flex-1">
                             <SelectValue placeholder="All stages" />
