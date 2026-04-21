@@ -189,7 +189,7 @@ export function FounderCommandCenter() {
               <p className="text-lg font-bold">{formatINR(totals.achievedRev)}</p>
             </CardContent>
           </Card>
-          <Card className={overallPct >= 100 ? "bg-green-50 border-green-200" : overallPct >= 70 ? "bg-yellow-50 border-yellow-200" : "bg-red-50 border-red-200"}>
+          <Card className={overallPct >= 100 ? "bg-green-500/10 border-green-500/30" : overallPct >= 70 ? "bg-yellow-500/10 border-yellow-500/30" : "bg-red-500/10 border-red-500/30"}>
             <CardContent className="p-3 text-center">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Achievement</p>
               <p className={`text-lg font-bold ${overallPct >= 100 ? "text-green-700" : overallPct >= 70 ? "text-yellow-700" : "text-red-700"}`}>
@@ -258,9 +258,9 @@ export function FounderCommandCenter() {
                 <div key={p.id} className="flex items-center justify-between border rounded-lg px-3 py-2">
                   <div className="flex items-center gap-2">
                     <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                      idx === 0 ? "bg-yellow-100 text-yellow-700"
-                      : idx === 1 ? "bg-gray-100 text-gray-700"
-                      : idx === 2 ? "bg-orange-100 text-orange-700"
+                      idx === 0 ? "bg-yellow-500/20 text-yellow-700"
+                      : idx === 1 ? "bg-muted text-foreground"
+                      : idx === 2 ? "bg-orange-500/20 text-orange-700"
                       : "bg-muted text-muted-foreground"
                     }`}>
                       {idx + 1}
