@@ -33,6 +33,9 @@ const InsuranceDashboard = lazy(() =>
 const UnifiedMarketingHub = lazy(() =>
   import("@/components/admin/marketing/UnifiedMarketingHub").then((module) => ({ default: module.UnifiedMarketingHub })),
 );
+const MarketingTechHub = lazy(() =>
+  import("@/components/admin/marketing/MarketingTechHub").then((module) => ({ default: module.MarketingTechHub })),
+);
 
 const ChannelProvidersSettings = lazy(() =>
   import("@/components/admin/settings/ChannelProvidersSettings").then((module) => ({ default: module.ChannelProvidersSettings })),
@@ -319,7 +322,7 @@ const VALID_ADMIN_TABS = new Set([
   "services-loans-bulk", "services-emi-calculator", "services-emi-pdf", "services-discounts", "services-quote-generator",
   "services-pricing", "services-partners", "ecommerce-accessories", "ecommerce-orders", "ecommerce-crosssell", "d2c-rto",
   "d2c-returns", "d2c-checkout", "d2c-inbox", "content-blog", "content-news", "content-launches", "content-ai",
-  "content-intelligence", "marketing-command", "whatsapp-hub", "holi-share", "marketing-email", "marketing-bulk", "integrations-api",
+  "content-intelligence", "marketing-command", "marketing-tech-hub", "whatsapp-hub", "holi-share", "marketing-email", "marketing-bulk", "integrations-api",
   "open-api-portal", "integrations-whatsapp", "marketing-templates", "marketing-automation", "wa-pdf-automation", "wa-smart-triggers", "integrations-shipping",
   "integrations-payments", "integrations-ad-tracking", "profile-business", "profile-logo", "profile-users", "profile-contact",
   "profile-otp", "roles", "team-management", "settings", "calling-system", "manager-dashboard", "team-engagement",
@@ -438,6 +441,7 @@ const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
         "content-ai",
         "content-intelligence",
         "marketing-command",
+        "marketing-tech-hub",
         "whatsapp-hub",
         "whatsapp-inbox",
         "d2c-inbox",
