@@ -535,7 +535,29 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
             Manage, tag, and assign leads across all services
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {isSuperAdmin() && (
+            <>
+              <Button
+                variant="outline"
+                onClick={handleExportFiltered}
+                disabled={isExporting || !leads?.length}
+                title="Download the leads currently visible after filters/search"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export Filtered ({leads?.length || 0})
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleExportAll}
+                disabled={isExporting}
+                title="Download every lead in this workspace, ignoring filters"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {isExporting ? "Exporting…" : "Export All"}
+              </Button>
+            </>
+          )}
           <Button variant="outline" onClick={() => setIsBulkUploadOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Bulk Import
