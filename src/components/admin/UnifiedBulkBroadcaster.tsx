@@ -528,7 +528,7 @@ export const UnifiedBulkBroadcaster = () => {
         toast.error(`File me kam se kam header + 1 data row chahiye (mila: ${rows.length})`);
         return;
       }
-      const hdrs = rows[0].map((h) => h.toLowerCase().trim());
+      const hdrs = rows[0].map((h) => String(h ?? "").toLowerCase().trim());
       const nameIdx = hdrs.findIndex((h) => h === "name" || h.includes("name") || h.includes("customer"));
       const phoneIdx = hdrs.findIndex(
         (h) => h.includes("phone") || h.includes("mobile") || h.includes("contact") || h.includes("whatsapp") || h === "no" || h === "number"
@@ -542,13 +542,13 @@ export const UnifiedBulkBroadcaster = () => {
 
       let invalidPhones = 0;
       const mapped: Contact[] = rows.slice(1).map((r) => {
-        const rawPhone = phoneIdx >= 0 ? r[phoneIdx] : "";
+        const rawPhone = phoneIdx >= 0 ? String(r[phoneIdx] ?? "") : "";
         const phone = normaliseIndianPhone(rawPhone);
         if (!phone && rawPhone) invalidPhones++;
         return {
-          name: (nameIdx >= 0 ? r[nameIdx] : "")?.trim() || "Customer",
+          name: String((nameIdx >= 0 ? r[nameIdx] : "") ?? "").trim() || "Customer",
           phone,
-          email: emailIdx >= 0 ? (r[emailIdx] || "").trim() : "",
+          email: emailIdx >= 0 ? String(r[emailIdx] ?? "").trim() : "",
           vertical: "Custom Upload",
           source_table: "custom_upload",
         };
