@@ -63,16 +63,16 @@ const VERTICAL_SOURCES: {
   stageField?: string;
 }[] = [
   { id: "sales_leads",     label: "Sales Leads",         emoji: "🚗", table: "leads",                     nameField: "name",          phoneField: "phone",          emailField: "email", stageField: "status" },
-  { id: "sales_pipeline",  label: "Sales Pipeline",      emoji: "📈", table: "sales_pipeline",            nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "stage" },
-  { id: "loan_leads",      label: "Loan Leads",          emoji: "💰", table: "car_loan_leads",            nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "pipeline_stage" },
-  { id: "loan_apps",       label: "Loan Applications",   emoji: "📝", table: "loan_applications",         nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "status" },
+  { id: "sales_pipeline",  label: "Sales Pipeline",      emoji: "📈", table: "sales_pipeline",            nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "pipeline_stage" },
+  { id: "loan_leads",      label: "Loan Leads",          emoji: "💰", table: "car_loan_leads",            nameField: "name",          phoneField: "phone",          emailField: "email", stageField: "status" },
+  { id: "loan_apps",       label: "Loan Applications",   emoji: "📝", table: "loan_applications",         nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "stage" },
   { id: "insurance_c",     label: "Insurance Clients",   emoji: "🛡️", table: "insurance_clients",         nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "pipeline_stage" },
   { id: "insurance_p",     label: "Insurance Prospects", emoji: "📋", table: "insurance_prospects",       nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "prospect_status" },
-  { id: "hsrp",            label: "HSRP / FASTag",       emoji: "🪪", table: "hsrp_bookings",             nameField: "owner_name",    phoneField: "mobile",         emailField: "email", stageField: "booking_status" },
-  { id: "rental",          label: "Self-Drive Rental",   emoji: "🔑", table: "rental_bookings",           nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "booking_status" },
+  { id: "hsrp",            label: "HSRP / FASTag",       emoji: "🪪", table: "hsrp_bookings",             nameField: "owner_name",    phoneField: "mobile",         emailField: "email", stageField: "order_status" },
+  { id: "rental",          label: "Self-Drive Rental",   emoji: "🔑", table: "rental_bookings",           nameField: "customer_name", phoneField: "phone",          emailField: "email", stageField: "status" },
   { id: "accessories",     label: "Accessories Orders",  emoji: "🛍️", table: "accessory_orders",          nameField: "shipping_name", phoneField: "shipping_phone",emailField: "shipping_email", stageField: "order_status" },
-  { id: "dealer",          label: "Dealer Network",      emoji: "🏢", table: "dealer_inquiry_recipients", nameField: "name",          phoneField: "phone",          emailField: "email" },
-  { id: "unified",         label: "Unified Customers",   emoji: "👥", table: "unified_customers",         nameField: "full_name",     phoneField: "phone",          emailField: "email", stageField: "lifecycle_stage" },
+  { id: "dealer",          label: "Dealer Network",      emoji: "🏢", table: "dealer_inquiry_recipients", nameField: "rep_name",      phoneField: "phone" },
+  { id: "unified",         label: "Unified Customers",   emoji: "👥", table: "unified_customers",         nameField: "customer_name", phoneField: "phone",          emailField: "email" },
 ];
 
 // Type augmentation for stage support
