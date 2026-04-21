@@ -15,8 +15,10 @@ import {
   Plus, Edit, Trash2, Copy, Zap, LayoutTemplate, Save, CheckCircle, Clock, XCircle,
   AlertTriangle, Eye, Send, MessageSquare, Shield, Megaphone,
   FileText, Image, Video, Globe, Search, Filter, RefreshCw, BarChart3,
-  GitBranch, TrendingUp, Phone, Link, Reply, PhoneCall, X, Upload, Loader2
+  GitBranch, TrendingUp, Phone, Link, Reply, PhoneCall, X, Upload, Loader2,
+  Download, FileSpreadsheet
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -713,7 +715,10 @@ export function WaTemplateManager() {
   const [editButtons, setEditButtons] = useState<MetaButton[]>([]);
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterVertical, setFilterVertical] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [statsOpen, setStatsOpen] = useState(false);
@@ -948,9 +953,128 @@ export function WaTemplateManager() {
   const filteredTemplates = templates.filter(t => {
     if (filterCategory !== "all" && t.category !== filterCategory) return false;
     if (filterVertical !== "all" && t.vertical !== filterVertical) return false;
+    if (filterStatus !== "all" && t.status !== filterStatus) return false;
     if (searchQuery && !t.name.includes(searchQuery.toLowerCase()) && !(t.display_name || "").toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
+
+  const allSelected = filteredTemplates.length > 0 && filteredTemplates.every(t => selectedIds.has(t.id));
+  const someSelected = filteredTemplates.some(t => selectedIds.has(t.id));
+  const toggleAll = () => {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredTemplates.map(t => t.id)));
+  };
+  const toggleOne = (id: string) => {
+    const next = new Set(selectedIds);
+    next.has(id) ? next.delete(id) : next.add(id);
+    setSelectedIds(next);
+  };
+
+  const exportToExcel = async () => {
+    try {
+      const ExcelJS = (await import("exceljs")).default;
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet("WhatsApp Templates");
+      ws.columns = [
+        { header: "Name", key: "name", width: 30 },
+        { header: "Display Name", key: "display_name", width: 30 },
+        { header: "Category", key: "category", width: 15 },
+        { header: "Vertical", key: "vertical", width: 15 },
+        { header: "Status", key: "status", width: 12 },
+        { header: "Language", key: "language", width: 10 },
+        { header: "Body", key: "body", width: 60 },
+        { header: "Header", key: "header_content", width: 30 },
+        { header: "Footer", key: "footer", width: 30 },
+        { header: "Buttons", key: "buttons", width: 30 },
+        { header: "Sent", key: "sent_count", width: 10 },
+        { header: "Delivered", key: "delivered_count", width: 10 },
+        { header: "Read", key: "read_count", width: 10 },
+        { header: "Failed", key: "failed_count", width: 10 },
+        { header: "Created", key: "created_at", width: 20 },
+      ];
+      ws.getRow(1).font = { bold: true };
+      const source = selectedIds.size > 0
+        ? filteredTemplates.filter(t => selectedIds.has(t.id))
+        : filteredTemplates;
+      source.forEach(t => {
+        const btns = Array.isArray(t.buttons) ? t.buttons.map((b: any) => `${b.type}:${b.text}`).join(" | ") : "";
+        ws.addRow({
+          name: t.name,
+          display_name: t.display_name || "",
+          category: t.category,
+          vertical: t.vertical || "",
+          status: t.status,
+          language: t.language,
+          body: t.body,
+          header_content: t.header_content || "",
+          footer: t.footer || "",
+          buttons: btns,
+          sent_count: t.sent_count || 0,
+          delivered_count: t.delivered_count || 0,
+          read_count: t.read_count || 0,
+          failed_count: t.failed_count || 0,
+          created_at: t.created_at ? new Date(t.created_at).toLocaleString() : "",
+        });
+      });
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `whatsapp-templates-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${source.length} templates`);
+    } catch (err: any) {
+      toast.error(err.message || "Export failed");
+    }
+  };
+
+  const bulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Delete ${selectedIds.size} template(s) from local + Meta?`)) return;
+    setBulkBusy(true);
+    let ok = 0, fail = 0;
+    const ids = Array.from(selectedIds);
+    for (const id of ids) {
+      const tmpl = templates.find(t => t.id === id);
+      if (!tmpl) continue;
+      try {
+        if (tmpl.meta_template_id) {
+          await supabase.functions.invoke("meta-templates", { body: { action: "delete_template", template_name: tmpl.name } });
+        }
+        await supabase.from("wa_templates").delete().eq("id", id);
+        ok++;
+      } catch { fail++; }
+    }
+    setBulkBusy(false);
+    setSelectedIds(new Set());
+    await fetchAll();
+    toast.success(`Deleted ${ok} template(s)${fail ? `, ${fail} failed` : ""}`);
+  };
+
+  const bulkSubmit = async () => {
+    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds).filter(id => {
+      const t = templates.find(x => x.id === id);
+      return t && (t.status === "draft" || t.status === "rejected");
+    });
+    if (ids.length === 0) { toast.info("No draft/rejected templates selected"); return; }
+    if (!confirm(`Submit ${ids.length} template(s) to Meta for approval?`)) return;
+    setBulkBusy(true);
+    let ok = 0, fail = 0;
+    for (const id of ids) {
+      try {
+        const { data, error } = await supabase.functions.invoke("meta-templates", { body: { action: "submit_template", template_id: id } });
+        if (error || data?.error) fail++; else ok++;
+      } catch { fail++; }
+    }
+    setBulkBusy(false);
+    setSelectedIds(new Set());
+    await fetchAll();
+    toast.success(`Submitted ${ok}${fail ? `, ${fail} failed` : ""}`);
+  };
+
 
   const getCatMeta = (cat: string) => META_CATEGORIES[cat as MetaCategory] || META_CATEGORIES.utility;
   const getStatusIcon = (s: string) => {
@@ -1029,8 +1153,8 @@ export function WaTemplateManager() {
 
         {/* Templates Tab */}
         <TabsContent value="templates" className="mt-3">
-          <div className="flex gap-2 mb-3">
-            <div className="relative flex-1">
+          <div className="flex flex-wrap gap-2 mb-3">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
               <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search..." className="pl-8 h-8 text-xs" />
             </div>
@@ -1050,7 +1174,36 @@ export function WaTemplateManager() {
                 {VERTICALS.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="paused">Paused</SelectItem>
+                <SelectItem value="disabled">Disabled</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" onClick={exportToExcel} title="Export to Excel">
+              <FileSpreadsheet className="h-3.5 w-3.5" /> Export
+            </Button>
           </div>
+
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-md bg-primary/10 border border-primary/20">
+              <Badge variant="secondary" className="text-xs">{selectedIds.size} selected</Badge>
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" disabled={bulkBusy} onClick={bulkSubmit}>
+                <Send className="h-3.5 w-3.5" /> Submit to Meta
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 text-destructive" disabled={bulkBusy} onClick={bulkDelete}>
+                <Trash2 className="h-3.5 w-3.5" /> Delete
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs ml-auto" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+              {bulkBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            </div>
+          )}
 
           <Card>
             <CardContent className="p-0">
@@ -1058,6 +1211,14 @@ export function WaTemplateManager() {
                 <Table>
                   <TableHeader>
                     <TableRow className="text-xs">
+                      <TableHead className="w-[40px]">
+                        <Checkbox
+                          checked={allSelected}
+                          // @ts-ignore radix accepts indeterminate
+                          data-state={!allSelected && someSelected ? "indeterminate" : undefined}
+                          onCheckedChange={toggleAll}
+                        />
+                      </TableHead>
                       <TableHead className="w-[220px]">Template</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Status</TableHead>
@@ -1067,7 +1228,7 @@ export function WaTemplateManager() {
                   </TableHeader>
                   <TableBody>
                     {filteredTemplates.length === 0 ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">No templates found</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground text-sm">No templates found</TableCell></TableRow>
                     ) : filteredTemplates.map(t => {
                       const catMeta = getCatMeta(t.category);
                       const hasVariants = templates.some(v => v.ab_variant_of === t.id);
@@ -1075,7 +1236,10 @@ export function WaTemplateManager() {
                       const readPct = total > 0 ? Math.round((t.read_count / total) * 100) : 0;
                       const btnCount = Array.isArray(t.buttons) ? t.buttons.length : 0;
                       return (
-                        <TableRow key={t.id} className="group">
+                        <TableRow key={t.id} className="group" data-state={selectedIds.has(t.id) ? "selected" : undefined}>
+                          <TableCell>
+                            <Checkbox checked={selectedIds.has(t.id)} onCheckedChange={() => toggleOne(t.id)} />
+                          </TableCell>
                           <TableCell>
                             <div>
                               <div className="flex items-center gap-1.5">
