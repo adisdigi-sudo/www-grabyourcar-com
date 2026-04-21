@@ -282,14 +282,16 @@ export const UnifiedBulkBroadcaster = () => {
     fetched: number;        // raw rows from DB before any filtering
     invalidPhone: number;   // dropped (phone normalisation failed)
     duplicates: number;     // dropped within-vertical duplicates (by id)
-    accepted: number;       // contributed to merged list
+    deduped: number;        // valid rows after phone + dedupe, before stage filter
+    stageMatched: number;   // rows matching selected stage(s)
+    accepted: number;       // contributed to merged list after stage filtering
     error?: string;
   }
   const [diagnostics, setDiagnostics] = useState<VerticalDiag[]>([]);
   const [loadSummary, setLoadSummary] = useState<{
     totalFetched: number;
-    totalAccepted: number;
     afterDedup: number;
+    stageFiltered: number;
     afterChannelFilter: number;
     stageFilterActive: boolean;
     runAt: string;
@@ -384,7 +386,6 @@ export const UnifiedBulkBroadcaster = () => {
     try {
       for (const v of VERTICAL_SOURCES) {
         if (!selectedVerticals.has(v.id)) continue;
-        // Always include id so we can keep TRUE record count (no false dedupe within a vertical)
         const colsArr = ["id", v.nameField, v.phoneField, v.emailField, v.stageField].filter(Boolean) as string[];
         const cols = colsArr.join(", ");
         const wantedStage = stageFilter[v.id]?.trim();
@@ -399,19 +400,20 @@ export const UnifiedBulkBroadcaster = () => {
           fetched: 0,
           invalidPhone: 0,
           duplicates: 0,
+          deduped: 0,
+          stageMatched: 0,
           accepted: 0,
         };
 
         let allRows: any[] = [];
         try {
-          allRows = await fetchAllPages<any>(async (from, to) => {
-            let q = (supabase as any)
+          allRows = await fetchAllPages<any>(async (from, to) =>
+            (supabase as any)
               .from(v.table)
               .select(cols)
-              .not(v.phoneField, "is", null);
-            if (wantedStage && v.stageField) q = q.eq(v.stageField, wantedStage);
-            return q.range(from, to);
-          });
+              .not(v.phoneField, "is", null)
+              .range(from, to)
+          );
         } catch (err: any) {
           console.warn(`[${v.label}] load failed:`, err?.message || err);
           errors.push(`${v.label}: ${err?.message || "load failed"}`);
@@ -421,20 +423,26 @@ export const UnifiedBulkBroadcaster = () => {
         }
 
         diag.fetched = allRows.length;
-        let added = 0;
         const stageSet: Set<string> = stagesPerVertical[v.id] || new Set<string>();
-        allRows.forEach((r: any) => {
+        const dedupedVerticalContacts: Contact[] = [];
+
+        allRows.forEach((r: any, index: number) => {
           const phone = normaliseIndianPhone(r[v.phoneField]);
-          if (!phone) { diag.invalidPhone++; return; }
+          if (!phone) {
+            diag.invalidPhone++;
+            return;
+          }
           const name = String(r[v.nameField] || "Customer").trim() || "Customer";
           const stage = v.stageField ? String(r[v.stageField] || "").trim() : "";
           if (stage) stageSet.add(stage);
-          // STRICT: only dedupe by row ID within a vertical → TRUE count preserved.
-          const rowId = r.id ? String(r.id) : `${phone}|${name.toLowerCase()}|${added}`;
+          const rowId = r.id ? String(r.id) : `${phone}|${name.toLowerCase()}|${index}`;
           const key = `${v.id}|${rowId}`;
-          if (seenKeys.has(key)) { diag.duplicates++; return; }
+          if (seenKeys.has(key)) {
+            diag.duplicates++;
+            return;
+          }
           seenKeys.add(key);
-          merged.push({
+          dedupedVerticalContacts.push({
             name,
             phone,
             email: v.emailField ? String(r[v.emailField] || "").trim() : "",
@@ -442,30 +450,37 @@ export const UnifiedBulkBroadcaster = () => {
             source_table: v.table,
             stage: stage || undefined,
           });
-          added++;
         });
-        diag.accepted = added;
+
+        diag.deduped = dedupedVerticalContacts.length;
+        const stageMatchedContacts = wantedStage
+          ? dedupedVerticalContacts.filter((contact) => (contact.stage || "") === wantedStage)
+          : dedupedVerticalContacts;
+
+        diag.stageMatched = stageMatchedContacts.length;
+        diag.accepted = stageMatchedContacts.length;
+        merged.push(...stageMatchedContacts);
         stagesPerVertical[v.id] = stageSet;
-        perVerticalCounts[v.label] = added;
+        perVerticalCounts[v.label] = stageMatchedContacts.length;
         diags.push(diag);
       }
 
-      const totalFetched = diags.reduce((s, d) => s + d.fetched, 0);
-      const totalAccepted = merged.length;
-      const filtered = merged.filter((c) => (channel === "email" ? !!c.email : c.phone.length === 10));
+      const totalFetched = diags.reduce((sum, d) => sum + d.fetched, 0);
+      const afterDedup = diags.reduce((sum, d) => sum + d.deduped, 0);
+      const stageFiltered = diags.reduce((sum, d) => sum + d.stageMatched, 0);
+      const readyToSend = merged.filter((c) => (channel === "email" ? !!c.email : c.phone.length === 10));
 
-      setContacts(filtered);
-      setSelectedContacts(new Set(filtered.map((_, i) => i)));
+      setContacts(readyToSend);
+      setSelectedContacts(new Set(readyToSend.map((_, i) => i)));
       setDiagnostics(diags);
       setLoadSummary({
         totalFetched,
-        totalAccepted,
-        afterDedup: totalAccepted,
-        afterChannelFilter: filtered.length,
+        afterDedup,
+        stageFiltered,
+        afterChannelFilter: readyToSend.length,
         stageFilterActive,
         runAt: new Date().toLocaleTimeString(),
       });
-      // Save discovered stages for each loaded vertical
       setStageOptions((prev) => {
         const next = { ...prev };
         Object.entries(stagesPerVertical).forEach(([id, set]) => {
@@ -474,10 +489,9 @@ export const UnifiedBulkBroadcaster = () => {
         return next;
       });
       const breakdown = Object.entries(perVerticalCounts).map(([k, v]) => `${k}: ${v}`).join(" • ");
-      toast.success(
-        `✅ Loaded ${filtered.length} contacts (fetched ${totalFetched} from DB)`,
-        { description: breakdown || undefined }
-      );
+      toast.success(`Loaded ${readyToSend.length} ready contacts`, {
+        description: `Total ${totalFetched} • Deduped ${afterDedup} • Stage ${stageFiltered}${breakdown ? ` • ${breakdown}` : ""}` ,
+      });
       if (errors.length) toast.warning(`${errors.length} source(s) had errors`, { description: errors.join("; ") });
     } catch (err: any) {
       toast.error("Audience load failed: " + (err.message || ""));
@@ -803,22 +817,25 @@ export const UnifiedBulkBroadcaster = () => {
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                   <div className="bg-card border rounded p-1.5">
-                    <p className="text-[9px] text-muted-foreground uppercase">Fetched (DB)</p>
+                    <p className="text-[9px] text-muted-foreground uppercase">Total records</p>
                     <p className="text-sm font-bold">{loadSummary.totalFetched}</p>
                   </div>
                   <div className="bg-card border rounded p-1.5">
-                    <p className="text-[9px] text-muted-foreground uppercase">After dedupe</p>
+                    <p className="text-[9px] text-muted-foreground uppercase">Deduped records</p>
                     <p className="text-sm font-bold">{loadSummary.afterDedup}</p>
                   </div>
                   <div className="bg-card border rounded p-1.5">
-                    <p className="text-[9px] text-muted-foreground uppercase">{loadSummary.stageFilterActive ? "Stage filtered" : "Stage filter"}</p>
-                    <p className="text-sm font-bold">{loadSummary.stageFilterActive ? loadSummary.afterDedup : "—"}</p>
+                    <p className="text-[9px] text-muted-foreground uppercase">Stage filtered</p>
+                    <p className="text-sm font-bold">{loadSummary.stageFiltered}</p>
                   </div>
                   <div className="bg-emerald-500/10 border border-emerald-500/30 rounded p-1.5">
                     <p className="text-[9px] text-emerald-700 dark:text-emerald-300 uppercase">Ready to send</p>
                     <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{loadSummary.afterChannelFilter}</p>
                   </div>
                 </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Total {loadSummary.totalFetched} → Deduped {loadSummary.afterDedup} → {loadSummary.stageFilterActive ? "Selected stage" : "All stages"} {loadSummary.stageFiltered} → Ready {loadSummary.afterChannelFilter}
+                </p>
 
                 {showDiagnostics && diagnostics.length > 0 && (
                   <div className="border rounded bg-background overflow-x-auto">
@@ -832,7 +849,8 @@ export const UnifiedBulkBroadcaster = () => {
                           <TableHead className="text-[10px] h-7 text-right">Fetched</TableHead>
                           <TableHead className="text-[10px] h-7 text-right">Bad ph</TableHead>
                           <TableHead className="text-[10px] h-7 text-right">Dup</TableHead>
-                          <TableHead className="text-[10px] h-7 text-right">Kept</TableHead>
+                          <TableHead className="text-[10px] h-7 text-right">Deduped</TableHead>
+                          <TableHead className="text-[10px] h-7 text-right">Stage match</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -851,7 +869,8 @@ export const UnifiedBulkBroadcaster = () => {
                             <TableCell className="text-[10px] py-1 text-right font-bold">{d.fetched}</TableCell>
                             <TableCell className="text-[10px] py-1 text-right text-amber-600">{d.invalidPhone || "—"}</TableCell>
                             <TableCell className="text-[10px] py-1 text-right text-muted-foreground">{d.duplicates || "—"}</TableCell>
-                            <TableCell className="text-[10px] py-1 text-right font-bold text-emerald-600">{d.accepted}</TableCell>
+                            <TableCell className="text-[10px] py-1 text-right font-bold">{d.deduped}</TableCell>
+                            <TableCell className="text-[10px] py-1 text-right font-bold text-emerald-600">{d.stageMatched}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
