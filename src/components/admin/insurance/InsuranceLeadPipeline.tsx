@@ -913,6 +913,14 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
     });
   }, [pipelineClients, wonClients, selectedStage, search, sourceFilter, priorityFilter, expiryPreset, expiryFrom, expiryTo, executiveFilter, wonDatePreset, wonDateFrom, wonDateTo, getWonDateBounds, getWonEffectiveDate, applyExpiryFilter]);
 
+  // Apply "show only selected" filter on top of all other filters
+  const visibleFiltered = useMemo(() => {
+    if (onlySelectedView && bulkSelectedIds.size > 0) {
+      return filtered.filter(c => bulkSelectedIds.has(c.id));
+    }
+    return filtered;
+  }, [filtered, onlySelectedView, bulkSelectedIds]);
+
   const toggleSelectAll = useCallback(() => {
     const validIds = filtered.filter(c => c.phone && !c.phone.startsWith("IB_")).map(c => c.id);
     setBulkSelectedIds(prev => prev.size === validIds.length ? new Set() : new Set(validIds));
