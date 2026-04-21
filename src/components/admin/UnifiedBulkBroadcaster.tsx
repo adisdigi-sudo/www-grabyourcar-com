@@ -378,15 +378,29 @@ export const UnifiedBulkBroadcaster = () => {
     const perVerticalCounts: Record<string, number> = {};
     const stagesPerVertical: Record<string, Set<string>> = {};
     const errors: string[] = [];
+    const diags: VerticalDiag[] = [];
+    let stageFilterActive = false;
 
     try {
       for (const v of VERTICAL_SOURCES) {
         if (!selectedVerticals.has(v.id)) continue;
         // Always include id so we can keep TRUE record count (no false dedupe within a vertical)
-        const cols = ["id", v.nameField, v.phoneField, v.emailField, v.stageField]
-          .filter(Boolean)
-          .join(", ");
+        const colsArr = ["id", v.nameField, v.phoneField, v.emailField, v.stageField].filter(Boolean) as string[];
+        const cols = colsArr.join(", ");
         const wantedStage = stageFilter[v.id]?.trim();
+        if (wantedStage) stageFilterActive = true;
+
+        const diag: VerticalDiag = {
+          label: v.label,
+          table: v.table,
+          columns: colsArr,
+          stageField: v.stageField,
+          appliedStage: wantedStage || undefined,
+          fetched: 0,
+          invalidPhone: 0,
+          duplicates: 0,
+          accepted: 0,
+        };
 
         let allRows: any[] = [];
         try {
@@ -401,22 +415,24 @@ export const UnifiedBulkBroadcaster = () => {
         } catch (err: any) {
           console.warn(`[${v.label}] load failed:`, err?.message || err);
           errors.push(`${v.label}: ${err?.message || "load failed"}`);
+          diag.error = err?.message || "load failed";
+          diags.push(diag);
           continue;
         }
 
+        diag.fetched = allRows.length;
         let added = 0;
         const stageSet: Set<string> = stagesPerVertical[v.id] || new Set<string>();
         allRows.forEach((r: any) => {
           const phone = normaliseIndianPhone(r[v.phoneField]);
-          if (!phone) return;
+          if (!phone) { diag.invalidPhone++; return; }
           const name = String(r[v.nameField] || "Customer").trim() || "Customer";
           const stage = v.stageField ? String(r[v.stageField] || "").trim() : "";
           if (stage) stageSet.add(stage);
           // STRICT: only dedupe by row ID within a vertical → TRUE count preserved.
-          // Across verticals we still allow same phone (different vertical context).
           const rowId = r.id ? String(r.id) : `${phone}|${name.toLowerCase()}|${added}`;
           const key = `${v.id}|${rowId}`;
-          if (seenKeys.has(key)) return;
+          if (seenKeys.has(key)) { diag.duplicates++; return; }
           seenKeys.add(key);
           merged.push({
             name,
@@ -428,13 +444,27 @@ export const UnifiedBulkBroadcaster = () => {
           });
           added++;
         });
+        diag.accepted = added;
         stagesPerVertical[v.id] = stageSet;
         perVerticalCounts[v.label] = added;
+        diags.push(diag);
       }
 
+      const totalFetched = diags.reduce((s, d) => s + d.fetched, 0);
+      const totalAccepted = merged.length;
       const filtered = merged.filter((c) => (channel === "email" ? !!c.email : c.phone.length === 10));
+
       setContacts(filtered);
       setSelectedContacts(new Set(filtered.map((_, i) => i)));
+      setDiagnostics(diags);
+      setLoadSummary({
+        totalFetched,
+        totalAccepted,
+        afterDedup: totalAccepted,
+        afterChannelFilter: filtered.length,
+        stageFilterActive,
+        runAt: new Date().toLocaleTimeString(),
+      });
       // Save discovered stages for each loaded vertical
       setStageOptions((prev) => {
         const next = { ...prev };
@@ -444,7 +474,10 @@ export const UnifiedBulkBroadcaster = () => {
         return next;
       });
       const breakdown = Object.entries(perVerticalCounts).map(([k, v]) => `${k}: ${v}`).join(" • ");
-      toast.success(`✅ Loaded ${filtered.length} contacts (full DB)`, { description: breakdown || undefined });
+      toast.success(
+        `✅ Loaded ${filtered.length} contacts (fetched ${totalFetched} from DB)`,
+        { description: breakdown || undefined }
+      );
       if (errors.length) toast.warning(`${errors.length} source(s) had errors`, { description: errors.join("; ") });
     } catch (err: any) {
       toast.error("Audience load failed: " + (err.message || ""));
