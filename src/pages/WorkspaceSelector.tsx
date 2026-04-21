@@ -38,6 +38,7 @@ const WorkspaceSelector = () => {
 
   const [passwordTarget, setPasswordTarget] = useState<BusinessVertical | null>(null);
   const [bootstrapTimedOut, setBootstrapTimedOut] = useState(false);
+  const [healthOpen, setHealthOpen] = useState(false);
   const isBootstrapping = !authInitialized || authLoading || verticalLoading;
 
   useEffect(() => {
