@@ -484,138 +484,351 @@ function VariableSampleEditor({ body, samples, onChange }: { body: string; sampl
   );
 }
 
-// ─── Excel Recipient Uploader ───
-async function parseRecipientExcel(file: File): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
+// ─── Excel/CSV Recipient Parser (robust, strict variable matching) ───
+const PHONE_ALIASES = ["phone", "mobile", "mobile_number", "phone_number", "contact", "contactnumber", "whatsapp", "number"];
+const normaliseHeader = (raw: any) =>
+  String(raw ?? "")
+    .replace(/^\ufeff/, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s\-./]+/g, "_")
+    .replace(/[^a-z0-9_{}]/g, "");
+
+const cellToString = (val: any): string => {
+  if (val === null || val === undefined) return "";
+  // ExcelJS rich cell types
+  if (typeof val === "object") {
+    if ("text" in val) return String((val as any).text ?? "").trim();
+    if ("result" in val) return String((val as any).result ?? "").trim(); // formula
+    if ("richText" in val && Array.isArray((val as any).richText)) {
+      return (val as any).richText.map((r: any) => r.text || "").join("").trim();
+    }
+    if ("hyperlink" in val) return String((val as any).text || (val as any).hyperlink || "").trim();
+    if (val instanceof Date) return val.toISOString().slice(0, 10);
+  }
+  if (typeof val === "number") {
+    // Avoid scientific notation for big phone numbers
+    return Number.isInteger(val) ? val.toFixed(0) : String(val);
+  }
+  return String(val).trim();
+};
+
+const normalisePhoneCell = (val: any): string => {
+  let s = cellToString(val);
+  s = s.replace(/[\s\-+()]/g, "").replace(/^91(?=\d{10}$)/, "");
+  // Strip leading zeros / country codes
+  if (s.startsWith("0")) s = s.replace(/^0+/, "");
+  return s;
+};
+
+async function parseRecipientFile(file: File): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
+  const name = file.name.toLowerCase();
+  // CSV path
+  if (name.endsWith(".csv") || name.endsWith(".txt") || file.type === "text/csv") {
+    const text = await file.text();
+    return parseRecipientText(text);
+  }
+  // XLSX path
   const ExcelJS = (await import("exceljs")).default;
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(await file.arrayBuffer());
   const ws = wb.worksheets[0];
-  if (!ws) throw new Error("No sheet found in Excel");
+  if (!ws) throw new Error("Excel me koi sheet nahi mili");
+
+  // Build header map by walking row 1 cells via index (covers sparse cells)
   const headerRow = ws.getRow(1);
+  const colCount = Math.max(ws.columnCount, headerRow.cellCount, (headerRow.values as any[])?.length || 0);
   const headers: string[] = [];
-  headerRow.eachCell((cell, col) => { headers[col - 1] = String(cell.value || "").trim(); });
+  for (let c = 1; c <= colCount; c++) {
+    const cell = headerRow.getCell(c);
+    headers[c - 1] = normaliseHeader(cell?.value);
+  }
+  // Detect & rename phone alias to canonical "phone"
+  const phoneIdx = headers.findIndex((h) => PHONE_ALIASES.includes(h));
+  if (phoneIdx >= 0) headers[phoneIdx] = "phone";
+
   const rows: Record<string, string>[] = [];
-  ws.eachRow((row, rowNum) => {
-    if (rowNum === 1) return;
+  const lastRow = ws.actualRowCount || ws.rowCount;
+  for (let r = 2; r <= lastRow; r++) {
+    const row = ws.getRow(r);
     const obj: Record<string, string> = {};
-    row.eachCell((cell, col) => {
-      const key = headers[col - 1];
-      if (key) obj[key] = String(cell.value ?? "").trim();
-    });
-    if (obj.phone || obj.Phone || obj.PHONE) rows.push(obj);
-  });
+    let hasAny = false;
+    for (let c = 1; c <= colCount; c++) {
+      const key = headers[c - 1];
+      if (!key) continue;
+      const cell = row.getCell(c);
+      const v = key === "phone" ? normalisePhoneCell(cell?.value) : cellToString(cell?.value);
+      if (v) hasAny = true;
+      obj[key] = v;
+    }
+    if (hasAny && obj.phone) rows.push(obj);
+  }
   return { headers: headers.filter(Boolean), rows };
 }
 
-function RecipientExcelUploader({ requiredVars, onParsed }: {
+function parseRecipientText(text: string): { headers: string[]; rows: Record<string, string>[] } {
+  // Detect delimiter: CSV (,) | TSV (\t) | semicolon (;)
+  const firstLine = text.split(/\r?\n/)[0] || "";
+  const tabs = (firstLine.match(/\t/g) || []).length;
+  const semis = (firstLine.match(/;/g) || []).length;
+  const commas = (firstLine.match(/,/g) || []).length;
+  const delim = tabs > commas && tabs > semis ? "\t" : semis > commas ? ";" : ",";
+
+  // Robust split honouring quotes
+  const splitLine = (line: string) => {
+    const out: string[] = [];
+    let cur = "", inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQ) {
+        if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+        else if (ch === '"') inQ = false;
+        else cur += ch;
+      } else if (ch === '"') inQ = true;
+      else if (ch === delim) { out.push(cur); cur = ""; }
+      else cur += ch;
+    }
+    out.push(cur);
+    return out;
+  };
+
+  const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
+  if (lines.length < 2) throw new Error("Header row + at least 1 data row required");
+  const rawHeaders = splitLine(lines[0]).map(normaliseHeader);
+  const phoneIdx = rawHeaders.findIndex((h) => PHONE_ALIASES.includes(h));
+  if (phoneIdx >= 0) rawHeaders[phoneIdx] = "phone";
+
+  const rows: Record<string, string>[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cells = splitLine(lines[i]);
+    const obj: Record<string, string> = {};
+    let hasAny = false;
+    rawHeaders.forEach((key, idx) => {
+      if (!key) return;
+      const raw = cells[idx];
+      const v = key === "phone" ? normalisePhoneCell(raw) : cellToString(raw);
+      if (v) hasAny = true;
+      obj[key] = v;
+    });
+    if (hasAny && obj.phone) rows.push(obj);
+  }
+  return { headers: rawHeaders.filter(Boolean), rows };
+}
+
+function RecipientExcelUploader({ requiredVars, templateName, onParsed }: {
   requiredVars: string[];
+  templateName?: string;
   onParsed: (data: { rows: Record<string, string>[]; missing: string[] } | null) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [parsing, setParsing] = useState(false);
-  const [result, setResult] = useState<{ rows: Record<string, string>[]; missing: string[]; headers: string[] } | null>(null);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const [result, setResult] = useState<{ rows: Record<string, string>[]; missing: string[]; headers: string[]; invalidPhones: number } | null>(null);
+
+  const requiredLower = requiredVars.map((v) => v.toLowerCase());
+
+  const finalize = (parsed: { headers: string[]; rows: Record<string, string>[] }) => {
+    const lowerHeaders = parsed.headers.map((h) => h.toLowerCase());
+    const missing: string[] = [];
+    if (!lowerHeaders.includes("phone")) missing.push("phone");
+    requiredLower.forEach((v) => { if (!lowerHeaders.includes(v)) missing.push(v); });
+
+    // Validate phones (10 digit Indian)
+    const validRows = parsed.rows.filter((r) => /^[6-9]\d{9}$/.test(r.phone));
+    const invalidPhones = parsed.rows.length - validRows.length;
+
+    const res = { rows: validRows, missing, headers: parsed.headers, invalidPhones };
+    setResult(res);
+    onParsed({ rows: validRows, missing });
+    if (missing.length > 0) toast.error(`Missing required columns: ${missing.join(", ")}`);
+    else if (validRows.length === 0) toast.error("Koi valid 10-digit Indian phone number nahi mila");
+    else {
+      toast.success(`✅ ${validRows.length} recipients loaded${invalidPhones ? ` (${invalidPhones} invalid phones skipped)` : ""}`);
+    }
+  };
 
   const handleFile = async (file: File) => {
     setParsing(true);
     try {
-      const { headers, rows } = await parseRecipientExcel(file);
-      const lowerHeaders = headers.map(h => h.toLowerCase());
-      const missing = requiredVars.filter(v => !lowerHeaders.includes(v.toLowerCase()));
-      if (!lowerHeaders.includes("phone")) missing.unshift("phone");
-      const res = { rows, missing, headers };
-      setResult(res);
-      onParsed({ rows, missing });
-      if (missing.length > 0) toast.error(`Missing required columns: ${missing.join(", ")}`);
-      else toast.success(`✅ ${rows.length} recipients loaded with all variables.`);
+      const parsed = await parseRecipientFile(file);
+      finalize(parsed);
     } catch (e) {
-      toast.error("Excel parse failed: " + (e as Error).message);
+      toast.error("File parse failed: " + (e as Error).message);
       onParsed(null);
+      setResult(null);
     } finally { setParsing(false); }
   };
 
-  const downloadTemplate = async () => {
-    const ExcelJS = (await import("exceljs")).default;
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Recipients");
-    const cols = ["phone", ...requiredVars.filter(v => v !== "phone")];
-    ws.addRow(cols);
-    ws.addRow(["9876543210", ...cols.slice(1).map(c => BROADCAST_VARS.find(v => v.key === c)?.sample || "Sample")]);
-    ws.getRow(1).font = { bold: true };
-    const buf = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "broadcast-recipients-template.xlsx"; a.click();
-    URL.revokeObjectURL(url);
+  const handlePaste = () => {
+    if (!pasteText.trim()) { toast.error("Paste karne ke liye data daalein"); return; }
+    setParsing(true);
+    try {
+      const parsed = parseRecipientText(pasteText);
+      finalize(parsed);
+      setPasteOpen(false);
+      setPasteText("");
+    } catch (e) {
+      toast.error("Paste parse failed: " + (e as Error).message);
+    } finally { setParsing(false); }
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
   };
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-xs font-semibold">📊 Upload Recipients Excel *</Label>
-        <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={downloadTemplate}>
-          <FileText className="h-3 w-3" /> Download Template
-        </Button>
+        <Label className="text-xs font-semibold">📊 Upload Recipients (Excel / CSV / Paste) *</Label>
+        <div className="flex gap-1">
+          <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => setPasteOpen(true)}>
+            <Quote className="h-3 w-3" /> Paste
+          </Button>
+        </div>
       </div>
       <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-2 text-[10px] text-blue-700 dark:text-blue-400">
-        <p className="font-semibold mb-1">Required columns (must exist in Excel):</p>
+        <p className="font-semibold mb-1">Required columns (case-insensitive, must exist):</p>
         <div className="flex flex-wrap gap-1">
           <Badge variant="outline" className="text-[9px] font-mono">phone</Badge>
-          {requiredVars.filter(v => v !== "phone").map(v => (
+          {requiredVars.filter((v) => v.toLowerCase() !== "phone").map((v) => (
             <Badge key={v} variant="outline" className="text-[9px] font-mono">{v}</Badge>
           ))}
         </div>
+        <p className="mt-1 text-[9px] text-muted-foreground">
+          Tip: phone column ke aliases bhi chalenge — mobile, contact, whatsapp, phone_number, etc.
+        </p>
       </div>
-      <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-      <Button type="button" variant="outline" className="w-full h-16 border-dashed gap-2" onClick={() => fileRef.current?.click()} disabled={parsing}>
-        {parsing ? <><RefreshCw className="h-4 w-4 animate-spin" /> Parsing...</> : <><FileUp className="h-4 w-4" /> Click to upload .xlsx</>}
-      </Button>
+      <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.txt" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
+        onClick={() => fileRef.current?.click()}
+        className={`w-full rounded-lg border-2 border-dashed cursor-pointer transition-all p-4 flex flex-col items-center gap-1 ${dragOver ? "border-primary bg-primary/5" : "border-muted-foreground/30 hover:border-primary/50"} ${parsing ? "opacity-60 pointer-events-none" : ""}`}
+      >
+        {parsing ? (
+          <><RefreshCw className="h-5 w-5 animate-spin text-primary" /><p className="text-xs">Parsing...</p></>
+        ) : (
+          <>
+            <FileUp className="h-5 w-5 text-primary" />
+            <p className="text-xs font-medium">Click to upload or drag & drop</p>
+            <p className="text-[10px] text-muted-foreground">.xlsx, .xls, .csv, .txt — multiple recipients supported</p>
+          </>
+        )}
+      </div>
       {result && (
-        <div className={`rounded-lg p-2 text-[11px] ${result.missing.length === 0 ? "bg-green-500/10 text-green-700 dark:text-green-400" : "bg-destructive/10 text-destructive"}`}>
+        <div className={`rounded-lg p-2 text-[11px] ${result.missing.length === 0 && result.rows.length > 0 ? "bg-green-500/10 text-green-700 dark:text-green-400" : "bg-destructive/10 text-destructive"}`}>
           {result.missing.length === 0 ? (
-            <><Check className="h-3 w-3 inline mr-1" /> {result.rows.length} recipients ready • Columns: {result.headers.join(", ")}</>
+            <>
+              <Check className="h-3 w-3 inline mr-1" />
+              <b>{result.rows.length}</b> recipients ready • Columns: {result.headers.join(", ")}
+              {result.invalidPhones > 0 && <span className="block mt-0.5 text-amber-600">⚠ {result.invalidPhones} invalid phone numbers skipped</span>}
+            </>
           ) : (
             <><AlertCircle className="h-3 w-3 inline mr-1" /> Missing: <span className="font-mono font-bold">{result.missing.join(", ")}</span> — Excel me ye columns add karein, tabhi details client tak jayengi</>
           )}
         </div>
       )}
+
+      <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Quote className="h-4 w-4" /> Paste Recipients (CSV / TSV from Excel/Sheets)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <div className="bg-muted/40 rounded p-2 text-[10px]">
+              <p className="font-semibold">Format:</p>
+              <p className="font-mono">phone,{requiredVars.filter((v) => v.toLowerCase() !== "phone").join(",") || "name"}</p>
+              <p className="font-mono">9876543210,{requiredVars.filter((v) => v.toLowerCase() !== "phone").map((v) => BROADCAST_VARS.find((b) => b.key === v)?.sample || "Sample").join(",") || "Rahul"}</p>
+            </div>
+            <Textarea
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
+              placeholder={`phone,${requiredVars.filter((v) => v.toLowerCase() !== "phone").join(",") || "name"}\n9876543210,Rahul\n9876543211,Priya\n...`}
+              className="h-48 font-mono text-xs"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasteOpen(false)}>Cancel</Button>
+            <Button onClick={handlePaste} disabled={parsing || !pasteText.trim()} className="gap-1">
+              <Check className="h-3 w-3" /> Parse & Load
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 // ─── Auto-detect Excel template downloader ───
-// Generates a CSV with `phone, name, var_1, var_2…` columns matching the
-// template's required variables, plus one sample row, so users can fill it
-// in and re-upload directly.
+// Generates an .xlsx with EXACTLY the required columns from the selected
+// template + 3 ready-to-edit sample rows. Strictly variable-matched.
 function ExcelTemplateDownloader({ templateName, requiredVars }: {
   templateName: string;
   requiredVars: string[];
 }) {
-  const handleDownload = () => {
-    const headers = ["phone", "name", ...requiredVars];
-    const sampleRow: Record<string, string> = {
-      phone: "9876543210",
-      name: "Rahul Sharma",
-    };
-    requiredVars.forEach((v, idx) => {
-      sampleRow[v] = BROADCAST_VARS.find((b) => b.key === v)?.sample || `Sample ${idx + 1}`;
-    });
-    const csvLine = (cells: string[]) =>
-      cells.map((c) => {
-        const safe = String(c ?? "").replace(/"/g, '""');
-        return /[",\n]/.test(safe) ? `"${safe}"` : safe;
-      }).join(",");
-    const csv = [csvLine(headers), csvLine(headers.map((h) => sampleRow[h] || ""))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${templateName || "broadcast"}_recipients_template.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success("📥 Excel template downloaded — fill it and re-upload");
+  const handleDownload = async () => {
+    const sampleNames = ["Rahul Sharma", "Priya Verma", "Amit Patel"];
+    const samplePhones = ["9876543210", "9988776655", "9123456789"];
+    // EXACT column order: phone first, then template's variables (deduped)
+    const extraVars = requiredVars.filter((v) => v.toLowerCase() !== "phone");
+    const headers = ["phone", ...extraVars];
+
+    try {
+      const ExcelJS = (await import("exceljs")).default;
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet("Recipients");
+      ws.addRow(headers);
+      const headerStyleRow = ws.getRow(1);
+      headerStyleRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      headerStyleRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF16A34A" } };
+      headerStyleRow.alignment = { horizontal: "center", vertical: "middle" };
+      headerStyleRow.height = 22;
+      // 3 sample rows
+      for (let i = 0; i < 3; i++) {
+        const row: any[] = [samplePhones[i]];
+        extraVars.forEach((v, idx) => {
+          const def = BROADCAST_VARS.find((b) => b.key === v)?.sample;
+          row.push(def || (/name/i.test(v) ? sampleNames[i] : `Sample ${idx + 1}`));
+        });
+        ws.addRow(row);
+      }
+      // Format phone column as text to prevent scientific notation
+      ws.getColumn(1).numFmt = "@";
+      ws.columns.forEach((col) => {
+        let max = 10;
+        col.eachCell?.({ includeEmpty: false }, (cell) => {
+          const len = String(cell.value ?? "").length;
+          if (len > max) max = len;
+        });
+        col.width = Math.min(max + 4, 30);
+      });
+      // Note row
+      const noteRow = ws.addRow([]);
+      ws.mergeCells(noteRow.number, 1, noteRow.number, Math.max(headers.length, 2));
+      const note = ws.getCell(noteRow.number, 1);
+      note.value = `⚠ Column names ko change na karein. Variables exactly template ke {{...}} se match hone chahiye.`;
+      note.font = { italic: true, color: { argb: "FFB45309" } };
+
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${(templateName || "broadcast").replace(/[^a-z0-9_-]/gi, "_")}_recipients_template.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("📥 Excel template downloaded — fill aur re-upload karein");
+    } catch (e) {
+      toast.error("Template download failed: " + (e as Error).message);
+    }
   };
 
   return (
@@ -623,14 +836,14 @@ function ExcelTemplateDownloader({ templateName, requiredVars }: {
       <div className="flex items-start gap-2 min-w-0">
         <FileText className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
         <div className="min-w-0">
-          <p className="text-xs font-semibold">Need a starter Excel?</p>
+          <p className="text-xs font-semibold">Sample Excel — exactly matching this template</p>
           <p className="text-[10px] text-muted-foreground truncate">
-            Auto-built for this template: phone, name{requiredVars.length > 0 ? `, ${requiredVars.join(", ")}` : ""}
+            Columns: phone{requiredVars.filter((v) => v.toLowerCase() !== "phone").length > 0 ? `, ${requiredVars.filter((v) => v.toLowerCase() !== "phone").join(", ")}` : ""}
           </p>
         </div>
       </div>
-      <Button type="button" size="sm" variant="outline" className="h-7 gap-1 shrink-0" onClick={handleDownload}>
-        <Upload className="h-3 w-3 rotate-180" /> Download
+      <Button type="button" size="sm" variant="default" className="h-7 gap-1 shrink-0" onClick={handleDownload}>
+        <Upload className="h-3 w-3 rotate-180" /> Download .xlsx
       </Button>
     </div>
   );
