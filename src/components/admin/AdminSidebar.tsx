@@ -42,6 +42,7 @@ import {
   KeyRound,
   Trophy,
   Bot,
+  Crown,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
@@ -73,6 +74,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   // ── Universal ──
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "founder-cockpit", label: "👑 Founder Cockpit", icon: Crown, badge: "NEW", allowedRoles: ["super_admin", "admin"] },
   { id: "live-chats", label: "💬 Live Chats", icon: MessageCircle, badge: "LIVE" },
   { id: "ai-cofounder", label: "🤖 AI Co-Founder", icon: Brain, badge: "AI" },
   { id: "my-hr", label: "📋 My HR", icon: LayoutDashboard },

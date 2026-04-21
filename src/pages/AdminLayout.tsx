@@ -327,7 +327,8 @@ const VALID_ADMIN_TABS = new Set([
   "dealer-reps", "dealer-inventory", "dealer-broadcast", "accounts-dashboard", "accounts-invoices", "accounts-expenses",
   "accounts-bills", "accounts-banking", "accounts-chart", "accounts-journal", "accounts-reports", "accounts-documents",
   "hr-core", "hr-recruitment", "hr-workforce", "hr-attendance", "hr-payroll", "hr-expense", "hr-performance", "hr-engagement",
-  "hr-assets", "hr-helpdesk", "hr-task-escalation", "hr-daily-reports", "ai-cofounder", "legacy-leads", "my-hr", "my-team"
+  "hr-assets", "hr-helpdesk", "hr-task-escalation", "hr-daily-reports", "ai-cofounder", "legacy-leads", "my-hr", "my-team",
+  "founder-cockpit"
 ]);
 
 const getInitialAdminTab = () => {
@@ -350,6 +351,7 @@ const ADMIN_BOOTSTRAP_TIMEOUT_MS = 12000;
 
 const UNIVERSAL_ADMIN_TABS = new Set([
   DEFAULT_ADMIN_TAB,
+  "founder-cockpit",
   "live-chats",
   "ai-cofounder",
   "my-hr",
