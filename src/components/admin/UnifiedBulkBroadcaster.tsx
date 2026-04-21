@@ -502,7 +502,58 @@ export const UnifiedBulkBroadcaster = () => {
     }
   };
 
-  // ─── CSV / Excel upload (robust) ───
+  // ─── Download a smart Excel template that exactly matches selected variables ───
+  const downloadSmartTemplate = async () => {
+    try {
+      const ExcelJS = await import("exceljs");
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet("Contacts");
+
+      // Always include name + phone, then every variable (deduped, name/phone removed)
+      const baseCols = ["name", "phone"];
+      const extras = templateVars
+        .map((v) => v.toLowerCase())
+        .filter((v) => !baseCols.includes(v) && v !== "1");
+      const headers = [...baseCols, ...extras];
+
+      ws.addRow(headers);
+      // One example row so user understands format
+      const example = headers.map((h) => {
+        if (h === "name") return "Rahul Sharma";
+        if (h === "phone") return "9876543210";
+        if (h === "expiry_date") return "31-12-2026";
+        if (h === "quote_amount" || h === "amount") return "12500";
+        if (h === "policy_number") return "POL12345";
+        return `<${h}>`;
+      });
+      ws.addRow(example);
+
+      // Bold + width
+      ws.getRow(1).font = { bold: true };
+      headers.forEach((_, i) => {
+        ws.getColumn(i + 1).width = 18;
+      });
+
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const tmplName = (selectedTemplate as any)?.name || "broadcast";
+      a.href = url;
+      a.download = `${tmplName}_template.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("📥 Smart template downloaded", {
+        description: `Columns: ${headers.join(", ")}`,
+      });
+    } catch (err: any) {
+      toast.error("Template download failed: " + (err?.message || ""));
+    }
+  };
+
+  // ─── CSV / Excel upload (robust + template-aware validation) ───
   const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -542,24 +593,70 @@ export const UnifiedBulkBroadcaster = () => {
         return;
       }
 
+      // ─── STRICT: if a Meta template is chosen, file MUST contain every variable column ───
+      const requiredVars = templateVars
+        .map((v) => v.toLowerCase())
+        .filter((v) => v !== "name" && v !== "customer_name" && v !== "phone" && v !== "1");
+      const varIdxMap: Record<string, number> = {};
+      const missingVars: string[] = [];
+      if (useMetaTemplate && metaTemplateName && requiredVars.length > 0) {
+        for (const v of requiredVars) {
+          const idx = hdrs.findIndex((h) => h === v || h.replace(/\s+/g, "_") === v);
+          if (idx < 0) missingVars.push(v);
+          else varIdxMap[v] = idx;
+        }
+        if (missingVars.length > 0) {
+          toast.error(`❌ File me ye required columns missing hain: ${missingVars.join(", ")}`, {
+            description: "Pehle 'Download Smart Template' use karo, fill karo, phir upload karo.",
+            duration: 8000,
+          });
+          // reset file input so user can re-upload after fixing
+          if (fileRef.current) fileRef.current.value = "";
+          return;
+        }
+      } else {
+        // Even without template, capture any extra columns as vars
+        hdrs.forEach((h, i) => {
+          if (i !== nameIdx && i !== phoneIdx && i !== emailIdx && h) varIdxMap[h] = i;
+        });
+      }
+
       let invalidPhones = 0;
-      const mapped: Contact[] = rows.slice(1).map((r) => {
+      const missingVarRows: number[] = [];
+      const mapped: Contact[] = rows.slice(1).map((r, rowIdx) => {
         const rawPhone = phoneIdx >= 0 ? String(r[phoneIdx] ?? "") : "";
         const phone = normaliseIndianPhone(rawPhone);
         if (!phone && rawPhone) invalidPhones++;
+        const vars: Record<string, string> = {};
+        Object.entries(varIdxMap).forEach(([key, idx]) => {
+          vars[key] = String(r[idx] ?? "").trim();
+        });
+        // Track rows that have empty required vars
+        if (requiredVars.length > 0) {
+          const blanks = requiredVars.filter((v) => !vars[v]);
+          if (blanks.length > 0) missingVarRows.push(rowIdx + 2);
+        }
         return {
           name: String((nameIdx >= 0 ? r[nameIdx] : "") ?? "").trim() || "Customer",
           phone,
           email: emailIdx >= 0 ? String(r[emailIdx] ?? "").trim() : "",
           vertical: "Custom Upload",
           source_table: "custom_upload",
+          vars,
         };
       }).filter((c) => c.phone.length === 10 || (channel === "email" && c.email));
 
       setContacts(mapped);
       setSelectedContacts(new Set(mapped.map((_, i) => i)));
-      toast.success(`✅ Loaded ${mapped.length} contacts from ${file.name}`, {
-        description: invalidPhones > 0 ? `${invalidPhones} rows skipped (invalid phone)` : undefined,
+
+      const descParts: string[] = [];
+      if (invalidPhones > 0) descParts.push(`${invalidPhones} rows skipped (invalid phone)`);
+      if (missingVarRows.length > 0) descParts.push(`⚠ ${missingVarRows.length} rows have empty variable values`);
+      if (requiredVars.length > 0) descParts.push(`Variables loaded: ${requiredVars.join(", ")}`);
+
+      toast.success(`✅ Loaded ${mapped.length} contacts — ready to shoot!`, {
+        description: descParts.join(" • ") || undefined,
+        duration: 6000,
       });
     } catch (err: any) {
       console.error("[Upload] Parse failed:", err);
