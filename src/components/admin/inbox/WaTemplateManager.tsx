@@ -1153,8 +1153,8 @@ export function WaTemplateManager() {
 
         {/* Templates Tab */}
         <TabsContent value="templates" className="mt-3">
-          <div className="flex gap-2 mb-3">
-            <div className="relative flex-1">
+          <div className="flex flex-wrap gap-2 mb-3">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
               <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search..." className="pl-8 h-8 text-xs" />
             </div>
@@ -1174,7 +1174,36 @@ export function WaTemplateManager() {
                 {VERTICALS.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="paused">Paused</SelectItem>
+                <SelectItem value="disabled">Disabled</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" onClick={exportToExcel} title="Export to Excel">
+              <FileSpreadsheet className="h-3.5 w-3.5" /> Export
+            </Button>
           </div>
+
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-md bg-primary/10 border border-primary/20">
+              <Badge variant="secondary" className="text-xs">{selectedIds.size} selected</Badge>
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" disabled={bulkBusy} onClick={bulkSubmit}>
+                <Send className="h-3.5 w-3.5" /> Submit to Meta
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 text-destructive" disabled={bulkBusy} onClick={bulkDelete}>
+                <Trash2 className="h-3.5 w-3.5" /> Delete
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs ml-auto" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+              {bulkBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            </div>
+          )}
 
           <Card>
             <CardContent className="p-0">
