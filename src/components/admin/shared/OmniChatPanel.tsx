@@ -19,6 +19,10 @@ import {
   AlertTriangle,
   Settings2,
   RotateCcw,
+  Paperclip,
+  FileText,
+  Download,
+  Image as ImageIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type OmniChannel } from "@/lib/omniSend";
@@ -28,6 +32,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { resolveWaMediaUrl, isImageMime } from "@/components/admin/inbox/waMedia";
 
 interface OmniChatPanelProps {
   phone?: string;
