@@ -640,7 +640,12 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                 {channelIcon(selectedThread.channel)}
               </div>
 
-              <ScrollArea className="flex-1 px-2">
+              <div className="relative flex-1 min-h-0">
+                <div
+                  ref={scrollAreaRef}
+                  onScroll={handleScrollAreaScroll}
+                  className="absolute inset-0 overflow-y-auto px-2"
+                >
                 <div className={prefs.density === "comfortable" ? "space-y-3 py-2" : "space-y-2 py-2"}>
                   {messages.map((m) => {
                     const isInbound = m.direction === "inbound";
