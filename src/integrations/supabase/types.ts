@@ -19509,6 +19509,63 @@ export type Database = {
           },
         ]
       }
+      wa_meta_account_status: {
+        Row: {
+          account_review_status: string | null
+          business_initiated_24h: number | null
+          business_verification_status: string | null
+          created_at: string
+          daily_conversation_limit: number | null
+          display_phone_number: string | null
+          fetched_at: string
+          id: string
+          messaging_limit_tier: string | null
+          monthly_conversation_limit: number | null
+          phone_number_id: string | null
+          quality_rating: string | null
+          raw_payload: Json | null
+          throughput_tier: string | null
+          user_initiated_24h: number | null
+          verified_name: string | null
+        }
+        Insert: {
+          account_review_status?: string | null
+          business_initiated_24h?: number | null
+          business_verification_status?: string | null
+          created_at?: string
+          daily_conversation_limit?: number | null
+          display_phone_number?: string | null
+          fetched_at?: string
+          id?: string
+          messaging_limit_tier?: string | null
+          monthly_conversation_limit?: number | null
+          phone_number_id?: string | null
+          quality_rating?: string | null
+          raw_payload?: Json | null
+          throughput_tier?: string | null
+          user_initiated_24h?: number | null
+          verified_name?: string | null
+        }
+        Update: {
+          account_review_status?: string | null
+          business_initiated_24h?: number | null
+          business_verification_status?: string | null
+          created_at?: string
+          daily_conversation_limit?: number | null
+          display_phone_number?: string | null
+          fetched_at?: string
+          id?: string
+          messaging_limit_tier?: string | null
+          monthly_conversation_limit?: number | null
+          phone_number_id?: string | null
+          quality_rating?: string | null
+          raw_payload?: Json | null
+          throughput_tier?: string | null
+          user_initiated_24h?: number | null
+          verified_name?: string | null
+        }
+        Relationships: []
+      }
       wa_opt_outs: {
         Row: {
           id: string
@@ -19789,6 +19846,149 @@ export type Database = {
           retarget_type?: string
           service?: string | null
           status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      wa_survey_questions: {
+        Row: {
+          created_at: string
+          id: string
+          options: Json | null
+          position: number
+          question_text: string
+          question_type: string
+          required: boolean
+          survey_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          options?: Json | null
+          position?: number
+          question_text: string
+          question_type: string
+          required?: boolean
+          survey_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          options?: Json | null
+          position?: number
+          question_text?: string
+          question_type?: string
+          required?: boolean
+          survey_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_survey_questions_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "wa_surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_survey_responses: {
+        Row: {
+          answer_text: string | null
+          answer_value: Json | null
+          campaign_id: string | null
+          created_at: string
+          id: string
+          question_id: string | null
+          respondent_name: string | null
+          respondent_phone: string
+          survey_id: string
+        }
+        Insert: {
+          answer_text?: string | null
+          answer_value?: Json | null
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          question_id?: string | null
+          respondent_name?: string | null
+          respondent_phone: string
+          survey_id: string
+        }
+        Update: {
+          answer_text?: string | null
+          answer_value?: Json | null
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          question_id?: string | null
+          respondent_name?: string | null
+          respondent_phone?: string
+          survey_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_survey_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "wa_survey_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_survey_responses_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "wa_surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_surveys: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          meta_flow_id: string | null
+          meta_flow_json: Json | null
+          meta_template_name: string | null
+          mode: string
+          name: string
+          status: string
+          total_responses: number
+          total_sent: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          meta_flow_id?: string | null
+          meta_flow_json?: Json | null
+          meta_template_name?: string | null
+          mode?: string
+          name: string
+          status?: string
+          total_responses?: number
+          total_sent?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          meta_flow_id?: string | null
+          meta_flow_json?: Json | null
+          meta_template_name?: string | null
+          mode?: string
+          name?: string
+          status?: string
+          total_responses?: number
+          total_sent?: number
           updated_at?: string
         }
         Relationships: []
