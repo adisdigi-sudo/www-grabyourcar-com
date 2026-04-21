@@ -316,13 +316,30 @@ export const UnifiedBulkBroadcaster = () => {
     return Array.from(new Set([...fromBody, ...explicit.map((v) => v.replace(/[{}]/g, ""))]));
   }, [selectedTemplate]);
 
-  // ─── Toggle a vertical ───
-  const toggleVertical = (id: string) => {
+  // ─── Toggle a vertical (auto-discover stages on first add) ───
+  const toggleVertical = async (id: string) => {
     setSelectedVerticals((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+    // Pre-load distinct stages for this vertical (so dropdown is ready BEFORE Load contacts)
+    const v = VERTICAL_SOURCES.find((x) => x.id === id);
+    if (!v || !v.stageField) return;
+    if (stageOptions[id] && stageOptions[id].length > 0) return; // already loaded
+    try {
+      const rows = await fetchAllPages<any>(async (from, to) =>
+        (supabase as any).from(v.table).select(v.stageField).not(v.stageField, "is", null).range(from, to)
+      );
+      const set = new Set<string>();
+      rows.forEach((r: any) => {
+        const s = String(r[v.stageField!] || "").trim();
+        if (s) set.add(s);
+      });
+      setStageOptions((prev) => ({ ...prev, [id]: Array.from(set).sort() }));
+    } catch (err) {
+      console.warn(`[stage-discover ${v.label}]`, err);
+    }
   };
 
   // ─── Bulk-load ALL contacts (paginated, no cap) from selected verticals ───
