@@ -596,18 +596,18 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
             <>
               <Button
                 variant="outline"
-                onClick={handleExportFiltered}
+                onClick={() => openExportPicker("filtered")}
                 disabled={isExporting || !leads?.length}
-                title="Download the leads currently visible after filters/search"
+                title="Choose columns and download the leads currently visible after filters/search"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export Filtered ({leads?.length || 0})
               </Button>
               <Button
                 variant="outline"
-                onClick={handleExportAll}
+                onClick={() => openExportPicker("all")}
                 disabled={isExporting}
-                title="Download every lead in this workspace, ignoring filters"
+                title="Choose columns and download every lead in this workspace"
               >
                 <Download className="h-4 w-4 mr-2" />
                 {isExporting ? "Exporting…" : "Export All"}
