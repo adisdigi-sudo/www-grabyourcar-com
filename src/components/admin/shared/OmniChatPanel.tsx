@@ -367,6 +367,20 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
     return <MessageSquare className="h-3 w-3 text-primary" />;
   };
 
+  const highlight = (text: string | null | undefined, q: string) => {
+    if (!text) return text || "";
+    if (!q.trim()) return text;
+    const escaped = q.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const parts = text.split(new RegExp(`(${escaped})`, "ig"));
+    return parts.map((part, i) =>
+      part.toLowerCase() === q.trim().toLowerCase() ? (
+        <mark key={i} className="rounded-sm bg-primary/30 px-0.5 text-foreground">{part}</mark>
+      ) : (
+        <span key={i}>{part}</span>
+      )
+    );
+  };
+
   return (
     <Card className="flex h-[600px] flex-col">
       <CardHeader className="pb-2">
@@ -495,14 +509,18 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                   >
                     <div className="mb-0.5 flex items-center gap-1.5">
                       {channelIcon(t.channel)}
-                      <span className="flex-1 truncate font-medium">{t.customer_name || t.phone}</span>
+                      <span className="flex-1 truncate font-medium">
+                        {highlight(t.customer_name || t.phone, searchQuery)}
+                      </span>
                       {(t.unread_count || 0) > 0 && (
                         <Badge variant="default" className="h-4 min-w-4 px-1 text-[9px]">
                           {t.unread_count}
                         </Badge>
                       )}
                     </div>
-                    <p className="truncate text-[10px] text-muted-foreground">{t.last_message || "New message"}</p>
+                    <p className="truncate text-[10px] text-muted-foreground">
+                      {t.last_message ? highlight(t.last_message, searchQuery) : "New message"}
+                    </p>
                     <p className="mt-0.5 text-[9px] text-muted-foreground">
                       {new Date(t.last_at).toLocaleDateString("en-IN", {
                         day: "2-digit",
