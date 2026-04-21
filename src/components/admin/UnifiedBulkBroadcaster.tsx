@@ -892,8 +892,29 @@ export const UnifiedBulkBroadcaster = () => {
                 {isLoadingAudience ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                 Load contacts ({selectedVerticals.size})
               </Button>
-              <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="gap-1.5">
-                <Upload className="h-3.5 w-3.5" /> CSV/Excel
+              {useMetaTemplate && metaTemplateName && templateVars.length > 0 && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={downloadSmartTemplate}
+                  className="gap-1.5"
+                  title={`Download Excel with columns: name, phone, ${templateVars.join(", ")}`}
+                >
+                  <Sparkles className="h-3.5 w-3.5" /> Download Smart Template
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileRef.current?.click()}
+                className="gap-1.5"
+                title={
+                  useMetaTemplate && metaTemplateName && templateVars.length > 0
+                    ? `Required columns: name, phone, ${templateVars.join(", ")}`
+                    : "Upload contacts (name, phone, email)"
+                }
+              >
+                <Upload className="h-3.5 w-3.5" /> Upload Filled Excel
               </Button>
               <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleCSVUpload} />
             </div>
