@@ -731,7 +731,18 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                   })}
                   <div ref={messagesEndRef} />
                 </div>
-              </ScrollArea>
+                </div>
+                {showJumpToLatest && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={jumpToLatest}
+                    className="absolute bottom-2 left-1/2 z-10 h-7 -translate-x-1/2 rounded-full px-3 text-[11px] shadow-md"
+                  >
+                    ↓ Jump to latest
+                  </Button>
+                )}
+              </div>
 
               <div className="space-y-1.5 border-t pt-2">
                 <QuickReplyChips
