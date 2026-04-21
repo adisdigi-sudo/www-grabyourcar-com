@@ -280,18 +280,16 @@ const navItems: NavItem[] = [
     ]
   },
 
-  // ── Marketing Campaigns — marketing only ──
-  { 
-    id: "marketing", 
-    label: "📢 Marketing", 
+  // ── Marketing & Tech (unified hub) ──
+  {
+    id: "marketing",
+    label: "📢 Marketing & Tech",
     icon: Users,
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
-      { id: "marketing-command", label: "🎯 Command Center", icon: Rocket },
-      { id: "whatsapp-hub", label: "💬 Comms Hub", icon: MessageSquare, badge: "All-in-One" },
+      { id: "marketing-tech-hub", label: "🚀 Hub (WhatsApp · Web · Brand · Email · Ads)", icon: Rocket, badge: "New" },
       { id: "wa-pdf-automation", label: "📄 WA PDF Auto-Send", icon: FileText },
-      { id: "holi-share", label: "📣 Bulk Broadcast", icon: MessageSquare },
       { id: "smart-excel", label: "📊 Smart Excel Upload", icon: Database },
       { id: "marketing-bulk", label: "Bulk Data Manager", icon: Database },
     ]
