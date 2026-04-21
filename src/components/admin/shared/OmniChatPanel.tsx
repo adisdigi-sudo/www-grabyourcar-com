@@ -702,6 +702,24 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                   ))}
                 </div>
                 <div className="flex gap-1.5">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                    className="hidden"
+                    onChange={handleAttachmentUpload}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading || sending || selectedThread.isDraft}
+                    title="Attach image or PDF"
+                  >
+                    {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Paperclip className="h-3.5 w-3.5" />}
+                  </Button>
                   <Input
                     placeholder={`Reply via ${replyChannel}...`}
                     value={replyMessage}
