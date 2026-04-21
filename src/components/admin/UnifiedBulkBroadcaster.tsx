@@ -682,9 +682,12 @@ export const UnifiedBulkBroadcaster = () => {
                         <span className="text-[10px] truncate w-24">{v.emoji} {v.label}</span>
                         <Select
                           value={stageFilter[v.id] || "__all__"}
-                          onValueChange={(val) =>
-                            setStageFilter((prev) => ({ ...prev, [v.id]: val === "__all__" ? "" : val }))
-                          }
+                          onValueChange={(val) => {
+                            const newVal = val === "__all__" ? "" : val;
+                            setStageFilter((prev) => ({ ...prev, [v.id]: newVal }));
+                            // Auto-reload so user instantly sees the filtered set (no "stuck" feeling)
+                            setTimeout(() => { loadAllSelected(); }, 50);
+                          }}
                         >
                           <SelectTrigger className="h-7 text-[10px] flex-1">
                             <SelectValue placeholder="All stages" />
