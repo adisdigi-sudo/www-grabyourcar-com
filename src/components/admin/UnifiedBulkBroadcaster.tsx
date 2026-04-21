@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { parseCSV } from "@/lib/spreadsheetUtils";
 import { fetchAllPages } from "@/lib/fetchAllPages";
+import { SelectionFilterToolbar } from "@/components/shared/SelectionFilterToolbar";
 
 // ─── Excel cell value → clean string (handles rich-text, formulas, hyperlinks, dates) ───
 const excelCellToString = (v: any): string => {
