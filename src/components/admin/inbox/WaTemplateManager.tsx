@@ -1211,6 +1211,14 @@ export function WaTemplateManager() {
                 <Table>
                   <TableHeader>
                     <TableRow className="text-xs">
+                      <TableHead className="w-[40px]">
+                        <Checkbox
+                          checked={allSelected}
+                          // @ts-ignore radix accepts indeterminate
+                          data-state={!allSelected && someSelected ? "indeterminate" : undefined}
+                          onCheckedChange={toggleAll}
+                        />
+                      </TableHead>
                       <TableHead className="w-[220px]">Template</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Status</TableHead>
@@ -1220,7 +1228,7 @@ export function WaTemplateManager() {
                   </TableHeader>
                   <TableBody>
                     {filteredTemplates.length === 0 ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">No templates found</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground text-sm">No templates found</TableCell></TableRow>
                     ) : filteredTemplates.map(t => {
                       const catMeta = getCatMeta(t.category);
                       const hasVariants = templates.some(v => v.ab_variant_of === t.id);
@@ -1228,7 +1236,10 @@ export function WaTemplateManager() {
                       const readPct = total > 0 ? Math.round((t.read_count / total) * 100) : 0;
                       const btnCount = Array.isArray(t.buttons) ? t.buttons.length : 0;
                       return (
-                        <TableRow key={t.id} className="group">
+                        <TableRow key={t.id} className="group" data-state={selectedIds.has(t.id) ? "selected" : undefined}>
+                          <TableCell>
+                            <Checkbox checked={selectedIds.has(t.id)} onCheckedChange={() => toggleOne(t.id)} />
+                          </TableCell>
                           <TableCell>
                             <div>
                               <div className="flex items-center gap-1.5">
