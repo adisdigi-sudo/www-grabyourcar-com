@@ -22,6 +22,24 @@ import {
   Gauge, TrendingUp, Eye, CheckCheck, Ban, Clock, BarChart3, Sparkles, X,
 } from "lucide-react";
 import { parseCSV } from "@/lib/spreadsheetUtils";
+import { fetchAllPages } from "@/lib/fetchAllPages";
+
+// ─── Excel cell value → clean string (handles rich-text, formulas, hyperlinks, dates) ───
+const excelCellToString = (v: any): string => {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") return String(v).trim();
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === "object") {
+    if ("text" in v && typeof (v as any).text === "string") return String((v as any).text).trim();
+    if ("result" in v && (v as any).result !== undefined) return excelCellToString((v as any).result);
+    if ("hyperlink" in v && (v as any).text) return String((v as any).text).trim();
+    if ("richText" in v && Array.isArray((v as any).richText)) {
+      return (v as any).richText.map((r: any) => r.text || "").join("").trim();
+    }
+    if (Array.isArray(v)) return v.map(excelCellToString).join(" ").trim();
+  }
+  return String(v).trim();
+};
 
 // ─── Types ───
 interface Contact {
