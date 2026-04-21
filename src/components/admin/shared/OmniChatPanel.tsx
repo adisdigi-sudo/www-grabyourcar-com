@@ -384,14 +384,85 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
               </Badge>
             )}
           </CardTitle>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={loadThreads}>
-            <RefreshCw className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" title="Customise layout">
+                  <Settings2 className="h-3.5 w-3.5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-72 space-y-3 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold">Customise chat</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[10px]"
+                    onClick={() => setPrefs(DEFAULT_PREFS)}
+                  >
+                    <RotateCcw className="mr-1 h-3 w-3" /> Reset
+                  </Button>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs flex justify-between">
+                    <span>List width</span>
+                    <span className="text-muted-foreground">{prefs.listWidthPct}%</span>
+                  </Label>
+                  <Slider
+                    min={20}
+                    max={50}
+                    step={1}
+                    value={[prefs.listWidthPct]}
+                    onValueChange={([v]) => setPrefs((p) => ({ ...p, listWidthPct: v }))}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs flex justify-between">
+                    <span>Message bubble max</span>
+                    <span className="text-muted-foreground">{prefs.bubbleMaxPct}%</span>
+                  </Label>
+                  <Slider
+                    min={60}
+                    max={100}
+                    step={5}
+                    value={[prefs.bubbleMaxPct]}
+                    onValueChange={([v]) => setPrefs((p) => ({ ...p, bubbleMaxPct: v }))}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Comfortable spacing</Label>
+                  <Switch
+                    checked={prefs.density === "comfortable"}
+                    onCheckedChange={(c) =>
+                      setPrefs((p) => ({ ...p, density: c ? "comfortable" : "compact" }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Wrap long URLs</Label>
+                  <Switch
+                    checked={prefs.wrapLongUrls}
+                    onCheckedChange={(c) => setPrefs((p) => ({ ...p, wrapLongUrls: c }))}
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={loadThreads} title="Refresh">
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
-      <CardContent className="flex flex-1 gap-2 overflow-hidden p-2">
-        <div className="flex w-1/3 flex-col gap-1.5 border-r pr-2">
+      <CardContent className="flex flex-1 gap-2 overflow-hidden p-2 min-w-0">
+        <div
+          className="flex shrink-0 flex-col gap-1.5 border-r pr-2 min-w-0"
+          style={{ width: `${prefs.listWidthPct}%` }}
+        >
           <div className="relative">
             <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
