@@ -127,6 +127,8 @@ export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) =
   const { isSuperAdmin } = useAdminAuth();
   const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportPickerOpen, setIsExportPickerOpen] = useState(false);
+  const [exportScope, setExportScope] = useState<"filtered" | "all">("filtered");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>(verticalCategory || "all");
