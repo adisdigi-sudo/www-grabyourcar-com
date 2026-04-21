@@ -118,6 +118,37 @@ const quickTags = [
   'Test Drive Done', 'Finance Approved', 'Insurance Quoted', 'Ready to Buy'
 ];
 
+// CSV export column catalog — Super Admin column picker
+const EXPORT_COLUMNS: { key: keyof Lead; label: string; group: string; default?: boolean }[] = [
+  { key: "id", label: "Lead ID", group: "Identity" },
+  { key: "customer_name", label: "Customer Name", group: "Identity", default: true },
+  { key: "phone", label: "Phone", group: "Identity", default: true },
+  { key: "email", label: "Email", group: "Identity", default: true },
+  { key: "city", label: "City", group: "Identity", default: true },
+  { key: "service_category", label: "Service Category", group: "Classification", default: true },
+  { key: "lead_type", label: "Lead Type", group: "Classification" },
+  { key: "source", label: "Source", group: "Classification", default: true },
+  { key: "status", label: "Status", group: "Classification", default: true },
+  { key: "priority", label: "Priority", group: "Classification" },
+  { key: "team_assigned", label: "Team Assigned", group: "Assignment", default: true },
+  { key: "assigned_to", label: "Assigned To (User)", group: "Assignment" },
+  { key: "car_brand", label: "Car Brand", group: "Vehicle Interest", default: true },
+  { key: "car_model", label: "Car Model", group: "Vehicle Interest", default: true },
+  { key: "car_variant", label: "Car Variant", group: "Vehicle Interest" },
+  { key: "budget_min", label: "Budget Min", group: "Vehicle Interest" },
+  { key: "budget_max", label: "Budget Max", group: "Vehicle Interest" },
+  { key: "buying_timeline", label: "Buying Timeline", group: "Vehicle Interest" },
+  { key: "follow_up_count", label: "Follow-up Count", group: "Engagement" },
+  { key: "last_contacted_at", label: "Last Contacted", group: "Engagement" },
+  { key: "next_followup_at", label: "Next Follow-up", group: "Engagement" },
+  { key: "tags", label: "Tags", group: "Engagement" },
+  { key: "notes", label: "Notes", group: "Engagement" },
+  { key: "created_at", label: "Created At", group: "Timestamps", default: true },
+  { key: "updated_at", label: "Updated At", group: "Timestamps" },
+];
+
+const DEFAULT_EXPORT_KEYS = EXPORT_COLUMNS.filter(c => c.default).map(c => c.key);
+
 interface LeadManagementProps {
   verticalCategory?: string;
 }
