@@ -10,9 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Crown, Target, TrendingUp, Trophy, Plus, IndianRupee, Calendar } from "lucide-react";
+import { Crown, Target, TrendingUp, Trophy, Plus, IndianRupee, Calendar, Download, MessageSquare, Settings2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, startOfQuarter, startOfWeek, endOfMonth, endOfQuarter, endOfWeek } from "date-fns";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { downloadFounderReportPDF } from "@/lib/founderReportPDF";
 
 type Period = "week" | "month" | "quarter";
 
@@ -152,7 +155,7 @@ export function FounderCommandCenter() {
             Founder Command Center
             <Badge variant="outline" className="ml-2 text-xs">{periodMeta.label}</Badge>
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
               <TabsList className="h-8">
                 <TabsTrigger value="week" className="text-xs">Weekly</TabsTrigger>
@@ -160,6 +163,37 @@ export function FounderCommandCenter() {
                 <TabsTrigger value="quarter" className="text-xs">Quarterly</TabsTrigger>
               </TabsList>
             </Tabs>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8"
+              onClick={() => {
+                downloadFounderReportPDF({
+                  period,
+                  periodLabel: periodMeta.label,
+                  dateRange: { from: periodMeta.from, to: periodMeta.to },
+                  totals,
+                  verticalStats: verticalStats.map((v) => ({
+                    verticalName: v.vertical.name,
+                    targetRevenue: v.targetRevenue,
+                    achievedRevenue: v.achievedRevenue,
+                    targetCount: v.targetCount,
+                    achievedCount: v.achievedCount,
+                    achievement: v.achievement,
+                  })),
+                  topPerformers: topPerformers.map((p: any) => ({
+                    employee_name: p.employee_name,
+                    vertical_name: p.vertical_name,
+                    total_deals: p.total_deals,
+                    total_incentive: Number(p.total_incentive || 0),
+                  })),
+                });
+                toast.success("Founder report PDF downloaded");
+              }}
+            >
+              <Download className="h-3.5 w-3.5 mr-1" /> Export PDF
+            </Button>
+            <BriefingConfigDialog />
             <SetTargetDialog
               open={dialogOpen}
               onOpenChange={setDialogOpen}
@@ -395,6 +429,149 @@ function SetTargetDialog({ open, onOpenChange, verticals, monthYear, periodLabel
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !verticalName}>
             {saveMutation.isPending ? "Saving..." : "Save Target"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function BriefingConfigDialog() {
+  const [open, setOpen] = useState(false);
+  const [phonesText, setPhonesText] = useState("");
+  const [enabled, setEnabled] = useState(true);
+  const [dailyEnabled, setDailyEnabled] = useState(true);
+  const [weeklyEnabled, setWeeklyEnabled] = useState(true);
+  const [sendingTest, setSendingTest] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: config } = useQuery({
+    queryKey: ["founder-briefing-config"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("admin_settings")
+        .select("setting_value")
+        .eq("setting_key", "founder_briefing_config")
+        .maybeSingle();
+      return (data?.setting_value || {}) as {
+        enabled?: boolean;
+        phones?: string[];
+        daily_enabled?: boolean;
+        weekly_enabled?: boolean;
+      };
+    },
+    enabled: open,
+  });
+
+  useMemo(() => {
+    if (config) {
+      setPhonesText((config.phones || []).join("\n"));
+      setEnabled(config.enabled !== false);
+      setDailyEnabled(config.daily_enabled !== false);
+      setWeeklyEnabled(config.weekly_enabled !== false);
+    }
+  }, [config]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const phones = phonesText
+        .split(/[\n,]/)
+        .map((p) => p.trim())
+        .filter((p) => p.length >= 10);
+      const value = {
+        enabled,
+        daily_enabled: dailyEnabled,
+        weekly_enabled: weeklyEnabled,
+        phones,
+      };
+      const { error } = await supabase
+        .from("admin_settings")
+        .upsert(
+          { setting_key: "founder_briefing_config", setting_value: value, description: "Founder daily/weekly briefing config" },
+          { onConflict: "setting_key" },
+        );
+      if (error) throw error;
+      return phones.length;
+    },
+    onSuccess: (n) => {
+      toast.success(`Briefing config saved (${n} recipient${n === 1 ? "" : "s"})`);
+      queryClient.invalidateQueries({ queryKey: ["founder-briefing-config"] });
+      setOpen(false);
+    },
+    onError: (e: any) => toast.error(e.message || "Failed to save"),
+  });
+
+  const sendTest = async () => {
+    const phones = phonesText.split(/[\n,]/).map((p) => p.trim()).filter((p) => p.length >= 10);
+    if (phones.length === 0) {
+      toast.error("Add at least one phone number first");
+      return;
+    }
+    setSendingTest(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("founder-briefing", {
+        body: { mode: "daily", testPhone: phones[0] },
+      });
+      if (error) throw error;
+      if (data?.success) toast.success(`Test briefing sent to ${phones[0]}`);
+      else toast.error(data?.error || "Test failed");
+    } catch (e: any) {
+      toast.error(e.message || "Test send failed");
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="h-8">
+          <MessageSquare className="h-3.5 w-3.5 mr-1" /> Briefings
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Settings2 className="h-4 w-4" /> WhatsApp Briefing Config
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2 rounded-lg border p-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Enable founder briefings</Label>
+              <Switch checked={enabled} onCheckedChange={setEnabled} />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-muted-foreground">Daily (9 AM)</Label>
+              <Switch checked={dailyEnabled} onCheckedChange={setDailyEnabled} disabled={!enabled} />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-muted-foreground">Weekly (Mon 9 AM)</Label>
+              <Switch checked={weeklyEnabled} onCheckedChange={setWeeklyEnabled} disabled={!enabled} />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Founder WhatsApp numbers (one per line)</Label>
+            <Textarea
+              placeholder="9876543210&#10;9123456789"
+              rows={4}
+              value={phonesText}
+              onChange={(e) => setPhonesText(e.target.value)}
+              className="font-mono text-sm"
+            />
+            <p className="text-[10px] text-muted-foreground mt-1">
+              10-digit Indian numbers. Auto-prefixed with 91.
+            </p>
+          </div>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" size="sm" onClick={sendTest} disabled={sendingTest}>
+            <Send className="h-3.5 w-3.5 mr-1" /> {sendingTest ? "Sending..." : "Send Test"}
+          </Button>
+          <div className="flex-1" />
+          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            {saveMutation.isPending ? "Saving..." : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>
