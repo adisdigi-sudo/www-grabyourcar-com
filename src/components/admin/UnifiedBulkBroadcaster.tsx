@@ -325,7 +325,7 @@ export const UnifiedBulkBroadcaster = () => {
     });
   };
 
-  // ─── Bulk-load contacts from all selected verticals ───
+  // ─── Bulk-load ALL contacts (paginated, no cap) from selected verticals ───
   const loadAllSelected = async () => {
     if (selectedVerticals.size === 0) {
       toast.error("Pehle ek ya zyada vertical select karo");
@@ -333,31 +333,41 @@ export const UnifiedBulkBroadcaster = () => {
     }
     setIsLoadingAudience(true);
     const merged: Contact[] = [];
-    // Dedup by phone+name+vertical so the same phone with different client names
-    // (e.g., personal + business policies on one mobile) loads as separate contacts.
     const seenKeys = new Set<string>();
     const perVerticalCounts: Record<string, number> = {};
+    const stagesPerVertical: Record<string, Set<string>> = {};
     const errors: string[] = [];
 
     try {
       for (const v of VERTICAL_SOURCES) {
         if (!selectedVerticals.has(v.id)) continue;
-        const cols = [v.nameField, v.phoneField, v.emailField].filter(Boolean).join(", ");
-        const { data, error } = await (supabase as any)
-          .from(v.table)
-          .select(cols)
-          .not(v.phoneField, "is", null)
-          .limit(10000);
-        if (error) {
-          console.warn(`[${v.label}] load failed:`, error.message);
-          errors.push(`${v.label}: ${error.message}`);
+        const cols = [v.nameField, v.phoneField, v.emailField, v.stageField].filter(Boolean).join(", ");
+        const wantedStage = stageFilter[v.id]?.trim();
+
+        let allRows: any[] = [];
+        try {
+          allRows = await fetchAllPages<any>(async (from, to) => {
+            let q = (supabase as any)
+              .from(v.table)
+              .select(cols)
+              .not(v.phoneField, "is", null);
+            if (wantedStage && v.stageField) q = q.eq(v.stageField, wantedStage);
+            return q.range(from, to);
+          });
+        } catch (err: any) {
+          console.warn(`[${v.label}] load failed:`, err?.message || err);
+          errors.push(`${v.label}: ${err?.message || "load failed"}`);
           continue;
         }
+
         let added = 0;
-        (data || []).forEach((r: any) => {
+        const stageSet: Set<string> = stagesPerVertical[v.id] || new Set<string>();
+        allRows.forEach((r: any) => {
           const phone = normaliseIndianPhone(r[v.phoneField]);
           if (!phone) return;
           const name = String(r[v.nameField] || "Customer").trim() || "Customer";
+          const stage = v.stageField ? String(r[v.stageField] || "").trim() : "";
+          if (stage) stageSet.add(stage);
           const key = `${v.id}|${phone}|${name.toLowerCase()}`;
           if (seenKeys.has(key)) return;
           seenKeys.add(key);
@@ -367,16 +377,27 @@ export const UnifiedBulkBroadcaster = () => {
             email: v.emailField ? String(r[v.emailField] || "").trim() : "",
             vertical: v.label,
             source_table: v.table,
+            stage: stage || undefined,
           });
           added++;
         });
+        stagesPerVertical[v.id] = stageSet;
         perVerticalCounts[v.label] = added;
       }
+
       const filtered = merged.filter((c) => (channel === "email" ? !!c.email : c.phone.length === 10));
       setContacts(filtered);
       setSelectedContacts(new Set(filtered.map((_, i) => i)));
+      // Save discovered stages for each loaded vertical
+      setStageOptions((prev) => {
+        const next = { ...prev };
+        Object.entries(stagesPerVertical).forEach(([id, set]) => {
+          next[id] = Array.from(set).sort();
+        });
+        return next;
+      });
       const breakdown = Object.entries(perVerticalCounts).map(([k, v]) => `${k}: ${v}`).join(" • ");
-      toast.success(`✅ Loaded ${filtered.length} unique contacts`, { description: breakdown || undefined });
+      toast.success(`✅ Loaded ${filtered.length} contacts (full DB)`, { description: breakdown || undefined });
       if (errors.length) toast.warning(`${errors.length} source(s) had errors`, { description: errors.join("; ") });
     } catch (err: any) {
       toast.error("Audience load failed: " + (err.message || ""));
@@ -385,39 +406,68 @@ export const UnifiedBulkBroadcaster = () => {
     }
   };
 
-  // ─── CSV upload ───
+  // ─── CSV / Excel upload (robust) ───
   const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       let rows: string[][] = [];
-      if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+      const lower = file.name.toLowerCase();
+      if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
         const ExcelJS = await import("exceljs");
         const wb = new ExcelJS.Workbook();
         await wb.xlsx.load(await file.arrayBuffer());
         const ws = wb.worksheets[0];
-        if (!ws) throw new Error("No worksheet found");
-        ws.eachRow((row) => rows.push((row.values as any[]).slice(1).map((v) => String(v ?? ""))));
+        if (!ws) throw new Error("No worksheet in workbook");
+        // includeEmpty:false skips fully blank rows; iterate ALL rows including header
+        ws.eachRow({ includeEmpty: false }, (row) => {
+          const vals = row.values as any[];
+          // ExcelJS row.values is 1-indexed; index 0 is undefined
+          const cells = vals.slice(1).map(excelCellToString);
+          if (cells.some((c) => c !== "")) rows.push(cells);
+        });
+        console.log(`[Excel] Parsed ${rows.length} rows from ${file.name}`);
       } else {
-        rows = parseCSV(await file.text());
+        rows = parseCSV(await file.text()).filter((r) => r.some((c) => c.trim()));
       }
-      if (rows.length < 2) { toast.error("Need header + data"); return; }
+      if (rows.length < 2) {
+        toast.error(`File me kam se kam header + 1 data row chahiye (mila: ${rows.length})`);
+        return;
+      }
       const hdrs = rows[0].map((h) => h.toLowerCase().trim());
-      const nameIdx = hdrs.findIndex((h) => h.includes("name"));
-      const phoneIdx = hdrs.findIndex((h) => h.includes("phone") || h.includes("mobile"));
-      const emailIdx = hdrs.findIndex((h) => h.includes("email"));
-      const mapped: Contact[] = rows.slice(1).filter((r) => r.some((c) => c.trim())).map((r) => ({
-        name: nameIdx >= 0 ? r[nameIdx] || "Customer" : "Customer",
-        phone: phoneIdx >= 0 ? normaliseIndianPhone(r[phoneIdx]) : "",
-        email: emailIdx >= 0 ? r[emailIdx] || "" : "",
-        vertical: "Custom Upload",
-        source_table: "custom_upload",
-      })).filter((c) => c.phone.length === 10 || (channel === "email" && c.email));
+      const nameIdx = hdrs.findIndex((h) => h === "name" || h.includes("name") || h.includes("customer"));
+      const phoneIdx = hdrs.findIndex(
+        (h) => h.includes("phone") || h.includes("mobile") || h.includes("contact") || h.includes("whatsapp") || h === "no" || h === "number"
+      );
+      const emailIdx = hdrs.findIndex((h) => h.includes("email") || h.includes("mail"));
+
+      if (phoneIdx < 0 && channel !== "email") {
+        toast.error(`Phone column nahi mila. Headers: ${hdrs.join(", ")}`);
+        return;
+      }
+
+      let invalidPhones = 0;
+      const mapped: Contact[] = rows.slice(1).map((r) => {
+        const rawPhone = phoneIdx >= 0 ? r[phoneIdx] : "";
+        const phone = normaliseIndianPhone(rawPhone);
+        if (!phone && rawPhone) invalidPhones++;
+        return {
+          name: (nameIdx >= 0 ? r[nameIdx] : "")?.trim() || "Customer",
+          phone,
+          email: emailIdx >= 0 ? (r[emailIdx] || "").trim() : "",
+          vertical: "Custom Upload",
+          source_table: "custom_upload",
+        };
+      }).filter((c) => c.phone.length === 10 || (channel === "email" && c.email));
+
       setContacts(mapped);
       setSelectedContacts(new Set(mapped.map((_, i) => i)));
-      toast.success(`✅ Loaded ${mapped.length} contacts from file`);
+      toast.success(`✅ Loaded ${mapped.length} contacts from ${file.name}`, {
+        description: invalidPhones > 0 ? `${invalidPhones} rows skipped (invalid phone)` : undefined,
+      });
     } catch (err: any) {
-      toast.error("Parse failed: " + err.message);
+      console.error("[Upload] Parse failed:", err);
+      toast.error("Parse failed: " + (err?.message || "unknown error"));
     }
   };
 
