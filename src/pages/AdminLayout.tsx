@@ -891,6 +891,8 @@ const AdminLayout = () => {
         return <AutoIntelligenceSettings />;
       case "marketing-command":
         return <MarketingCommandCenter />;
+      case "marketing-tech-hub":
+        return <MarketingTechHub />;
       case "holi-share":
         return <UnifiedBulkBroadcaster />;
       case "marketing-email":
