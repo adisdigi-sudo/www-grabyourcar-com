@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Send, FileText, Users, GitBranch, BarChart3, Blocks, Star, MousePointer, ShoppingCart, Vote, Sparkles, Zap, Store, Plug, Inbox, Archive, TrendingUp, MessageSquare } from "lucide-react";
+import { Mail, Send, FileText, Users, GitBranch, BarChart3, Blocks, Star, MousePointer, ShoppingCart, Vote, Sparkles, Zap, Store, Plug, Inbox, TrendingUp, MessageSquare } from "lucide-react";
 import { WhatsAppBulkSender } from "./WhatsAppBulkSender";
 import { MetaAdsRoiPanel } from "../whatsapp-hub/modules/analytics/MetaAdsRoiPanel";
 import { EmailInboxDashboard } from "./email/EmailInboxDashboard";
@@ -16,7 +16,6 @@ import { DynamicContentBuilder } from "./email/DynamicContentBuilder";
 import { EmailMarketingManagement } from "../EmailMarketingManagement";
 import { OmniCampaignManager } from "./omni/OmniCampaignManager";
 import { IntegrationMarketplace } from "./omni/IntegrationMarketplace";
-import { LegacyLeadsManager } from "../shared/LegacyLeadsManager";
 
 export function UnifiedMarketingHub() {
   const [activeTab, setActiveTab] = useState("omni");
@@ -77,9 +76,6 @@ export function UnifiedMarketingHub() {
           <TabsTrigger value="meta-roi" className="gap-1.5 text-xs sm:text-sm">
             <TrendingUp className="h-3.5 w-3.5" />Meta Ads & ROI
           </TabsTrigger>
-          <TabsTrigger value="legacy" className="gap-1.5 text-xs sm:text-sm">
-            <Archive className="h-3.5 w-3.5" />Legacy Leads
-          </TabsTrigger>
           <TabsTrigger value="integrations" className="gap-1.5 text-xs sm:text-sm">
             <Store className="h-3.5 w-3.5" />Integrations
           </TabsTrigger>
@@ -99,7 +95,6 @@ export function UnifiedMarketingHub() {
         <TabsContent value="polls"><EmailPollManager /></TabsContent>
         <TabsContent value="analytics"><EmailAnalyticsDashboard /></TabsContent>
         <TabsContent value="meta-roi"><MetaAdsRoiPanel /></TabsContent>
-        <TabsContent value="legacy"><LegacyLeadsManager /></TabsContent>
         <TabsContent value="integrations"><IntegrationMarketplace /></TabsContent>
       </Tabs>
     </div>

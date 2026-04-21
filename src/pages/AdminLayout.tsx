@@ -171,9 +171,6 @@ const FleetVerticalWorkspace = lazy(() =>
   import("@/components/admin/verticals/FleetVerticalWorkspace").then((module) => ({ default: module.FleetVerticalWorkspace })),
 );
 const PartnersManager = lazy(() => import("@/components/admin/PartnersManager"));
-const LegacyLeadsManager = lazy(() =>
-  import("@/components/admin/shared/LegacyLeadsManager").then((module) => ({ default: module.LegacyLeadsManager })),
-);
 const MyHRDashboard = lazy(() =>
   import("@/components/admin/shared/MyHRDashboard").then((module) => ({ default: module.MyHRDashboard })),
 );
@@ -330,7 +327,7 @@ const VALID_ADMIN_TABS = new Set([
   "dealer-reps", "dealer-inventory", "dealer-broadcast", "accounts-dashboard", "accounts-invoices", "accounts-expenses",
   "accounts-bills", "accounts-banking", "accounts-chart", "accounts-journal", "accounts-reports", "accounts-documents",
   "hr-core", "hr-recruitment", "hr-workforce", "hr-attendance", "hr-payroll", "hr-expense", "hr-performance", "hr-engagement",
-  "hr-assets", "hr-helpdesk", "hr-task-escalation", "hr-daily-reports", "ai-cofounder", "legacy-leads", "my-hr", "my-team",
+  "hr-assets", "hr-helpdesk", "hr-task-escalation", "hr-daily-reports", "ai-cofounder", "my-hr", "my-team",
   "founder-cockpit"
 ]);
 
@@ -368,7 +365,6 @@ const UNIVERSAL_ADMIN_TABS = new Set([
   "leads-all",
   "leads-hot",
   "leads-whatsapp",
-  "legacy-leads",
 ]);
 
 const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
@@ -994,8 +990,6 @@ const AdminLayout = () => {
         return <EmployeeDailyReportsDashboard />;
       case "ai-cofounder":
         return <AICofounderDashboard />;
-      case "legacy-leads":
-        return <LegacyLeadsManager />;
       case "my-hr":
         return <MyHRDashboard />;
       case "live-chats":
