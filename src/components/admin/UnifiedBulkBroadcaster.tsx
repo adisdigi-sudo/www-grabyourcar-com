@@ -272,6 +272,30 @@ export const UnifiedBulkBroadcaster = () => {
   // Discovered stage values per vertical (auto-populated after load)
   const [stageOptions, setStageOptions] = useState<Record<string, string[]>>({});
 
+  // ─── Diagnostics (per-vertical breakdown of last load) ───
+  interface VerticalDiag {
+    label: string;
+    table: string;
+    columns: string[];
+    stageField?: string;
+    appliedStage?: string;
+    fetched: number;        // raw rows from DB before any filtering
+    invalidPhone: number;   // dropped (phone normalisation failed)
+    duplicates: number;     // dropped within-vertical duplicates (by id)
+    accepted: number;       // contributed to merged list
+    error?: string;
+  }
+  const [diagnostics, setDiagnostics] = useState<VerticalDiag[]>([]);
+  const [loadSummary, setLoadSummary] = useState<{
+    totalFetched: number;
+    totalAccepted: number;
+    afterDedup: number;
+    afterChannelFilter: number;
+    stageFilterActive: boolean;
+    runAt: string;
+  } | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+
   // WhatsApp config
   const [useMetaTemplate, setUseMetaTemplate] = useState(true);
   const [metaTemplateName, setMetaTemplateName] = useState("");
