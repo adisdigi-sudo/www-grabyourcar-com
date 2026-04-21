@@ -148,8 +148,11 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   const [searchQuery, setSearchQuery] = useState("");
   const [prefs, setPrefs] = useState<ChatPrefs>(() => loadPrefs());
   const [uploading, setUploading] = useState(false);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -242,8 +245,33 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   }, [selectedThread]);
 
   useEffect(() => {
+    if (autoScroll) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      setShowJumpToLatest(false);
+    } else if (messages.length) {
+      setShowJumpToLatest(true);
+    }
+  }, [messages, autoScroll]);
+
+  // Reset autoscroll when switching threads
+  useEffect(() => {
+    setAutoScroll(true);
+    setShowJumpToLatest(false);
+  }, [selectedThread?.id]);
+
+  function handleScrollAreaScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distanceFromBottom < 80;
+    setAutoScroll(atBottom);
+    if (atBottom) setShowJumpToLatest(false);
+  }
+
+  function jumpToLatest() {
+    setAutoScroll(true);
+    setShowJumpToLatest(false);
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }
 
   async function loadThreads() {
     setLoading(true);
