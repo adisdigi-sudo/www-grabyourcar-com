@@ -13,11 +13,15 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
-  FileSpreadsheet, FileDown, Plus, Trash2, ArrowRight, TrendingUp, TrendingDown, AlertCircle,
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  FileSpreadsheet, FileDown, Plus, Trash2, ArrowRight, TrendingUp, TrendingDown, AlertCircle, ShieldAlert,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { fmt, VERTICALS } from "../../corporate-budget/types";
 import { cn } from "@/lib/utils";
+import { buildExportFilename } from "../shared/exportNaming";
 
 interface PLLine {
   id: string;
@@ -223,7 +227,12 @@ export const MonthlyPLDesigner = ({ open, onClose }: Props) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `PnL-${monthYear}.csv`;
+    a.download = buildExportFilename({
+      module: "monthly-pnl",
+      scope: "summary",
+      period: monthYear,
+      ext: "csv",
+    });
     a.click();
     URL.revokeObjectURL(url);
     toast.success("P&L downloaded");
