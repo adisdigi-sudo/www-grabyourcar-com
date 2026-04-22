@@ -20,7 +20,7 @@ import { StatTile } from "../shared/StatTile";
 import {
   computeInsurancePayout, computeLoanPayout, computeDealPayout, inr, RuleRow,
 } from "../shared/payoutEngine";
-import { buildRowInvoice, buildMonthlyStatement } from "../shared/founderReportPDF";
+import { buildRowInvoice, buildMonthlyStatement, buildFounderSnapshot, buildFounderCSV } from "../shared/founderReportPDF";
 
 /* ---------- PERIOD HELPERS ---------- */
 type PeriodKind = "week" | "month" | "quarter" | "year" | "custom";
@@ -251,6 +251,52 @@ export const FounderMasterReportHub = () => {
 
   const profit = revenueTotal + insuranceNet + loanNet + dealNet - payrollTotal - expenseTotal;
 
+  // Loan stage breakdown for the chart
+  const loanStageBreakdown = useMemo(() => {
+    const buckets = {
+      new_lead: 0, qualified: 0, offer_shared: 0,
+      sanctioned: 0, disbursed: 0, lost: 0, other: 0,
+    } as Record<string, number>;
+    loans.forEach((l: any) => {
+      const s = (l.stage || "other").toLowerCase();
+      if (s in buckets) buckets[s] += 1; else buckets.other += 1;
+    });
+    const issued = loans.length;
+    const disbursed = buckets.disbursed;
+    const sanctioned = buckets.sanctioned;
+    const pending = issued - disbursed - buckets.lost;
+    const lost = buckets.lost;
+    return { buckets, issued, disbursed, sanctioned, pending, lost };
+  }, [loans]);
+
+  // Reconciliation — checks summary KPI vs sum of table rows
+  const reconciliation = useMemo(() => {
+    const polTableNet = policyComputed.reduce((s, p) => s + p._calc.net, 0);
+    const loanTableNet = loanComputed.reduce((s, l) => s + l._calc.net, 0);
+    const dealTableNet = dealComputed.reduce((s, d) => s + d._calc.net, 0);
+    const items = [
+      { module: "Policies", summaryNet: insuranceNet, tableNet: polTableNet, diff: insuranceNet - polTableNet },
+      { module: "Loans",    summaryNet: loanNet,      tableNet: loanTableNet, diff: loanNet - loanTableNet },
+      { module: "Deals",    summaryNet: dealNet,      tableNet: dealTableNet, diff: dealNet - dealTableNet },
+    ];
+    return items.map(i => ({
+      ...i,
+      status: Math.abs(i.diff) < 1
+        ? "✓ Match"
+        : `⚠ Off by ${inr(Math.abs(i.diff))} — likely due to filters/overrides`,
+    }));
+  }, [policyComputed, loanComputed, dealComputed, insuranceNet, loanNet, dealNet]);
+
+  // Audit trail — exact filters used per query
+  const auditTrail = useMemo(() => ([
+    { module: "Policies", query: `status=active AND issued_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: policies.length },
+    { module: "Loans",    query: `disbursement_date OR sanction_date OR created_at BETWEEN ${periodStart} AND ${periodEnd}`, rows: loans.length },
+    { module: "Deals",    query: `created_at OR closed_at BETWEEN ${periodStart} AND ${periodEnd}`, rows: deals.length },
+    { module: "Invoices", query: `invoice_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: invoices.length },
+    { module: "Payroll",  query: `payroll_month IN months(${periodStart}..${periodEnd})`, rows: payroll.length },
+    { module: "Expenses", query: `expense_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: expenses.length },
+  ]), [periodStart, periodEnd, policies.length, loans.length, deals.length, invoices.length, payroll.length, expenses.length]);
+
   const verticals = useMemo(() => {
     const set = new Set<string>();
     invoices.forEach((i: any) => i.vertical_name && set.add(i.vertical_name));
@@ -262,6 +308,47 @@ export const FounderMasterReportHub = () => {
   const filterText = (txt: string) => !search || txt.toLowerCase().includes(search.toLowerCase());
   const filterVert = (v: string | null | undefined) => vertical === "all" || (v || "").toLowerCase() === vertical.toLowerCase();
 
+  /* ---------- SNAPSHOT BUILDER ---------- */
+  const buildSnapshot = () => ({
+    periodLabel, periodKind, periodStart, periodEnd,
+    filters: { vertical, search },
+    kpis: {
+      revenue: revenueTotal, receivables: receivablesTotal,
+      payroll: payrollTotal, expenses: expenseTotal,
+      incentives: incentiveTotal, profit,
+    },
+    counts: {
+      policies: policies.length,
+      loans: loans.length,
+      loansDisbursed: loans.filter((l: any) => l.stage === "disbursed").length,
+      deals: deals.length,
+      invoices: invoices.length,
+      invoicesPaid: invoices.filter((i: any) => i.status === "paid").length,
+    },
+    policies: policyComputed.map((p: any) => ({
+      ref: p.policy_number || p.id.slice(0, 8),
+      customer: p.insurance_clients?.customer_name || "—",
+      type: `${p.policy_type} · ${p.insurer}`,
+      base: p._calc.base, pct: p._calc.pct, gross: p._calc.gross, tds: p._calc.tds, net: p._calc.net,
+    })),
+    loans: loanComputed.map((l: any) => ({
+      ref: l.disbursement_reference || l.id.slice(0, 8),
+      customer: l.customer_name || "—",
+      bank: l.lender_name || "—",
+      stage: l.stage || "—",
+      base: l._calc.base, pct: l._calc.pct, gross: l._calc.gross, tds: l._calc.tds, net: l._calc.net,
+    })),
+    deals: dealComputed.map((d: any) => ({
+      ref: d.deal_number || d.id.slice(0, 8),
+      customer: d.master_customers?.name || "—",
+      vertical: d.vertical_name || "—",
+      value: d._calc.dealValue, margin: d._calc.grossMargin, pct: d._calc.pct,
+      net: d._calc.net, received: d._calc.received, pending: d._calc.pending,
+    })),
+    reconciliation,
+    audit: auditTrail,
+  });
+
   /* ---------- RENDER ---------- */
   return (
     <SectionCard
@@ -271,6 +358,14 @@ export const FounderMasterReportHub = () => {
       className="lg:col-span-3"
       action={
         <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
+            onClick={() => buildFounderCSV(buildSnapshot())}>
+            <FileSpreadsheet className="h-3 w-3" /> Export CSV
+          </Button>
+          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
+            onClick={() => buildFounderSnapshot(buildSnapshot())}>
+            <FileDown className="h-3 w-3" /> Export PDF
+          </Button>
           <Badge variant={liveOn ? "default" : "secondary"} className="gap-1 text-[10px] cursor-pointer" onClick={() => setLiveOn(v => !v)}>
             <Radio className={`h-2.5 w-2.5 ${liveOn ? "animate-pulse" : ""}`} />
             {liveOn ? "Live" : "Paused"}
@@ -359,7 +454,187 @@ export const FounderMasterReportHub = () => {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Loan Breakdown Chart — Issued vs Disbursed vs Pending vs Lost */}
+      <div className="mb-5 p-4 rounded-lg border bg-white">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <Banknote className="h-4 w-4 text-emerald-600" /> Loan Pipeline Breakdown
+            </h3>
+            <p className="text-[10px] text-slate-500">Live for {periodLabel} · {loans.length} total cases</p>
+          </div>
+          <div className="flex items-center gap-3 text-[10px]">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-blue-500" />Issued</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" />Sanctioned</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-600" />Disbursed</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-slate-400" />Pending</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500" />Lost</span>
+          </div>
+        </div>
+
+        {loans.length === 0 ? (
+          <div className="text-center text-xs text-slate-500 py-6">No loan cases in {periodLabel}</div>
+        ) : (
+          <>
+            {/* Stacked bar */}
+            <div className="h-7 w-full rounded-md overflow-hidden flex border bg-slate-100">
+              {(() => {
+                const total = Math.max(loanStageBreakdown.issued, 1);
+                const segs: Array<{ k: string; n: number; cls: string; label: string }> = [
+                  { k: "disb", n: loanStageBreakdown.disbursed, cls: "bg-emerald-600", label: "Disbursed" },
+                  { k: "sanc", n: loanStageBreakdown.sanctioned, cls: "bg-amber-500", label: "Sanctioned" },
+                  { k: "pend", n: Math.max(0, loanStageBreakdown.pending - loanStageBreakdown.sanctioned), cls: "bg-slate-400", label: "Pending" },
+                  { k: "lost", n: loanStageBreakdown.lost, cls: "bg-red-500", label: "Lost" },
+                ];
+                return segs.filter(s => s.n > 0).map(s => (
+                  <div
+                    key={s.k}
+                    className={`${s.cls} flex items-center justify-center text-[10px] text-white font-semibold`}
+                    style={{ width: `${(s.n / total) * 100}%` }}
+                    title={`${s.label}: ${s.n}`}
+                  >
+                    {((s.n / total) * 100) >= 8 ? `${s.n}` : ""}
+                  </div>
+                ));
+              })()}
+            </div>
+
+            {/* KPI grid */}
+            <div className="grid grid-cols-5 gap-2 mt-3 text-center">
+              <div className="p-2 rounded border bg-blue-50">
+                <div className="text-[9px] uppercase text-blue-700 font-semibold">Issued</div>
+                <div className="text-base font-bold text-blue-700">{loanStageBreakdown.issued}</div>
+              </div>
+              <div className="p-2 rounded border bg-amber-50">
+                <div className="text-[9px] uppercase text-amber-700 font-semibold">Sanctioned</div>
+                <div className="text-base font-bold text-amber-700">{loanStageBreakdown.sanctioned}</div>
+              </div>
+              <div className="p-2 rounded border bg-emerald-50">
+                <div className="text-[9px] uppercase text-emerald-700 font-semibold">Disbursed</div>
+                <div className="text-base font-bold text-emerald-700">{loanStageBreakdown.disbursed}</div>
+                <div className="text-[9px] text-slate-500">{inr(loanNet)} net</div>
+              </div>
+              <div className="p-2 rounded border bg-slate-50">
+                <div className="text-[9px] uppercase text-slate-700 font-semibold">Pending</div>
+                <div className="text-base font-bold text-slate-700">{Math.max(0, loanStageBreakdown.pending)}</div>
+              </div>
+              <div className="p-2 rounded border bg-red-50">
+                <div className="text-[9px] uppercase text-red-700 font-semibold">Lost</div>
+                <div className="text-base font-bold text-red-700">{loanStageBreakdown.lost}</div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Reconciliation row */}
+      <div className="mb-4 p-3 rounded-lg border bg-white">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-700 mb-2">
+          Auto-Reconciliation · Summary KPI vs Table Totals
+        </div>
+        <div className="grid grid-cols-3 gap-3 text-xs">
+          {reconciliation.map(r => {
+            const ok = Math.abs(r.diff) < 1;
+            return (
+              <div key={r.module} className={`p-2 rounded border ${ok ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-300"}`}>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">{r.module}</span>
+                  <span className={`text-[10px] font-mono ${ok ? "text-emerald-700" : "text-amber-700"}`}>{r.status}</span>
+                </div>
+                <div className="text-[10px] text-slate-600 mt-1">
+                  Summary: <b>{inr(r.summaryNet)}</b> · Table: <b>{inr(r.tableNet)}</b>
+                  {!ok && <span className="text-amber-700"> · Δ {inr(Math.abs(r.diff))}</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Audit Panel + GST Legend (collapsible via <details>) */}
+      <details className="mb-4 rounded-lg border bg-slate-50/40 group">
+        <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700 flex items-center gap-2 select-none hover:bg-slate-100 rounded-t-lg">
+          <Search className="h-3.5 w-3.5" />
+          Audit · Date-range queries & Payout Rule Legend
+          <span className="ml-auto text-[10px] text-slate-500 font-normal">click to {""}<span className="group-open:hidden">expand</span><span className="hidden group-open:inline">collapse</span></span>
+        </summary>
+        <div className="grid md:grid-cols-2 gap-3 p-3 border-t">
+          {/* Audit table */}
+          <div>
+            <div className="text-[11px] font-semibold uppercase text-slate-600 mb-2">Live Query Audit</div>
+            <div className="rounded border overflow-hidden">
+              <table className="w-full text-[11px]">
+                <thead className="bg-slate-100 text-[10px] uppercase text-slate-500">
+                  <tr><th className="px-2 py-1 text-left">Module</th><th className="px-2 py-1 text-left">Filter</th><th className="px-2 py-1 text-right">Rows</th></tr>
+                </thead>
+                <tbody className="divide-y">
+                  {auditTrail.map(a => (
+                    <tr key={a.module}>
+                      <td className="px-2 py-1 font-medium">{a.module}</td>
+                      <td className="px-2 py-1 font-mono text-[9px] text-slate-600 break-all">{a.query}</td>
+                      <td className="px-2 py-1 text-right font-semibold">{a.rows}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[10px] text-slate-500 mt-2">
+              These are the exact filters applied to the database when you change Weekly / Monthly / Custom.
+              Use them to validate counts manually if needed.
+            </p>
+          </div>
+
+          {/* GST / Payout Rule Legend */}
+          <div>
+            <div className="text-[11px] font-semibold uppercase text-slate-600 mb-2">GST & Payout Rule Legend</div>
+            <div className="rounded border overflow-hidden">
+              <table className="w-full text-[11px]">
+                <thead className="bg-slate-100 text-[10px] uppercase text-slate-500">
+                  <tr>
+                    <th className="px-2 py-1 text-left">Policy Type</th>
+                    <th className="px-2 py-1 text-center">GST</th>
+                    <th className="px-2 py-1 text-left">Base Formula</th>
+                    <th className="px-2 py-1 text-right">Default %</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr>
+                    <td className="px-2 py-1"><Badge variant="outline" className="text-[10px]">Standalone OD</Badge></td>
+                    <td className="px-2 py-1 text-center font-mono">18%</td>
+                    <td className="px-2 py-1 font-mono text-[10px]">premium − 18% GST</td>
+                    <td className="px-2 py-1 text-right font-semibold">15%</td>
+                  </tr>
+                  <tr>
+                    <td className="px-2 py-1"><Badge variant="outline" className="text-[10px]">Third Party</Badge></td>
+                    <td className="px-2 py-1 text-center font-mono">18%</td>
+                    <td className="px-2 py-1 font-mono text-[10px]">premium − 18% GST</td>
+                    <td className="px-2 py-1 text-right font-semibold">2.5%</td>
+                  </tr>
+                  <tr className="bg-amber-50">
+                    <td className="px-2 py-1"><Badge variant="outline" className="text-[10px]">Comprehensive</Badge></td>
+                    <td className="px-2 py-1 text-center font-mono font-semibold text-amber-700">18.5%</td>
+                    <td className="px-2 py-1 font-mono text-[10px]">premium − 18.5% − TP − PA</td>
+                    <td className="px-2 py-1 text-right font-semibold">12%</td>
+                  </tr>
+                  <tr>
+                    <td className="px-2 py-1" colSpan={4}>
+                      <span className="text-[10px] text-slate-600">
+                        <b>TDS:</b> 5% deducted from gross payout for all types ·
+                        <b> Loans:</b> 1.2% of net disbursement ·
+                        <b> Deals:</b> margin = deal_value − dealer_payout, TDS 5%
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[10px] text-slate-500 mt-2">
+              Per-record overrides (Custom %) apply on top of these defaults and are highlighted amber in the tables.
+            </p>
+          </div>
+        </div>
+      </details>
+
       <div className="flex items-center gap-2 flex-wrap mb-4 p-3 rounded-lg border bg-slate-50/50">
         <Filter className="h-3.5 w-3.5 text-slate-500" />
         <Select value={vertical} onValueChange={setVertical}>
