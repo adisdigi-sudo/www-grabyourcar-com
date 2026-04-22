@@ -92,6 +92,43 @@ export type SectionPayload =
 const PAGE_WIDTH_A4 = 210;
 const PAGE_HEIGHT_A4 = 297;
 
+// Cache loaded images so we don't refetch per render
+const imageCache = new Map<string, { dataUrl: string; w: number; h: number; format: string } | null>();
+
+async function loadImageAsDataUrl(
+  url: string,
+): Promise<{ dataUrl: string; w: number; h: number; format: string } | null> {
+  if (imageCache.has(url)) return imageCache.get(url) ?? null;
+  try {
+    const res = await fetch(url, { mode: "cors", cache: "force-cache" });
+    if (!res.ok) {
+      imageCache.set(url, null);
+      return null;
+    }
+    const blob = await res.blob();
+    const ctype = blob.type || "image/png";
+    const format = ctype.includes("jpeg") || ctype.includes("jpg") ? "JPEG" : "PNG";
+    const dataUrl: string = await new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result));
+      fr.onerror = () => reject(new Error("read fail"));
+      fr.readAsDataURL(blob);
+    });
+    const dims: { w: number; h: number } = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => resolve({ w: 1, h: 1 });
+      img.src = dataUrl;
+    });
+    const result = { dataUrl, w: dims.w, h: dims.h, format };
+    imageCache.set(url, result);
+    return result;
+  } catch {
+    imageCache.set(url, null);
+    return null;
+  }
+}
+
 export class UnifiedPdfRenderer {
   readonly doc: jsPDF;
   readonly branding: ResolvedBranding;
@@ -99,6 +136,9 @@ export class UnifiedPdfRenderer {
   private cursorY: number;
   private headerRendered = false;
   private placeholderCtx: PdfPlaceholderContext = {};
+  private logoAsset: { dataUrl: string; w: number; h: number; format: string } | null = null;
+  private watermarkAsset: { dataUrl: string; w: number; h: number; format: string } | null = null;
+  private signatureAsset: { dataUrl: string; w: number; h: number; format: string } | null = null;
 
   constructor(branding: ResolvedBranding, options: RendererOptions) {
     this.branding = branding;
@@ -109,6 +149,34 @@ export class UnifiedPdfRenderer {
       format: branding.page_size || "a4",
     });
     this.cursorY = branding.margins.top;
+  }
+
+  /** Preload remote brand assets so addImage receives data URLs (avoids silent failures). */
+  async preloadAssets(): Promise<void> {
+    const b = this.branding;
+    const tasks: Promise<void>[] = [];
+    if (b.logo_url) {
+      tasks.push(
+        loadImageAsDataUrl(b.logo_url).then((a) => {
+          this.logoAsset = a;
+        }),
+      );
+    }
+    if (b.watermark_url && b.show_watermark) {
+      tasks.push(
+        loadImageAsDataUrl(b.watermark_url).then((a) => {
+          this.watermarkAsset = a;
+        }),
+      );
+    }
+    if (b.signature_url) {
+      tasks.push(
+        loadImageAsDataUrl(b.signature_url).then((a) => {
+          this.signatureAsset = a;
+        }),
+      );
+    }
+    await Promise.all(tasks);
   }
 
   setPlaceholderContext(ctx: PdfPlaceholderContext) {
