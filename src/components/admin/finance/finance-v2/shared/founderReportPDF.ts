@@ -743,8 +743,10 @@ export function buildFounderSnapshotHTML(s: FounderSnapshotInput, cfg: ExportCol
 }
 
 export function buildFounderSnapshotWithConfig(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}) {
-  const html = buildFounderSnapshotHTML(s, cfg);
-  openHtmlPrint(html, `Founder-Snapshot-${s.periodLabel}`);
+  renderFounderSnapshotPdf(s, cfg).catch((err) => {
+    console.error("[buildFounderSnapshotWithConfig] PDF render failed:", err);
+    alert("Could not generate the Founder snapshot PDF. Please try again.");
+  });
 }
 
 export function getFounderSnapshotPrintableHTML(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}): string {
