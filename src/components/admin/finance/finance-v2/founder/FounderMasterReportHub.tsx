@@ -251,6 +251,52 @@ export const FounderMasterReportHub = () => {
 
   const profit = revenueTotal + insuranceNet + loanNet + dealNet - payrollTotal - expenseTotal;
 
+  // Loan stage breakdown for the chart
+  const loanStageBreakdown = useMemo(() => {
+    const buckets = {
+      new_lead: 0, qualified: 0, offer_shared: 0,
+      sanctioned: 0, disbursed: 0, lost: 0, other: 0,
+    } as Record<string, number>;
+    loans.forEach((l: any) => {
+      const s = (l.stage || "other").toLowerCase();
+      if (s in buckets) buckets[s] += 1; else buckets.other += 1;
+    });
+    const issued = loans.length;
+    const disbursed = buckets.disbursed;
+    const sanctioned = buckets.sanctioned;
+    const pending = issued - disbursed - buckets.lost;
+    const lost = buckets.lost;
+    return { buckets, issued, disbursed, sanctioned, pending, lost };
+  }, [loans]);
+
+  // Reconciliation — checks summary KPI vs sum of table rows
+  const reconciliation = useMemo(() => {
+    const polTableNet = policyComputed.reduce((s, p) => s + p._calc.net, 0);
+    const loanTableNet = loanComputed.reduce((s, l) => s + l._calc.net, 0);
+    const dealTableNet = dealComputed.reduce((s, d) => s + d._calc.net, 0);
+    const items = [
+      { module: "Policies", summaryNet: insuranceNet, tableNet: polTableNet, diff: insuranceNet - polTableNet },
+      { module: "Loans",    summaryNet: loanNet,      tableNet: loanTableNet, diff: loanNet - loanTableNet },
+      { module: "Deals",    summaryNet: dealNet,      tableNet: dealTableNet, diff: dealNet - dealTableNet },
+    ];
+    return items.map(i => ({
+      ...i,
+      status: Math.abs(i.diff) < 1
+        ? "✓ Match"
+        : `⚠ Off by ${inr(Math.abs(i.diff))} — likely due to filters/overrides`,
+    }));
+  }, [policyComputed, loanComputed, dealComputed, insuranceNet, loanNet, dealNet]);
+
+  // Audit trail — exact filters used per query
+  const auditTrail = useMemo(() => ([
+    { module: "Policies", query: `status=active AND issued_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: policies.length },
+    { module: "Loans",    query: `disbursement_date OR sanction_date OR created_at BETWEEN ${periodStart} AND ${periodEnd}`, rows: loans.length },
+    { module: "Deals",    query: `created_at OR closed_at BETWEEN ${periodStart} AND ${periodEnd}`, rows: deals.length },
+    { module: "Invoices", query: `invoice_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: invoices.length },
+    { module: "Payroll",  query: `payroll_month IN months(${periodStart}..${periodEnd})`, rows: payroll.length },
+    { module: "Expenses", query: `expense_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: expenses.length },
+  ]), [periodStart, periodEnd, policies.length, loans.length, deals.length, invoices.length, payroll.length, expenses.length]);
+
   const verticals = useMemo(() => {
     const set = new Set<string>();
     invoices.forEach((i: any) => i.vertical_name && set.add(i.vertical_name));
