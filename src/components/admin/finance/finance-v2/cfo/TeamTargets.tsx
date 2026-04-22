@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Target, Plus, Pencil, Trash2, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { Target, Plus, Pencil, Trash2, TrendingUp, TrendingDown, Loader2, FileDown, Image as ImageIcon } from "lucide-react";
+import { toPng } from "html-to-image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,6 +49,47 @@ export const TeamTargets = () => {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<TargetForm | null>(null);
   const [filterPeriod, setFilterPeriod] = useState<string>(format(new Date(), "yyyy-MM"));
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  const downloadCSV = () => {
+    const rows: string[] = [];
+    rows.push(`"Team Targets","${filterPeriod}","Generated ${format(new Date(), "dd MMM yyyy, p")}"`);
+    rows.push("");
+    rows.push('"Vertical","Period","Target Revenue","Achieved Revenue","Revenue %","Target Leads","Achieved Leads","Target Closures","Achieved Closures"');
+    for (const t of targets) {
+      const pct = t.target_revenue > 0 ? Math.round((Number(t.achieved_revenue || 0) / Number(t.target_revenue)) * 100) : 0;
+      rows.push([
+        `"${t.vertical_name}"`, `"${t.period_type} ${t.month_year}"`,
+        t.target_revenue || 0, t.achieved_revenue || 0, pct,
+        t.target_leads || 0, t.achieved_leads || 0,
+        t.target_closures || 0, t.achieved_closures || 0,
+      ].join(","));
+    }
+    rows.push("");
+    rows.push(`"TOTAL","",${totals.revenue},${totals.achieved},${totals.revenue > 0 ? Math.round((totals.achieved / totals.revenue) * 100) : 0},${totals.leads},${totals.leadsAch},${totals.closures},${totals.closuresAch}`);
+    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `team-targets-${filterPeriod}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV downloaded");
+  };
+
+  const downloadPNG = async () => {
+    if (!tableRef.current) return;
+    try {
+      const dataUrl = await toPng(tableRef.current, { backgroundColor: "#ffffff", pixelRatio: 2, cacheBust: true });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `team-targets-${filterPeriod}.png`;
+      a.click();
+      toast.success("PNG exported");
+    } catch {
+      toast.error("PNG export failed");
+    }
+  };
 
   const { data: targets = [], isLoading } = useQuery({
     queryKey: ["team-targets-cfo", filterPeriod],
@@ -121,13 +163,21 @@ export const TeamTargets = () => {
       icon={Target}
       className="lg:col-span-3"
       action={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Input
             type="month"
             value={filterPeriod}
             onChange={(e) => setFilterPeriod(e.target.value)}
             className="h-8 text-xs w-36"
           />
+          <Button size="sm" variant="outline" className="h-8 text-[11px] gap-1"
+            onClick={downloadCSV} disabled={targets.length === 0}>
+            <FileDown className="h-3 w-3" /> CSV
+          </Button>
+          <Button size="sm" variant="outline" className="h-8 text-[11px] gap-1"
+            onClick={downloadPNG} disabled={targets.length === 0}>
+            <ImageIcon className="h-3 w-3" /> PNG
+          </Button>
           <Button size="sm" className="gap-1 bg-slate-900 hover:bg-slate-800"
             onClick={() => setEditing({ ...blank(), month_year: filterPeriod })}>
             <Plus className="h-3.5 w-3.5" /> Set Target
@@ -135,6 +185,7 @@ export const TeamTargets = () => {
         </div>
       }
     >
+      <div ref={tableRef}>
       {/* Aggregate strip */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         {[
@@ -229,6 +280,7 @@ export const TeamTargets = () => {
           </div>
         </div>
       )}
+      </div>
 
       {/* Editor Dialog */}
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>

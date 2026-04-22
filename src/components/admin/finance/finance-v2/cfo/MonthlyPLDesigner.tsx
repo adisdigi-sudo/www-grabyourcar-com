@@ -12,7 +12,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { FileSpreadsheet, FileDown, Plus, Trash2, ArrowRight, TrendingUp, TrendingDown } from "lucide-react";
+import {
+  FileSpreadsheet, FileDown, Plus, Trash2, ArrowRight, TrendingUp, TrendingDown, AlertCircle,
+} from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { fmt, VERTICALS } from "../../corporate-budget/types";
 import { cn } from "@/lib/utils";
@@ -34,8 +36,6 @@ interface Props {
 const DEFAULT_REVENUE_BUCKETS = ["Insurance Premiums", "Car Sales", "Loan Commissions", "HSRP Fees", "Rentals", "Accessories Sales", "Other Income"];
 const DEFAULT_EXPENSE_BUCKETS = ["Salaries & HR", "Marketing & Ads", "Office Rent", "Tech & Tools", "Travel", "Professional Fees", "Utilities", "Other Expenses"];
 
-const VERTICAL_KEYS = VERTICALS.filter((v) => v !== "All");
-
 const newLine = (type: "revenue" | "expense"): PLLine => ({
   id: crypto.randomUUID(),
   category: "",
@@ -44,6 +44,11 @@ const newLine = (type: "revenue" | "expense"): PLLine => ({
   vertical: "All",
   notes: "",
 });
+
+interface LineErrors {
+  category?: string;
+  amount?: string;
+}
 
 export const MonthlyPLDesigner = ({ open, onClose }: Props) => {
   const [monthYear, setMonthYear] = useState(format(new Date(), "yyyy-MM"));
@@ -54,11 +59,11 @@ export const MonthlyPLDesigner = ({ open, onClose }: Props) => {
     DEFAULT_EXPENSE_BUCKETS.map((c) => ({ ...newLine("expense"), category: c }))
   );
   const [autoFilling, setAutoFilling] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
   const periodStart = format(startOfMonth(new Date(monthYear + "-01")), "yyyy-MM-dd");
   const periodEnd = format(endOfMonth(new Date(monthYear + "-01")), "yyyy-MM-dd");
 
-  // Fetch live actuals to suggest auto-fill
   const { data: liveActuals } = useQuery({
     queryKey: ["pl-live-actuals", monthYear],
     enabled: open,
@@ -88,34 +93,81 @@ export const MonthlyPLDesigner = ({ open, onClose }: Props) => {
   const netProfit = totalRevenue - totalExpense;
   const margin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
+  // ---- VALIDATION ----
+  // A line is "active" if it has any data entered (category OR amount). Empty default rows are ignored.
+  const validateLine = (l: PLLine): LineErrors => {
+    const errs: LineErrors = {};
+    const hasCategory = l.category.trim().length > 0;
+    const hasAmount = Number(l.amount) > 0;
+    if (hasAmount && !hasCategory) errs.category = "Category is required when an amount is set";
+    if (hasCategory && !hasAmount) errs.amount = "Amount must be greater than 0";
+    return errs;
+  };
+
+  const revenueErrors = useMemo(() => revenueLines.map(validateLine), [revenueLines]);
+  const expenseErrors = useMemo(() => expenseLines.map(validateLine), [expenseLines]);
+
+  const validRevenueLines = useMemo(
+    () => revenueLines.filter((l) => l.category.trim() && Number(l.amount) > 0),
+    [revenueLines]
+  );
+  const validExpenseLines = useMemo(
+    () => expenseLines.filter((l) => l.category.trim() && Number(l.amount) > 0),
+    [expenseLines]
+  );
+
+  const lineErrorCount =
+    revenueErrors.filter((e) => e.category || e.amount).length +
+    expenseErrors.filter((e) => e.category || e.amount).length;
+
+  const validationIssues: string[] = [];
+  if (validRevenueLines.length === 0 && validExpenseLines.length === 0) {
+    validationIssues.push("Add at least one revenue or expense allocation with a category and amount.");
+  }
+  if (lineErrorCount > 0) {
+    validationIssues.push(`${lineErrorCount} ${lineErrorCount === 1 ? "row has" : "rows have"} a missing category or amount. Complete or remove them.`);
+  }
+  // Duplicate category check within same section
+  const dupRev = new Set<string>();
+  const dupExp = new Set<string>();
+  const seenRev = new Set<string>();
+  const seenExp = new Set<string>();
+  for (const l of validRevenueLines) {
+    const k = l.category.trim().toLowerCase();
+    if (seenRev.has(k)) dupRev.add(k); else seenRev.add(k);
+  }
+  for (const l of validExpenseLines) {
+    const k = l.category.trim().toLowerCase();
+    if (seenExp.has(k)) dupExp.add(k); else seenExp.add(k);
+  }
+  if (dupRev.size + dupExp.size > 0) {
+    validationIssues.push("Duplicate categories detected in the same section — please consolidate.");
+  }
+
+  const canExport = validationIssues.length === 0;
+
   const autoFillFromLive = () => {
     if (!liveActuals) return;
     setAutoFilling(true);
 
-    // Sum invoices per vertical -> map to revenue buckets
     const revenueByVertical: Record<string, number> = {};
     for (const inv of liveActuals.invoices) {
       const v = (inv.vertical_name || "Other").toString();
       revenueByVertical[v] = (revenueByVertical[v] || 0) + Number(inv.total_amount || 0);
     }
-    // Add PL entries
     for (const p of liveActuals.plEntries) {
       const v = (p.vertical_slug || "other").toString();
       revenueByVertical[v] = (revenueByVertical[v] || 0) + Number(p.gross_revenue || 0);
     }
 
     setRevenueLines((prev) => prev.map((l) => {
-      // try to match category to vertical
       const matchKey = Object.keys(revenueByVertical).find(
         (k) => l.category.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(l.category.toLowerCase().split(" ")[0])
       );
-      if (matchKey) {
-        return { ...l, amount: Math.round(revenueByVertical[matchKey]) };
-      }
+      if (matchKey) return { ...l, amount: Math.round(revenueByVertical[matchKey]) };
       return l;
     }));
 
-    // Sum expenses by type
     const expenseByType: Record<string, number> = {};
     for (const e of liveActuals.expenses) {
       const t = (e.expense_type || "Other").toString();
@@ -125,9 +177,7 @@ export const MonthlyPLDesigner = ({ open, onClose }: Props) => {
       const matchKey = Object.keys(expenseByType).find(
         (k) => l.category.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(l.category.toLowerCase().split(" ")[0])
       );
-      if (matchKey) {
-        return { ...l, amount: Math.round(expenseByType[matchKey]) };
-      }
+      if (matchKey) return { ...l, amount: Math.round(expenseByType[matchKey]) };
       return l;
     }));
 
@@ -145,16 +195,25 @@ export const MonthlyPLDesigner = ({ open, onClose }: Props) => {
     else setExpenseLines((p) => p.filter((l) => l.id !== id));
   };
 
+  const guard = (fn: () => void) => () => {
+    if (!canExport) {
+      setShowErrors(true);
+      toast.error(validationIssues[0] || "Fix validation errors before downloading.");
+      return;
+    }
+    fn();
+  };
+
   const downloadCSV = () => {
     const rows: string[] = [];
     rows.push(`"Monthly P&L Statement","${monthYear}"`);
     rows.push("");
     rows.push('"Section","Category","Vertical","Amount (INR)","Notes"');
-    for (const l of revenueLines.filter((l) => l.amount > 0))
+    for (const l of validRevenueLines)
       rows.push(`"Revenue","${l.category}","${l.vertical}",${l.amount},"${l.notes || ""}"`);
     rows.push(`"","Total Revenue","",${totalRevenue},""`);
     rows.push("");
-    for (const l of expenseLines.filter((l) => l.amount > 0))
+    for (const l of validExpenseLines)
       rows.push(`"Expense","${l.category}","${l.vertical}",${l.amount},"${l.notes || ""}"`);
     rows.push(`"","Total Expenses","",${totalExpense},""`);
     rows.push("");
@@ -189,12 +248,12 @@ td,th{padding:6px 8px;border-bottom:1px solid #f1f5f9;text-align:left}
 <p class="muted">Period: ${monthYear} · Generated ${format(new Date(), "dd MMM yyyy, p")}</p>
 <h2>Revenue</h2>
 <table><thead><tr><th>Category</th><th>Vertical</th><th class="amt">Amount</th></tr></thead><tbody>
-${revenueLines.filter((l) => l.amount > 0).map((l) => `<tr><td>${l.category}</td><td>${l.vertical}</td><td class="amt">${fmt(l.amount)}</td></tr>`).join("")}
+${validRevenueLines.map((l) => `<tr><td>${l.category}</td><td>${l.vertical}</td><td class="amt">${fmt(l.amount)}</td></tr>`).join("")}
 <tr class="tot"><td colspan="2">Total Revenue</td><td class="amt">${fmt(totalRevenue)}</td></tr>
 </tbody></table>
 <h2>Expenses</h2>
 <table><thead><tr><th>Category</th><th>Vertical</th><th class="amt">Amount</th></tr></thead><tbody>
-${expenseLines.filter((l) => l.amount > 0).map((l) => `<tr><td>${l.category}</td><td>${l.vertical}</td><td class="amt">${fmt(l.amount)}</td></tr>`).join("")}
+${validExpenseLines.map((l) => `<tr><td>${l.category}</td><td>${l.vertical}</td><td class="amt">${fmt(l.amount)}</td></tr>`).join("")}
 <tr class="tot"><td colspan="2">Total Expenses</td><td class="amt">${fmt(totalExpense)}</td></tr>
 </tbody></table>
 <div class="profit"><span>Net ${netProfit >= 0 ? "Profit" : "Loss"}</span><span>${fmt(Math.abs(netProfit))} · ${margin.toFixed(1)}%</span></div>
@@ -207,40 +266,61 @@ ${expenseLines.filter((l) => l.amount > 0).map((l) => `<tr><td>${l.category}</td
     }
   };
 
-  const renderLines = (lines: PLLine[], type: "revenue" | "expense") => (
+  const renderLines = (lines: PLLine[], errors: LineErrors[], type: "revenue" | "expense") => (
     <div className="rounded-lg border overflow-hidden">
       <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-100 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-        <div className="col-span-4">Category</div>
+        <div className="col-span-4">Category <span className="text-red-500">*</span></div>
         <div className="col-span-3">Vertical</div>
-        <div className="col-span-2 text-right">Amount (₹)</div>
+        <div className="col-span-2 text-right">Amount (₹) <span className="text-red-500">*</span></div>
         <div className="col-span-2">Notes</div>
         <div className="col-span-1"></div>
       </div>
-      <div className="divide-y max-h-64 overflow-y-auto">
-        {lines.map((l) => (
-          <div key={l.id} className="grid grid-cols-12 gap-2 px-3 py-2 bg-white items-center">
-            <Input className="col-span-4 h-8 text-xs"
-              value={l.category}
-              onChange={(e) => updateLine(type, l.id, { category: e.target.value })}
-              placeholder="Category" />
-            <Select value={l.vertical} onValueChange={(v) => updateLine(type, l.id, { vertical: v })}>
-              <SelectTrigger className="col-span-3 h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>{VERTICALS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
-            </Select>
-            <Input className="col-span-2 h-8 text-xs text-right tabular-nums"
-              type="number" min={0} value={l.amount || ""}
-              onChange={(e) => updateLine(type, l.id, { amount: Number(e.target.value) || 0 })}
-              placeholder="0" />
-            <Input className="col-span-2 h-8 text-xs"
-              value={l.notes || ""}
-              onChange={(e) => updateLine(type, l.id, { notes: e.target.value })}
-              placeholder="—" />
-            <Button size="icon" variant="ghost" className="col-span-1 h-8 w-8 justify-self-end text-slate-400 hover:text-red-600"
-              onClick={() => removeLine(type, l.id)}>
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        ))}
+      <div className="divide-y max-h-72 overflow-y-auto">
+        {lines.map((l, idx) => {
+          const err = errors[idx] || {};
+          const showLineErr = showErrors && (err.category || err.amount);
+          return (
+            <div key={l.id} className={cn(
+              "grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white",
+              showLineErr && "bg-red-50/40"
+            )}>
+              <div className="col-span-4">
+                <Input className={cn("h-8 text-xs", showLineErr && err.category && "border-red-400 focus-visible:ring-red-300")}
+                  value={l.category}
+                  onChange={(e) => updateLine(type, l.id, { category: e.target.value })}
+                  placeholder="Category" />
+                {showLineErr && err.category && (
+                  <p className="text-[10px] text-red-600 mt-0.5 flex items-center gap-1">
+                    <AlertCircle className="h-2.5 w-2.5" /> {err.category}
+                  </p>
+                )}
+              </div>
+              <Select value={l.vertical} onValueChange={(v) => updateLine(type, l.id, { vertical: v })}>
+                <SelectTrigger className="col-span-3 h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>{VERTICALS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
+              </Select>
+              <div className="col-span-2">
+                <Input className={cn("h-8 text-xs text-right tabular-nums", showLineErr && err.amount && "border-red-400 focus-visible:ring-red-300")}
+                  type="number" min={0} value={l.amount || ""}
+                  onChange={(e) => updateLine(type, l.id, { amount: Number(e.target.value) || 0 })}
+                  placeholder="0" />
+                {showLineErr && err.amount && (
+                  <p className="text-[10px] text-red-600 mt-0.5 text-right flex items-center justify-end gap-1">
+                    <AlertCircle className="h-2.5 w-2.5" /> {err.amount}
+                  </p>
+                )}
+              </div>
+              <Input className="col-span-2 h-8 text-xs"
+                value={l.notes || ""}
+                onChange={(e) => updateLine(type, l.id, { notes: e.target.value })}
+                placeholder="—" />
+              <Button size="icon" variant="ghost" className="col-span-1 h-8 w-8 justify-self-end text-slate-400 hover:text-red-600"
+                onClick={() => removeLine(type, l.id)}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          );
+        })}
       </div>
       <div className="px-3 py-2 bg-slate-50 border-t flex items-center justify-between">
         <Button size="sm" variant="ghost" className="h-7 text-xs gap-1"
@@ -274,7 +354,6 @@ ${expenseLines.filter((l) => l.amount > 0).map((l) => `<tr><td>${l.category}</td
         </DialogHeader>
 
         <div className="space-y-5 py-4">
-          {/* Period & Auto-fill */}
           <div className="flex items-end justify-between gap-3 flex-wrap">
             <div>
               <Label className="text-xs">Reporting Month</Label>
@@ -287,7 +366,6 @@ ${expenseLines.filter((l) => l.amount > 0).map((l) => `<tr><td>${l.category}</td
             </Button>
           </div>
 
-          {/* Live snapshot */}
           {liveActuals && (
             <div className="grid grid-cols-3 gap-3 rounded-lg border bg-slate-50/50 p-3">
               <div>
@@ -305,23 +383,41 @@ ${expenseLines.filter((l) => l.amount > 0).map((l) => `<tr><td>${l.category}</td
             </div>
           )}
 
+          {/* ---- Validation summary ---- */}
+          {showErrors && validationIssues.length > 0 && (
+            <div className="rounded-lg border border-red-300 bg-red-50/60 p-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+                <div className="text-xs text-red-800 space-y-0.5">
+                  <p className="font-semibold">Cannot generate P&L — fix the following:</p>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    {validationIssues.map((m, i) => <li key={i}>{m}</li>)}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
           <section>
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-serif font-semibold text-sm text-slate-900">Revenue</h3>
-              <Badge variant="outline" className="text-[10px]">{revenueLines.length} buckets</Badge>
+              <Badge variant="outline" className="text-[10px]">
+                {validRevenueLines.length} active · {revenueLines.length} buckets
+              </Badge>
             </div>
-            {renderLines(revenueLines, "revenue")}
+            {renderLines(revenueLines, revenueErrors, "revenue")}
           </section>
 
           <section>
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-serif font-semibold text-sm text-slate-900">Expenses</h3>
-              <Badge variant="outline" className="text-[10px]">{expenseLines.length} buckets</Badge>
+              <Badge variant="outline" className="text-[10px]">
+                {validExpenseLines.length} active · {expenseLines.length} buckets
+              </Badge>
             </div>
-            {renderLines(expenseLines, "expense")}
+            {renderLines(expenseLines, expenseErrors, "expense")}
           </section>
 
-          {/* Bottom Line */}
           <section className="rounded-xl border bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="rounded-lg bg-white/5 p-3">
@@ -350,10 +446,10 @@ ${expenseLines.filter((l) => l.amount > 0).map((l) => `<tr><td>${l.category}</td
 
         <DialogFooter className="border-t pt-4 gap-2">
           <Button variant="outline" onClick={onClose}>Close</Button>
-          <Button variant="outline" className="gap-1" onClick={downloadCSV}>
+          <Button variant="outline" className={cn("gap-1", !canExport && "opacity-60")} onClick={guard(downloadCSV)}>
             <FileDown className="h-3.5 w-3.5" /> CSV
           </Button>
-          <Button className="gap-1 bg-slate-900 hover:bg-slate-800" onClick={downloadHTML}>
+          <Button className={cn("gap-1 bg-slate-900 hover:bg-slate-800", !canExport && "opacity-60")} onClick={guard(downloadHTML)}>
             <FileDown className="h-3.5 w-3.5" /> Print / PDF
           </Button>
         </DialogFooter>
