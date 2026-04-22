@@ -1,9 +1,6 @@
 import { lazy, Suspense } from "react";
 import { type DateRange } from "./dashboard";
 
-const FounderCommandCenter = lazy(() =>
-  import("./dashboard/FounderCommandCenter").then((module) => ({ default: module.FounderCommandCenter })),
-);
 const TeamPerformanceComparison = lazy(() =>
   import("./dashboard/TeamPerformanceComparison").then((module) => ({ default: module.TeamPerformanceComparison })),
 );
@@ -15,9 +12,6 @@ const EmployeeDailyReportsDashboard = lazy(() =>
 );
 const ScheduledReportsManager = lazy(() =>
   import("./dashboard/ScheduledReportsManager").then((module) => ({ default: module.ScheduledReportsManager })),
-);
-const ApprovalsQueueWidget = lazy(() =>
-  import("./dashboard/ApprovalsQueueWidget").then((module) => ({ default: module.ApprovalsQueueWidget })),
 );
 const LiveDealsAttribution = lazy(() =>
   import("./dashboard/LiveDealsAttribution").then((module) => ({ default: module.LiveDealsAttribution })),
@@ -37,11 +31,9 @@ export const AdminDashboardDeferredSections = ({ dateRange }: AdminDashboardDefe
   return (
     <Suspense fallback={<DeferredSectionFallback />}>
       <div className="space-y-6">
-        <FounderCommandCenter />
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <ApprovalsQueueWidget />
-          <LiveDealsAttribution />
-        </div>
+        {/* Founder cockpit widgets (Targets / Approvals / AI Coach / Briefings) live in the dedicated
+            👑 Founder Cockpit sidebar tab — not duplicated here to keep the main Dashboard clean. */}
+        <LiveDealsAttribution />
         <TeamPerformanceComparison dateRange={dateRange} />
         <TaskEscalationView />
         <EmployeeDailyReportsDashboard />
