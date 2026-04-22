@@ -20,7 +20,7 @@ import { StatTile } from "../shared/StatTile";
 import {
   computeInsurancePayout, computeLoanPayout, computeDealPayout, inr, RuleRow,
 } from "../shared/payoutEngine";
-import { buildRowInvoice, buildMonthlyStatement } from "../shared/founderReportPDF";
+import { buildRowInvoice, buildMonthlyStatement, buildFounderSnapshot, buildFounderCSV } from "../shared/founderReportPDF";
 
 /* ---------- PERIOD HELPERS ---------- */
 type PeriodKind = "week" | "month" | "quarter" | "year" | "custom";
