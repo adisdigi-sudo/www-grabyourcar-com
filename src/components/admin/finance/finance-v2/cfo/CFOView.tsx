@@ -227,6 +227,7 @@ const CFOView = () => {
 
       <BudgetPlannerDialog open={plannerOpen} onClose={() => setPlannerOpen(false)} />
       <BudgetDetailDialog budgetId={detailId} onClose={() => setDetailId(null)} />
+      <MonthlyPLDesigner open={plDesignerOpen} onClose={() => setPlDesignerOpen(false)} />
     </div>
   );
 };
