@@ -4554,6 +4554,176 @@ export type Database = {
           },
         ]
       }
+      corporate_budget_approvals: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_name: string | null
+          budget_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          new_status: string | null
+          previous_status: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_name?: string | null
+          budget_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_name?: string | null
+          budget_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "corporate_budget_approvals_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "corporate_budgets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      corporate_budget_lines: {
+        Row: {
+          actual_amount: number
+          budget_id: string
+          category_id: string | null
+          category_name: string
+          created_at: string
+          department: string | null
+          id: string
+          notes: string | null
+          planned_amount: number
+          updated_at: string
+          vertical: string | null
+        }
+        Insert: {
+          actual_amount?: number
+          budget_id: string
+          category_id?: string | null
+          category_name: string
+          created_at?: string
+          department?: string | null
+          id?: string
+          notes?: string | null
+          planned_amount?: number
+          updated_at?: string
+          vertical?: string | null
+        }
+        Update: {
+          actual_amount?: number
+          budget_id?: string
+          category_id?: string | null
+          category_name?: string
+          created_at?: string
+          department?: string | null
+          id?: string
+          notes?: string | null
+          planned_amount?: number
+          updated_at?: string
+          vertical?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "corporate_budget_lines_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "corporate_budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "corporate_budget_lines_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "corporate_expense_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      corporate_budgets: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          approved_by_name: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          notes: string | null
+          period_end: string
+          period_start: string
+          period_type: string
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          submitted_by_name: string | null
+          title: string
+          total_actual: number
+          total_planned: number
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          notes?: string | null
+          period_end: string
+          period_start: string
+          period_type?: string
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          submitted_by_name?: string | null
+          title: string
+          total_actual?: number
+          total_planned?: number
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          submitted_by_name?: string | null
+          title?: string
+          total_actual?: number
+          total_planned?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       corporate_clients: {
         Row: {
           company_name: string
@@ -4584,6 +4754,45 @@ export type Database = {
           logo_url?: string
           sort_order?: number | null
           website_url?: string | null
+        }
+        Relationships: []
+      }
+      corporate_expense_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          is_standard: boolean
+          name: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_standard?: boolean
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_standard?: boolean
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
