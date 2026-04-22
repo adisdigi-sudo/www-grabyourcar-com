@@ -560,7 +560,12 @@ export const FounderMasterReportHub = () => {
           {reconciliation.map(r => {
             const ok = Math.abs(r.diff) < 1;
             return (
-              <div key={r.module} className={`p-2 rounded border ${ok ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-300"}`}>
+              <button
+                type="button"
+                key={r.module}
+                onClick={() => setDrillModule(r.module as any)}
+                className={`text-left p-2 rounded border transition hover:shadow-sm hover:scale-[1.01] ${ok ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-300"}`}
+              >
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">{r.module}</span>
                   <span className={`text-[10px] font-mono ${ok ? "text-emerald-700" : "text-amber-700"}`}>{r.status}</span>
@@ -569,7 +574,8 @@ export const FounderMasterReportHub = () => {
                   Summary: <b>{inr(r.summaryNet)}</b> · Table: <b>{inr(r.tableNet)}</b>
                   {!ok && <span className="text-amber-700"> · Δ {inr(Math.abs(r.diff))}</span>}
                 </div>
-              </div>
+                <div className="text-[9px] text-slate-400 mt-1">click to drill into rows →</div>
+              </button>
             );
           })}
         </div>
