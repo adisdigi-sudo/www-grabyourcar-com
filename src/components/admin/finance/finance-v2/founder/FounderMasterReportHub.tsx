@@ -448,7 +448,7 @@ export const FounderMasterReportHub = () => {
   return (
     <SectionCard
       title="Founder Master Report Hub"
-      description="Live · Period-filtered · Custom payout %: P&L · Payroll · Policies · Loans · Deals · Invoices · Team."
+      description="Live · Won-only (Active Policies · Disbursed Loans · Paid Deals) · Period-filtered · Inline reject with reason."
       icon={BarChart3}
       className="lg:col-span-3"
       action={
