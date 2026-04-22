@@ -289,8 +289,8 @@ export const FounderMasterReportHub = () => {
   // Audit trail — exact filters used per query
   const auditTrail = useMemo(() => ([
     { module: "Policies", query: `status=active AND issued_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: policies.length },
-    { module: "Loans",    query: `disbursement_date OR sanction_date OR created_at BETWEEN ${periodStart} AND ${periodEnd}`, rows: loans.length },
-    { module: "Deals",    query: `created_at OR closed_at BETWEEN ${periodStart} AND ${periodEnd}`, rows: deals.length },
+    { module: "Loans",    query: `stage=disbursed AND disbursement_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: loans.length },
+    { module: "Deals",    query: `payment_status=received AND (closed_at OR created_at) BETWEEN ${periodStart} AND ${periodEnd}`, rows: deals.length },
     { module: "Invoices", query: `invoice_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: invoices.length },
     { module: "Payroll",  query: `payroll_month IN months(${periodStart}..${periodEnd})`, rows: payroll.length },
     { module: "Expenses", query: `expense_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: expenses.length },
