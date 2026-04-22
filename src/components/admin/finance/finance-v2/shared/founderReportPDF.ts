@@ -719,7 +719,7 @@ export interface ExportColumnConfig {
   includeCoverPage?: boolean;
 }
 
-const DEFAULT_COLS: Required<Omit<ExportColumnConfig, "includeReconciliation" | "includeAudit" | "includeKpis" | "includeCounts">> = {
+const DEFAULT_COLS: Required<Omit<ExportColumnConfig, "includeReconciliation" | "includeAudit" | "includeKpis" | "includeCounts" | "includeCoverPage">> = {
   policies: ["ref", "customer", "type", "base", "pct", "gross", "tds", "net"],
   loans: ["ref", "customer", "bank", "stage", "base", "pct", "gross", "tds", "net"],
   deals: ["ref", "customer", "vertical", "value", "margin", "pct", "net", "received", "pending"],
@@ -910,6 +910,13 @@ export function buildFounderSnapshotWithConfig(s: FounderSnapshotInput, cfg: Exp
     console.error("[buildFounderSnapshotWithConfig] PDF render failed:", err);
     alert("Could not generate the Founder snapshot PDF. Please try again.");
   });
+}
+
+/** Render the Founder snapshot PDF and return an object URL for in-app preview (iframe). */
+export async function previewFounderSnapshotPdf(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}): Promise<string> {
+  const blob = await renderFounderSnapshotPdf(s, cfg, true);
+  if (!(blob instanceof Blob)) throw new Error("PDF preview generation failed");
+  return URL.createObjectURL(blob);
 }
 
 export function getFounderSnapshotPrintableHTML(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}): string {
