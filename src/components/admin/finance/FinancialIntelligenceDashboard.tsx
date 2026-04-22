@@ -1,9 +1,8 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { format, subMonths } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   TrendingUp, TrendingDown, AlertTriangle, IndianRupee,
@@ -21,62 +20,149 @@ interface MonthData {
   profit: number;
 }
 
+const monthKey = (d: string | Date | null | undefined): string | null => {
+  if (!d) return null;
+  try {
+    const dt = typeof d === "string" ? new Date(d) : d;
+    if (isNaN(dt.getTime())) return null;
+    return format(dt, "yyyy-MM");
+  } catch { return null; }
+};
+
 export const FinancialIntelligenceDashboard = () => {
-  const months = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = subMonths(new Date(), i);
-      return format(d, "yyyy-MM");
-    }).reverse();
-  }, []);
+  const months = useMemo(() => Array.from({ length: 6 }, (_, i) =>
+    format(subMonths(new Date(), i), "yyyy-MM")
+  ).reverse(), []);
+  const startDate = `${months[0]}-01`;
 
-  // Fetch 6 months of revenue
-  const { data: allRevenues = [] } = useQuery({
-    queryKey: ["fi-revenues-6m", months[0]],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("revenue_entries").select("amount, month_year, category, revenue_date")
-        .gte("revenue_date", `${months[0]}-01`).order("revenue_date", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: allExpenses = [] } = useQuery({
-    queryKey: ["fi-expenses-6m", months[0]],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("expense_entries").select("amount, month_year, category, expense_date")
-        .gte("expense_date", `${months[0]}-01`).order("expense_date", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
-
+  // ── LIVE REVENUE SOURCES (paid/received only)
   const { data: invoices = [] } = useQuery({
-    queryKey: ["fi-invoices-summary"],
+    queryKey: ["fi-invoices", startDate],
     queryFn: async () => {
-      const { data, error } = await supabase.from("invoices").select("total_amount, status, due_date, invoice_date")
-        .gte("invoice_date", `${months[0]}-01`);
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: payrolls = [] } = useQuery({
-    queryKey: ["fi-payroll-summary"],
-    queryFn: async () => {
-      const { data, error } = await (supabase.from("payroll_records") as any).select("net_salary, gross_salary, payroll_month, payment_status");
+      const { data, error } = await supabase.from("invoices")
+        .select("total_amount, status, due_date, invoice_date, paid_at, vertical_name, amount_paid, balance_due")
+        .gte("invoice_date", startDate);
       if (error) throw error;
       return data || [];
     },
   });
 
-  // Monthly breakdown
+  const { data: payments = [] } = useQuery({
+    queryKey: ["fi-payments", startDate],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("payment_received") as any)
+        .select("amount, payment_date, notes, invoice_number")
+        .gte("payment_date", startDate);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: deals = [] } = useQuery({
+    queryKey: ["fi-deals", startDate],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("deals")
+        .select("payment_received_amount, payment_status, closed_at, created_at, vertical_name")
+        .eq("payment_status", "received")
+        .gte("created_at", startDate);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: hsrp = [] } = useQuery({
+    queryKey: ["fi-hsrp", startDate],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("hsrp_bookings")
+        .select("payment_amount, service_price, payment_status, created_at")
+        .eq("payment_status", "paid")
+        .gte("created_at", startDate);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: accessory = [] } = useQuery({
+    queryKey: ["fi-accessory", startDate],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("accessory_orders")
+        .select("total_amount, payment_status, created_at")
+        .eq("payment_status", "paid")
+        .gte("created_at", startDate);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: rentals = [] } = useQuery({
+    queryKey: ["fi-rentals", startDate],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("rental_bookings") as any)
+        .select("total_amount, payment_status, created_at")
+        .eq("payment_status", "paid")
+        .gte("created_at", startDate);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // ── EXPENSES — payroll + (refunds = debit payments)
+  const { data: payrolls = [] } = useQuery({
+    queryKey: ["fi-payroll-summary"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("payroll_records") as any)
+        .select("net_salary, gross_salary, payroll_month, payment_status");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Aggregate monthly revenue & expense from live data
   const monthlyData: MonthData[] = useMemo(() => {
     return months.map(m => {
-      const rev = allRevenues.filter((r: any) => r.month_year === m).reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
-      const exp = allExpenses.filter((e: any) => e.month_year === m).reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
-      return { month: m, revenue: rev, expense: exp, profit: rev - exp };
+      // Revenue = sum across all paid sources
+      let rev = 0;
+      const revBreakdown: Record<string, number> = {};
+      const add = (cat: string, amount: number) => {
+        rev += amount;
+        revBreakdown[cat] = (revBreakdown[cat] || 0) + amount;
+      };
+      invoices
+        .filter((i: any) => i.status === "paid" && monthKey(i.paid_at || i.invoice_date) === m)
+        .forEach((i: any) => add(i.vertical_name || "Invoiced", Number(i.total_amount || 0)));
+      // Standalone payments not linked to an invoice (avoid double counting)
+      payments
+        .filter((p: any) => !p.invoice_number && monthKey(p.payment_date) === m && !/^\[DEBIT\]/i.test(String(p.notes || "")))
+        .forEach((p: any) => add("Direct Payments", Number(p.amount || 0)));
+      deals
+        .filter((d: any) => monthKey(d.closed_at || d.created_at) === m)
+        .forEach((d: any) => add(d.vertical_name || "Deals", Number(d.payment_received_amount || 0)));
+      hsrp
+        .filter((h: any) => monthKey(h.created_at) === m)
+        .forEach((h: any) => add("HSRP", Number(h.payment_amount || h.service_price || 0)));
+      accessory
+        .filter((a: any) => monthKey(a.created_at) === m)
+        .forEach((a: any) => add("Accessories", Number(a.total_amount || 0)));
+      rentals
+        .filter((r: any) => monthKey(r.created_at) === m)
+        .forEach((r: any) => add("Self Drive", Number(r.total_amount || 0)));
+
+      // Expenses = payroll for that month + debit payments
+      let exp = 0;
+      const expBreakdown: Record<string, number> = {};
+      const monthPayroll = payrolls
+        .filter((p: any) => p.payroll_month === m)
+        .reduce((s: number, p: any) => s + Number(p.net_salary || 0), 0);
+      if (monthPayroll > 0) { exp += monthPayroll; expBreakdown["Payroll"] = monthPayroll; }
+
+      const refunds = payments
+        .filter((p: any) => monthKey(p.payment_date) === m && /^\[DEBIT\]/i.test(String(p.notes || "")))
+        .reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+      if (refunds > 0) { exp += refunds; expBreakdown["Refunds"] = refunds; }
+
+      return { month: m, revenue: rev, expense: exp, profit: rev - exp, _revBreakdown: revBreakdown, _expBreakdown: expBreakdown } as MonthData & { _revBreakdown: Record<string, number>; _expBreakdown: Record<string, number> };
     });
-  }, [months, allRevenues, allExpenses]);
+  }, [months, invoices, payments, deals, hsrp, accessory, rentals, payrolls]);
 
   const currentMonth = monthlyData[monthlyData.length - 1];
   const prevMonth = monthlyData[monthlyData.length - 2];
@@ -85,73 +171,39 @@ export const FinancialIntelligenceDashboard = () => {
   const expChange = prevMonth?.expense > 0 ? ((currentMonth.expense - prevMonth.expense) / prevMonth.expense) * 100 : 0;
   const profitChange = prevMonth?.profit !== 0 ? ((currentMonth.profit - prevMonth.profit) / Math.abs(prevMonth.profit || 1)) * 100 : 0;
 
-  // Revenue by category
   const revenueByCategory = useMemo(() => {
-    const cats: Record<string, number> = {};
-    const curM = months[months.length - 1];
-    allRevenues.filter((r: any) => r.month_year === curM).forEach((r: any) => {
-      const cat = r.category || "Other";
-      cats[cat] = (cats[cat] || 0) + Number(r.amount || 0);
-    });
-    return Object.entries(cats).sort((a, b) => b[1] - a[1]);
-  }, [allRevenues, months]);
+    const cats = (currentMonth as any)._revBreakdown || {};
+    return Object.entries(cats).sort((a: any, b: any) => b[1] - a[1]) as [string, number][];
+  }, [currentMonth]);
 
-  // Expense by category
   const expenseByCategory = useMemo(() => {
-    const cats: Record<string, number> = {};
-    const curM = months[months.length - 1];
-    allExpenses.filter((e: any) => e.month_year === curM).forEach((e: any) => {
-      const cat = e.category || "Other";
-      cats[cat] = (cats[cat] || 0) + Number(e.amount || 0);
-    });
-    return Object.entries(cats).sort((a, b) => b[1] - a[1]);
-  }, [allExpenses, months]);
+    const cats = (currentMonth as any)._expBreakdown || {};
+    return Object.entries(cats).sort((a: any, b: any) => b[1] - a[1]) as [string, number][];
+  }, [currentMonth]);
 
-  // Alerts
   const alerts = useMemo(() => {
     const list: { type: "danger" | "warning" | "info"; message: string }[] = [];
+    if (currentMonth.profit < 0) list.push({ type: "danger", message: `Net LOSS of ${fmt(Math.abs(currentMonth.profit))} this month` });
+    if (revChange < -10) list.push({ type: "warning", message: `Revenue dropped ${Math.abs(revChange).toFixed(0)}% vs last month` });
+    if (expChange > 20) list.push({ type: "warning", message: `Expenses increased ${expChange.toFixed(0)}% vs last month` });
 
-    if (currentMonth.profit < 0) {
-      list.push({ type: "danger", message: `Net LOSS of ${fmt(Math.abs(currentMonth.profit))} this month` });
+    const overdue = invoices.filter((i: any) => i.status !== "paid" && i.due_date && new Date(i.due_date) < new Date());
+    if (overdue.length > 0) {
+      const total = overdue.reduce((s: number, i: any) => s + Number(i.balance_due || i.total_amount || 0), 0);
+      list.push({ type: "danger", message: `${overdue.length} overdue invoice(s) totaling ${fmt(total)}` });
     }
-    if (revChange < -10) {
-      list.push({ type: "warning", message: `Revenue dropped ${Math.abs(revChange).toFixed(0)}% vs last month` });
-    }
-    if (expChange > 20) {
-      list.push({ type: "warning", message: `Expenses increased ${expChange.toFixed(0)}% vs last month` });
-    }
-
-    const overdueInvoices = invoices.filter((i: any) => i.status !== "paid" && i.due_date && new Date(i.due_date) < new Date());
-    if (overdueInvoices.length > 0) {
-      const overdueTotal = overdueInvoices.reduce((s: number, i: any) => s + Number(i.total_amount || 0), 0);
-      list.push({ type: "danger", message: `${overdueInvoices.length} overdue invoices totaling ${fmt(overdueTotal)}` });
-    }
-
     const pendingPayroll = payrolls.filter((p: any) => p.payment_status === "pending");
-    if (pendingPayroll.length > 0) {
-      list.push({ type: "warning", message: `${pendingPayroll.length} pending payroll payments` });
-    }
+    if (pendingPayroll.length > 0) list.push({ type: "warning", message: `${pendingPayroll.length} pending payroll payments` });
 
-    const totalPayroll = payrolls.filter((p: any) => p.payroll_month === months[months.length - 1])
-      .reduce((s: number, p: any) => s + Number(p.net_salary || 0), 0);
-    if (totalPayroll > 0 && currentMonth.revenue > 0 && (totalPayroll / currentMonth.revenue) > 0.6) {
-      list.push({ type: "warning", message: `Payroll is ${((totalPayroll / currentMonth.revenue) * 100).toFixed(0)}% of revenue — high burn` });
-    }
-
-    if (list.length === 0) {
-      list.push({ type: "info", message: "All financial metrics healthy this month" });
-    }
-
+    if (list.length === 0) list.push({ type: "info", message: "All financial metrics healthy this month" });
     return list;
-  }, [currentMonth, revChange, expChange, invoices, payrolls, months]);
+  }, [currentMonth, revChange, expChange, invoices, payrolls]);
 
-  // Invoice Summary
   const totalInvoiced = invoices.reduce((s: number, i: any) => s + Number(i.total_amount || 0), 0);
   const paidInvoices = invoices.filter((i: any) => i.status === "paid").reduce((s: number, i: any) => s + Number(i.total_amount || 0), 0);
   const collectionRate = totalInvoiced > 0 ? (paidInvoices / totalInvoiced) * 100 : 0;
 
-  const maxProfit = Math.max(...monthlyData.map(m => Math.abs(m.profit)), 1);
-  const maxRev = Math.max(...monthlyData.map(m => m.revenue), 1);
+  const maxRev = Math.max(...monthlyData.map(m => Math.max(m.revenue, m.expense)), 1);
 
   return (
     <div className="space-y-4">
@@ -160,10 +212,9 @@ export const FinancialIntelligenceDashboard = () => {
           <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white"><Zap className="h-5 w-5" /></div>
           Financial Intelligence
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">Auto-generated insights • Trend analysis • Smart alerts</p>
+        <p className="text-sm text-muted-foreground mt-1">Live data from invoices • payments • deals • bookings • payroll</p>
       </div>
 
-      {/* Alerts */}
       {alerts.length > 0 && (
         <div className="space-y-2">
           {alerts.map((alert, i) => (
@@ -183,7 +234,6 @@ export const FinancialIntelligenceDashboard = () => {
         </div>
       )}
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "Revenue", value: fmt(currentMonth.revenue), change: pct(revChange), up: revChange >= 0, icon: ArrowUpRight, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
@@ -202,9 +252,8 @@ export const FinancialIntelligenceDashboard = () => {
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        {/* 6-Month P&L Trend (text-based chart) */}
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="h-4 w-4" /> 6-Month P&L Trend</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="h-4 w-4" /> 6-Month P&L Trend (Live)</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-3">
               {monthlyData.map(m => (
@@ -227,13 +276,12 @@ export const FinancialIntelligenceDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Revenue & Expense Breakdown */}
         <div className="space-y-4">
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><PieChart className="h-4 w-4 text-emerald-600" /> Revenue by Category</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><PieChart className="h-4 w-4 text-emerald-600" /> Revenue by Source (this month)</CardTitle></CardHeader>
             <CardContent>
               <ScrollArea className="h-[120px]">
-                {revenueByCategory.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No revenue data</p>}
+                {revenueByCategory.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No revenue this month</p>}
                 {revenueByCategory.map(([cat, amount]) => (
                   <div key={cat} className="flex justify-between items-center py-1.5 border-b last:border-0">
                     <span className="text-xs capitalize">{cat}</span>
@@ -250,10 +298,10 @@ export const FinancialIntelligenceDashboard = () => {
           </Card>
 
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><PieChart className="h-4 w-4 text-red-600" /> Expense by Category</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><PieChart className="h-4 w-4 text-red-600" /> Expense Breakdown</CardTitle></CardHeader>
             <CardContent>
               <ScrollArea className="h-[120px]">
-                {expenseByCategory.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No expense data</p>}
+                {expenseByCategory.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No expenses recorded</p>}
                 {expenseByCategory.map(([cat, amount]) => (
                   <div key={cat} className="flex justify-between items-center py-1.5 border-b last:border-0">
                     <span className="text-xs capitalize">{cat}</span>
@@ -271,7 +319,6 @@ export const FinancialIntelligenceDashboard = () => {
         </div>
       </div>
 
-      {/* Payroll Summary */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><IndianRupee className="h-4 w-4" /> Payroll Cost Summary</CardTitle></CardHeader>
         <CardContent>
