@@ -137,3 +137,190 @@ export function buildMonthlyStatement(opts: {
   `;
   openHtmlPrint(html, `${moduleLabel}-Statement-${monthLabel}`);
 }
+
+/* ============== Full Founder Dashboard Snapshot (PDF) ============== */
+
+export interface FounderSnapshotInput {
+  periodLabel: string;
+  periodKind: string;
+  periodStart: string;
+  periodEnd: string;
+  filters: { vertical: string; search: string };
+  kpis: {
+    revenue: number; receivables: number; payroll: number; expenses: number;
+    incentives: number; profit: number;
+  };
+  counts: {
+    policies: number; loans: number; loansDisbursed: number;
+    deals: number; invoices: number; invoicesPaid: number;
+  };
+  policies: Array<{ ref: string; customer: string; type: string; base: number; pct: number; gross: number; tds: number; net: number; }>;
+  loans: Array<{ ref: string; customer: string; bank: string; stage: string; base: number; pct: number; gross: number; tds: number; net: number; }>;
+  deals: Array<{ ref: string; customer: string; vertical: string; value: number; margin: number; pct: number; net: number; received: number; pending: number; }>;
+  reconciliation: Array<{ module: string; summaryNet: number; tableNet: number; diff: number; status: string }>;
+  audit: Array<{ module: string; query: string; rows: number }>;
+}
+
+export function buildFounderSnapshot(s: FounderSnapshotInput) {
+  const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
+  const polTotals = {
+    base: sum(s.policies.map(p => p.base)),
+    gross: sum(s.policies.map(p => p.gross)),
+    tds: sum(s.policies.map(p => p.tds)),
+    net: sum(s.policies.map(p => p.net)),
+  };
+  const loanTotals = {
+    base: sum(s.loans.map(l => l.base)),
+    gross: sum(s.loans.map(l => l.gross)),
+    tds: sum(s.loans.map(l => l.tds)),
+    net: sum(s.loans.map(l => l.net)),
+  };
+  const dealTotals = {
+    value: sum(s.deals.map(d => d.value)),
+    margin: sum(s.deals.map(d => d.margin)),
+    net: sum(s.deals.map(d => d.net)),
+    received: sum(s.deals.map(d => d.received)),
+    pending: sum(s.deals.map(d => d.pending)),
+  };
+
+  const html = `
+    <h1>Founder Master Report — Snapshot</h1>
+    <p class="muted">
+      Period: <b>${esc(s.periodLabel)}</b> (${esc(s.periodKind)}) · ${esc(s.periodStart)} → ${esc(s.periodEnd)}<br/>
+      Filters: vertical=<b>${esc(s.filters.vertical)}</b>${s.filters.search ? ` · search="${esc(s.filters.search)}"` : ""}<br/>
+      Generated ${new Date().toLocaleString("en-IN")}
+    </p>
+
+    <h2>Headline KPIs</h2>
+    <table>
+      <tr><th>Metric</th><th class="num">Amount</th><th>Notes</th></tr>
+      <tr><td>Revenue (Paid Invoices)</td><td class="num">${inr(s.kpis.revenue)}</td><td>${s.counts.invoicesPaid} paid invoices</td></tr>
+      <tr><td>Receivables</td><td class="num">${inr(s.kpis.receivables)}</td><td>${s.counts.invoices - s.counts.invoicesPaid} pending</td></tr>
+      <tr><td>Payroll (Net)</td><td class="num">${inr(s.kpis.payroll)}</td><td>—</td></tr>
+      <tr><td>Operational Expenses</td><td class="num">${inr(s.kpis.expenses)}</td><td>—</td></tr>
+      <tr><td>Total Incentives (Net of TDS)</td><td class="num">${inr(s.kpis.incentives)}</td><td>Insurance + Loans + Deals</td></tr>
+      <tr class="totals"><td>Net Profit / Loss</td><td class="num">${s.kpis.profit >= 0 ? "" : "- "}${inr(Math.abs(s.kpis.profit))}</td><td>${s.kpis.profit >= 0 ? "Surplus" : "Deficit"}</td></tr>
+    </table>
+
+    <h2>Live Vertical Counts</h2>
+    <table>
+      <tr><th>Vertical</th><th class="num">Records</th><th>Detail</th></tr>
+      <tr><td>Policies Issued</td><td class="num">${s.counts.policies}</td><td>Net Payout: ${inr(polTotals.net)}</td></tr>
+      <tr><td>Car Loan Cases</td><td class="num">${s.counts.loans}</td><td>${s.counts.loansDisbursed} disbursed · Net: ${inr(loanTotals.net)}</td></tr>
+      <tr><td>Car Sales / Deals</td><td class="num">${s.counts.deals}</td><td>Net Margin: ${inr(dealTotals.net)}</td></tr>
+    </table>
+
+    <h2>Reconciliation</h2>
+    <table>
+      <tr><th>Module</th><th class="num">Summary Net</th><th class="num">Table Net</th><th class="num">Diff</th><th>Status</th></tr>
+      ${s.reconciliation.map(r => `
+        <tr>
+          <td>${esc(r.module)}</td>
+          <td class="num">${inr(r.summaryNet)}</td>
+          <td class="num">${inr(r.tableNet)}</td>
+          <td class="num">${inr(r.diff)}</td>
+          <td>${esc(r.status)}</td>
+        </tr>`).join("")}
+    </table>
+
+    <h2>Audit Trail — Date-range queries</h2>
+    <table>
+      <tr><th>Module</th><th>Query</th><th class="num">Rows</th></tr>
+      ${s.audit.map(a => `<tr><td>${esc(a.module)}</td><td style="font-family:monospace;font-size:10px">${esc(a.query)}</td><td class="num">${a.rows}</td></tr>`).join("")}
+    </table>
+
+    <h2>Policies (${s.policies.length})</h2>
+    <table>
+      <tr><th>#</th><th>Policy</th><th>Customer</th><th>Type</th><th class="num">Base</th><th class="num">%</th><th class="num">Gross</th><th class="num">TDS</th><th class="num">Net</th></tr>
+      ${s.policies.map((p,i) => `<tr><td>${i+1}</td><td>${esc(p.ref)}</td><td>${esc(p.customer)}</td><td>${esc(p.type)}</td><td class="num">${inr(p.base)}</td><td class="num">${p.pct}%</td><td class="num">${inr(p.gross)}</td><td class="num">${inr(p.tds)}</td><td class="num">${inr(p.net)}</td></tr>`).join("")}
+      <tr class="totals"><td colspan="4">TOTAL</td><td class="num">${inr(polTotals.base)}</td><td class="num">—</td><td class="num">${inr(polTotals.gross)}</td><td class="num">${inr(polTotals.tds)}</td><td class="num">${inr(polTotals.net)}</td></tr>
+    </table>
+
+    <h2>Car Loans (${s.loans.length})</h2>
+    <table>
+      <tr><th>#</th><th>Customer</th><th>Bank</th><th>Stage</th><th class="num">Net Disb.</th><th class="num">%</th><th class="num">Gross</th><th class="num">TDS</th><th class="num">Net</th></tr>
+      ${s.loans.map((l,i) => `<tr><td>${i+1}</td><td>${esc(l.customer)}</td><td>${esc(l.bank)}</td><td>${esc(l.stage)}</td><td class="num">${inr(l.base)}</td><td class="num">${l.pct}%</td><td class="num">${inr(l.gross)}</td><td class="num">${inr(l.tds)}</td><td class="num">${inr(l.net)}</td></tr>`).join("")}
+      <tr class="totals"><td colspan="4">TOTAL</td><td class="num">${inr(loanTotals.base)}</td><td class="num">—</td><td class="num">${inr(loanTotals.gross)}</td><td class="num">${inr(loanTotals.tds)}</td><td class="num">${inr(loanTotals.net)}</td></tr>
+    </table>
+
+    <h2>Car Deals (${s.deals.length})</h2>
+    <table>
+      <tr><th>#</th><th>Deal</th><th>Customer</th><th>Vertical</th><th class="num">Value</th><th class="num">Margin</th><th class="num">%</th><th class="num">Net</th><th class="num">Received</th><th class="num">Pending</th></tr>
+      ${s.deals.map((d,i) => `<tr><td>${i+1}</td><td>${esc(d.ref)}</td><td>${esc(d.customer)}</td><td>${esc(d.vertical)}</td><td class="num">${inr(d.value)}</td><td class="num">${inr(d.margin)}</td><td class="num">${d.pct.toFixed(1)}%</td><td class="num">${inr(d.net)}</td><td class="num">${inr(d.received)}</td><td class="num">${inr(d.pending)}</td></tr>`).join("")}
+      <tr class="totals"><td colspan="4">TOTAL</td><td class="num">${inr(dealTotals.value)}</td><td class="num">${inr(dealTotals.margin)}</td><td class="num">—</td><td class="num">${inr(dealTotals.net)}</td><td class="num">${inr(dealTotals.received)}</td><td class="num">${inr(dealTotals.pending)}</td></tr>
+    </table>
+
+    <div class="stamp">Founder Master Report Snapshot · GYC Finance Office · Confidential</div>
+  `;
+  openHtmlPrint(html, `Founder-Snapshot-${s.periodLabel}`);
+}
+
+/* ============== CSV Snapshot Export ============== */
+
+export function buildFounderCSV(s: FounderSnapshotInput) {
+  const esc = (v: any) => {
+    const str = String(v ?? "");
+    return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+  };
+  const lines: string[] = [];
+
+  lines.push(`Founder Master Report Snapshot`);
+  lines.push(`Period,${esc(s.periodLabel)},${esc(s.periodKind)},${s.periodStart},${s.periodEnd}`);
+  lines.push(`Filters,vertical=${esc(s.filters.vertical)},search=${esc(s.filters.search)}`);
+  lines.push(`Generated,${new Date().toISOString()}`);
+  lines.push("");
+
+  lines.push("== KPIs ==");
+  lines.push("Metric,Amount");
+  lines.push(`Revenue (Paid),${s.kpis.revenue}`);
+  lines.push(`Receivables,${s.kpis.receivables}`);
+  lines.push(`Payroll,${s.kpis.payroll}`);
+  lines.push(`Expenses,${s.kpis.expenses}`);
+  lines.push(`Incentives Net,${s.kpis.incentives}`);
+  lines.push(`Net Profit/Loss,${s.kpis.profit}`);
+  lines.push("");
+
+  lines.push("== Counts ==");
+  lines.push(`Policies,${s.counts.policies}`);
+  lines.push(`Loans Total,${s.counts.loans}`);
+  lines.push(`Loans Disbursed,${s.counts.loansDisbursed}`);
+  lines.push(`Deals,${s.counts.deals}`);
+  lines.push(`Invoices Total,${s.counts.invoices}`);
+  lines.push(`Invoices Paid,${s.counts.invoicesPaid}`);
+  lines.push("");
+
+  lines.push("== Reconciliation ==");
+  lines.push("Module,Summary Net,Table Net,Diff,Status");
+  s.reconciliation.forEach(r => lines.push(`${esc(r.module)},${r.summaryNet},${r.tableNet},${r.diff},${esc(r.status)}`));
+  lines.push("");
+
+  lines.push("== Audit Trail ==");
+  lines.push("Module,Query,Rows");
+  s.audit.forEach(a => lines.push(`${esc(a.module)},${esc(a.query)},${a.rows}`));
+  lines.push("");
+
+  lines.push("== Policies ==");
+  lines.push("Reference,Customer,Type,Base,Pct,Gross,TDS,Net");
+  s.policies.forEach(p => lines.push([p.ref, p.customer, p.type, p.base, p.pct, p.gross, p.tds, p.net].map(esc).join(",")));
+  lines.push("");
+
+  lines.push("== Loans ==");
+  lines.push("Reference,Customer,Bank,Stage,Base,Pct,Gross,TDS,Net");
+  s.loans.forEach(l => lines.push([l.ref, l.customer, l.bank, l.stage, l.base, l.pct, l.gross, l.tds, l.net].map(esc).join(",")));
+  lines.push("");
+
+  lines.push("== Deals ==");
+  lines.push("Reference,Customer,Vertical,Value,Margin,Pct,Net,Received,Pending");
+  s.deals.forEach(d => lines.push([d.ref, d.customer, d.vertical, d.value, d.margin, d.pct, d.net, d.received, d.pending].map(esc).join(",")));
+
+  const csv = lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Founder-Snapshot-${s.periodLabel.replace(/\s+/g, "_")}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
