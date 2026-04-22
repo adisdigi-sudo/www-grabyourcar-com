@@ -13,11 +13,15 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
-  FileSpreadsheet, FileDown, Plus, Trash2, ArrowRight, TrendingUp, TrendingDown, AlertCircle,
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  FileSpreadsheet, FileDown, Plus, Trash2, ArrowRight, TrendingUp, TrendingDown, AlertCircle, ShieldAlert,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { fmt, VERTICALS } from "../../corporate-budget/types";
 import { cn } from "@/lib/utils";
+import { buildExportFilename } from "../shared/exportNaming";
 
 interface PLLine {
   id: string;
@@ -223,7 +227,12 @@ export const MonthlyPLDesigner = ({ open, onClose }: Props) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `PnL-${monthYear}.csv`;
+    a.download = buildExportFilename({
+      module: "monthly-pnl",
+      scope: "summary",
+      period: monthYear,
+      ext: "csv",
+    });
     a.click();
     URL.revokeObjectURL(url);
     toast.success("P&L downloaded");
@@ -267,73 +276,117 @@ ${validExpenseLines.map((l) => `<tr><td>${l.category}</td><td>${l.vertical}</td>
   };
 
   const renderLines = (lines: PLLine[], errors: LineErrors[], type: "revenue" | "expense") => (
-    <div className="rounded-lg border overflow-hidden">
-      <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-100 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-        <div className="col-span-4">Category <span className="text-red-500">*</span></div>
-        <div className="col-span-3">Vertical</div>
-        <div className="col-span-2 text-right">Amount (₹) <span className="text-red-500">*</span></div>
-        <div className="col-span-2">Notes</div>
-        <div className="col-span-1"></div>
-      </div>
-      <div className="divide-y max-h-72 overflow-y-auto">
-        {lines.map((l, idx) => {
-          const err = errors[idx] || {};
-          const showLineErr = showErrors && (err.category || err.amount);
-          return (
-            <div key={l.id} className={cn(
-              "grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white",
-              showLineErr && "bg-red-50/40"
-            )}>
-              <div className="col-span-4">
-                <Input className={cn("h-8 text-xs", showLineErr && err.category && "border-red-400 focus-visible:ring-red-300")}
-                  value={l.category}
-                  onChange={(e) => updateLine(type, l.id, { category: e.target.value })}
-                  placeholder="Category" />
-                {showLineErr && err.category && (
-                  <p className="text-[10px] text-red-600 mt-0.5 flex items-center gap-1">
-                    <AlertCircle className="h-2.5 w-2.5" /> {err.category}
-                  </p>
-                )}
+    <TooltipProvider delayDuration={150}>
+      <div className="rounded-lg border overflow-hidden">
+        <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-100 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+          <div className="col-span-4">Category <span className="text-red-500">*</span></div>
+          <div className="col-span-2">Vertical</div>
+          <div className="col-span-2 text-right">Amount (₹) <span className="text-red-500">*</span></div>
+          <div className="col-span-2">Notes</div>
+          <div className="col-span-1 text-center">Status</div>
+          <div className="col-span-1"></div>
+        </div>
+        <div className="divide-y max-h-72 overflow-y-auto">
+          {lines.map((l, idx) => {
+            const err = errors[idx] || {};
+            const blocking = !!(err.category || err.amount);
+            const showLineErr = showErrors && blocking;
+            const messages = [err.category, err.amount].filter(Boolean) as string[];
+            return (
+              <div key={l.id} className={cn(
+                "grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white",
+                showLineErr && "bg-red-50/40"
+              )}>
+                <div className="col-span-4">
+                  <Tooltip open={blocking && err.category ? undefined : false}>
+                    <TooltipTrigger asChild>
+                      <Input className={cn("h-8 text-xs", showLineErr && err.category && "border-red-400 focus-visible:ring-red-300")}
+                        value={l.category}
+                        onChange={(e) => updateLine(type, l.id, { category: e.target.value })}
+                        placeholder="Category" />
+                    </TooltipTrigger>
+                    {err.category && (
+                      <TooltipContent side="top" className="bg-red-600 text-white border-red-700">
+                        <p className="text-[11px] flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {err.category}</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                  {showLineErr && err.category && (
+                    <p className="text-[10px] text-red-600 mt-0.5 flex items-center gap-1">
+                      <AlertCircle className="h-2.5 w-2.5" /> {err.category}
+                    </p>
+                  )}
+                </div>
+                <Select value={l.vertical} onValueChange={(v) => updateLine(type, l.id, { vertical: v })}>
+                  <SelectTrigger className="col-span-2 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>{VERTICALS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
+                </Select>
+                <div className="col-span-2">
+                  <Tooltip open={blocking && err.amount ? undefined : false}>
+                    <TooltipTrigger asChild>
+                      <Input className={cn("h-8 text-xs text-right tabular-nums", showLineErr && err.amount && "border-red-400 focus-visible:ring-red-300")}
+                        type="number" min={0} value={l.amount || ""}
+                        onChange={(e) => updateLine(type, l.id, { amount: Number(e.target.value) || 0 })}
+                        placeholder="0" />
+                    </TooltipTrigger>
+                    {err.amount && (
+                      <TooltipContent side="top" className="bg-red-600 text-white border-red-700">
+                        <p className="text-[11px] flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {err.amount}</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                  {showLineErr && err.amount && (
+                    <p className="text-[10px] text-red-600 mt-0.5 text-right flex items-center justify-end gap-1">
+                      <AlertCircle className="h-2.5 w-2.5" /> {err.amount}
+                    </p>
+                  )}
+                </div>
+                <Input className="col-span-2 h-8 text-xs"
+                  value={l.notes || ""}
+                  onChange={(e) => updateLine(type, l.id, { notes: e.target.value })}
+                  placeholder="—" />
+                <div className="col-span-1 flex justify-center">
+                  {blocking ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge className="bg-red-100 text-red-700 border-0 text-[9px] gap-0.5 h-5 px-1.5 cursor-help">
+                          <ShieldAlert className="h-2.5 w-2.5" /> Blocks
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-xs">
+                        <p className="font-semibold text-[11px] mb-0.5">This line blocks export</p>
+                        <ul className="text-[10px] space-y-0.5">
+                          {messages.map((m, i) => <li key={i}>• {m}</li>)}
+                        </ul>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (l.category.trim() && Number(l.amount) > 0) ? (
+                    <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[9px] h-5 px-1.5">OK</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[9px] h-5 px-1.5 text-slate-400">Empty</Badge>
+                  )}
+                </div>
+                <Button size="icon" variant="ghost" className="col-span-1 h-8 w-8 justify-self-end text-slate-400 hover:text-red-600"
+                  onClick={() => removeLine(type, l.id)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
               </div>
-              <Select value={l.vertical} onValueChange={(v) => updateLine(type, l.id, { vertical: v })}>
-                <SelectTrigger className="col-span-3 h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>{VERTICALS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
-              </Select>
-              <div className="col-span-2">
-                <Input className={cn("h-8 text-xs text-right tabular-nums", showLineErr && err.amount && "border-red-400 focus-visible:ring-red-300")}
-                  type="number" min={0} value={l.amount || ""}
-                  onChange={(e) => updateLine(type, l.id, { amount: Number(e.target.value) || 0 })}
-                  placeholder="0" />
-                {showLineErr && err.amount && (
-                  <p className="text-[10px] text-red-600 mt-0.5 text-right flex items-center justify-end gap-1">
-                    <AlertCircle className="h-2.5 w-2.5" /> {err.amount}
-                  </p>
-                )}
-              </div>
-              <Input className="col-span-2 h-8 text-xs"
-                value={l.notes || ""}
-                onChange={(e) => updateLine(type, l.id, { notes: e.target.value })}
-                placeholder="—" />
-              <Button size="icon" variant="ghost" className="col-span-1 h-8 w-8 justify-self-end text-slate-400 hover:text-red-600"
-                onClick={() => removeLine(type, l.id)}>
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+        <div className="px-3 py-2 bg-slate-50 border-t flex items-center justify-between">
+          <Button size="sm" variant="ghost" className="h-7 text-xs gap-1"
+            onClick={() => type === "revenue"
+              ? setRevenueLines((p) => [...p, newLine("revenue")])
+              : setExpenseLines((p) => [...p, newLine("expense")])}>
+            <Plus className="h-3 w-3" /> Add line
+          </Button>
+          <p className="text-xs font-semibold tabular-nums">
+            Subtotal: {fmt(lines.reduce((s, l) => s + Number(l.amount || 0), 0))}
+          </p>
+        </div>
       </div>
-      <div className="px-3 py-2 bg-slate-50 border-t flex items-center justify-between">
-        <Button size="sm" variant="ghost" className="h-7 text-xs gap-1"
-          onClick={() => type === "revenue"
-            ? setRevenueLines((p) => [...p, newLine("revenue")])
-            : setExpenseLines((p) => [...p, newLine("expense")])}>
-          <Plus className="h-3 w-3" /> Add line
-        </Button>
-        <p className="text-xs font-semibold tabular-nums">
-          Subtotal: {fmt(lines.reduce((s, l) => s + Number(l.amount || 0), 0))}
-        </p>
-      </div>
-    </div>
+    </TooltipProvider>
   );
 
   return (

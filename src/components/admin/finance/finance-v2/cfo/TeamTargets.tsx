@@ -17,6 +17,7 @@ import { SectionCard } from "../shared/SectionCard";
 import { fmt, VERTICALS } from "../../corporate-budget/types";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { buildExportFilename } from "../shared/exportNaming";
 
 const PERIOD_OPTIONS = [
   { value: "monthly", label: "Monthly" },
@@ -71,7 +72,12 @@ export const TeamTargets = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `team-targets-${filterPeriod}.csv`;
+    a.download = buildExportFilename({
+      module: "team-targets",
+      scope: "summary",
+      period: filterPeriod,
+      ext: "csv",
+    });
     a.click();
     URL.revokeObjectURL(url);
     toast.success("CSV downloaded");
@@ -83,7 +89,12 @@ export const TeamTargets = () => {
       const dataUrl = await toPng(tableRef.current, { backgroundColor: "#ffffff", pixelRatio: 2, cacheBust: true });
       const a = document.createElement("a");
       a.href = dataUrl;
-      a.download = `team-targets-${filterPeriod}.png`;
+      a.download = buildExportFilename({
+        module: "team-targets",
+        scope: "snapshot",
+        period: filterPeriod,
+        ext: "png",
+      });
       a.click();
       toast.success("PNG exported");
     } catch {

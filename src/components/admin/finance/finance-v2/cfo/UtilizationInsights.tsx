@@ -13,6 +13,8 @@ import { format, startOfMonth, subMonths, addMonths } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toPng } from "html-to-image";
 import { toast } from "sonner";
+import { buildExportFilename } from "../shared/exportNaming";
+import { UtilizationDrillDownDialog, type DrillContext } from "./UtilizationDrillDownDialog";
 
 type Granularity = "month" | "quarter" | "year";
 
@@ -70,9 +72,41 @@ export const UtilizationInsights = () => {
   const [gran, setGran] = useState<Granularity>("month");
   const monthsBack = useMemo(() => GRANULARITY.find((g) => g.id === gran)!.months, [gran]);
   const [hidden, setHidden] = useState<Record<SeriesKey, boolean>>({ Planned: false, Actual: false });
+  const [drill, setDrill] = useState<DrillContext | null>(null);
 
   const verticalChartRef = useRef<HTMLDivElement>(null);
   const trendChartRef = useRef<HTMLDivElement>(null);
+
+  const granularityLabel = useMemo(() => GRANULARITY.find((g) => g.id === gran)!.label, [gran]);
+  const rangeStart = useMemo(
+    () => format(subMonths(startOfMonth(new Date()), monthsBack), "yyyy-MM-dd"),
+    [monthsBack]
+  );
+  const rangeEnd = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
+
+  const openVerticalDrill = (row: any) => {
+    setDrill({
+      mode: "vertical",
+      key: row.vertical,
+      granularityLabel,
+      rangeStart,
+      rangeEnd,
+      planned: row.Planned,
+      actual: row.Actual,
+    });
+  };
+
+  const openMonthDrill = (row: any) => {
+    setDrill({
+      mode: "month",
+      key: row.month,
+      granularityLabel,
+      rangeStart,
+      rangeEnd,
+      planned: row.Planned,
+      actual: row.Actual,
+    });
+  };
 
   const { data: budgetLines = [] } = useQuery({
     queryKey: ["util-budget-lines", monthsBack],
@@ -179,7 +213,12 @@ export const UtilizationInsights = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `utilization-insights-${gran}-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.download = buildExportFilename({
+      module: "utilization-insights",
+      scope: "summary",
+      period: granularityLabel,
+      ext: "csv",
+    });
     a.click();
     URL.revokeObjectURL(url);
     toast.success("CSV downloaded");
@@ -192,7 +231,12 @@ export const UtilizationInsights = () => {
       const dataUrl = await toPng(node, { backgroundColor: "#ffffff", pixelRatio: 2, cacheBust: true });
       const a = document.createElement("a");
       a.href = dataUrl;
-      a.download = `utilization-${which}-${format(new Date(), "yyyy-MM-dd")}.png`;
+      a.download = buildExportFilename({
+        module: "utilization-insights",
+        scope: which === "vertical" ? "by-vertical" : "trend",
+        period: granularityLabel,
+        ext: "png",
+      });
       a.click();
       toast.success("Chart exported as PNG");
     } catch (e: any) {
@@ -261,7 +305,7 @@ export const UtilizationInsights = () => {
           <div className="flex items-center justify-between mb-2">
             <p className="font-serif font-semibold text-sm text-slate-900">By Vertical</p>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-500">Click legend to toggle</span>
+              <span className="text-[10px] text-slate-500">Click bar to drill · legend to toggle</span>
               <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] gap-1"
                 onClick={() => downloadPNG("vertical")}>
                 <ImageIcon className="h-3 w-3" /> PNG
@@ -274,7 +318,11 @@ export const UtilizationInsights = () => {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={verticalData} margin={{ top: 8, right: 8, left: -10, bottom: 30 }}>
+              <BarChart data={verticalData} margin={{ top: 8, right: 8, left: -10, bottom: 30 }}
+                onClick={(e: any) => {
+                  const row = e?.activePayload?.[0]?.payload;
+                  if (row) openVerticalDrill(row);
+                }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="vertical" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" interval={0} height={50} />
                 <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
@@ -288,8 +336,8 @@ export const UtilizationInsights = () => {
                     </span>
                   )}
                 />
-                <Bar dataKey="Planned" fill="#94a3b8" radius={[3, 3, 0, 0]} hide={hidden.Planned} />
-                <Bar dataKey="Actual" fill="#0f172a" radius={[3, 3, 0, 0]} hide={hidden.Actual} />
+                <Bar dataKey="Planned" fill="#94a3b8" radius={[3, 3, 0, 0]} hide={hidden.Planned} cursor="pointer" />
+                <Bar dataKey="Actual" fill="#0f172a" radius={[3, 3, 0, 0]} hide={hidden.Actual} cursor="pointer" />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -309,7 +357,11 @@ export const UtilizationInsights = () => {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={timeData} margin={{ top: 8, right: 8, left: -10, bottom: 8 }}>
+            <LineChart data={timeData} margin={{ top: 8, right: 8, left: -10, bottom: 8 }}
+              onClick={(e: any) => {
+                const row = e?.activePayload?.[0]?.payload;
+                if (row) openMonthDrill(row);
+              }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="month" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
@@ -323,12 +375,15 @@ export const UtilizationInsights = () => {
                   </span>
                 )}
               />
-              <Line type="monotone" dataKey="Planned" stroke="#94a3b8" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} hide={hidden.Planned} />
-              <Line type="monotone" dataKey="Actual" stroke="#0f172a" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} hide={hidden.Actual} />
+              <Line type="monotone" dataKey="Planned" stroke="#94a3b8" strokeWidth={2} dot={{ r: 3, cursor: "pointer" }} activeDot={{ r: 5, cursor: "pointer" }} hide={hidden.Planned} />
+              <Line type="monotone" dataKey="Actual" stroke="#0f172a" strokeWidth={2} dot={{ r: 3, cursor: "pointer" }} activeDot={{ r: 5, cursor: "pointer" }} hide={hidden.Actual} />
             </LineChart>
           </ResponsiveContainer>
+          <p className="text-[10px] text-slate-500 mt-1 text-center">Click any point to drill down for that month</p>
         </div>
       </div>
+
+      <UtilizationDrillDownDialog context={drill} onClose={() => setDrill(null)} />
     </SectionCard>
   );
 };

@@ -14,12 +14,13 @@ import {
 } from "@/components/ui/select";
 import {
   CheckCircle2, XCircle, Clock, Inbox, Loader2, Eye, History, MessageSquare,
-  Search, Filter, User, Send, ShieldCheck, ShieldX, Hourglass,
+  Search, Filter, User, Send, ShieldCheck, ShieldX, Hourglass, FileDown, Printer, AlertCircle,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { SectionCard } from "../shared/SectionCard";
 import { fmt, VERTICALS, STATUS_META } from "../../corporate-budget/types";
 import { cn } from "@/lib/utils";
+import { buildExportFilename } from "../shared/exportNaming";
 
 type Decision = "approve" | "reject";
 type StatusFilter = "all" | "pending_approval" | "approved" | "rejected";
@@ -113,7 +114,13 @@ export const FounderApprovalQueue = () => {
 
   const decideMutation = useMutation({
     mutationFn: async ({ id, decision, note }: { id: string; decision: Decision; note: string }) => {
-      if (decision === "reject" && !note.trim()) throw new Error("Reason for rejection is required");
+      const trimmed = note.trim();
+      if (decision === "reject" && !trimmed) {
+        throw new Error("Rejection reason is required — please add a comment so the team can act on it.");
+      }
+      if (decision === "reject" && trimmed.length < 5) {
+        throw new Error("Rejection reason is too short — add a clear, actionable note (≥ 5 characters).");
+      }
       const { data: u } = await supabase.auth.getUser();
       const userName = u?.user?.user_metadata?.full_name || u?.user?.email || "Founder";
       const newStatus = decision === "approve" ? "approved" : "rejected";
@@ -124,7 +131,7 @@ export const FounderApprovalQueue = () => {
         approved_by_name: userName,
         approved_at: new Date().toISOString(),
       };
-      if (decision === "reject") updates.rejection_reason = note.trim();
+      if (decision === "reject") updates.rejection_reason = trimmed;
 
       const { error: e1 } = await (supabase.from("corporate_budgets") as any).update(updates).eq("id", id);
       if (e1) throw e1;
@@ -136,7 +143,7 @@ export const FounderApprovalQueue = () => {
         actor_name: userName,
         previous_status: "pending_approval",
         new_status: newStatus,
-        comment: note.trim() || null,
+        comment: trimmed || null,
       });
       if (e2) throw e2;
     },
@@ -183,6 +190,85 @@ export const FounderApprovalQueue = () => {
     if (status === "rejected") return "border-red-200 bg-red-50/30";
     return "border-amber-200 bg-amber-50/30";
   };
+
+  // ---- Audit timeline exports ----
+  const exportTimelineCSV = () => {
+    if (!open) return;
+    const rows: string[] = [];
+    rows.push(`"Approval Audit Trail","${(open.title || "").replace(/"/g, '""')}"`);
+    rows.push(`"Period","${open.period_start} → ${open.period_end}"`);
+    rows.push(`"Status","${open.status}"`);
+    rows.push(`"Total Planned","${open.total_planned}"`);
+    rows.push("");
+    rows.push('"#","Timestamp","Action","Actor","Previous Status","New Status","Comment"');
+    timeline.forEach((ev: any, i: number) => {
+      rows.push([
+        i + 1,
+        `"${format(new Date(ev.created_at), "yyyy-MM-dd HH:mm:ss")}"`,
+        `"${ev.action}"`,
+        `"${(ev.actor_name || "—").replace(/"/g, '""')}"`,
+        `"${ev.previous_status || ""}"`,
+        `"${ev.new_status || ""}"`,
+        `"${(ev.comment || "").replace(/"/g, '""')}"`,
+      ].join(","));
+    });
+    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = buildExportFilename({
+      module: "founder-approval",
+      scope: `audit-${(open.title || "plan").slice(0, 24)}`,
+      ext: "csv",
+    });
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Audit trail exported");
+  };
+
+  const exportTimelinePDF = () => {
+    if (!open) return;
+    const rowsHTML = timeline.map((ev: any, i: number) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${format(new Date(ev.created_at), "dd MMM yyyy HH:mm:ss")}</td>
+        <td><strong style="text-transform:capitalize">${ev.action}</strong></td>
+        <td>${ev.actor_name || "—"}</td>
+        <td>${ev.previous_status || ""} → ${ev.new_status || ""}</td>
+        <td>${(ev.comment || "—").replace(/</g, "&lt;")}</td>
+      </tr>`).join("");
+    const html = `
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Approval Audit · ${open.title || ""}</title>
+<style>
+body{font-family:Georgia,serif;max-width:820px;margin:32px auto;padding:24px;color:#0f172a}
+h1{font-size:20px;margin:0 0 4px;border-bottom:2px solid #0f172a;padding-bottom:8px}
+.muted{color:#64748b;font-size:11px}
+.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0;border:1px solid #e2e8f0;border-radius:6px;padding:10px;background:#f8fafc}
+.meta div{font-size:11px}.meta b{display:block;font-size:14px;color:#0f172a;margin-top:2px;font-family:Arial}
+table{width:100%;border-collapse:collapse;font-family:Arial;font-size:11px;margin-top:8px}
+th,td{padding:7px 9px;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:top}
+th{background:#0f172a;color:white;text-transform:uppercase;font-size:10px;letter-spacing:1px}
+</style></head><body>
+<h1>Approval Audit Trail</h1>
+<p class="muted">Generated ${format(new Date(), "dd MMM yyyy, HH:mm")} · Plan: <strong>${open.title || ""}</strong></p>
+<div class="meta">
+  <div>Period<b>${open.period_start} → ${open.period_end}</b></div>
+  <div>Status<b style="text-transform:capitalize">${open.status}</b></div>
+  <div>Total Planned<b>₹${Number(open.total_planned || 0).toLocaleString("en-IN")}</b></div>
+  <div>Submitted by<b>${open.submitted_by_name || "—"}</b></div>
+</div>
+<table><thead><tr><th>#</th><th>Timestamp</th><th>Action</th><th>Actor</th><th>Transition</th><th>Comment</th></tr></thead>
+<tbody>${rowsHTML || '<tr><td colspan="6" style="text-align:center;color:#64748b">No events</td></tr>'}</tbody></table>
+</body></html>`;
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      setTimeout(() => w.print(), 400);
+    }
+  };
+
+  const rejectionInvalid = pendingDecision === "reject" && comment.trim().length < 5;
 
   return (
     <SectionCard
@@ -386,13 +472,23 @@ export const FounderApprovalQueue = () => {
 
               {/* ---- AUDIT TIMELINE ---- */}
               <div className="rounded-lg border bg-white p-4">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
                     <History className="h-3.5 w-3.5" /> Audit Trail
+                    <Badge variant="outline" className="text-[10px] ml-1">
+                      {timeline.length} {timeline.length === 1 ? "event" : "events"}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="text-[10px]">
-                    {timeline.length} {timeline.length === 1 ? "event" : "events"}
-                  </Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1"
+                      onClick={exportTimelineCSV} disabled={timeline.length === 0}>
+                      <FileDown className="h-3 w-3" /> CSV
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1"
+                      onClick={exportTimelinePDF} disabled={timeline.length === 0}>
+                      <Printer className="h-3 w-3" /> PDF
+                    </Button>
+                  </div>
                 </div>
                 {timeline.length === 0 ? (
                   <p className="text-xs text-slate-500 text-center py-4">No audit events recorded yet.</p>
@@ -450,20 +546,36 @@ export const FounderApprovalQueue = () => {
                   pendingDecision === "approve" ? "border-emerald-300 bg-emerald-50/40" :
                   pendingDecision === "reject" ? "border-red-300 bg-red-50/40" :
                   "border-slate-200 bg-slate-50/30")}>
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700 mb-2">
-                    <MessageSquare className="h-3 w-3" />
-                    {pendingDecision === "reject" ? "Rejection reason (required)" :
-                     pendingDecision === "approve" ? "Approval note (optional)" :
-                     "Add comment (optional)"}
+                  <div className="flex items-center justify-between gap-1.5 text-xs font-medium text-slate-700 mb-2">
+                    <span className="flex items-center gap-1.5">
+                      <MessageSquare className="h-3 w-3" />
+                      {pendingDecision === "reject" ? (
+                        <>Rejection reason <span className="text-red-600">(required, min 5 chars)</span></>
+                      ) : pendingDecision === "approve" ? "Approval note (optional)"
+                       : "Add comment (optional)"}
+                    </span>
+                    {pendingDecision === "reject" && (
+                      <span className={cn("text-[10px] tabular-nums",
+                        rejectionInvalid ? "text-red-600" : "text-emerald-700")}>
+                        {comment.trim().length}/5+
+                      </span>
+                    )}
                   </div>
                   <Textarea
                     rows={3}
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
+                    className={cn(pendingDecision === "reject" && rejectionInvalid && "border-red-400 focus-visible:ring-red-300")}
                     placeholder={pendingDecision === "reject"
-                      ? "Explain why this plan needs revision..."
+                      ? "Explain why this plan needs revision (required for audit trail)..."
                       : "Sign-off note for the team..."}
                   />
+                  {pendingDecision === "reject" && rejectionInvalid && (
+                    <p className="text-[11px] text-red-600 mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      A clear rejection reason is required so the team can act on the feedback.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -477,8 +589,15 @@ export const FounderApprovalQueue = () => {
             {open?.status === "pending_approval" && (
               <>
                 <Button variant="outline" className="gap-1 border-red-300 text-red-700 hover:bg-red-50"
-                  onClick={() => openId && decideMutation.mutate({ id: openId, decision: "reject", note: comment })}
-                  disabled={decideMutation.isPending || (pendingDecision === "reject" && !comment.trim())}>
+                  onClick={() => {
+                    setPendingDecision("reject");
+                    if (rejectionInvalid) {
+                      toast.error("Add a rejection reason (min 5 characters) before rejecting.");
+                      return;
+                    }
+                    openId && decideMutation.mutate({ id: openId, decision: "reject", note: comment });
+                  }}
+                  disabled={decideMutation.isPending || (pendingDecision === "reject" && rejectionInvalid)}>
                   {decideMutation.isPending && pendingDecision === "reject" && <Loader2 className="h-3 w-3 animate-spin" />}
                   <XCircle className="h-3 w-3" /> Reject
                 </Button>
