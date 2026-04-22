@@ -10,6 +10,12 @@ const ApprovalsQueueWidget = lazy(() =>
 const LiveDealsAttribution = lazy(() =>
   import("./LiveDealsAttribution").then((m) => ({ default: m.LiveDealsAttribution })),
 );
+const FounderAICoach = lazy(() =>
+  import("./FounderAICoach").then((m) => ({ default: m.FounderAICoach })),
+);
+const FounderBriefingScheduler = lazy(() =>
+  import("./FounderBriefingScheduler").then((m) => ({ default: m.FounderBriefingScheduler })),
+);
 
 const SectionFallback = () => (
   <div className="rounded-2xl border border-border bg-card/60 px-4 py-6 text-sm text-muted-foreground">
@@ -35,6 +41,15 @@ export const FounderCockpitPage = () => {
       <Suspense fallback={<SectionFallback />}>
         <FounderCommandCenter />
       </Suspense>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <Suspense fallback={<SectionFallback />}>
+          <FounderAICoach />
+        </Suspense>
+        <Suspense fallback={<SectionFallback />}>
+          <FounderBriefingScheduler />
+        </Suspense>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Suspense fallback={<SectionFallback />}>
