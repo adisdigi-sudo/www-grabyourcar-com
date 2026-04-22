@@ -228,43 +228,200 @@ export const FounderApprovalQueue = () => {
 
   const exportTimelinePDF = () => {
     if (!open) return;
-    const rowsHTML = timeline.map((ev: any, i: number) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${format(new Date(ev.created_at), "dd MMM yyyy HH:mm:ss")}</td>
-        <td><strong style="text-transform:capitalize">${ev.action}</strong></td>
-        <td>${ev.actor_name || "—"}</td>
-        <td>${ev.previous_status || ""} → ${ev.new_status || ""}</td>
-        <td>${(ev.comment || "—").replace(/</g, "&lt;")}</td>
+    const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const inr = (n: any) => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+
+    // ---- Allocation breakup ----
+    const totalPlanned = lines.reduce((s: number, l: any) => s + Number(l.planned_amount || 0), 0);
+    const linesByVertical: Record<string, { count: number; total: number }> = {};
+    const linesByCategory: Record<string, { count: number; total: number }> = {};
+    for (const l of lines) {
+      const v = l.vertical || "All";
+      const c = l.category_name || "Uncategorised";
+      linesByVertical[v] = linesByVertical[v] || { count: 0, total: 0 };
+      linesByVertical[v].count++;
+      linesByVertical[v].total += Number(l.planned_amount || 0);
+      linesByCategory[c] = linesByCategory[c] || { count: 0, total: 0 };
+      linesByCategory[c].count++;
+      linesByCategory[c].total += Number(l.planned_amount || 0);
+    }
+
+    const allocationRows = lines.length === 0
+      ? `<tr><td colspan="6" style="text-align:center;color:#64748b;padding:14px">No allocation lines recorded.</td></tr>`
+      : lines.map((l: any, i: number) => {
+          const pct = totalPlanned > 0 ? (Number(l.planned_amount || 0) / totalPlanned) * 100 : 0;
+          return `<tr>
+            <td>${i + 1}</td>
+            <td><strong>${esc(l.category_name || "—")}</strong></td>
+            <td>${esc(l.vertical || "All")}</td>
+            <td>${esc(l.department || "All")}</td>
+            <td style="text-align:right" class="num">${inr(l.planned_amount)}<div class="pct">${pct.toFixed(1)}%</div></td>
+            <td class="notes">${esc(l.notes || "—")}</td>
+          </tr>`;
+        }).join("");
+
+    const verticalSummaryRows = Object.entries(linesByVertical)
+      .sort((a, b) => b[1].total - a[1].total)
+      .map(([v, info]) => `<tr>
+        <td>${esc(v)}</td>
+        <td style="text-align:center">${info.count}</td>
+        <td style="text-align:right" class="num">${inr(info.total)}</td>
+        <td style="text-align:right" class="num">${totalPlanned > 0 ? ((info.total / totalPlanned) * 100).toFixed(1) : "0"}%</td>
       </tr>`).join("");
+
+    const categorySummaryRows = Object.entries(linesByCategory)
+      .sort((a, b) => b[1].total - a[1].total)
+      .map(([c, info]) => `<tr>
+        <td>${esc(c)}</td>
+        <td style="text-align:center">${info.count}</td>
+        <td style="text-align:right" class="num">${inr(info.total)}</td>
+        <td style="text-align:right" class="num">${totalPlanned > 0 ? ((info.total / totalPlanned) * 100).toFixed(1) : "0"}%</td>
+      </tr>`).join("");
+
+    // ---- Audit timeline rows ----
+    const actionLabel = (a: string) =>
+      a === "submit" ? "Submitted" : a === "approve" ? "Approved" : a === "reject" ? "Rejected" : a;
+    const actionColor = (a: string) =>
+      a === "approve" ? "#059669" : a === "reject" ? "#dc2626" : a === "submit" ? "#2563eb" : "#475569";
+
+    const timelineRows = timeline.length === 0
+      ? `<tr><td colspan="6" style="text-align:center;color:#64748b;padding:14px">No audit events recorded.</td></tr>`
+      : timeline.map((ev: any, i: number) => `<tr>
+          <td>${i + 1}</td>
+          <td class="num">${format(new Date(ev.created_at), "dd MMM yyyy")}<div class="muted-sm">${format(new Date(ev.created_at), "HH:mm:ss")}</div></td>
+          <td><strong style="color:${actionColor(ev.action)}">${actionLabel(ev.action)}</strong></td>
+          <td>${esc(ev.actor_name || "—")}</td>
+          <td><span class="pill">${esc((ev.previous_status || "").replace(/_/g, " "))}</span> → <span class="pill pill-strong">${esc((ev.new_status || "").replace(/_/g, " "))}</span></td>
+          <td class="notes">${ev.comment ? `<em>"${esc(ev.comment)}"</em>` : "—"}</td>
+        </tr>`).join("");
+
+    // ---- Status / decision strip ----
+    const submittedBlock = open.submitted_at
+      ? `${format(new Date(open.submitted_at), "dd MMM yyyy, HH:mm")} by ${esc(open.submitted_by_name || "—")}`
+      : "—";
+    const approvedBlock = open.approved_at
+      ? `${format(new Date(open.approved_at), "dd MMM yyyy, HH:mm")} by ${esc(open.approved_by_name || "—")}`
+      : "—";
+
     const html = `
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Approval Audit · ${open.title || ""}</title>
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Approval Audit · ${esc(open.title || "")}</title>
 <style>
-body{font-family:Georgia,serif;max-width:820px;margin:32px auto;padding:24px;color:#0f172a}
-h1{font-size:20px;margin:0 0 4px;border-bottom:2px solid #0f172a;padding-bottom:8px}
-.muted{color:#64748b;font-size:11px}
-.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0;border:1px solid #e2e8f0;border-radius:6px;padding:10px;background:#f8fafc}
-.meta div{font-size:11px}.meta b{display:block;font-size:14px;color:#0f172a;margin-top:2px;font-family:Arial}
-table{width:100%;border-collapse:collapse;font-family:Arial;font-size:11px;margin-top:8px}
-th,td{padding:7px 9px;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:top}
-th{background:#0f172a;color:white;text-transform:uppercase;font-size:10px;letter-spacing:1px}
-</style></head><body>
-<h1>Approval Audit Trail</h1>
-<p class="muted">Generated ${format(new Date(), "dd MMM yyyy, HH:mm")} · Plan: <strong>${open.title || ""}</strong></p>
-<div class="meta">
-  <div>Period<b>${open.period_start} → ${open.period_end}</b></div>
-  <div>Status<b style="text-transform:capitalize">${open.status}</b></div>
-  <div>Total Planned<b>₹${Number(open.total_planned || 0).toLocaleString("en-IN")}</b></div>
-  <div>Submitted by<b>${open.submitted_by_name || "—"}</b></div>
+@page { size: A4; margin: 18mm 14mm; }
+* { box-sizing: border-box; }
+body { font-family: Georgia, 'Times New Roman', serif; color:#0f172a; margin:0; padding:0; font-size:12px; line-height:1.45; }
+.wrap { max-width: 900px; margin: 0 auto; padding: 8px 4px 24px; }
+header { border-bottom: 3px double #0f172a; padding-bottom:10px; margin-bottom:14px; }
+header .brand { font-size:10px; letter-spacing:2px; color:#64748b; text-transform:uppercase; }
+header h1 { font-size:22px; margin:4px 0 2px; letter-spacing:.3px; }
+header .sub { font-size:11px; color:#475569; }
+.meta-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin:14px 0; }
+.meta-card { border:1px solid #e2e8f0; border-radius:6px; padding:9px 10px; background:#f8fafc; }
+.meta-card .label { font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:#64748b; font-family: Arial, sans-serif; }
+.meta-card .val { font-size:14px; font-weight:600; margin-top:3px; font-family: Arial, sans-serif; word-break:break-word; }
+.meta-card .val.cap { text-transform:capitalize; }
+.section { margin-top:18px; page-break-inside:auto; }
+.section-title { font-size:13px; font-weight:700; border-left:4px solid #0f172a; padding:2px 8px; margin-bottom:8px; background:#f1f5f9; }
+.section-sub { font-size:10px; color:#64748b; margin: -4px 0 8px 12px; }
+table { width:100%; border-collapse:collapse; font-family: Arial, sans-serif; font-size:10.5px; }
+th, td { padding: 6px 8px; border-bottom:1px solid #e2e8f0; text-align:left; vertical-align:top; }
+th { background:#0f172a; color:#fff; font-size:9.5px; letter-spacing:1px; text-transform:uppercase; font-weight:600; }
+tr:nth-child(even) td { background:#fafbfc; }
+tfoot td { background:#0f172a !important; color:#fff; font-weight:700; }
+.num { font-variant-numeric: tabular-nums; }
+.notes { color:#475569; font-style: italic; max-width:240px; }
+.muted-sm { font-size:9px; color:#94a3b8; font-weight:normal; }
+.pct { font-size:9px; color:#94a3b8; font-weight:normal; }
+.pill { display:inline-block; padding:1px 7px; border-radius:10px; background:#e2e8f0; color:#334155; font-size:9.5px; text-transform:capitalize; font-family: Arial; }
+.pill-strong { background:#0f172a; color:#fff; }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.kv { font-size:11px; }
+.kv .k { color:#64748b; font-family: Arial; font-size:9.5px; text-transform:uppercase; letter-spacing:1px; }
+.kv .v { font-weight:600; margin-top:2px; }
+.callout { border:1px solid #e2e8f0; border-left:4px solid #64748b; padding:10px 12px; border-radius:4px; background:#f8fafc; margin-top:8px; font-size:11px; }
+.callout.approved { border-left-color:#059669; background:#ecfdf5; }
+.callout.rejected { border-left-color:#dc2626; background:#fef2f2; }
+.callout .head { font-family: Arial; font-size:9.5px; text-transform:uppercase; letter-spacing:1.2px; color:#475569; margin-bottom:3px; }
+footer { margin-top:24px; padding-top:10px; border-top:1px solid #e2e8f0; font-size:9.5px; color:#64748b; display:flex; justify-content:space-between; }
+.sig { margin-top:36px; display:grid; grid-template-columns:1fr 1fr; gap:40px; font-size:11px; }
+.sig .line { border-top:1px solid #0f172a; padding-top:4px; text-align:center; color:#475569; }
+@media print { .section { page-break-inside: avoid; } table { page-break-inside: auto; } tr { page-break-inside: avoid; } thead { display: table-header-group; } }
+</style></head><body><div class="wrap">
+
+<header>
+  <div class="brand">Grab Your Car · Finance Office · Founder Approval Audit</div>
+  <h1>Budget Plan Audit Report</h1>
+  <div class="sub"><strong>${esc(open.title || "Untitled Plan")}</strong> · Generated ${format(new Date(), "dd MMM yyyy, HH:mm")}</div>
+</header>
+
+<div class="meta-grid">
+  <div class="meta-card"><div class="label">Period</div><div class="val">${esc(open.period_start)} → ${esc(open.period_end)}</div></div>
+  <div class="meta-card"><div class="label">Period Type</div><div class="val cap">${esc(open.period_type || "—")}</div></div>
+  <div class="meta-card"><div class="label">Status</div><div class="val cap" style="color:${actionColor(open.status === "approved" ? "approve" : open.status === "rejected" ? "reject" : "submit")}">${esc((open.status || "").replace(/_/g, " "))}</div></div>
+  <div class="meta-card"><div class="label">Total Planned</div><div class="val">${inr(open.total_planned)}</div></div>
 </div>
-<table><thead><tr><th>#</th><th>Timestamp</th><th>Action</th><th>Actor</th><th>Transition</th><th>Comment</th></tr></thead>
-<tbody>${rowsHTML || '<tr><td colspan="6" style="text-align:center;color:#64748b">No events</td></tr>'}</tbody></table>
-</body></html>`;
+
+<div class="section">
+  <div class="section-title">1 · Plan Summary</div>
+  <div class="two-col">
+    <div class="kv"><div class="k">Submitted</div><div class="v">${submittedBlock}</div></div>
+    <div class="kv"><div class="k">${open.status === "rejected" ? "Rejected" : "Approved"}</div><div class="v">${approvedBlock}</div></div>
+  </div>
+  ${open.description ? `<div class="callout"><div class="head">Description / Justification</div>${esc(open.description)}</div>` : ""}
+  ${open.status === "approved" ? `<div class="callout approved"><div class="head">Founder Sign-off</div>Plan approved by <strong>${esc(open.approved_by_name || "—")}</strong>${open.approved_at ? " on " + format(new Date(open.approved_at), "dd MMM yyyy, HH:mm") : ""}.</div>` : ""}
+  ${open.status === "rejected" && open.rejection_reason ? `<div class="callout rejected"><div class="head">Rejection Reason</div>${esc(open.rejection_reason)}</div>` : ""}
+</div>
+
+<div class="section">
+  <div class="section-title">2 · Allocation Breakup</div>
+  <div class="section-sub">${lines.length} allocation line${lines.length === 1 ? "" : "s"} · totalling ${inr(totalPlanned)}</div>
+  <table>
+    <thead><tr><th style="width:24px">#</th><th>Category</th><th>Vertical</th><th>Department</th><th style="text-align:right;width:110px">Planned</th><th>Notes</th></tr></thead>
+    <tbody>${allocationRows}</tbody>
+    ${lines.length > 0 ? `<tfoot><tr><td colspan="4" style="text-align:right">Grand Total</td><td style="text-align:right" class="num">${inr(totalPlanned)}</td><td></td></tr></tfoot>` : ""}
+  </table>
+</div>
+
+${verticalSummaryRows ? `<div class="section">
+  <div class="section-title">3 · Spend by Vertical</div>
+  <table>
+    <thead><tr><th>Vertical</th><th style="text-align:center;width:60px">Lines</th><th style="text-align:right;width:120px">Planned</th><th style="text-align:right;width:80px">Share</th></tr></thead>
+    <tbody>${verticalSummaryRows}</tbody>
+  </table>
+</div>` : ""}
+
+${categorySummaryRows ? `<div class="section">
+  <div class="section-title">4 · Spend by Category</div>
+  <table>
+    <thead><tr><th>Category</th><th style="text-align:center;width:60px">Lines</th><th style="text-align:right;width:120px">Planned</th><th style="text-align:right;width:80px">Share</th></tr></thead>
+    <tbody>${categorySummaryRows}</tbody>
+  </table>
+</div>` : ""}
+
+<div class="section">
+  <div class="section-title">5 · Full Audit Trail &amp; Decision History</div>
+  <div class="section-sub">${timeline.length} event${timeline.length === 1 ? "" : "s"} · all timestamps recorded server-side, fully traceable</div>
+  <table>
+    <thead><tr><th style="width:24px">#</th><th style="width:110px">Timestamp</th><th style="width:90px">Action</th><th style="width:130px">Actor</th><th>Transition</th><th>Remarks / Comment</th></tr></thead>
+    <tbody>${timelineRows}</tbody>
+  </table>
+</div>
+
+<div class="sig">
+  <div class="line">Prepared by — Finance Office</div>
+  <div class="line">Approved by — ${esc(open.approved_by_name || "Founder")}</div>
+</div>
+
+<footer>
+  <div>Confidential · Grab Your Car Finance Office</div>
+  <div>Plan ID: ${esc((open.id || "").slice(0, 8))} · Generated ${format(new Date(), "dd MMM yyyy HH:mm:ss")}</div>
+</footer>
+
+</div></body></html>`;
     const w = window.open("", "_blank");
     if (w) {
       w.document.write(html);
       w.document.close();
-      setTimeout(() => w.print(), 400);
+      setTimeout(() => w.print(), 500);
     }
   };
 
