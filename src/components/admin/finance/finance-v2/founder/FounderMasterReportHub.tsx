@@ -1098,11 +1098,24 @@ export const FounderMasterReportHub = () => {
                   <th className="px-3 py-2 text-right">TDS</th>
                   <th className="px-3 py-2 text-right">Net</th>
                   <th className="px-3 py-2 text-right">Received / Pending</th>
-                  <th className="px-3 py-2 text-center">PDF</th>
+                  <th className="px-3 py-2 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {dealComputed.filter((d: any) => filterVert(d.vertical_name) && filterText(`${d.deal_number || ""} ${d.master_customers?.name || ""}`)).map((d: any) => (
+                {(() => {
+                  const visible = dealComputed.filter((d: any) => filterVert(d.vertical_name) && filterText(`${d.deal_number || ""} ${d.master_customers?.name || ""}`));
+                  const totals = visible.reduce((a, d: any) => ({
+                    value: a.value + (d._calc.dealValue || 0),
+                    payout: a.payout + (d._calc.dealerPayout || 0),
+                    margin: a.margin + (d._calc.grossMargin || 0),
+                    tds: a.tds + (d._calc.tds || 0),
+                    net: a.net + (d._calc.net || 0),
+                    received: a.received + (d._calc.received || 0),
+                    pending: a.pending + (d._calc.pending || 0),
+                  }), { value: 0, payout: 0, margin: 0, tds: 0, net: 0, received: 0, pending: 0 });
+                  return (
+                    <>
+                      {visible.map((d: any) => (
                   <tr key={d.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2 font-mono">{d.deal_number || d.id.slice(0, 8)}</td>
                     <td className="px-3 py-2">{d.master_customers?.name || "—"}<div className="text-[10px] text-slate-500">{d.vertical_name}</div></td>
@@ -1116,16 +1129,40 @@ export const FounderMasterReportHub = () => {
                       <span className="text-emerald-700">{inr(d._calc.received)}</span> / <span className="text-amber-700">{inr(d._calc.pending)}</span>
                     </td>
                     <td className="px-3 py-2 text-center">
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => buildRowInvoice({
-                        module: "deal", reference: d.deal_number || d.id.slice(0, 8),
-                        customer: d.master_customers?.name || "—",
-                        meta: [["Vertical", d.vertical_name || "—"], ["Deal Value", inr(d._calc.dealValue)], ["Received", inr(d._calc.received)], ["Pending", inr(d._calc.pending)]],
-                        base: { label: "Gross Margin", amount: d._calc.grossMargin }, pct: d._calc.pct, gross: d._calc.grossMargin, tds: d._calc.tds, net: d._calc.net,
-                      })}><FileDown className="h-3.5 w-3.5" /></Button>
+                      <div className="flex items-center justify-center gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Download PDF" onClick={() => buildRowInvoice({
+                          module: "deal", reference: d.deal_number || d.id.slice(0, 8),
+                          customer: d.master_customers?.name || "—",
+                          meta: [["Vertical", d.vertical_name || "—"], ["Deal Value", inr(d._calc.dealValue)], ["Received", inr(d._calc.received)], ["Pending", inr(d._calc.pending)]],
+                          base: { label: "Gross Margin", amount: d._calc.grossMargin }, pct: d._calc.pct, gross: d._calc.grossMargin, tds: d._calc.tds, net: d._calc.net,
+                        })}><FileDown className="h-3.5 w-3.5" /></Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50" title="Mark Rejected / Cancel"
+                          onClick={() => { setRejectTarget({ kind: "deal", id: d.id, label: `Deal ${d.deal_number || d.id.slice(0,8)}` }); setRejectReason(""); }}>
+                          <Ban className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
-                {deals.length === 0 && <tr><td colSpan={10} className="px-3 py-8 text-center text-slate-500">No deals in {periodLabel}</td></tr>}
+                {deals.length === 0 && <tr><td colSpan={10} className="px-3 py-8 text-center text-slate-500">No won (paid) deals in {periodLabel}</td></tr>}
+                {visible.length > 0 && (
+                  <tr className="bg-slate-100 font-bold border-t-2 border-slate-300">
+                    <td className="px-3 py-2" colSpan={2}>TOTAL — {visible.length} deals</td>
+                    <td className="px-3 py-2 text-right">{inr(totals.value)}</td>
+                    <td className="px-3 py-2 text-right text-red-700">{inr(totals.payout)}</td>
+                    <td className="px-3 py-2 text-right">{inr(totals.margin)}</td>
+                    <td className="px-3 py-2" />
+                    <td className="px-3 py-2 text-right text-red-700">{inr(totals.tds)}</td>
+                    <td className="px-3 py-2 text-right text-emerald-700">{inr(totals.net)}</td>
+                    <td className="px-3 py-2 text-right text-[11px]">
+                      <span className="text-emerald-700">{inr(totals.received)}</span> / <span className="text-amber-700">{inr(totals.pending)}</span>
+                    </td>
+                    <td />
+                  </tr>
+                )}
+                    </>
+                  );
+                })()}
               </tbody>
             </table>
           </div>
