@@ -1356,6 +1356,44 @@ export type Database = {
           },
         ]
       }
+      approval_comments: {
+        Row: {
+          approval_id: string
+          author_id: string | null
+          author_name: string | null
+          comment: string | null
+          created_at: string
+          id: string
+          status_change: string | null
+        }
+        Insert: {
+          approval_id: string
+          author_id?: string | null
+          author_name?: string | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          status_change?: string | null
+        }
+        Update: {
+          approval_id?: string
+          author_id?: string | null
+          author_name?: string | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          status_change?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_comments_approval_id_fkey"
+            columns: ["approval_id"]
+            isOneToOne: false
+            referencedRelation: "approvals_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approvals_queue: {
         Row: {
           amount: number | null
@@ -12153,6 +12191,68 @@ export type Database = {
           },
         ]
       }
+      kpi_alert_events: {
+        Row: {
+          acknowledged: boolean | null
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_id: string | null
+          alert_type: string
+          context: Json | null
+          created_at: string
+          id: string
+          message: string | null
+          metric_value: number | null
+          notify_roles: Json | null
+          severity: string
+          threshold_value: number | null
+          title: string
+          vertical_name: string | null
+        }
+        Insert: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_id?: string | null
+          alert_type: string
+          context?: Json | null
+          created_at?: string
+          id?: string
+          message?: string | null
+          metric_value?: number | null
+          notify_roles?: Json | null
+          severity?: string
+          threshold_value?: number | null
+          title: string
+          vertical_name?: string | null
+        }
+        Update: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_id?: string | null
+          alert_type?: string
+          context?: Json | null
+          created_at?: string
+          id?: string
+          message?: string | null
+          metric_value?: number | null
+          notify_roles?: Json | null
+          severity?: string
+          threshold_value?: number | null
+          title?: string
+          vertical_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_alert_events_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kpi_targets: {
         Row: {
           achieved_deals: number | null
@@ -13658,8 +13758,12 @@ export type Database = {
           created_by: string | null
           id: string
           is_active: boolean | null
+          last_triggered_at: string | null
           name: string
           notification_channels: Json | null
+          notify_roles: Json | null
+          severity: string | null
+          trigger_count: number | null
         }
         Insert: {
           alert_type: string
@@ -13668,8 +13772,12 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_active?: boolean | null
+          last_triggered_at?: string | null
           name: string
           notification_channels?: Json | null
+          notify_roles?: Json | null
+          severity?: string | null
+          trigger_count?: number | null
         }
         Update: {
           alert_type?: string
@@ -13678,8 +13786,12 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_active?: boolean | null
+          last_triggered_at?: string | null
           name?: string
           notification_channels?: Json | null
+          notify_roles?: Json | null
+          severity?: string | null
+          trigger_count?: number | null
         }
         Relationships: []
       }
@@ -17460,6 +17572,8 @@ export type Database = {
           id: string
           month_year: string
           notes: string | null
+          period_key: string
+          period_type: string
           set_by: string | null
           status: string | null
           target_count: number | null
@@ -17478,6 +17592,8 @@ export type Database = {
           id?: string
           month_year: string
           notes?: string | null
+          period_key: string
+          period_type?: string
           set_by?: string | null
           status?: string | null
           target_count?: number | null
@@ -17496,6 +17612,8 @@ export type Database = {
           id?: string
           month_year?: string
           notes?: string | null
+          period_key?: string
+          period_type?: string
           set_by?: string | null
           status?: string | null
           target_count?: number | null
