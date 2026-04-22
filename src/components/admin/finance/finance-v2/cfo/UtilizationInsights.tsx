@@ -305,7 +305,7 @@ export const UtilizationInsights = () => {
           <div className="flex items-center justify-between mb-2">
             <p className="font-serif font-semibold text-sm text-slate-900">By Vertical</p>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-500">Click legend to toggle</span>
+              <span className="text-[10px] text-slate-500">Click bar to drill · legend to toggle</span>
               <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] gap-1"
                 onClick={() => downloadPNG("vertical")}>
                 <ImageIcon className="h-3 w-3" /> PNG
@@ -318,7 +318,11 @@ export const UtilizationInsights = () => {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={verticalData} margin={{ top: 8, right: 8, left: -10, bottom: 30 }}>
+              <BarChart data={verticalData} margin={{ top: 8, right: 8, left: -10, bottom: 30 }}
+                onClick={(e: any) => {
+                  const row = e?.activePayload?.[0]?.payload;
+                  if (row) openVerticalDrill(row);
+                }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="vertical" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" interval={0} height={50} />
                 <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
@@ -332,8 +336,8 @@ export const UtilizationInsights = () => {
                     </span>
                   )}
                 />
-                <Bar dataKey="Planned" fill="#94a3b8" radius={[3, 3, 0, 0]} hide={hidden.Planned} />
-                <Bar dataKey="Actual" fill="#0f172a" radius={[3, 3, 0, 0]} hide={hidden.Actual} />
+                <Bar dataKey="Planned" fill="#94a3b8" radius={[3, 3, 0, 0]} hide={hidden.Planned} cursor="pointer" />
+                <Bar dataKey="Actual" fill="#0f172a" radius={[3, 3, 0, 0]} hide={hidden.Actual} cursor="pointer" />
               </BarChart>
             </ResponsiveContainer>
           )}
