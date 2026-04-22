@@ -709,13 +709,14 @@ export function buildFounderSnapshot(s: FounderSnapshotInput) {
 /* ============== CSV Snapshot Export ============== */
 
 export interface ExportColumnConfig {
-  policies?: string[];   // subset of: ref,customer,type,base,pct,gross,tds,net
-  loans?: string[];      // subset of: ref,customer,bank,stage,base,pct,gross,tds,net
-  deals?: string[];      // subset of: ref,customer,vertical,value,margin,pct,net,received,pending
+  policies?: string[];
+  loans?: string[];
+  deals?: string[];
   includeReconciliation?: boolean;
   includeAudit?: boolean;
   includeKpis?: boolean;
   includeCounts?: boolean;
+  includeCoverPage?: boolean;
 }
 
 const DEFAULT_COLS: Required<Omit<ExportColumnConfig, "includeReconciliation" | "includeAudit" | "includeKpis" | "includeCounts">> = {
