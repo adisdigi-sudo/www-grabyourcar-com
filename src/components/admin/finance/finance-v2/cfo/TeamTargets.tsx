@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Target, Plus, Pencil, Trash2, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { Target, Plus, Pencil, Trash2, TrendingUp, TrendingDown, Loader2, FileDown, Image as ImageIcon } from "lucide-react";
+import { toPng } from "html-to-image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

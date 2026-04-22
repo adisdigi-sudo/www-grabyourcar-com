@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -6,10 +6,13 @@ import {
   CartesianGrid, LineChart, Line,
 } from "recharts";
 import { SectionCard } from "../shared/SectionCard";
-import { TrendingUp, BarChart3 } from "lucide-react";
+import { TrendingUp, BarChart3, Image as ImageIcon, FileDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { fmt, VERTICALS } from "../../corporate-budget/types";
-import { format, startOfMonth, subMonths } from "date-fns";
+import { format, startOfMonth, subMonths, addMonths } from "date-fns";
 import { cn } from "@/lib/utils";
+import { toPng } from "html-to-image";
+import { toast } from "sonner";
 
 type Granularity = "month" | "quarter" | "year";
 
@@ -21,19 +24,55 @@ const GRANULARITY: { id: Granularity; label: string; months: number }[] = [
 
 const VERTICAL_KEYS = VERTICALS.filter((v) => v !== "All");
 
-const COLORS: Record<string, string> = {
-  Insurance: "#0ea5e9",
-  "Car Sales": "#6366f1",
-  "Car Loans": "#10b981",
-  HSRP: "#f59e0b",
-  "Self Drive Rental": "#ec4899",
-  Accessories: "#8b5cf6",
-  General: "#64748b",
+// --- Custom tooltip with utilization & variance ---
+const RichTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  const planned = Number(payload.find((p: any) => p.dataKey === "Planned")?.value || 0);
+  const actual = Number(payload.find((p: any) => p.dataKey === "Actual")?.value || 0);
+  const variance = planned - actual;
+  const util = planned > 0 ? Math.round((actual / planned) * 100) : 0;
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white shadow-xl px-3 py-2 text-xs min-w-[200px]">
+      <p className="font-semibold text-slate-900 mb-1.5 border-b pb-1">{label}</p>
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-slate-400" /> Planned</span>
+          <span className="font-semibold tabular-nums">{fmt(planned)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-slate-900" /> Actual</span>
+          <span className="font-semibold tabular-nums">{fmt(actual)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3 pt-1 mt-1 border-t">
+          <span className="text-slate-500">Variance</span>
+          <span className={cn("font-semibold tabular-nums", variance >= 0 ? "text-emerald-700" : "text-red-700")}>
+            {variance >= 0 ? "+" : "−"}{fmt(Math.abs(variance))}
+          </span>
+        </div>
+        {planned > 0 && (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-slate-500">Utilization</span>
+            <span className={cn("font-semibold tabular-nums",
+              util > 100 ? "text-red-700" : util >= 80 ? "text-amber-700" : "text-emerald-700")}>
+              {util}%
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
+
+const SERIES_KEYS = ["Planned", "Actual"] as const;
+type SeriesKey = typeof SERIES_KEYS[number];
 
 export const UtilizationInsights = () => {
   const [gran, setGran] = useState<Granularity>("month");
   const monthsBack = useMemo(() => GRANULARITY.find((g) => g.id === gran)!.months, [gran]);
+  const [hidden, setHidden] = useState<Record<SeriesKey, boolean>>({ Planned: false, Actual: false });
+
+  const verticalChartRef = useRef<HTMLDivElement>(null);
+  const trendChartRef = useRef<HTMLDivElement>(null);
 
   const { data: budgetLines = [] } = useQuery({
     queryKey: ["util-budget-lines", monthsBack],
@@ -57,7 +96,6 @@ export const UtilizationInsights = () => {
     },
   });
 
-  // Aggregate planned by vertical
   const verticalData = useMemo(() => {
     const map: Record<string, { planned: number; actual: number }> = {};
     for (const v of VERTICAL_KEYS) map[v] = { planned: 0, actual: 0 };
@@ -84,7 +122,6 @@ export const UtilizationInsights = () => {
       .filter((r) => r.Planned > 0 || r.Actual > 0);
   }, [budgetLines, expenses]);
 
-  // Time-series by month (planned distributed evenly across budget months, actual = expenses sum per month)
   const timeData = useMemo(() => {
     const buckets: Record<string, { Planned: number; Actual: number }> = {};
     const now = startOfMonth(new Date());
@@ -92,7 +129,6 @@ export const UtilizationInsights = () => {
       const key = format(subMonths(now, i), "MMM yy");
       buckets[key] = { Planned: 0, Actual: 0 };
     }
-    // Spread planned across the budget's period months
     for (const l of budgetLines) {
       const meta = l.corporate_budgets;
       if (!meta) continue;
@@ -103,7 +139,7 @@ export const UtilizationInsights = () => {
       while (cursor <= end) {
         const k = format(cursor, "MMM yy");
         if (k in buckets) months.push(k);
-        cursor = startOfMonth(subMonths(cursor, -1));
+        cursor = addMonths(cursor, 1);
       }
       const split = months.length > 0 ? Number(l.planned_amount || 0) / months.length : 0;
       for (const m of months) buckets[m].Planned += split;
@@ -123,6 +159,53 @@ export const UtilizationInsights = () => {
   const totalActual = verticalData.reduce((s, r) => s + r.Actual, 0);
   const overallUtil = totalPlanned > 0 ? Math.round((totalActual / totalPlanned) * 100) : 0;
 
+  // ---- exports ----
+  const downloadCSV = () => {
+    const rows: string[] = [];
+    rows.push(`"Utilization Insights","${GRANULARITY.find((g) => g.id === gran)!.label}","Generated ${format(new Date(), "dd MMM yyyy, p")}"`);
+    rows.push("");
+    rows.push('"By Vertical"');
+    rows.push('"Vertical","Planned (INR)","Actual (INR)","Variance","Utilization %"');
+    for (const r of verticalData) {
+      rows.push(`"${r.vertical}",${r.Planned},${r.Actual},${r.Planned - r.Actual},${r.utilization}`);
+    }
+    rows.push(`"TOTAL",${totalPlanned},${totalActual},${totalPlanned - totalActual},${overallUtil}`);
+    rows.push("");
+    rows.push('"Trend Over Time"');
+    rows.push('"Month","Planned (INR)","Actual (INR)"');
+    for (const r of timeData) rows.push(`"${r.month}",${r.Planned},${r.Actual}`);
+
+    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `utilization-insights-${gran}-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV downloaded");
+  };
+
+  const downloadPNG = async (which: "vertical" | "trend") => {
+    const node = which === "vertical" ? verticalChartRef.current : trendChartRef.current;
+    if (!node) return;
+    try {
+      const dataUrl = await toPng(node, { backgroundColor: "#ffffff", pixelRatio: 2, cacheBust: true });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `utilization-${which}-${format(new Date(), "yyyy-MM-dd")}.png`;
+      a.click();
+      toast.success("Chart exported as PNG");
+    } catch (e: any) {
+      toast.error("PNG export failed");
+    }
+  };
+
+  const handleLegendClick = (e: any) => {
+    const k = e.dataKey as SeriesKey;
+    if (!SERIES_KEYS.includes(k)) return;
+    setHidden((h) => ({ ...h, [k]: !h[k] }));
+  };
+
   return (
     <SectionCard
       title="Utilization Insights"
@@ -130,19 +213,24 @@ export const UtilizationInsights = () => {
       icon={BarChart3}
       className="lg:col-span-3"
       action={
-        <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-1">
-          {GRANULARITY.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => setGran(g.id)}
-              className={cn(
-                "px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors",
-                gran === g.id ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-              )}
-            >
-              {g.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-1">
+            {GRANULARITY.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => setGran(g.id)}
+                className={cn(
+                  "px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors",
+                  gran === g.id ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+          <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1" onClick={downloadCSV}>
+            <FileDown className="h-3 w-3" /> CSV
+          </Button>
         </div>
       }
     >
@@ -169,10 +257,16 @@ export const UtilizationInsights = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="rounded-lg border bg-white p-3">
+        <div ref={verticalChartRef} className="rounded-lg border bg-white p-3">
           <div className="flex items-center justify-between mb-2">
             <p className="font-serif font-semibold text-sm text-slate-900">By Vertical</p>
-            <span className="text-[10px] text-slate-500">Planned vs Actual</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-500">Click legend to toggle</span>
+              <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] gap-1"
+                onClick={() => downloadPNG("vertical")}>
+                <ImageIcon className="h-3 w-3" /> PNG
+              </Button>
+            </div>
           </div>
           {verticalData.length === 0 ? (
             <div className="h-64 flex items-center justify-center text-sm text-slate-400">
@@ -184,31 +278,53 @@ export const UtilizationInsights = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="vertical" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" interval={0} height={50} />
                 <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: any) => fmt(Number(v))} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="Planned" fill="#94a3b8" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="Actual" fill="#0f172a" radius={[3, 3, 0, 0]} />
+                <Tooltip content={<RichTooltip />} cursor={{ fill: "rgba(15,23,42,0.04)" }} />
+                <Legend
+                  wrapperStyle={{ fontSize: 11, cursor: "pointer" }}
+                  onClick={handleLegendClick}
+                  formatter={(v) => (
+                    <span style={{ color: hidden[v as SeriesKey] ? "#cbd5e1" : "#0f172a", textDecoration: hidden[v as SeriesKey] ? "line-through" : "none" }}>
+                      {v}
+                    </span>
+                  )}
+                />
+                <Bar dataKey="Planned" fill="#94a3b8" radius={[3, 3, 0, 0]} hide={hidden.Planned} />
+                <Bar dataKey="Actual" fill="#0f172a" radius={[3, 3, 0, 0]} hide={hidden.Actual} />
               </BarChart>
             </ResponsiveContainer>
           )}
         </div>
 
-        <div className="rounded-lg border bg-white p-3">
+        <div ref={trendChartRef} className="rounded-lg border bg-white p-3">
           <div className="flex items-center justify-between mb-2">
             <p className="font-serif font-semibold text-sm text-slate-900">Trend Over Time</p>
-            <span className="text-[10px] text-slate-500 flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" /> Monthly rolling
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" /> Monthly rolling
+              </span>
+              <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] gap-1"
+                onClick={() => downloadPNG("trend")}>
+                <ImageIcon className="h-3 w-3" /> PNG
+              </Button>
+            </div>
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={timeData} margin={{ top: 8, right: 8, left: -10, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="month" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: any) => fmt(Number(v))} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Line type="monotone" dataKey="Planned" stroke="#94a3b8" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="Actual" stroke="#0f172a" strokeWidth={2} dot={{ r: 3 }} />
+              <Tooltip content={<RichTooltip />} cursor={{ stroke: "#cbd5e1", strokeWidth: 1 }} />
+              <Legend
+                wrapperStyle={{ fontSize: 11, cursor: "pointer" }}
+                onClick={handleLegendClick}
+                formatter={(v) => (
+                  <span style={{ color: hidden[v as SeriesKey] ? "#cbd5e1" : "#0f172a", textDecoration: hidden[v as SeriesKey] ? "line-through" : "none" }}>
+                    {v}
+                  </span>
+                )}
+              />
+              <Line type="monotone" dataKey="Planned" stroke="#94a3b8" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} hide={hidden.Planned} />
+              <Line type="monotone" dataKey="Actual" stroke="#0f172a" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} hide={hidden.Actual} />
             </LineChart>
           </ResponsiveContainer>
         </div>
