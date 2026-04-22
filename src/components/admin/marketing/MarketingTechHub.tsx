@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { RequestApprovalDialog } from "./RequestApprovalDialog";
 
 // Lazy-load tab content (keeps initial bundle small)
 const WhatsAppMarketingPortal = lazy(() =>
@@ -160,10 +161,17 @@ export function MarketingTechHub() {
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchKpis} disabled={loading}>
-          <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-          Refresh KPIs
-        </Button>
+        <div className="flex items-center gap-2">
+          <RequestApprovalDialog
+            buttonLabel="Submit for Approval"
+            buttonVariant="outline"
+            area="marketing_tech"
+          />
+          <Button variant="outline" size="sm" onClick={fetchKpis} disabled={loading}>
+            <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+            Refresh KPIs
+          </Button>
+        </div>
       </div>
 
       {/* KPI Strip */}
