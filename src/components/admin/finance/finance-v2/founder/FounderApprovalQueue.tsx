@@ -191,6 +191,85 @@ export const FounderApprovalQueue = () => {
     return "border-amber-200 bg-amber-50/30";
   };
 
+  // ---- Audit timeline exports ----
+  const exportTimelineCSV = () => {
+    if (!open) return;
+    const rows: string[] = [];
+    rows.push(`"Approval Audit Trail","${(open.title || "").replace(/"/g, '""')}"`);
+    rows.push(`"Period","${open.period_start} → ${open.period_end}"`);
+    rows.push(`"Status","${open.status}"`);
+    rows.push(`"Total Planned","${open.total_planned}"`);
+    rows.push("");
+    rows.push('"#","Timestamp","Action","Actor","Previous Status","New Status","Comment"');
+    timeline.forEach((ev: any, i: number) => {
+      rows.push([
+        i + 1,
+        `"${format(new Date(ev.created_at), "yyyy-MM-dd HH:mm:ss")}"`,
+        `"${ev.action}"`,
+        `"${(ev.actor_name || "—").replace(/"/g, '""')}"`,
+        `"${ev.previous_status || ""}"`,
+        `"${ev.new_status || ""}"`,
+        `"${(ev.comment || "").replace(/"/g, '""')}"`,
+      ].join(","));
+    });
+    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = buildExportFilename({
+      module: "founder-approval",
+      scope: `audit-${(open.title || "plan").slice(0, 24)}`,
+      ext: "csv",
+    });
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Audit trail exported");
+  };
+
+  const exportTimelinePDF = () => {
+    if (!open) return;
+    const rowsHTML = timeline.map((ev: any, i: number) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${format(new Date(ev.created_at), "dd MMM yyyy HH:mm:ss")}</td>
+        <td><strong style="text-transform:capitalize">${ev.action}</strong></td>
+        <td>${ev.actor_name || "—"}</td>
+        <td>${ev.previous_status || ""} → ${ev.new_status || ""}</td>
+        <td>${(ev.comment || "—").replace(/</g, "&lt;")}</td>
+      </tr>`).join("");
+    const html = `
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Approval Audit · ${open.title || ""}</title>
+<style>
+body{font-family:Georgia,serif;max-width:820px;margin:32px auto;padding:24px;color:#0f172a}
+h1{font-size:20px;margin:0 0 4px;border-bottom:2px solid #0f172a;padding-bottom:8px}
+.muted{color:#64748b;font-size:11px}
+.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0;border:1px solid #e2e8f0;border-radius:6px;padding:10px;background:#f8fafc}
+.meta div{font-size:11px}.meta b{display:block;font-size:14px;color:#0f172a;margin-top:2px;font-family:Arial}
+table{width:100%;border-collapse:collapse;font-family:Arial;font-size:11px;margin-top:8px}
+th,td{padding:7px 9px;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:top}
+th{background:#0f172a;color:white;text-transform:uppercase;font-size:10px;letter-spacing:1px}
+</style></head><body>
+<h1>Approval Audit Trail</h1>
+<p class="muted">Generated ${format(new Date(), "dd MMM yyyy, HH:mm")} · Plan: <strong>${open.title || ""}</strong></p>
+<div class="meta">
+  <div>Period<b>${open.period_start} → ${open.period_end}</b></div>
+  <div>Status<b style="text-transform:capitalize">${open.status}</b></div>
+  <div>Total Planned<b>₹${Number(open.total_planned || 0).toLocaleString("en-IN")}</b></div>
+  <div>Submitted by<b>${open.submitted_by_name || "—"}</b></div>
+</div>
+<table><thead><tr><th>#</th><th>Timestamp</th><th>Action</th><th>Actor</th><th>Transition</th><th>Comment</th></tr></thead>
+<tbody>${rowsHTML || '<tr><td colspan="6" style="text-align:center;color:#64748b">No events</td></tr>'}</tbody></table>
+</body></html>`;
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      setTimeout(() => w.print(), 400);
+    }
+  };
+
+  const rejectionInvalid = pendingDecision === "reject" && comment.trim().length < 5;
+
   return (
     <SectionCard
       title="Founder Approval Queue"
