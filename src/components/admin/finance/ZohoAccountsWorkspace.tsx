@@ -7,7 +7,7 @@ import {
   Clock, Landmark, Calculator, BarChart3, FolderOpen,
   ChevronDown, ChevronRight, BookOpen, RefreshCw,
   Globe, Lock, FileText, CreditCard, ArrowLeftRight,
-  PiggyBank, Search, Plus, Settings, Truck, IndianRupee
+  PiggyBank, Search, Plus, Settings, Truck, IndianRupee, TrendingUp
 } from "lucide-react";
 
 // Lazy load sub-modules
@@ -28,6 +28,7 @@ const AccountsPurchaseOrders = lazy(() => import("./AccountsPurchaseOrders"));
 const AccountsItemsModule = lazy(() => import("./AccountsItemsModule"));
 const AccountsBudgets = lazy(() => import("./AccountsBudgets"));
 const CorporateBudgetWorkspace = lazy(() => import("./corporate-budget/CorporateBudgetWorkspace"));
+const CFOBoardWorkspace = lazy(() => import("./cfo-board/CFOBoardWorkspace"));
 const VerticalProfitLoss = lazy(() => import("./VerticalProfitLoss"));
 const AccountsFinancialDocuments = lazy(() => import("./AccountsFinancialDocuments"));
 const AccountsGSTReports = lazy(() => import("./AccountsGSTReports"));
@@ -71,6 +72,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
       { id: "corporate-budget", label: "Corporate Budget" },
     ],
   },
+  { id: "cfo-board", label: "CFO Board", icon: TrendingUp },
   { id: "reports", label: "Reports", icon: BarChart3 },
   { id: "profit-loss", label: "Profit & Loss", icon: Calculator },
   { id: "gst-reports", label: "GST Reports", icon: IndianRupee },
@@ -120,6 +122,7 @@ export const ZohoAccountsWorkspace = ({ initialView = "home" }: ZohoAccountsWork
       case "chart-of-accounts": return <AccountsChartOfAccounts />;
       case "budgets": return <AccountsBudgets />;
       case "corporate-budget": return <CorporateBudgetWorkspace />;
+      case "cfo-board": return <CFOBoardWorkspace />;
       case "reports": return <FinancialIntelligenceDashboard />;
       case "profit-loss": return <VerticalProfitLoss />;
       case "gst-reports": return <AccountsGSTReports />;
