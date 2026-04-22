@@ -308,6 +308,47 @@ export const FounderMasterReportHub = () => {
   const filterText = (txt: string) => !search || txt.toLowerCase().includes(search.toLowerCase());
   const filterVert = (v: string | null | undefined) => vertical === "all" || (v || "").toLowerCase() === vertical.toLowerCase();
 
+  /* ---------- SNAPSHOT BUILDER ---------- */
+  const buildSnapshot = () => ({
+    periodLabel, periodKind, periodStart, periodEnd,
+    filters: { vertical, search },
+    kpis: {
+      revenue: revenueTotal, receivables: receivablesTotal,
+      payroll: payrollTotal, expenses: expenseTotal,
+      incentives: incentiveTotal, profit,
+    },
+    counts: {
+      policies: policies.length,
+      loans: loans.length,
+      loansDisbursed: loans.filter((l: any) => l.stage === "disbursed").length,
+      deals: deals.length,
+      invoices: invoices.length,
+      invoicesPaid: invoices.filter((i: any) => i.status === "paid").length,
+    },
+    policies: policyComputed.map((p: any) => ({
+      ref: p.policy_number || p.id.slice(0, 8),
+      customer: p.insurance_clients?.customer_name || "—",
+      type: `${p.policy_type} · ${p.insurer}`,
+      base: p._calc.base, pct: p._calc.pct, gross: p._calc.gross, tds: p._calc.tds, net: p._calc.net,
+    })),
+    loans: loanComputed.map((l: any) => ({
+      ref: l.disbursement_reference || l.id.slice(0, 8),
+      customer: l.customer_name || "—",
+      bank: l.lender_name || "—",
+      stage: l.stage || "—",
+      base: l._calc.base, pct: l._calc.pct, gross: l._calc.gross, tds: l._calc.tds, net: l._calc.net,
+    })),
+    deals: dealComputed.map((d: any) => ({
+      ref: d.deal_number || d.id.slice(0, 8),
+      customer: d.master_customers?.name || "—",
+      vertical: d.vertical_name || "—",
+      value: d._calc.dealValue, margin: d._calc.grossMargin, pct: d._calc.pct,
+      net: d._calc.net, received: d._calc.received, pending: d._calc.pending,
+    })),
+    reconciliation,
+    audit: auditTrail,
+  });
+
   /* ---------- RENDER ---------- */
   return (
     <SectionCard
@@ -317,6 +358,14 @@ export const FounderMasterReportHub = () => {
       className="lg:col-span-3"
       action={
         <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
+            onClick={() => buildFounderCSV(buildSnapshot())}>
+            <FileSpreadsheet className="h-3 w-3" /> Export CSV
+          </Button>
+          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
+            onClick={() => buildFounderSnapshot(buildSnapshot())}>
+            <FileDown className="h-3 w-3" /> Export PDF
+          </Button>
           <Badge variant={liveOn ? "default" : "secondary"} className="gap-1 text-[10px] cursor-pointer" onClick={() => setLiveOn(v => !v)}>
             <Radio className={`h-2.5 w-2.5 ${liveOn ? "animate-pulse" : ""}`} />
             {liveOn ? "Live" : "Paused"}
