@@ -354,7 +354,8 @@ const ADMIN_BOOTSTRAP_TIMEOUT_MS = 12000;
 
 const UNIVERSAL_ADMIN_TABS = new Set([
   DEFAULT_ADMIN_TAB,
-  "founder-cockpit",
+  // "founder-cockpit" intentionally NOT universal — it's now scoped to the dedicated
+  // "founder-cockpit" workspace so it doesn't show inside HR / Marketing / Sales / etc.
   "live-chats",
   "ai-cofounder",
   "my-hr",
