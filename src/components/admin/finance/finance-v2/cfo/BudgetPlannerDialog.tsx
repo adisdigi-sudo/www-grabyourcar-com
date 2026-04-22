@@ -80,6 +80,19 @@ export const BudgetPlannerDialog = ({ open, onClose }: BudgetPlannerDialogProps)
   const [periodStart, setPeriodStart] = useState<string>(format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [rows, setRows] = useState<AllocationRow[]>([newRow()]);
   const [submitForApproval, setSubmitForApproval] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
+
+  const rowErrors = useMemo(() => {
+    return rows.map((r) => ({
+      id: r.id,
+      category: !r.category_name.trim(),
+      amount: !(Number(r.planned_amount) > 0),
+    }));
+  }, [rows]);
+
+  const titleError = !title.trim();
+  const hasLineErrors = rowErrors.some((e) => e.category || e.amount);
+  const hasAnyError = titleError || hasLineErrors;
 
   const period = useMemo(
     () => computePeriod(periodType, new Date(periodStart)),
@@ -119,9 +132,16 @@ export const BudgetPlannerDialog = ({ open, onClose }: BudgetPlannerDialogProps)
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!title.trim()) throw new Error("Title is required");
+      if (titleError) {
+        setShowErrors(true);
+        throw new Error("Title is required");
+      }
+      if (hasLineErrors) {
+        setShowErrors(true);
+        throw new Error("Each allocation line needs a category name and a positive amount");
+      }
       const validRows = rows.filter((r) => r.category_name.trim() && Number(r.planned_amount) > 0);
-      if (validRows.length === 0) throw new Error("Add at least one allocation line with category and amount");
+      if (validRows.length === 0) throw new Error("Add at least one allocation line");
 
       const { data: budget, error: bErr } = await (supabase.from("corporate_budgets") as any)
         .insert({
