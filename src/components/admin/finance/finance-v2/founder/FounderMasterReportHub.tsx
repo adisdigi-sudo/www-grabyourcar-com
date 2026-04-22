@@ -12,8 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Wallet, Users, Shield, Banknote, Car, FileText, Target, FileDown,
-  TrendingUp, TrendingDown, Search, Filter, BarChart3,
-  Radio, RotateCcw, Image as ImageIcon,
+  TrendingUp, TrendingDown, Search, Filter, FileSpreadsheet, BarChart3,
+  Radio, RotateCcw, Image as ImageIcon, Download,
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import { SectionCard } from "../shared/SectionCard";
