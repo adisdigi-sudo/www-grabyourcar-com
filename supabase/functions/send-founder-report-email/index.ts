@@ -16,10 +16,24 @@ serve(async (req) => {
     if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY not configured");
 
     const body = await req.json();
-    const { to, subject, summary, pdfBase64, fileName } = body || {};
+    const {
+      to,             // string | string[]
+      subject,
+      summary,
+      pdfBase64,
+      pdfFileName,
+      csvBase64,
+      csvFileName,
+      // legacy fields kept for backward compat
+      fileName,
+    } = body || {};
 
-    if (!to || !/.+@.+\..+/.test(to)) {
-      return new Response(JSON.stringify({ error: "Invalid recipient email" }), {
+    const recipients: string[] = Array.isArray(to)
+      ? to.filter((e) => typeof e === "string" && /.+@.+\..+/.test(e))
+      : (typeof to === "string" && /.+@.+\..+/.test(to) ? [to] : []);
+
+    if (recipients.length === 0) {
+      return new Response(JSON.stringify({ error: "No valid recipient email(s) provided" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -35,21 +49,17 @@ serve(async (req) => {
       </div>
     `;
 
+    const attachments: Array<{ filename: string; content: string }> = [];
+    if (pdfBase64) attachments.push({ filename: pdfFileName || fileName || "founder-report.pdf", content: pdfBase64 });
+    if (csvBase64) attachments.push({ filename: csvFileName || "founder-report.csv", content: csvBase64 });
+
     const payload: any = {
       from: "GrabYourCar Reports <reports@notify.grabyourcar.com>",
-      to: [to],
+      to: recipients,
       subject: subject || "Your Founder Performance Report",
       html,
     };
-
-    if (pdfBase64) {
-      payload.attachments = [
-        {
-          filename: fileName || "founder-report.pdf",
-          content: pdfBase64,
-        },
-      ];
-    }
+    if (attachments.length) payload.attachments = attachments;
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -69,7 +79,7 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ success: true, id: data.id }), {
+    return new Response(JSON.stringify({ success: true, id: data.id, recipients }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
