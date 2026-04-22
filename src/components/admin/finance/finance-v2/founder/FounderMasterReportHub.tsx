@@ -144,38 +144,29 @@ export const FounderMasterReportHub = () => {
     },
   });
 
-  // LOANS — anything that lives in the period: disbursed in range OR sanctioned in range OR created in range
+  // LOANS — ONLY DISBURSED (won) cases in the selected period
   const { data: loans = [] } = useQuery({
     queryKey: ["founder-loans", pKey],
     queryFn: async () => {
-      const startTs = periodStart + "T00:00:00";
-      const endTs = periodEnd + "T23:59:59";
-      const orFilter = [
-        `and(disbursement_date.gte.${periodStart},disbursement_date.lte.${periodEnd})`,
-        `and(sanction_date.gte.${periodStart},sanction_date.lte.${periodEnd})`,
-        `and(created_at.gte.${startTs},created_at.lte.${endTs})`,
-      ].join(",");
       const { data } = await (supabase.from("loan_applications") as any).select("*")
-        .or(orFilter)
-        .order("created_at", { ascending: false });
+        .eq("stage", "disbursed")
+        .gte("disbursement_date", periodStart).lte("disbursement_date", periodEnd)
+        .order("disbursement_date", { ascending: false });
       return data || [];
     },
   });
 
-  // DEALS — closed_at in range OR created in range (covers both new and recently-closed deals)
+  // DEALS — ONLY WON deals (payment received) closed in the selected period
   const { data: deals = [] } = useQuery({
     queryKey: ["founder-deals", pKey],
     queryFn: async () => {
       const startTs = periodStart + "T00:00:00";
       const endTs = periodEnd + "T23:59:59";
-      const orFilter = [
-        `and(created_at.gte.${startTs},created_at.lte.${endTs})`,
-        `and(closed_at.gte.${startTs},closed_at.lte.${endTs})`,
-      ].join(",");
       const { data } = await (supabase.from("deals") as any)
         .select("*, master_customers(name, phone)")
-        .or(orFilter)
-        .order("created_at", { ascending: false });
+        .eq("payment_status", "received")
+        .or(`and(closed_at.gte.${startTs},closed_at.lte.${endTs}),and(created_at.gte.${startTs},created_at.lte.${endTs})`)
+        .order("closed_at", { ascending: false });
       return data || [];
     },
   });
