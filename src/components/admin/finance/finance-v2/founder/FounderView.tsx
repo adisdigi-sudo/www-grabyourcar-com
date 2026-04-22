@@ -8,6 +8,7 @@ import { SectionCard } from "../shared/SectionCard";
 import { StatTile } from "../shared/StatTile";
 import { fmt } from "../../corporate-budget/types";
 import { FounderApprovalQueue } from "./FounderApprovalQueue";
+import { FounderMasterReportHub } from "./FounderMasterReportHub";
 
 const FounderView = () => {
   const { data: pendingFinal = [] } = useQuery({
@@ -72,6 +73,9 @@ const FounderView = () => {
           trendLabel={pendingFinal.length > 0 ? "Your sign-off" : "All clear"}
         />
       </div>
+
+      {/* Master deep-detail report hub */}
+      <FounderMasterReportHub />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Approval Queue with full review/approve/reject + comments */}
