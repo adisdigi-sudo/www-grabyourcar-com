@@ -48,6 +48,198 @@ export function openHtmlPrint(html: string, title = "Report") {
   w.document.close();
 }
 
+/* =================================================================
+   ============== BRANDED PDF ENGINE (UnifiedPdfRenderer) ===========
+   ================================================================= */
+
+/** Internal: section heading band (brand accent on white). */
+function drawSectionHeading(doc: any, y: number, label: string, accent: [number, number, number], left: number, contentWidth: number): number {
+  doc.setFillColor(accent[0], accent[1], accent[2]);
+  doc.rect(left, y, 3, 7, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11.5);
+  doc.setTextColor(15, 23, 42);
+  doc.text(label.toUpperCase(), left + 6, y + 5);
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.2);
+  doc.line(left, y + 8.5, left + contentWidth, y + 8.5);
+  return y + 12;
+}
+
+/** Internal: KPI strip — 3 cards per row, brand-themed. */
+function drawKpiStrip(doc: any, y: number, items: Array<{ label: string; value: string; accent?: boolean }>, accent: [number, number, number], left: number, contentWidth: number): number {
+  const cardsPerRow = 3;
+  const gap = 3;
+  const cardW = (contentWidth - gap * (cardsPerRow - 1)) / cardsPerRow;
+  const cardH = 18;
+  let rowIdx = 0;
+  for (let i = 0; i < items.length; i++) {
+    const col = i % cardsPerRow;
+    if (col === 0 && i > 0) rowIdx++;
+    const x = left + col * (cardW + gap);
+    const cy = y + rowIdx * (cardH + gap);
+    const it = items[i];
+    if (it.accent) {
+      doc.setFillColor(accent[0], accent[1], accent[2]);
+      doc.roundedRect(x, cy, cardW, cardH, 1.5, 1.5, "F");
+      doc.setTextColor(255, 255, 255);
+    } else {
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(x, cy, cardW, cardH, 1.5, 1.5, "FD");
+      doc.setTextColor(100, 116, 139);
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.8);
+    doc.text(it.label.toUpperCase(), x + 3, cy + 5.5);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    if (!it.accent) doc.setTextColor(15, 23, 42);
+    doc.text(it.value, x + 3, cy + 13);
+  }
+  return y + (rowIdx + 1) * (cardH + gap) + 2;
+}
+
+/** Render & save a branded PDF using UnifiedPdfRenderer. */
+async function renderBrandedPdf(opts: {
+  fileName: string;
+  title: string;
+  subtitle?: string;
+  meta: Record<string, string>;
+  build: (ctx: {
+    doc: any;
+    accent: [number, number, number];
+    left: number;
+    right: number;
+    contentWidth: number;
+    pageWidth: number;
+    pageHeight: number;
+    cursorY: number;
+    setCursorY: (y: number) => void;
+    section: (label: string) => void;
+    addTable: (head: string[], body: any[][], opts?: { numCols?: number[]; foot?: any[][] }) => void;
+    kpiStrip: (items: Array<{ label: string; value: string; accent?: boolean }>) => void;
+    paragraph: (text: string) => void;
+  }) => void;
+}) {
+  const renderer = await createRenderer({
+    vertical: "founder-cockpit",
+    documentType: "report",
+    documentTitle: opts.title,
+    documentSubtitle: opts.subtitle,
+  });
+
+  // Render branded header + watermark
+  renderer.renderHeader();
+
+  const doc: any = renderer.doc;
+  const branding = renderer.branding;
+  const accent = hexToRgb(branding.brand_accent_color);
+  const left = branding.margins.left;
+  const right = branding.margins.right;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const contentWidth = pageWidth - left - right;
+  let cursorY = (renderer as any).cursorY ?? branding.margins.top + 30;
+
+  // Doc-meta strip
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(100, 116, 139);
+  const metaParts = Object.entries(opts.meta).map(([k, v]) => `${k}: ${v}`);
+  const wrapped = doc.splitTextToSize(metaParts.join("   ·   "), contentWidth);
+  doc.text(wrapped, left, cursorY);
+  cursorY += wrapped.length * 4 + 4;
+
+  const ensureSpace = (need: number) => {
+    if (cursorY + need > pageHeight - branding.margins.bottom - 14) {
+      doc.addPage();
+      cursorY = branding.margins.top + 4;
+    }
+  };
+
+  const ctx = {
+    doc,
+    accent,
+    left,
+    right,
+    contentWidth,
+    pageWidth,
+    pageHeight,
+    cursorY,
+    setCursorY: (y: number) => {
+      cursorY = y;
+    },
+    section: (label: string) => {
+      ensureSpace(16);
+      cursorY = drawSectionHeading(doc, cursorY, label, accent, left, contentWidth);
+      ctx.cursorY = cursorY;
+    },
+    addTable: (head: string[], body: any[][], tableOpts?: { numCols?: number[]; foot?: any[][] }) => {
+      ensureSpace(22);
+      const numCols = tableOpts?.numCols ?? [];
+      const columnStyles: Record<number, any> = {};
+      numCols.forEach((idx) => {
+        columnStyles[idx] = { halign: "right", cellWidth: "auto" };
+      });
+      autoTable(doc, {
+        startY: cursorY,
+        head: [head],
+        body,
+        foot: tableOpts?.foot,
+        theme: "grid",
+        headStyles: { fillColor: accent, textColor: [255, 255, 255], fontSize: 8.5, fontStyle: "bold", halign: "left" },
+        bodyStyles: { fontSize: 8.5, textColor: [30, 41, 59] },
+        footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: "bold", fontSize: 8.5 },
+        alternateRowStyles: { fillColor: [250, 251, 253] },
+        columnStyles,
+        margin: { left, right },
+        styles: { cellPadding: 2, lineColor: [226, 232, 240], lineWidth: 0.15 },
+      });
+      cursorY = (doc as any).lastAutoTable.finalY + 5;
+      ctx.cursorY = cursorY;
+    },
+    kpiStrip: (items: Array<{ label: string; value: string; accent?: boolean }>) => {
+      const rows = Math.ceil(items.length / 3);
+      ensureSpace(rows * 21 + 4);
+      cursorY = drawKpiStrip(doc, cursorY, items, accent, left, contentWidth);
+      ctx.cursorY = cursorY;
+    },
+    paragraph: (text: string) => {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      const lines = doc.splitTextToSize(text, contentWidth);
+      ensureSpace(lines.length * 4 + 2);
+      doc.text(lines, left, cursorY);
+      cursorY += lines.length * 4.2 + 3;
+      ctx.cursorY = cursorY;
+    },
+  };
+
+  opts.build(ctx);
+
+  // Confidentiality stamp
+  ensureSpace(14);
+  doc.setDrawColor(203, 213, 225);
+  doc.setFillColor(248, 250, 252);
+  doc.setLineDashPattern([1, 1], 0);
+  doc.roundedRect(left, cursorY, contentWidth, 9, 1, 1, "FD");
+  doc.setLineDashPattern([], 0);
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.text(
+    "Confidential — auto-generated by GYC Finance Office. Figures derived from live system data.",
+    pageWidth / 2,
+    cursorY + 5.6,
+    { align: "center" },
+  );
+
+  await renderer.save(opts.fileName);
+}
+
 /* ============== Per-record net-payout invoice ============== */
 
 export function buildRowInvoice(opts: {
