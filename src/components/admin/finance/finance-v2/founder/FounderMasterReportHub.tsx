@@ -476,18 +476,19 @@ export const FounderMasterReportHub = () => {
                       className="px-3 py-2 text-right"
                       title={
                         `Total Premium: ${inr(p._calc.breakup?.total_premium || 0)}\n` +
-                        `Less GST 18%:  -${inr(p._calc.breakup?.gst_18pct || 0)}\n` +
+                        `Less GST ${p._calc.breakup?.gst_pct ?? 18}%:  -${inr(p._calc.breakup?.gst_amount ?? p._calc.breakup?.gst_18pct ?? 0)}\n` +
                         `Base (ex-GST): ${inr(p._calc.breakup?.base_ex_gst || 0)}\n` +
                         (p._calc.kind === "comprehensive"
                           ? `Less TP part: -${inr(p._calc.breakup?.tp_less || 0)}\n` +
                             `Less PA driver: -${inr(p._calc.breakup?.pa_less || 0)}\n`
                           : "") +
-                        `Payable Base: ${inr(p._calc.base)}`
+                        `Payable Base: ${inr(p._calc.base)}\n` +
+                        `Payout %: ${p._calc.pct}%${p._calc.isCustom ? " (custom)" : ""}`
                       }
                     >
                       <div className="font-medium">{inr(p._calc.base)}</div>
                       <div className="text-[10px] text-slate-500 leading-tight">
-                        {inr(p._calc.breakup?.total_premium || 0)} − GST
+                        {inr(p._calc.breakup?.total_premium || 0)} − {p._calc.breakup?.gst_pct ?? 18}% GST
                         {p._calc.kind === "comprehensive" && (p._calc.breakup?.tp_less || 0) > 0 && " − TP"}
                         {p._calc.kind === "comprehensive" && (p._calc.breakup?.pa_less || 0) > 0 && " − PA"}
                       </div>
