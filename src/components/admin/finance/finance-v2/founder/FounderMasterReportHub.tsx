@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -12,15 +12,19 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Wallet, Users, Shield, Banknote, Car, FileText, Target, FileDown,
-  TrendingUp, TrendingDown, Search, Filter, FileSpreadsheet, BarChart3,
-  Radio, RotateCcw,
+  TrendingUp, TrendingDown, Search, Filter, BarChart3,
+  Radio, RotateCcw, Image as ImageIcon,
 } from "lucide-react";
+import html2canvas from "html2canvas";
 import { SectionCard } from "../shared/SectionCard";
 import { StatTile } from "../shared/StatTile";
 import {
   computeInsurancePayout, computeLoanPayout, computeDealPayout, inr, RuleRow,
 } from "../shared/payoutEngine";
-import { buildRowInvoice, buildMonthlyStatement, buildFounderSnapshot, buildFounderCSV } from "../shared/founderReportPDF";
+import { buildRowInvoice, buildMonthlyStatement } from "../shared/founderReportPDF";
+import { FounderExportDialog } from "./FounderExportDialog";
+import { ReconciliationDrillModal } from "./ReconciliationDrillModal";
+import { useToast } from "@/hooks/use-toast";
 
 /* ---------- PERIOD HELPERS ---------- */
 type PeriodKind = "week" | "month" | "quarter" | "year" | "custom";
