@@ -212,13 +212,26 @@ export class UnifiedPdfRenderer {
   }
 
   private drawWatermark() {
-    if (!this.branding.show_watermark || !this.branding.watermark_url) return;
+    if (!this.branding.show_watermark) return;
+    const asset = this.watermarkAsset;
+    if (!asset) return;
     try {
-      const w = 120;
-      const h = 120;
+      // Subtle, centered, aspect-ratio preserved watermark — sits BEHIND content
+      const maxSize = 90; // mm
+      const ratio = asset.w / asset.h || 1;
+      const w = ratio >= 1 ? maxSize : maxSize * ratio;
+      const h = ratio >= 1 ? maxSize / ratio : maxSize;
       const x = (this.pageWidth - w) / 2;
       const y = (this.pageHeight - h) / 2;
-      this.doc.addImage(this.branding.watermark_url, "PNG", x, y, w, h, undefined, "FAST");
+      const gState = (this.doc as any).GState
+        ? new (this.doc as any).GState({ opacity: 0.06 })
+        : null;
+      if (gState) (this.doc as any).setGState(gState);
+      this.doc.addImage(asset.dataUrl, asset.format, x, y, w, h, undefined, "FAST");
+      if (gState) {
+        const reset = new (this.doc as any).GState({ opacity: 1 });
+        (this.doc as any).setGState(reset);
+      }
     } catch {
       /* ignore */
     }
@@ -230,7 +243,6 @@ export class UnifiedPdfRenderer {
     const primary = hexToRgb(b.brand_primary_color);
     const accent = hexToRgb(b.brand_accent_color);
     const x = b.margins.left;
-    const w = this.contentWidth;
     const headerH = 28;
 
     // Background band
@@ -241,10 +253,22 @@ export class UnifiedPdfRenderer {
     this.setFillRGB(accent);
     this.doc.rect(0, headerH, this.pageWidth, 1.5, "F");
 
-    // Logo (left)
-    if (b.logo_url) {
+    // Logo (left) — aspect-ratio preserved, contained inside header band
+    let logoOffset = 0;
+    if (this.logoAsset) {
       try {
-        this.doc.addImage(b.logo_url, "PNG", x, 6, 18, 18, undefined, "FAST");
+        const maxH = 18; // mm
+        const maxW = 22;
+        const ratio = this.logoAsset.w / this.logoAsset.h || 1;
+        let lw = maxH * ratio;
+        let lh = maxH;
+        if (lw > maxW) {
+          lw = maxW;
+          lh = maxW / ratio;
+        }
+        const ly = (headerH - lh) / 2;
+        this.doc.addImage(this.logoAsset.dataUrl, this.logoAsset.format, x, ly, lw, lh, undefined, "FAST");
+        logoOffset = lw + 4;
       } catch {
         /* ignore broken logo */
       }
@@ -254,13 +278,13 @@ export class UnifiedPdfRenderer {
     this.doc.setFont(b.font_heading, "bold");
     this.doc.setFontSize(18);
     this.setTextRGB([255, 255, 255]);
-    this.doc.text(b.company_name, x + (b.logo_url ? 22 : 0), 14);
+    this.doc.text(b.company_name, x + logoOffset, 14);
 
     if (b.company_tagline) {
       this.doc.setFont(b.font_body, "normal");
       this.doc.setFontSize(8.5);
       this.setTextRGB([220, 230, 245]);
-      this.doc.text(b.company_tagline, x + (b.logo_url ? 22 : 0), 19);
+      this.doc.text(b.company_tagline, x + logoOffset, 19);
     }
 
     // Document title (right side)
