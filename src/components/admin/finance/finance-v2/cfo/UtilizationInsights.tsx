@@ -13,6 +13,8 @@ import { format, startOfMonth, subMonths, addMonths } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toPng } from "html-to-image";
 import { toast } from "sonner";
+import { buildExportFilename } from "../shared/exportNaming";
+import { UtilizationDrillDownDialog, type DrillContext } from "./UtilizationDrillDownDialog";
 
 type Granularity = "month" | "quarter" | "year";
 
@@ -70,9 +72,41 @@ export const UtilizationInsights = () => {
   const [gran, setGran] = useState<Granularity>("month");
   const monthsBack = useMemo(() => GRANULARITY.find((g) => g.id === gran)!.months, [gran]);
   const [hidden, setHidden] = useState<Record<SeriesKey, boolean>>({ Planned: false, Actual: false });
+  const [drill, setDrill] = useState<DrillContext | null>(null);
 
   const verticalChartRef = useRef<HTMLDivElement>(null);
   const trendChartRef = useRef<HTMLDivElement>(null);
+
+  const granularityLabel = useMemo(() => GRANULARITY.find((g) => g.id === gran)!.label, [gran]);
+  const rangeStart = useMemo(
+    () => format(subMonths(startOfMonth(new Date()), monthsBack), "yyyy-MM-dd"),
+    [monthsBack]
+  );
+  const rangeEnd = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
+
+  const openVerticalDrill = (row: any) => {
+    setDrill({
+      mode: "vertical",
+      key: row.vertical,
+      granularityLabel,
+      rangeStart,
+      rangeEnd,
+      planned: row.Planned,
+      actual: row.Actual,
+    });
+  };
+
+  const openMonthDrill = (row: any) => {
+    setDrill({
+      mode: "month",
+      key: row.month,
+      granularityLabel,
+      rangeStart,
+      rangeEnd,
+      planned: row.Planned,
+      actual: row.Actual,
+    });
+  };
 
   const { data: budgetLines = [] } = useQuery({
     queryKey: ["util-budget-lines", monthsBack],
@@ -179,7 +213,12 @@ export const UtilizationInsights = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `utilization-insights-${gran}-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.download = buildExportFilename({
+      module: "utilization-insights",
+      scope: "summary",
+      period: granularityLabel,
+      ext: "csv",
+    });
     a.click();
     URL.revokeObjectURL(url);
     toast.success("CSV downloaded");
@@ -192,7 +231,12 @@ export const UtilizationInsights = () => {
       const dataUrl = await toPng(node, { backgroundColor: "#ffffff", pixelRatio: 2, cacheBust: true });
       const a = document.createElement("a");
       a.href = dataUrl;
-      a.download = `utilization-${which}-${format(new Date(), "yyyy-MM-dd")}.png`;
+      a.download = buildExportFilename({
+        module: "utilization-insights",
+        scope: which === "vertical" ? "by-vertical" : "trend",
+        period: granularityLabel,
+        ext: "png",
+      });
       a.click();
       toast.success("Chart exported as PNG");
     } catch (e: any) {
