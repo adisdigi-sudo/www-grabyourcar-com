@@ -724,7 +724,9 @@ export class UnifiedPdfRenderer {
  */
 export async function createRenderer(opts: RendererOptions): Promise<UnifiedPdfRenderer> {
   const branding = opts.brandingOverride ?? (await resolveBranding(opts.vertical));
-  return new UnifiedPdfRenderer(branding, opts);
+  const renderer = new UnifiedPdfRenderer(branding, opts);
+  await renderer.preloadAssets();
+  return renderer;
 }
 
 // Re-export for downstream use
