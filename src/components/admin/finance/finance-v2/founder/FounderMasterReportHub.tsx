@@ -874,11 +874,21 @@ export const FounderMasterReportHub = () => {
                   <th className="px-3 py-2 text-right">Gross</th>
                   <th className="px-3 py-2 text-right">TDS</th>
                   <th className="px-3 py-2 text-right">Net Payout</th>
-                  <th className="px-3 py-2 text-center">PDF</th>
+                  <th className="px-3 py-2 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {policyComputed.filter((p: any) => filterText(`${p.policy_number} ${p.insurance_clients?.customer_name || ""}`)).map((p: any) => (
+                {(() => {
+                  const visible = policyComputed.filter((p: any) => filterText(`${p.policy_number} ${p.insurance_clients?.customer_name || ""}`));
+                  const totals = visible.reduce((a, p: any) => ({
+                    base: a.base + (p._calc.base || 0),
+                    gross: a.gross + (p._calc.gross || 0),
+                    tds: a.tds + (p._calc.tds || 0),
+                    net: a.net + (p._calc.net || 0),
+                  }), { base: 0, gross: 0, tds: 0, net: 0 });
+                  return (
+                    <>
+                      {visible.map((p: any) => (
                   <tr key={p.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2 font-mono">{p.policy_number || p.id.slice(0, 8)}</td>
                     <td className="px-3 py-2">{p.insurance_clients?.customer_name || "—"}<div className="text-[10px] text-slate-500">{p.insurance_clients?.vehicle_number || ""}</div></td>
@@ -923,16 +933,36 @@ export const FounderMasterReportHub = () => {
                     <td className="px-3 py-2 text-right text-red-600">{inr(p._calc.tds)}</td>
                     <td className="px-3 py-2 text-right font-semibold text-emerald-700">{inr(p._calc.net)}</td>
                     <td className="px-3 py-2 text-center">
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => buildRowInvoice({
-                        module: "insurance", reference: p.policy_number || p.id.slice(0, 8),
-                        customer: p.insurance_clients?.customer_name || "—",
-                        meta: [["Insurer", p.insurer], ["Type", p.policy_type], ["Vehicle", p.insurance_clients?.vehicle_number || "—"], ["Issued", p.issued_date || "—"], ["Payout %", `${p._calc.pct}%${p._calc.isCustom ? " (custom)" : ""}`]],
-                        base: { label: "Net Premium", amount: p._calc.base }, pct: p._calc.pct, gross: p._calc.gross, tds: p._calc.tds, net: p._calc.net,
-                      })}><FileDown className="h-3.5 w-3.5" /></Button>
+                      <div className="flex items-center justify-center gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Download PDF" onClick={() => buildRowInvoice({
+                          module: "insurance", reference: p.policy_number || p.id.slice(0, 8),
+                          customer: p.insurance_clients?.customer_name || "—",
+                          meta: [["Insurer", p.insurer], ["Type", p.policy_type], ["Vehicle", p.insurance_clients?.vehicle_number || "—"], ["Issued", p.issued_date || "—"], ["Payout %", `${p._calc.pct}%${p._calc.isCustom ? " (custom)" : ""}`]],
+                          base: { label: "Net Premium", amount: p._calc.base }, pct: p._calc.pct, gross: p._calc.gross, tds: p._calc.tds, net: p._calc.net,
+                        })}><FileDown className="h-3.5 w-3.5" /></Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50" title="Mark Rejected / Cancel"
+                          onClick={() => { setRejectTarget({ kind: "policy", id: p.id, label: `Policy ${p.policy_number || p.id.slice(0,8)}` }); setRejectReason(""); }}>
+                          <Ban className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
-                {policies.length === 0 && <tr><td colSpan={9} className="px-3 py-8 text-center text-slate-500">No policies issued in {periodLabel}</td></tr>}
+                {policies.length === 0 && <tr><td colSpan={9} className="px-3 py-8 text-center text-slate-500">No active (won) policies in {periodLabel}</td></tr>}
+                {visible.length > 0 && (
+                  <tr className="bg-slate-100 font-bold border-t-2 border-slate-300">
+                    <td className="px-3 py-2" colSpan={3}>TOTAL — {visible.length} policies</td>
+                    <td className="px-3 py-2 text-right">{inr(totals.base)}</td>
+                    <td className="px-3 py-2" />
+                    <td className="px-3 py-2 text-right">{inr(totals.gross)}</td>
+                    <td className="px-3 py-2 text-right text-red-700">{inr(totals.tds)}</td>
+                    <td className="px-3 py-2 text-right text-emerald-700">{inr(totals.net)}</td>
+                    <td />
+                  </tr>
+                )}
+                    </>
+                  );
+                })()}
               </tbody>
             </table>
           </div>
