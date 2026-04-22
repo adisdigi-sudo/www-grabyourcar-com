@@ -424,8 +424,15 @@ export const BudgetPlannerDialog = ({ open, onClose }: BudgetPlannerDialogProps)
             Cancel
           </Button>
           <Button
-            onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending || !title.trim() || totalPlanned === 0}
+            onClick={() => {
+              if (hasAnyError) {
+                setShowErrors(true);
+                toast.error("Please fix the highlighted fields before submitting");
+                return;
+              }
+              saveMutation.mutate();
+            }}
+            disabled={saveMutation.isPending}
             className="gap-2 bg-slate-900 hover:bg-slate-800"
           >
             {saveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
