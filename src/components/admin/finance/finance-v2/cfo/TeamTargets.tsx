@@ -280,6 +280,7 @@ export const TeamTargets = () => {
           </div>
         </div>
       )}
+      </div>
 
       {/* Editor Dialog */}
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
