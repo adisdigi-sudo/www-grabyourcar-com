@@ -1,11 +1,17 @@
 /**
  * Founder report PDF helpers.
- *  - openHtmlPrint(html, title): opens hidden window and triggers print
- *  - buildRowInvoice(args): single-record net-payout invoice
- *  - buildMonthlyStatement(args): consolidated monthly statement
+ *
+ *  - All downloadable PDFs are produced via the **UnifiedPdfRenderer** (jsPDF
+ *    + jspdf-autotable + resolved branding). Logo, watermark, brand colors,
+ *    fonts, and footer are applied automatically — no html2canvas, no print
+ *    dialog, no popup blockers.
+ *  - HTML / CSV builders remain for email payloads and screen previews.
  */
 
 import { inr } from "./payoutEngine";
+import { createRenderer } from "@/lib/pdf/UnifiedPdfRenderer";
+import autoTable from "jspdf-autotable";
+import { hexToRgb } from "@/lib/pdf/colorUtils";
 
 const esc = (v: any) =>
   String(v ?? "")
@@ -42,6 +48,198 @@ export function openHtmlPrint(html: string, title = "Report") {
   w.document.close();
 }
 
+/* =================================================================
+   ============== BRANDED PDF ENGINE (UnifiedPdfRenderer) ===========
+   ================================================================= */
+
+/** Internal: section heading band (brand accent on white). */
+function drawSectionHeading(doc: any, y: number, label: string, accent: [number, number, number], left: number, contentWidth: number): number {
+  doc.setFillColor(accent[0], accent[1], accent[2]);
+  doc.rect(left, y, 3, 7, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11.5);
+  doc.setTextColor(15, 23, 42);
+  doc.text(label.toUpperCase(), left + 6, y + 5);
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.2);
+  doc.line(left, y + 8.5, left + contentWidth, y + 8.5);
+  return y + 12;
+}
+
+/** Internal: KPI strip — 3 cards per row, brand-themed. */
+function drawKpiStrip(doc: any, y: number, items: Array<{ label: string; value: string; accent?: boolean }>, accent: [number, number, number], left: number, contentWidth: number): number {
+  const cardsPerRow = 3;
+  const gap = 3;
+  const cardW = (contentWidth - gap * (cardsPerRow - 1)) / cardsPerRow;
+  const cardH = 18;
+  let rowIdx = 0;
+  for (let i = 0; i < items.length; i++) {
+    const col = i % cardsPerRow;
+    if (col === 0 && i > 0) rowIdx++;
+    const x = left + col * (cardW + gap);
+    const cy = y + rowIdx * (cardH + gap);
+    const it = items[i];
+    if (it.accent) {
+      doc.setFillColor(accent[0], accent[1], accent[2]);
+      doc.roundedRect(x, cy, cardW, cardH, 1.5, 1.5, "F");
+      doc.setTextColor(255, 255, 255);
+    } else {
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(x, cy, cardW, cardH, 1.5, 1.5, "FD");
+      doc.setTextColor(100, 116, 139);
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.8);
+    doc.text(it.label.toUpperCase(), x + 3, cy + 5.5);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    if (!it.accent) doc.setTextColor(15, 23, 42);
+    doc.text(it.value, x + 3, cy + 13);
+  }
+  return y + (rowIdx + 1) * (cardH + gap) + 2;
+}
+
+/** Render & save a branded PDF using UnifiedPdfRenderer. */
+async function renderBrandedPdf(opts: {
+  fileName: string;
+  title: string;
+  subtitle?: string;
+  meta: Record<string, string>;
+  build: (ctx: {
+    doc: any;
+    accent: [number, number, number];
+    left: number;
+    right: number;
+    contentWidth: number;
+    pageWidth: number;
+    pageHeight: number;
+    cursorY: number;
+    setCursorY: (y: number) => void;
+    section: (label: string) => void;
+    addTable: (head: string[], body: any[][], opts?: { numCols?: number[]; foot?: any[][] }) => void;
+    kpiStrip: (items: Array<{ label: string; value: string; accent?: boolean }>) => void;
+    paragraph: (text: string) => void;
+  }) => void;
+}) {
+  const renderer = await createRenderer({
+    vertical: "founder-cockpit",
+    documentType: "report",
+    documentTitle: opts.title,
+    documentSubtitle: opts.subtitle,
+  });
+
+  // Render branded header + watermark
+  renderer.renderHeader();
+
+  const doc: any = renderer.doc;
+  const branding = renderer.branding;
+  const accent = hexToRgb(branding.brand_accent_color);
+  const left = branding.margins.left;
+  const right = branding.margins.right;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const contentWidth = pageWidth - left - right;
+  let cursorY = (renderer as any).cursorY ?? branding.margins.top + 30;
+
+  // Doc-meta strip
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(100, 116, 139);
+  const metaParts = Object.entries(opts.meta).map(([k, v]) => `${k}: ${v}`);
+  const wrapped = doc.splitTextToSize(metaParts.join("   ·   "), contentWidth);
+  doc.text(wrapped, left, cursorY);
+  cursorY += wrapped.length * 4 + 4;
+
+  const ensureSpace = (need: number) => {
+    if (cursorY + need > pageHeight - branding.margins.bottom - 14) {
+      doc.addPage();
+      cursorY = branding.margins.top + 4;
+    }
+  };
+
+  const ctx = {
+    doc,
+    accent,
+    left,
+    right,
+    contentWidth,
+    pageWidth,
+    pageHeight,
+    cursorY,
+    setCursorY: (y: number) => {
+      cursorY = y;
+    },
+    section: (label: string) => {
+      ensureSpace(16);
+      cursorY = drawSectionHeading(doc, cursorY, label, accent, left, contentWidth);
+      ctx.cursorY = cursorY;
+    },
+    addTable: (head: string[], body: any[][], tableOpts?: { numCols?: number[]; foot?: any[][] }) => {
+      ensureSpace(22);
+      const numCols = tableOpts?.numCols ?? [];
+      const columnStyles: Record<number, any> = {};
+      numCols.forEach((idx) => {
+        columnStyles[idx] = { halign: "right", cellWidth: "auto" };
+      });
+      autoTable(doc, {
+        startY: cursorY,
+        head: [head],
+        body,
+        foot: tableOpts?.foot,
+        theme: "grid",
+        headStyles: { fillColor: accent, textColor: [255, 255, 255], fontSize: 8.5, fontStyle: "bold", halign: "left" },
+        bodyStyles: { fontSize: 8.5, textColor: [30, 41, 59] },
+        footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: "bold", fontSize: 8.5 },
+        alternateRowStyles: { fillColor: [250, 251, 253] },
+        columnStyles,
+        margin: { left, right },
+        styles: { cellPadding: 2, lineColor: [226, 232, 240], lineWidth: 0.15 },
+      });
+      cursorY = (doc as any).lastAutoTable.finalY + 5;
+      ctx.cursorY = cursorY;
+    },
+    kpiStrip: (items: Array<{ label: string; value: string; accent?: boolean }>) => {
+      const rows = Math.ceil(items.length / 3);
+      ensureSpace(rows * 21 + 4);
+      cursorY = drawKpiStrip(doc, cursorY, items, accent, left, contentWidth);
+      ctx.cursorY = cursorY;
+    },
+    paragraph: (text: string) => {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      const lines = doc.splitTextToSize(text, contentWidth);
+      ensureSpace(lines.length * 4 + 2);
+      doc.text(lines, left, cursorY);
+      cursorY += lines.length * 4.2 + 3;
+      ctx.cursorY = cursorY;
+    },
+  };
+
+  opts.build(ctx);
+
+  // Confidentiality stamp
+  ensureSpace(14);
+  doc.setDrawColor(203, 213, 225);
+  doc.setFillColor(248, 250, 252);
+  doc.setLineDashPattern([1, 1], 0);
+  doc.roundedRect(left, cursorY, contentWidth, 9, 1, 1, "FD");
+  doc.setLineDashPattern([], 0);
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.text(
+    "Confidential — auto-generated by GYC Finance Office. Figures derived from live system data.",
+    pageWidth / 2,
+    cursorY + 5.6,
+    { align: "center" },
+  );
+
+  await renderer.save(opts.fileName);
+}
+
 /* ============== Per-record net-payout invoice ============== */
 
 export function buildRowInvoice(opts: {
@@ -57,26 +255,48 @@ export function buildRowInvoice(opts: {
   notes?: string;
 }) {
   const { module, reference, customer, meta, base, pct, gross, tds, net, notes } = opts;
-  const moduleLabel = module === "insurance" ? "Insurance Policy" : module === "loan" ? "Car Loan" : "Automotive Deal";
-  const html = `
-    <h1>Net Payout Statement — ${esc(moduleLabel)}</h1>
-    <p class="muted">Reference: <b>${esc(reference)}</b> · Generated ${new Date().toLocaleString("en-IN")}</p>
-    <div class="grid">
-      <div class="box"><div class="lbl">Customer</div><div class="val">${esc(customer)}</div></div>
-      ${meta.map(([k,v]) => `<div class="box"><div class="lbl">${esc(k)}</div><div class="val">${esc(v)}</div></div>`).join("")}
-    </div>
-    <h2>Payout Breakup</h2>
-    <table>
-      <tr><th>Component</th><th>Basis</th><th class="num">Amount</th></tr>
-      <tr><td>${esc(base.label)}</td><td>Source value</td><td class="num">${inr(base.amount)}</td></tr>
-      <tr><td>Gross Payout</td><td>${pct}% of base</td><td class="num">${inr(gross)}</td></tr>
-      <tr><td>TDS @ 5%</td><td>Statutory deduction</td><td class="num">- ${inr(tds)}</td></tr>
-      <tr class="totals"><td colspan="2">Net Payout (Receivable)</td><td class="num">${inr(net)}</td></tr>
-    </table>
-    ${notes ? `<div class="stamp"><b>Notes:</b> ${esc(notes)}</div>` : ""}
-    <div class="stamp">Auto-generated by Finance Office · GYC. All figures derived from live system data.</div>
-  `;
-  openHtmlPrint(html, `Payout - ${reference}`);
+  const moduleLabel =
+    module === "insurance" ? "Insurance Policy" : module === "loan" ? "Car Loan" : "Automotive Deal";
+
+  void renderBrandedPdf({
+    fileName: `Payout-${reference.replace(/[^A-Za-z0-9_-]+/g, "_")}.pdf`,
+    title: "Net Payout Statement",
+    subtitle: moduleLabel,
+    meta: {
+      Reference: reference,
+      Customer: customer,
+      Generated: new Date().toLocaleString("en-IN"),
+    },
+    build: (ctx) => {
+      // Customer + meta as KPI strip
+      ctx.kpiStrip([
+        { label: "Customer", value: customer || "—" },
+        ...meta.map(([k, v]) => ({ label: k, value: v })),
+      ]);
+
+      ctx.section("Payout Breakup");
+      ctx.addTable(
+        ["Component", "Basis", "Amount"],
+        [
+          [base.label, "Source value", inr(base.amount)],
+          ["Gross Payout", `${pct}% of base`, inr(gross)],
+          ["TDS @ 5%", "Statutory deduction", `- ${inr(tds)}`],
+        ],
+        {
+          numCols: [2],
+          foot: [["Net Payout (Receivable)", "", inr(net)]],
+        },
+      );
+
+      if (notes) {
+        ctx.section("Notes");
+        ctx.paragraph(notes);
+      }
+    },
+  }).catch((err) => {
+    console.error("[buildRowInvoice] PDF render failed:", err);
+    alert("Could not generate the PDF. Please try again.");
+  });
 }
 
 /* ============== Monthly consolidated statement ============== */
@@ -97,45 +317,56 @@ export function buildMonthlyStatement(opts: {
   }>;
 }) {
   const { monthLabel, module, rows } = opts;
-  const moduleLabel = module === "insurance" ? "Insurance" : module === "loan" ? "Car Loans" : "Automotive Deals";
+  const moduleLabel =
+    module === "insurance" ? "Insurance" : module === "loan" ? "Car Loans" : "Automotive Deals";
   const sum = rows.reduce(
     (a, r) => ({ base: a.base + r.base, gross: a.gross + r.gross, tds: a.tds + r.tds, net: a.net + r.net }),
     { base: 0, gross: 0, tds: 0, net: 0 },
   );
-  const html = `
-    <h1>${esc(moduleLabel)} Monthly Statement</h1>
-    <p class="muted">Period: <b>${esc(monthLabel)}</b> · Records: <b>${rows.length}</b> · Generated ${new Date().toLocaleString("en-IN")}</p>
-    <h2>Records</h2>
-    <table>
-      <tr>
-        <th>#</th><th>Date</th><th>Reference</th><th>Customer</th><th>Type</th>
-        <th class="num">Base</th><th class="num">%</th><th class="num">Gross</th><th class="num">TDS</th><th class="num">Net</th>
-      </tr>
-      ${rows.map((r,i) => `
-        <tr>
-          <td>${i+1}</td>
-          <td>${esc(r.date)}</td>
-          <td>${esc(r.reference)}</td>
-          <td>${esc(r.customer)}</td>
-          <td>${esc(r.productOrType)}</td>
-          <td class="num">${inr(r.base)}</td>
-          <td class="num">${r.pct.toFixed(2)}%</td>
-          <td class="num">${inr(r.gross)}</td>
-          <td class="num">${inr(r.tds)}</td>
-          <td class="num">${inr(r.net)}</td>
-        </tr>`).join("")}
-      <tr class="totals">
-        <td colspan="5">TOTAL</td>
-        <td class="num">${inr(sum.base)}</td>
-        <td class="num">—</td>
-        <td class="num">${inr(sum.gross)}</td>
-        <td class="num">${inr(sum.tds)}</td>
-        <td class="num">${inr(sum.net)}</td>
-      </tr>
-    </table>
-    <div class="stamp">Auto-generated by Finance Office · GYC. Founder consolidated statement.</div>
-  `;
-  openHtmlPrint(html, `${moduleLabel}-Statement-${monthLabel}`);
+
+  void renderBrandedPdf({
+    fileName: `${moduleLabel.replace(/\s+/g, "_")}-Statement-${monthLabel.replace(/\s+/g, "_")}.pdf`,
+    title: `${moduleLabel} Monthly Statement`,
+    subtitle: monthLabel,
+    meta: {
+      Period: monthLabel,
+      Records: String(rows.length),
+      Generated: new Date().toLocaleString("en-IN"),
+    },
+    build: (ctx) => {
+      ctx.kpiStrip([
+        { label: "Records", value: String(rows.length), accent: true },
+        { label: "Total Base", value: inr(sum.base) },
+        { label: "Gross Payout", value: inr(sum.gross) },
+        { label: "TDS", value: inr(sum.tds) },
+        { label: "Net Receivable", value: inr(sum.net), accent: true },
+      ]);
+
+      ctx.section(`${moduleLabel} Records`);
+      ctx.addTable(
+        ["#", "Date", "Reference", "Customer", "Type", "Base", "%", "Gross", "TDS", "Net"],
+        rows.map((r, i) => [
+          i + 1,
+          r.date,
+          r.reference,
+          r.customer,
+          r.productOrType,
+          inr(r.base),
+          `${r.pct.toFixed(2)}%`,
+          inr(r.gross),
+          inr(r.tds),
+          inr(r.net),
+        ]),
+        {
+          numCols: [5, 6, 7, 8, 9],
+          foot: [["", "", "", "", "TOTAL", inr(sum.base), "—", inr(sum.gross), inr(sum.tds), inr(sum.net)]],
+        },
+      );
+    },
+  }).catch((err) => {
+    console.error("[buildMonthlyStatement] PDF render failed:", err);
+    alert("Could not generate the PDF. Please try again.");
+  });
 }
 
 /* ============== Full Founder Dashboard Snapshot (PDF) ============== */
@@ -161,98 +392,156 @@ export interface FounderSnapshotInput {
   audit: Array<{ module: string; query: string; rows: number }>;
 }
 
-export function buildFounderSnapshot(s: FounderSnapshotInput) {
+/** Internal: build the branded Founder Snapshot PDF, honouring optional column/section config. */
+function renderFounderSnapshotPdf(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}): Promise<void> {
   const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
   const polTotals = {
-    base: sum(s.policies.map(p => p.base)),
-    gross: sum(s.policies.map(p => p.gross)),
-    tds: sum(s.policies.map(p => p.tds)),
-    net: sum(s.policies.map(p => p.net)),
+    base: sum(s.policies.map((p) => p.base)),
+    gross: sum(s.policies.map((p) => p.gross)),
+    tds: sum(s.policies.map((p) => p.tds)),
+    net: sum(s.policies.map((p) => p.net)),
   };
   const loanTotals = {
-    base: sum(s.loans.map(l => l.base)),
-    gross: sum(s.loans.map(l => l.gross)),
-    tds: sum(s.loans.map(l => l.tds)),
-    net: sum(s.loans.map(l => l.net)),
+    base: sum(s.loans.map((l) => l.base)),
+    gross: sum(s.loans.map((l) => l.gross)),
+    tds: sum(s.loans.map((l) => l.tds)),
+    net: sum(s.loans.map((l) => l.net)),
   };
   const dealTotals = {
-    value: sum(s.deals.map(d => d.value)),
-    margin: sum(s.deals.map(d => d.margin)),
-    net: sum(s.deals.map(d => d.net)),
-    received: sum(s.deals.map(d => d.received)),
-    pending: sum(s.deals.map(d => d.pending)),
+    value: sum(s.deals.map((d) => d.value)),
+    margin: sum(s.deals.map((d) => d.margin)),
+    net: sum(s.deals.map((d) => d.net)),
+    received: sum(s.deals.map((d) => d.received)),
+    pending: sum(s.deals.map((d) => d.pending)),
   };
 
-  const html = `
-    <h1>Founder Master Report — Snapshot</h1>
-    <p class="muted">
-      Period: <b>${esc(s.periodLabel)}</b> (${esc(s.periodKind)}) · ${esc(s.periodStart)} → ${esc(s.periodEnd)}<br/>
-      Filters: vertical=<b>${esc(s.filters.vertical)}</b>${s.filters.search ? ` · search="${esc(s.filters.search)}"` : ""}<br/>
-      Generated ${new Date().toLocaleString("en-IN")}
-    </p>
+  const includeKpis = cfg.includeKpis !== false;
+  const includeCounts = cfg.includeCounts !== false;
+  const includeRecon = cfg.includeReconciliation !== false;
+  const includeAudit = cfg.includeAudit !== false;
+  const policiesCols = cfg.policies?.length ? cfg.policies : DEFAULT_COLS.policies;
+  const loansCols = cfg.loans?.length ? cfg.loans : DEFAULT_COLS.loans;
+  const dealsCols = cfg.deals?.length ? cfg.deals : DEFAULT_COLS.deals;
 
-    <h2>Headline KPIs</h2>
-    <table>
-      <tr><th>Metric</th><th class="num">Amount</th><th>Notes</th></tr>
-      <tr><td>Revenue (Paid Invoices)</td><td class="num">${inr(s.kpis.revenue)}</td><td>${s.counts.invoicesPaid} paid invoices</td></tr>
-      <tr><td>Receivables</td><td class="num">${inr(s.kpis.receivables)}</td><td>${s.counts.invoices - s.counts.invoicesPaid} pending</td></tr>
-      <tr><td>Payroll (Net)</td><td class="num">${inr(s.kpis.payroll)}</td><td>—</td></tr>
-      <tr><td>Operational Expenses</td><td class="num">${inr(s.kpis.expenses)}</td><td>—</td></tr>
-      <tr><td>Total Incentives (Net of TDS)</td><td class="num">${inr(s.kpis.incentives)}</td><td>Insurance + Loans + Deals</td></tr>
-      <tr class="totals"><td>Net Profit / Loss</td><td class="num">${s.kpis.profit >= 0 ? "" : "- "}${inr(Math.abs(s.kpis.profit))}</td><td>${s.kpis.profit >= 0 ? "Surplus" : "Deficit"}</td></tr>
-    </table>
+  // Map column key -> renderer hint (header + cell renderer + numeric flag)
+  const colRenderers: Record<string, { label: string; render: (row: any) => string; numeric: boolean }> = {
+    ref: { label: "Reference", render: (r) => String(r.ref ?? "—"), numeric: false },
+    customer: { label: "Customer", render: (r) => String(r.customer ?? "—"), numeric: false },
+    type: { label: "Type", render: (r) => String(r.type ?? "—"), numeric: false },
+    bank: { label: "Bank", render: (r) => String(r.bank ?? "—"), numeric: false },
+    stage: { label: "Stage", render: (r) => String(r.stage ?? "—"), numeric: false },
+    vertical: { label: "Vertical", render: (r) => String(r.vertical ?? "—"), numeric: false },
+    base: { label: "Base", render: (r) => inr(r.base ?? 0), numeric: true },
+    pct: { label: "%", render: (r) => `${Number(r.pct ?? 0).toFixed(2)}%`, numeric: true },
+    gross: { label: "Gross", render: (r) => inr(r.gross ?? 0), numeric: true },
+    tds: { label: "TDS", render: (r) => inr(r.tds ?? 0), numeric: true },
+    net: { label: "Net", render: (r) => inr(r.net ?? 0), numeric: true },
+    value: { label: "Value", render: (r) => inr(r.value ?? 0), numeric: true },
+    margin: { label: "Margin", render: (r) => inr(r.margin ?? 0), numeric: true },
+    received: { label: "Received", render: (r) => inr(r.received ?? 0), numeric: true },
+    pending: { label: "Pending", render: (r) => inr(r.pending ?? 0), numeric: true },
+  };
 
-    <h2>Live Vertical Counts</h2>
-    <table>
-      <tr><th>Vertical</th><th class="num">Records</th><th>Detail</th></tr>
-      <tr><td>Policies Issued</td><td class="num">${s.counts.policies}</td><td>Net Payout: ${inr(polTotals.net)}</td></tr>
-      <tr><td>Car Loan Cases</td><td class="num">${s.counts.loans}</td><td>${s.counts.loansDisbursed} disbursed · Net: ${inr(loanTotals.net)}</td></tr>
-      <tr><td>Car Sales / Deals</td><td class="num">${s.counts.deals}</td><td>Net Margin: ${inr(dealTotals.net)}</td></tr>
-    </table>
+  const buildTableArgs = (cols: string[], rows: any[], totals: Record<string, number>) => {
+    const head = ["#", ...cols.map((c) => colRenderers[c]?.label ?? c)];
+    const body = rows.map((r, i) => [i + 1, ...cols.map((c) => (colRenderers[c] ? colRenderers[c].render(r) : String(r[c] ?? "")))]);
+    const numCols = cols
+      .map((c, idx) => (colRenderers[c]?.numeric ? idx + 1 : -1))
+      .filter((i) => i >= 0);
+    const footRow: any[] = ["", "TOTAL"];
+    for (let i = 1; i < cols.length; i++) {
+      const c = cols[i];
+      if (totals[c] !== undefined) footRow.push(inr(totals[c]));
+      else footRow.push("—");
+    }
+    return { head, body, numCols, foot: [footRow] };
+  };
 
-    <h2>Reconciliation</h2>
-    <table>
-      <tr><th>Module</th><th class="num">Summary Net</th><th class="num">Table Net</th><th class="num">Diff</th><th>Status</th></tr>
-      ${s.reconciliation.map(r => `
-        <tr>
-          <td>${esc(r.module)}</td>
-          <td class="num">${inr(r.summaryNet)}</td>
-          <td class="num">${inr(r.tableNet)}</td>
-          <td class="num">${inr(r.diff)}</td>
-          <td>${esc(r.status)}</td>
-        </tr>`).join("")}
-    </table>
+  return renderBrandedPdf({
+    fileName: `Founder-Snapshot-${s.periodLabel.replace(/\s+/g, "_")}.pdf`,
+    title: "Founder Master Report",
+    subtitle: `Snapshot · ${s.periodKind}`,
+    meta: {
+      Period: `${s.periodLabel} (${s.periodStart} → ${s.periodEnd})`,
+      Vertical: s.filters.vertical || "All",
+      ...(s.filters.search ? { Search: s.filters.search } : {}),
+      Generated: new Date().toLocaleString("en-IN"),
+    },
+    build: (ctx) => {
+      if (includeKpis) {
+        ctx.section("Headline KPIs");
+        ctx.kpiStrip([
+          { label: "Revenue (Paid)", value: inr(s.kpis.revenue) },
+          { label: "Receivables", value: inr(s.kpis.receivables) },
+          { label: "Payroll (Net)", value: inr(s.kpis.payroll) },
+          { label: "Op. Expenses", value: inr(s.kpis.expenses) },
+          { label: "Incentives Net", value: inr(s.kpis.incentives) },
+          {
+            label: s.kpis.profit >= 0 ? "Net Surplus" : "Net Deficit",
+            value: `${s.kpis.profit >= 0 ? "" : "- "}${inr(Math.abs(s.kpis.profit))}`,
+            accent: true,
+          },
+        ]);
+      }
 
-    <h2>Audit Trail — Date-range queries</h2>
-    <table>
-      <tr><th>Module</th><th>Query</th><th class="num">Rows</th></tr>
-      ${s.audit.map(a => `<tr><td>${esc(a.module)}</td><td style="font-family:monospace;font-size:10px">${esc(a.query)}</td><td class="num">${a.rows}</td></tr>`).join("")}
-    </table>
+      if (includeCounts) {
+        ctx.section("Live Vertical Counts");
+        ctx.addTable(
+          ["Vertical", "Records", "Detail"],
+          [
+            ["Policies Issued", String(s.counts.policies), `Net Payout: ${inr(polTotals.net)}`],
+            ["Car Loan Cases", String(s.counts.loans), `${s.counts.loansDisbursed} disbursed · Net: ${inr(loanTotals.net)}`],
+            ["Car Sales / Deals", String(s.counts.deals), `Net Margin: ${inr(dealTotals.net)}`],
+            ["Invoices", String(s.counts.invoices), `${s.counts.invoicesPaid} paid`],
+          ],
+          { numCols: [1] },
+        );
+      }
 
-    <h2>Policies (${s.policies.length})</h2>
-    <table>
-      <tr><th>#</th><th>Policy</th><th>Customer</th><th>Type</th><th class="num">Base</th><th class="num">%</th><th class="num">Gross</th><th class="num">TDS</th><th class="num">Net</th></tr>
-      ${s.policies.map((p,i) => `<tr><td>${i+1}</td><td>${esc(p.ref)}</td><td>${esc(p.customer)}</td><td>${esc(p.type)}</td><td class="num">${inr(p.base)}</td><td class="num">${p.pct}%</td><td class="num">${inr(p.gross)}</td><td class="num">${inr(p.tds)}</td><td class="num">${inr(p.net)}</td></tr>`).join("")}
-      <tr class="totals"><td colspan="4">TOTAL</td><td class="num">${inr(polTotals.base)}</td><td class="num">—</td><td class="num">${inr(polTotals.gross)}</td><td class="num">${inr(polTotals.tds)}</td><td class="num">${inr(polTotals.net)}</td></tr>
-    </table>
+      if (includeRecon && s.reconciliation.length) {
+        ctx.section("Auto-Reconciliation");
+        ctx.addTable(
+          ["Module", "Summary Net", "Table Net", "Diff", "Status"],
+          s.reconciliation.map((r) => [r.module, inr(r.summaryNet), inr(r.tableNet), inr(r.diff), r.status]),
+          { numCols: [1, 2, 3] },
+        );
+      }
 
-    <h2>Car Loans (${s.loans.length})</h2>
-    <table>
-      <tr><th>#</th><th>Customer</th><th>Bank</th><th>Stage</th><th class="num">Net Disb.</th><th class="num">%</th><th class="num">Gross</th><th class="num">TDS</th><th class="num">Net</th></tr>
-      ${s.loans.map((l,i) => `<tr><td>${i+1}</td><td>${esc(l.customer)}</td><td>${esc(l.bank)}</td><td>${esc(l.stage)}</td><td class="num">${inr(l.base)}</td><td class="num">${l.pct}%</td><td class="num">${inr(l.gross)}</td><td class="num">${inr(l.tds)}</td><td class="num">${inr(l.net)}</td></tr>`).join("")}
-      <tr class="totals"><td colspan="4">TOTAL</td><td class="num">${inr(loanTotals.base)}</td><td class="num">—</td><td class="num">${inr(loanTotals.gross)}</td><td class="num">${inr(loanTotals.tds)}</td><td class="num">${inr(loanTotals.net)}</td></tr>
-    </table>
+      if (includeAudit && s.audit.length) {
+        ctx.section("Audit Trail · Date-range Queries");
+        ctx.addTable(
+          ["Module", "Query", "Rows"],
+          s.audit.map((a) => [a.module, a.query, String(a.rows)]),
+          { numCols: [2] },
+        );
+      }
 
-    <h2>Car Deals (${s.deals.length})</h2>
-    <table>
-      <tr><th>#</th><th>Deal</th><th>Customer</th><th>Vertical</th><th class="num">Value</th><th class="num">Margin</th><th class="num">%</th><th class="num">Net</th><th class="num">Received</th><th class="num">Pending</th></tr>
-      ${s.deals.map((d,i) => `<tr><td>${i+1}</td><td>${esc(d.ref)}</td><td>${esc(d.customer)}</td><td>${esc(d.vertical)}</td><td class="num">${inr(d.value)}</td><td class="num">${inr(d.margin)}</td><td class="num">${d.pct.toFixed(1)}%</td><td class="num">${inr(d.net)}</td><td class="num">${inr(d.received)}</td><td class="num">${inr(d.pending)}</td></tr>`).join("")}
-      <tr class="totals"><td colspan="4">TOTAL</td><td class="num">${inr(dealTotals.value)}</td><td class="num">${inr(dealTotals.margin)}</td><td class="num">—</td><td class="num">${inr(dealTotals.net)}</td><td class="num">${inr(dealTotals.received)}</td><td class="num">${inr(dealTotals.pending)}</td></tr>
-    </table>
+      if (policiesCols.length && s.policies.length) {
+        ctx.section(`Policies (${s.policies.length})`);
+        const t = buildTableArgs(policiesCols, s.policies, polTotals as any);
+        ctx.addTable(t.head, t.body, { numCols: t.numCols, foot: t.foot });
+      }
 
-    <div class="stamp">Founder Master Report Snapshot · GYC Finance Office · Confidential</div>
-  `;
-  openHtmlPrint(html, `Founder-Snapshot-${s.periodLabel}`);
+      if (loansCols.length && s.loans.length) {
+        ctx.section(`Car Loans (${s.loans.length})`);
+        const t = buildTableArgs(loansCols, s.loans, loanTotals as any);
+        ctx.addTable(t.head, t.body, { numCols: t.numCols, foot: t.foot });
+      }
+
+      if (dealsCols.length && s.deals.length) {
+        ctx.section(`Car Deals (${s.deals.length})`);
+        const t = buildTableArgs(dealsCols, s.deals, dealTotals as any);
+        ctx.addTable(t.head, t.body, { numCols: t.numCols, foot: t.foot });
+      }
+    },
+  });
+}
+
+export function buildFounderSnapshot(s: FounderSnapshotInput) {
+  renderFounderSnapshotPdf(s).catch((err) => {
+    console.error("[buildFounderSnapshot] PDF render failed:", err);
+    alert("Could not generate the Founder snapshot PDF. Please try again.");
+  });
 }
 
 /* ============== CSV Snapshot Export ============== */
@@ -454,8 +743,10 @@ export function buildFounderSnapshotHTML(s: FounderSnapshotInput, cfg: ExportCol
 }
 
 export function buildFounderSnapshotWithConfig(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}) {
-  const html = buildFounderSnapshotHTML(s, cfg);
-  openHtmlPrint(html, `Founder-Snapshot-${s.periodLabel}`);
+  renderFounderSnapshotPdf(s, cfg).catch((err) => {
+    console.error("[buildFounderSnapshotWithConfig] PDF render failed:", err);
+    alert("Could not generate the Founder snapshot PDF. Please try again.");
+  });
 }
 
 export function getFounderSnapshotPrintableHTML(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}): string {
