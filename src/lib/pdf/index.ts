@@ -28,6 +28,11 @@ export {
   type BrandedInvoiceItem,
   type GenerateBrandedInvoiceOpts,
 } from "./generateBrandedInvoice";
+export {
+  generateBrandedReceipt,
+  type BrandedReceiptData,
+  type GenerateBrandedReceiptOpts,
+} from "./generateBrandedReceipt";
 export type {
   ResolvedBranding,
   PdfGlobalBranding,

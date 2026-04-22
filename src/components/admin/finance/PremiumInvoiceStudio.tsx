@@ -249,7 +249,29 @@ export const PremiumInvoiceStudio = () => {
             <div className="grid grid-cols-3 gap-3">
               <div><Label>Invoice Date</Label><Input type="date" value={form.invoice_date} onChange={(e) => setForm((p) => ({ ...p, invoice_date: e.target.value }))} /></div>
               <div><Label>Due Date</Label><Input type="date" value={form.due_date || ""} onChange={(e) => setForm((p) => ({ ...p, due_date: e.target.value }))} /></div>
-              <div><Label>Tax Rate (%)</Label><Input type="number" value={form.tax_rate} onChange={(e) => setForm((p) => ({ ...p, tax_rate: Number(e.target.value) }))} /></div>
+              <div><Label>GST Rate (%)</Label><Input type="number" value={form.tax_rate} onChange={(e) => setForm((p) => ({ ...p, tax_rate: Number(e.target.value) }))} /></div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 -mt-1">
+              <span className="text-[11px] text-muted-foreground font-medium">Quick GST:</span>
+              {[
+                { label: "18% (Standard)", v: 18 },
+                { label: "12%", v: 12 },
+                { label: "5%", v: 5 },
+                { label: "0% (Exempt)", v: 0 },
+              ].map((g) => (
+                <Button
+                  key={g.v}
+                  type="button"
+                  size="sm"
+                  variant={Number(form.tax_rate) === g.v ? "default" : "outline"}
+                  className="h-7 text-[11px] px-2"
+                  onClick={() => setForm((p) => ({ ...p, tax_rate: g.v }))}
+                >
+                  {g.label}
+                </Button>
+              ))}
+              <span className="text-[10px] text-muted-foreground ml-auto">Auto-applied to subtotal in totals & PDF</span>
             </div>
 
             <Separator />
