@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { useRealtimeTable } from "@/hooks/useRealtimeSync";
+import { ApprovalCommentsThread } from "./ApprovalCommentsThread";
 
 type StatusFilter = "pending" | "approved" | "rejected" | "all";
 
@@ -239,7 +240,7 @@ export function ApprovalsQueueWidget() {
 
       {/* Review Dialog */}
       <Dialog open={!!reviewItem} onOpenChange={(o) => !o && setReviewItem(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {reviewAction === "approve" ? (
@@ -276,6 +277,9 @@ export function ApprovalsQueueWidget() {
                   onChange={(e) => setReviewNotes(e.target.value)}
                   rows={3}
                 />
+              </div>
+              <div className="border-t pt-3">
+                <ApprovalCommentsThread approvalId={reviewItem.id} />
               </div>
             </div>
           )}
