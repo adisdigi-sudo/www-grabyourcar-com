@@ -581,9 +581,12 @@ export class UnifiedPdfRenderer {
     const x = this.pageWidth - b.margins.right - 60;
     const y = this.cursorY + 4;
 
-    if (b.signature_url) {
+    if (this.signatureAsset) {
       try {
-        this.doc.addImage(b.signature_url, "PNG", x, y, 50, 14, undefined, "FAST");
+        const ratio = this.signatureAsset.w / this.signatureAsset.h || 1;
+        const sw = Math.min(50, 14 * ratio);
+        const sh = sw / ratio;
+        this.doc.addImage(this.signatureAsset.dataUrl, this.signatureAsset.format, x, y, sw, sh, undefined, "FAST");
       } catch {
         /* ignore */
       }
