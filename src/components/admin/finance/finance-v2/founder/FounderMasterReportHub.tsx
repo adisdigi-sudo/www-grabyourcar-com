@@ -459,7 +459,7 @@ export const FounderMasterReportHub = () => {
       </div>
 
       {/* Loan Breakdown Chart — Issued vs Disbursed vs Pending vs Lost */}
-      <div className="mb-5 p-4 rounded-lg border bg-white">
+      <div ref={loanChartRef} className="mb-5 p-4 rounded-lg border bg-white">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
@@ -473,6 +473,26 @@ export const FounderMasterReportHub = () => {
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-600" />Disbursed</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-slate-400" />Pending</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500" />Lost</span>
+            <Button
+              size="sm" variant="outline" className="h-6 gap-1 text-[10px] ml-2"
+              onClick={async () => {
+                if (!loanChartRef.current) return;
+                try {
+                  const canvas = await html2canvas(loanChartRef.current, {
+                    backgroundColor: "#ffffff", scale: 2, logging: false, useCORS: true,
+                  });
+                  const a = document.createElement("a");
+                  a.href = canvas.toDataURL("image/png");
+                  a.download = `Loan-Pipeline-${periodLabel.replace(/\s+/g, "_")}.png`;
+                  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                  toast({ title: "Chart saved", description: "Loan pipeline downloaded as PNG." });
+                } catch (e: any) {
+                  toast({ title: "Couldn't save chart", description: e?.message || "Try again.", variant: "destructive" });
+                }
+              }}
+            >
+              <ImageIcon className="h-3 w-3" /> PNG
+            </Button>
           </div>
         </div>
 
