@@ -356,6 +356,8 @@ function SetTargetDialog({ open, onOpenChange, verticals, monthYear, periodLabel
         team_member_name: "Vertical Target",
         vertical_name: verticalName,
         month_year: monthYear,
+        period_type: "month",
+        period_key: monthYear,
         target_type: "deals",
         target_count: Number(targetCount) || 0,
         target_revenue: Number(targetRevenue) || 0,
@@ -366,7 +368,7 @@ function SetTargetDialog({ open, onOpenChange, verticals, monthYear, periodLabel
 
       const { error } = await supabase
         .from("team_targets")
-        .upsert(payload, { onConflict: "user_id,vertical_name,month_year" });
+        .upsert(payload, { onConflict: "user_id,vertical_name,period_type,period_key" });
 
       if (error) throw error;
     },

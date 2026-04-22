@@ -59,17 +59,16 @@ export function FounderAICoach() {
     try {
       const { data, error } = await supabase.functions.invoke("ai-cofounder", {
         body: {
-          action: "chat",
+          action: "quick_insight",
           user_name: profile?.name || "Founder",
           user_role: profile?.role || "super_admin",
           vertical: "all",
           question: p.prompt,
-          conversation_history: [],
         },
       });
       if (error) throw error;
       const text =
-        (data && (data.response || data.message || data.answer)) ||
+        (data && (data.insight || data.response || data.message || data.answer)) ||
         (typeof data === "string" ? data : "");
       if (!text) throw new Error("Empty response");
       setResponse(text);
