@@ -14771,41 +14771,56 @@ export type Database = {
       }
       monthly_financial_snapshots: {
         Row: {
+          computed_at: string | null
           created_at: string | null
+          expense_breakdown: Json | null
           id: string
           month_year: string
           net_profit: number | null
-          tenant_id: string
+          notes: string | null
+          source_breakdown: Json | null
+          tenant_id: string | null
           total_commission: number | null
           total_deal_value: number | null
           total_dealer_payout: number | null
           total_expenses: number | null
+          total_revenue: number | null
           total_revenue_margin: number | null
           vertical_name: string
         }
         Insert: {
+          computed_at?: string | null
           created_at?: string | null
+          expense_breakdown?: Json | null
           id?: string
           month_year: string
           net_profit?: number | null
-          tenant_id: string
+          notes?: string | null
+          source_breakdown?: Json | null
+          tenant_id?: string | null
           total_commission?: number | null
           total_deal_value?: number | null
           total_dealer_payout?: number | null
           total_expenses?: number | null
+          total_revenue?: number | null
           total_revenue_margin?: number | null
           vertical_name: string
         }
         Update: {
+          computed_at?: string | null
           created_at?: string | null
+          expense_breakdown?: Json | null
           id?: string
           month_year?: string
           net_profit?: number | null
-          tenant_id?: string
+          notes?: string | null
+          source_breakdown?: Json | null
+          tenant_id?: string | null
           total_commission?: number | null
           total_deal_value?: number | null
           total_dealer_payout?: number | null
           total_expenses?: number | null
+          total_revenue?: number | null
           total_revenue_margin?: number | null
           vertical_name?: string
         }
