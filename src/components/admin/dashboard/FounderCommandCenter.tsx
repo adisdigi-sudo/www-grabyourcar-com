@@ -594,3 +594,190 @@ function BriefingConfigDialog() {
     </Dialog>
   );
 }
+
+interface ShareReportButtonProps {
+  period: "week" | "month" | "quarter";
+  periodLabel: string;
+  dateRange: { from: Date; to: Date };
+  totals: { targetRev: number; achievedRev: number; targetCount: number; achievedCount: number };
+  verticalStats: any[];
+  topPerformers: any[];
+}
+
+function ShareReportButton({
+  period,
+  periodLabel,
+  dateRange,
+  totals,
+  verticalStats,
+  topPerformers,
+}: ShareReportButtonProps) {
+  const [open, setOpen] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const buildPdfBase64 = (): { base64: string; fileName: string } => {
+    const reportData: FounderReportData = {
+      period,
+      periodLabel,
+      dateRange,
+      totals,
+      verticalStats: verticalStats.map((v: any) => ({
+        verticalName: v.vertical.name,
+        targetRevenue: v.targetRevenue,
+        achievedRevenue: v.achievedRevenue,
+        targetCount: v.targetCount,
+        achievedCount: v.achievedCount,
+        achievement: v.achievement,
+      })),
+      topPerformers: topPerformers.map((p: any) => ({
+        employee_name: p.employee_name,
+        vertical_name: p.vertical_name,
+        total_deals: p.total_deals,
+        total_incentive: Number(p.total_incentive || 0),
+      })),
+    };
+    const doc = generateFounderReportPDF(reportData);
+    const dataUri = doc.output("datauristring");
+    const base64 = dataUri.split(",")[1] || "";
+    const fileName = `founder-report-${period}-${format(dateRange.from, "yyyy-MM-dd")}.pdf`;
+    return { base64, fileName };
+  };
+
+  const handleWhatsApp = async () => {
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (cleanPhone.length < 10) {
+      toast.error("Enter a valid 10-digit phone number");
+      return;
+    }
+    setSending(true);
+    try {
+      const { base64, fileName } = buildPdfBase64();
+      const { data, error } = await supabase.functions.invoke("wa-pdf-dispatcher", {
+        body: {
+          vertical: "founder",
+          event: "founder_report",
+          phone: cleanPhone,
+          name: "Founder",
+          pdfBase64: base64,
+          fileName,
+          variables: {
+            period: periodLabel,
+            achieved: String(totals.achievedRev),
+            target: String(totals.targetRev),
+          },
+        },
+      });
+      if (error) throw error;
+      if (data?.dispatched > 0) {
+        toast.success(`Report sent on WhatsApp to ${cleanPhone}`);
+      } else {
+        // No rule matched — fall back to direct messaging-service
+        const { data: fb, error: fbErr } = await supabase.functions.invoke("messaging-service", {
+          body: {
+            action: "send_message",
+            phone: cleanPhone,
+            message: `📊 Founder Report — ${periodLabel}\nAchieved: ₹${totals.achievedRev.toLocaleString("en-IN")} of ₹${totals.targetRev.toLocaleString("en-IN")}`,
+            messageType: "document",
+            mediaUrl: `data:application/pdf;base64,${base64}`,
+            mediaFileName: fileName,
+            customer_name: "Founder",
+            message_context: "founder_report",
+          },
+        });
+        if (fbErr) throw fbErr;
+        toast.success(fb?.success ? `Report sent on WhatsApp to ${cleanPhone}` : "Sent (check WA logs)");
+      }
+      setOpen(false);
+      setPhone("");
+    } catch (e: any) {
+      toast.error(e.message || "WhatsApp send failed");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleEmail = async () => {
+    if (!email || !/.+@.+\..+/.test(email)) {
+      toast.error("Enter a valid email");
+      return;
+    }
+    setSending(true);
+    try {
+      const { base64, fileName } = buildPdfBase64();
+      const { error } = await supabase.functions.invoke("send-founder-report-email", {
+        body: {
+          to: email,
+          period: periodLabel,
+          totals,
+          pdfBase64: base64,
+          fileName,
+        },
+      });
+      if (error) throw error;
+      toast.success(`Report emailed to ${email}`);
+      setOpen(false);
+      setEmail("");
+    } catch (e: any) {
+      // Fallback: just notify the user — function may not be deployed yet
+      toast.error(e.message || "Email send failed (function not deployed?)");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="h-8">
+          <Share2 className="h-3.5 w-3.5 mr-1" /> Share
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Share2 className="h-4 w-4" /> Share Founder Report — {periodLabel}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2 rounded-lg border p-3">
+            <Label className="text-xs flex items-center gap-1">
+              <MessageSquare className="h-3 w-3" /> WhatsApp
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="9876543210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="font-mono"
+              />
+              <Button onClick={handleWhatsApp} disabled={sending} size="sm">
+                <Send className="h-3.5 w-3.5 mr-1" /> Send
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-2 rounded-lg border p-3">
+            <Label className="text-xs flex items-center gap-1">
+              <Mail className="h-3 w-3" /> Email
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="founder@grabyourcar.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <Button onClick={handleEmail} disabled={sending} size="sm" variant="outline">
+                <Send className="h-3.5 w-3.5 mr-1" /> Send
+              </Button>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
