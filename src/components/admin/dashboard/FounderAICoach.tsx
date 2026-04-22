@@ -43,10 +43,10 @@ export function FounderAICoach() {
       if (!user) return null;
       const { data } = await supabase
         .from("crm_users")
-        .select("full_name,role")
+        .select("name,role")
         .eq("auth_user_id", user.id)
         .maybeSingle();
-      return data;
+      return data as { name: string; role: string } | null;
     },
   });
 
@@ -60,7 +60,7 @@ export function FounderAICoach() {
       const { data, error } = await supabase.functions.invoke("ai-cofounder", {
         body: {
           action: "chat",
-          user_name: profile?.full_name || "Founder",
+          user_name: profile?.name || "Founder",
           user_role: profile?.role || "super_admin",
           vertical: "all",
           question: p.prompt,
