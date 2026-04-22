@@ -445,6 +445,11 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
         .filter(Boolean) as NavItem[];
     }
 
+    // Founder Cockpit is a single-purpose workspace — show ONLY the cockpit entry.
+    if (normalizedActiveSlug === "founder-cockpit") {
+      items = items.filter(item => item.id === "founder-cockpit");
+    }
+
     return items
       .map(item => {
         if (!item.children) return item;
