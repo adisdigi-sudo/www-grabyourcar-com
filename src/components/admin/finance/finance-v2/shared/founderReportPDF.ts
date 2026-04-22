@@ -257,7 +257,37 @@ export function buildFounderSnapshot(s: FounderSnapshotInput) {
 
 /* ============== CSV Snapshot Export ============== */
 
-export function buildFounderCSV(s: FounderSnapshotInput) {
+export interface ExportColumnConfig {
+  policies?: string[];   // subset of: ref,customer,type,base,pct,gross,tds,net
+  loans?: string[];      // subset of: ref,customer,bank,stage,base,pct,gross,tds,net
+  deals?: string[];      // subset of: ref,customer,vertical,value,margin,pct,net,received,pending
+  includeReconciliation?: boolean;
+  includeAudit?: boolean;
+  includeKpis?: boolean;
+  includeCounts?: boolean;
+}
+
+const DEFAULT_COLS: Required<Omit<ExportColumnConfig, "includeReconciliation" | "includeAudit" | "includeKpis" | "includeCounts">> = {
+  policies: ["ref", "customer", "type", "base", "pct", "gross", "tds", "net"],
+  loans: ["ref", "customer", "bank", "stage", "base", "pct", "gross", "tds", "net"],
+  deals: ["ref", "customer", "vertical", "value", "margin", "pct", "net", "received", "pending"],
+};
+
+const COL_LABELS: Record<string, string> = {
+  ref: "Reference", customer: "Customer", type: "Type", bank: "Bank", stage: "Stage",
+  vertical: "Vertical", base: "Base", pct: "Pct", gross: "Gross", tds: "TDS", net: "Net",
+  value: "Value", margin: "Margin", received: "Received", pending: "Pending",
+};
+
+export function buildFounderCSV(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}) {
+  const policiesCols = cfg.policies?.length ? cfg.policies : DEFAULT_COLS.policies;
+  const loansCols = cfg.loans?.length ? cfg.loans : DEFAULT_COLS.loans;
+  const dealsCols = cfg.deals?.length ? cfg.deals : DEFAULT_COLS.deals;
+  const includeRecon = cfg.includeReconciliation !== false;
+  const includeAudit = cfg.includeAudit !== false;
+  const includeKpis = cfg.includeKpis !== false;
+  const includeCounts = cfg.includeCounts !== false;
+
   const esc = (v: any) => {
     const str = String(v ?? "");
     return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
@@ -270,50 +300,69 @@ export function buildFounderCSV(s: FounderSnapshotInput) {
   lines.push(`Generated,${new Date().toISOString()}`);
   lines.push("");
 
-  lines.push("== KPIs ==");
-  lines.push("Metric,Amount");
-  lines.push(`Revenue (Paid),${s.kpis.revenue}`);
-  lines.push(`Receivables,${s.kpis.receivables}`);
-  lines.push(`Payroll,${s.kpis.payroll}`);
-  lines.push(`Expenses,${s.kpis.expenses}`);
-  lines.push(`Incentives Net,${s.kpis.incentives}`);
-  lines.push(`Net Profit/Loss,${s.kpis.profit}`);
-  lines.push("");
+  if (includeKpis) {
+    lines.push("== KPIs ==");
+    lines.push("Metric,Amount");
+    lines.push(`Revenue (Paid),${s.kpis.revenue}`);
+    lines.push(`Receivables,${s.kpis.receivables}`);
+    lines.push(`Payroll,${s.kpis.payroll}`);
+    lines.push(`Expenses,${s.kpis.expenses}`);
+    lines.push(`Incentives Net,${s.kpis.incentives}`);
+    lines.push(`Net Profit/Loss,${s.kpis.profit}`);
+    lines.push("");
+  }
 
-  lines.push("== Counts ==");
-  lines.push(`Policies,${s.counts.policies}`);
-  lines.push(`Loans Total,${s.counts.loans}`);
-  lines.push(`Loans Disbursed,${s.counts.loansDisbursed}`);
-  lines.push(`Deals,${s.counts.deals}`);
-  lines.push(`Invoices Total,${s.counts.invoices}`);
-  lines.push(`Invoices Paid,${s.counts.invoicesPaid}`);
-  lines.push("");
+  if (includeCounts) {
+    lines.push("== Counts ==");
+    lines.push(`Policies,${s.counts.policies}`);
+    lines.push(`Loans Total,${s.counts.loans}`);
+    lines.push(`Loans Disbursed,${s.counts.loansDisbursed}`);
+    lines.push(`Deals,${s.counts.deals}`);
+    lines.push(`Invoices Total,${s.counts.invoices}`);
+    lines.push(`Invoices Paid,${s.counts.invoicesPaid}`);
+    lines.push("");
+  }
 
-  lines.push("== Reconciliation ==");
-  lines.push("Module,Summary Net,Table Net,Diff,Status");
-  s.reconciliation.forEach(r => lines.push(`${esc(r.module)},${r.summaryNet},${r.tableNet},${r.diff},${esc(r.status)}`));
-  lines.push("");
+  if (includeRecon) {
+    lines.push("== Reconciliation ==");
+    lines.push("Module,Summary Net,Table Net,Diff,Status");
+    s.reconciliation.forEach(r => lines.push(`${esc(r.module)},${r.summaryNet},${r.tableNet},${r.diff},${esc(r.status)}`));
+    lines.push("");
+  }
 
-  lines.push("== Audit Trail ==");
-  lines.push("Module,Query,Rows");
-  s.audit.forEach(a => lines.push(`${esc(a.module)},${esc(a.query)},${a.rows}`));
-  lines.push("");
+  if (includeAudit) {
+    lines.push("== Audit Trail ==");
+    lines.push("Module,Query,Rows");
+    s.audit.forEach(a => lines.push(`${esc(a.module)},${esc(a.query)},${a.rows}`));
+    lines.push("");
+  }
 
-  lines.push("== Policies ==");
-  lines.push("Reference,Customer,Type,Base,Pct,Gross,TDS,Net");
-  s.policies.forEach(p => lines.push([p.ref, p.customer, p.type, p.base, p.pct, p.gross, p.tds, p.net].map(esc).join(",")));
-  lines.push("");
+  if (policiesCols.length) {
+    lines.push(`== Policies (${s.policies.length}) ==`);
+    lines.push(policiesCols.map(c => COL_LABELS[c] || c).join(","));
+    s.policies.forEach(p => lines.push(policiesCols.map(c => esc((p as any)[c])).join(",")));
+    lines.push("");
+  }
 
-  lines.push("== Loans ==");
-  lines.push("Reference,Customer,Bank,Stage,Base,Pct,Gross,TDS,Net");
-  s.loans.forEach(l => lines.push([l.ref, l.customer, l.bank, l.stage, l.base, l.pct, l.gross, l.tds, l.net].map(esc).join(",")));
-  lines.push("");
+  if (loansCols.length) {
+    lines.push(`== Loans (${s.loans.length}) ==`);
+    lines.push(loansCols.map(c => COL_LABELS[c] || c).join(","));
+    s.loans.forEach(l => lines.push(loansCols.map(c => esc((l as any)[c])).join(",")));
+    lines.push("");
+  }
 
-  lines.push("== Deals ==");
-  lines.push("Reference,Customer,Vertical,Value,Margin,Pct,Net,Received,Pending");
-  s.deals.forEach(d => lines.push([d.ref, d.customer, d.vertical, d.value, d.margin, d.pct, d.net, d.received, d.pending].map(esc).join(",")));
+  if (dealsCols.length) {
+    lines.push(`== Deals (${s.deals.length}) ==`);
+    lines.push(dealsCols.map(c => COL_LABELS[c] || c).join(","));
+    s.deals.forEach(d => lines.push(dealsCols.map(c => esc((d as any)[c])).join(",")));
+  }
 
   const csv = lines.join("\n");
+  return csv;
+}
+
+export function downloadFounderCSV(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}) {
+  const csv = buildFounderCSV(s, cfg);
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -323,4 +372,93 @@ export function buildFounderCSV(s: FounderSnapshotInput) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+/* ============== Founder Snapshot HTML (for PDF/Email body) ============== */
+
+export function buildFounderSnapshotHTML(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}): string {
+  const policiesCols = cfg.policies?.length ? cfg.policies : DEFAULT_COLS.policies;
+  const loansCols = cfg.loans?.length ? cfg.loans : DEFAULT_COLS.loans;
+  const dealsCols = cfg.deals?.length ? cfg.deals : DEFAULT_COLS.deals;
+  const includeRecon = cfg.includeReconciliation !== false;
+  const includeAudit = cfg.includeAudit !== false;
+
+  const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
+  const polTotals = {
+    base: sum(s.policies.map(p => p.base)), gross: sum(s.policies.map(p => p.gross)),
+    tds: sum(s.policies.map(p => p.tds)), net: sum(s.policies.map(p => p.net)),
+  };
+  const loanTotals = {
+    base: sum(s.loans.map(l => l.base)), gross: sum(s.loans.map(l => l.gross)),
+    tds: sum(s.loans.map(l => l.tds)), net: sum(s.loans.map(l => l.net)),
+  };
+  const dealTotals = {
+    value: sum(s.deals.map(d => d.value)), margin: sum(s.deals.map(d => d.margin)),
+    net: sum(s.deals.map(d => d.net)), received: sum(s.deals.map(d => d.received)),
+    pending: sum(s.deals.map(d => d.pending)),
+  };
+
+  const renderTable = (cols: string[], rows: any[], totals?: Record<string, number>) => `
+    <table>
+      <tr>${cols.map(c => `<th class="${["base","pct","gross","tds","net","value","margin","received","pending"].includes(c) ? "num" : ""}">${esc(COL_LABELS[c] || c)}</th>`).join("")}</tr>
+      ${rows.map(r => `<tr>${cols.map(c => {
+        const v = r[c];
+        const isNum = typeof v === "number";
+        return `<td class="${isNum ? "num" : ""}">${isNum ? (c === "pct" ? `${v}%` : inr(v)) : esc(v)}</td>`;
+      }).join("")}</tr>`).join("")}
+      ${totals ? `<tr class="totals">${cols.map(c => {
+        if (totals[c] !== undefined) return `<td class="num">${inr(totals[c])}</td>`;
+        return `<td>${c === cols[0] ? "TOTAL" : "—"}</td>`;
+      }).join("")}</tr>` : ""}
+    </table>`;
+
+  return `
+    <h1>Founder Master Report — Snapshot</h1>
+    <p class="muted">
+      Period: <b>${esc(s.periodLabel)}</b> (${esc(s.periodKind)}) · ${esc(s.periodStart)} → ${esc(s.periodEnd)}<br/>
+      Filters: vertical=<b>${esc(s.filters.vertical)}</b>${s.filters.search ? ` · search="${esc(s.filters.search)}"` : ""}<br/>
+      Generated ${new Date().toLocaleString("en-IN")}
+    </p>
+
+    <h2>Headline KPIs</h2>
+    <table>
+      <tr><th>Metric</th><th class="num">Amount</th></tr>
+      <tr><td>Revenue (Paid)</td><td class="num">${inr(s.kpis.revenue)}</td></tr>
+      <tr><td>Receivables</td><td class="num">${inr(s.kpis.receivables)}</td></tr>
+      <tr><td>Payroll (Net)</td><td class="num">${inr(s.kpis.payroll)}</td></tr>
+      <tr><td>Operational Expenses</td><td class="num">${inr(s.kpis.expenses)}</td></tr>
+      <tr><td>Total Incentives</td><td class="num">${inr(s.kpis.incentives)}</td></tr>
+      <tr class="totals"><td>Net Profit / Loss</td><td class="num">${s.kpis.profit >= 0 ? "" : "- "}${inr(Math.abs(s.kpis.profit))}</td></tr>
+    </table>
+
+    ${includeRecon ? `
+    <h2>Auto-Reconciliation</h2>
+    <table>
+      <tr><th>Module</th><th class="num">Summary Net</th><th class="num">Table Net</th><th class="num">Diff</th><th>Status</th></tr>
+      ${s.reconciliation.map(r => `<tr><td>${esc(r.module)}</td><td class="num">${inr(r.summaryNet)}</td><td class="num">${inr(r.tableNet)}</td><td class="num">${inr(r.diff)}</td><td>${esc(r.status)}</td></tr>`).join("")}
+    </table>` : ""}
+
+    ${includeAudit ? `
+    <h2>Audit Trail — Date-range queries</h2>
+    <table>
+      <tr><th>Module</th><th>Query</th><th class="num">Rows</th></tr>
+      ${s.audit.map(a => `<tr><td>${esc(a.module)}</td><td style="font-family:monospace;font-size:10px">${esc(a.query)}</td><td class="num">${a.rows}</td></tr>`).join("")}
+    </table>` : ""}
+
+    ${policiesCols.length ? `<h2>Policies (${s.policies.length})</h2>${renderTable(policiesCols, s.policies, polTotals as any)}` : ""}
+    ${loansCols.length ? `<h2>Car Loans (${s.loans.length})</h2>${renderTable(loansCols, s.loans, loanTotals as any)}` : ""}
+    ${dealsCols.length ? `<h2>Car Deals (${s.deals.length})</h2>${renderTable(dealsCols, s.deals, dealTotals as any)}` : ""}
+
+    <div class="stamp">Founder Master Report Snapshot · GYC Finance Office · Confidential</div>
+  `;
+}
+
+export function buildFounderSnapshotWithConfig(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}) {
+  const html = buildFounderSnapshotHTML(s, cfg);
+  openHtmlPrint(html, `Founder-Snapshot-${s.periodLabel}`);
+}
+
+export function getFounderSnapshotPrintableHTML(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}): string {
+  const body = buildFounderSnapshotHTML(s, cfg);
+  return `<!doctype html><html><head><meta charset="utf-8"/><title>Founder Snapshot</title><style>${css}</style></head><body>${body}</body></html>`;
 }

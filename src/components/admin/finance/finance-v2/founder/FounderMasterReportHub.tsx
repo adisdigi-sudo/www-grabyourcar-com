@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -13,14 +13,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Wallet, Users, Shield, Banknote, Car, FileText, Target, FileDown,
   TrendingUp, TrendingDown, Search, Filter, FileSpreadsheet, BarChart3,
-  Radio, RotateCcw,
+  Radio, RotateCcw, Image as ImageIcon, Download,
 } from "lucide-react";
+import html2canvas from "html2canvas";
 import { SectionCard } from "../shared/SectionCard";
 import { StatTile } from "../shared/StatTile";
 import {
   computeInsurancePayout, computeLoanPayout, computeDealPayout, inr, RuleRow,
 } from "../shared/payoutEngine";
-import { buildRowInvoice, buildMonthlyStatement, buildFounderSnapshot, buildFounderCSV } from "../shared/founderReportPDF";
+import { buildRowInvoice, buildMonthlyStatement } from "../shared/founderReportPDF";
+import { FounderExportDialog } from "./FounderExportDialog";
+import { ReconciliationDrillModal } from "./ReconciliationDrillModal";
+import { useToast } from "@/hooks/use-toast";
 
 /* ---------- PERIOD HELPERS ---------- */
 type PeriodKind = "week" | "month" | "quarter" | "year" | "custom";
@@ -58,6 +62,7 @@ const buildPeriod = (kind: PeriodKind, anchor: Date, custom?: { from: string; to
 
 export const FounderMasterReportHub = () => {
   const qc = useQueryClient();
+  const { toast } = useToast();
   const [periodKind, setPeriodKind] = useState<PeriodKind>("month");
   const [anchor, setAnchor] = useState<Date>(new Date());
   const [customFrom, setCustomFrom] = useState<string>(fmtISO(startOfMonth(new Date())));
@@ -65,6 +70,9 @@ export const FounderMasterReportHub = () => {
   const [vertical, setVertical] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [liveOn, setLiveOn] = useState(true);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [drillModule, setDrillModule] = useState<"Policies" | "Loans" | "Deals" | null>(null);
+  const loanChartRef = useRef<HTMLDivElement>(null);
 
   // Custom payout % overrides — keyed by record id
   const [policyOverrides, setPolicyOverrides] = useState<Record<string, number>>({});
@@ -297,6 +305,50 @@ export const FounderMasterReportHub = () => {
     { module: "Expenses", query: `expense_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: expenses.length },
   ]), [periodStart, periodEnd, policies.length, loans.length, deals.length, invoices.length, payroll.length, expenses.length]);
 
+  // Drill rows for the reconciliation modal — surfaces records that contributed to mismatch
+  const drillData = useMemo(() => {
+    const polRows = policyComputed.map((p: any) => {
+      const def = computeInsurancePayout(p, rules);
+      const expected = def.net;
+      const actual = p._calc.net;
+      const diff = expected - actual;
+      return {
+        id: p.id,
+        ref: p.policy_number || p.id.slice(0, 8),
+        customer: p.insurance_clients?.customer_name || "—",
+        meta: `${p.policy_type} · ${p.insurer}`,
+        summaryNet: expected, tableNet: actual, diff,
+        reason: p._calc.isCustom ? `Custom % ${p._calc.pct}% (default ${def.pct}%)` : (Math.abs(diff) < 1 ? "Match" : "Rule/data variance"),
+      };
+    }).filter((r: any) => Math.abs(r.diff) >= 1);
+
+    const loanRows = loanComputed.map((l: any) => {
+      const def = computeLoanPayout(l, rules);
+      const expected = def.net; const actual = l._calc.net; const diff = expected - actual;
+      return {
+        id: l.id,
+        ref: l.disbursement_reference || l.id.slice(0, 8),
+        customer: l.customer_name || "—",
+        meta: `${l.lender_name || "—"} · ${l.car_model || "—"}`,
+        summaryNet: expected, tableNet: actual, diff,
+        reason: l._calc.isCustom ? `Custom % ${l._calc.pct}% (default ${def.pct}%)` : (Math.abs(diff) < 1 ? "Match" : "Rule/data variance"),
+      };
+    }).filter((r: any) => Math.abs(r.diff) >= 1);
+
+    const dealRows = dealComputed
+      .filter((d: any) => (d._calc.received || 0) < (d._calc.net || 0) || (d._calc.pending || 0) > 0)
+      .map((d: any) => ({
+        id: d.id,
+        ref: d.deal_number || d.id.slice(0, 8),
+        customer: d.master_customers?.name || "—",
+        meta: d.vertical_name || "—",
+        summaryNet: d._calc.net, tableNet: d._calc.received || 0, diff: (d._calc.net || 0) - (d._calc.received || 0),
+        reason: (d._calc.pending || 0) > 0 ? `Pending receivable ${inr(d._calc.pending)}` : "Partial receipt",
+      }));
+
+    return { Policies: polRows, Loans: loanRows, Deals: dealRows } as Record<string, any[]>;
+  }, [policyComputed, loanComputed, dealComputed, rules]);
+
   const verticals = useMemo(() => {
     const set = new Set<string>();
     invoices.forEach((i: any) => i.vertical_name && set.add(i.vertical_name));
@@ -358,13 +410,9 @@ export const FounderMasterReportHub = () => {
       className="lg:col-span-3"
       action={
         <div className="flex items-center gap-2 flex-wrap">
-          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
-            onClick={() => buildFounderCSV(buildSnapshot())}>
-            <FileSpreadsheet className="h-3 w-3" /> Export CSV
-          </Button>
-          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
-            onClick={() => buildFounderSnapshot(buildSnapshot())}>
-            <FileDown className="h-3 w-3" /> Export PDF
+          <Button size="sm" variant="default" className="h-7 gap-1 text-xs"
+            onClick={() => setExportDialogOpen(true)}>
+            <Download className="h-3 w-3" /> Export…
           </Button>
           <Badge variant={liveOn ? "default" : "secondary"} className="gap-1 text-[10px] cursor-pointer" onClick={() => setLiveOn(v => !v)}>
             <Radio className={`h-2.5 w-2.5 ${liveOn ? "animate-pulse" : ""}`} />
@@ -455,7 +503,7 @@ export const FounderMasterReportHub = () => {
       </div>
 
       {/* Loan Breakdown Chart — Issued vs Disbursed vs Pending vs Lost */}
-      <div className="mb-5 p-4 rounded-lg border bg-white">
+      <div ref={loanChartRef} className="mb-5 p-4 rounded-lg border bg-white">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
@@ -469,6 +517,26 @@ export const FounderMasterReportHub = () => {
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-600" />Disbursed</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-slate-400" />Pending</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500" />Lost</span>
+            <Button
+              size="sm" variant="outline" className="h-6 gap-1 text-[10px] ml-2"
+              onClick={async () => {
+                if (!loanChartRef.current) return;
+                try {
+                  const canvas = await html2canvas(loanChartRef.current, {
+                    backgroundColor: "#ffffff", scale: 2, logging: false, useCORS: true,
+                  });
+                  const a = document.createElement("a");
+                  a.href = canvas.toDataURL("image/png");
+                  a.download = `Loan-Pipeline-${periodLabel.replace(/\s+/g, "_")}.png`;
+                  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                  toast({ title: "Chart saved", description: "Loan pipeline downloaded as PNG." });
+                } catch (e: any) {
+                  toast({ title: "Couldn't save chart", description: e?.message || "Try again.", variant: "destructive" });
+                }
+              }}
+            >
+              <ImageIcon className="h-3 w-3" /> PNG
+            </Button>
           </div>
         </div>
 
@@ -536,7 +604,12 @@ export const FounderMasterReportHub = () => {
           {reconciliation.map(r => {
             const ok = Math.abs(r.diff) < 1;
             return (
-              <div key={r.module} className={`p-2 rounded border ${ok ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-300"}`}>
+              <button
+                type="button"
+                key={r.module}
+                onClick={() => setDrillModule(r.module as any)}
+                className={`text-left p-2 rounded border transition hover:shadow-sm hover:scale-[1.01] ${ok ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-300"}`}
+              >
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">{r.module}</span>
                   <span className={`text-[10px] font-mono ${ok ? "text-emerald-700" : "text-amber-700"}`}>{r.status}</span>
@@ -545,7 +618,8 @@ export const FounderMasterReportHub = () => {
                   Summary: <b>{inr(r.summaryNet)}</b> · Table: <b>{inr(r.tableNet)}</b>
                   {!ok && <span className="text-amber-700"> · Δ {inr(Math.abs(r.diff))}</span>}
                 </div>
-              </div>
+                <div className="text-[9px] text-slate-400 mt-1">click to drill into rows →</div>
+              </button>
             );
           })}
         </div>
@@ -1030,6 +1104,20 @@ export const FounderMasterReportHub = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      <FounderExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        snapshot={buildSnapshot}
+      />
+
+      <ReconciliationDrillModal
+        open={drillModule !== null}
+        onOpenChange={(v) => !v && setDrillModule(null)}
+        module={drillModule}
+        rows={drillModule ? drillData[drillModule] || [] : []}
+        totalDiff={drillModule ? (reconciliation.find(r => r.module === drillModule)?.diff || 0) : 0}
+      />
     </SectionCard>
   );
 };
