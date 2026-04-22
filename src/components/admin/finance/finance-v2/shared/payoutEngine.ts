@@ -2,19 +2,33 @@
  * Payout Calc Engine — pulls from commission_rules table when available,
  * falls back to industry-standard slabs.
  *
- * INSURANCE
- *  - standalone OD     : 15% of net_premium
- *  - third party (TP)  : 2.5% of net_premium
- *  - comprehensive     : 12% of net_premium
- *  - default           : 10% of net_premium
+ * INSURANCE (FOUNDER-LOCKED FORMULAS)
+ *   - Strip 18% GST first:  baseExGst = total_premium / 1.18  (or net_premium if column populated)
+ *
+ *   STANDALONE OD
+ *     base   = baseExGst
+ *     payout = base × % (default 15%)
+ *
+ *   THIRD PARTY (TP)
+ *     base   = baseExGst (TP itself is the entire premium)
+ *     payout = base × % (default 2.5%)
+ *
+ *   COMPREHENSIVE
+ *     base = baseExGst − tp_premium − pa_premium
+ *     (tp_premium / pa_premium come from policy.addons / metadata if recorded;
+ *      otherwise estimated from defaults: TP ≈ 18% of baseExGst, PA = 0)
+ *     payout = base × % (default 12%)
+ *
+ *   TDS = 5% of gross payout
  *
  * LOANS
- *  - 1.2% of net disbursement (sanction_amount or disbursement_amount fallback)
+ *   - 1.2% of net disbursement (sanction_amount or disbursement_amount fallback)
+ *   - TDS = 5%
  *
  * CAR DEALS
- *  - gross_margin = revenue (or deal_value) - dealer_payout
- *  - tds          = 5% of gross_margin
- *  - net_payout   = gross_margin - tds
+ *   - gross_margin = deal_value − dealer_payout
+ *   - tds = 5% of gross_margin
+ *   - net = gross_margin − tds
  */
 
 export type RuleRow = {
@@ -38,8 +52,13 @@ const FALLBACK = {
     comprehensive: 12,
     default: 10,
   } as Record<string, number>,
+  // Default split ratios used ONLY when explicit tp_premium/pa_premium are missing
+  comprehensive_tp_share: 0.18, // ~18% of net (ex-GST) goes to mandatory TP
+  comprehensive_pa_share: 0,    // PA optional; 0 unless user records it
   loan: 1.2,
   dealTdsPct: 5,
+  gstPct: 18,
+  tdsPct: 5,
 };
 
 const norm = (s: string | null | undefined) =>
@@ -47,9 +66,18 @@ const norm = (s: string | null | undefined) =>
 
 /* ---------------- INSURANCE ---------------- */
 
+export type PolicyKind = "standalone" | "third_party" | "comprehensive" | "other";
+
+export function classifyPolicy(policyType: string): PolicyKind {
+  const t = norm(policyType);
+  if (t.includes("third") || t === "tp") return "third_party";
+  if (t.includes("comp")) return "comprehensive";
+  if (t.includes("standalone") || t === "od" || t.includes("own_damage")) return "standalone";
+  return "other";
+}
+
 export function getInsurancePayoutPct(policyType: string, rules: RuleRow[] = []): number {
   const t = norm(policyType);
-  // Try DB rule first (vertical_name=insurance, conditions.policy_type matches)
   const match = rules.find((r) => {
     if (!r.is_active) return false;
     if (norm(r.vertical_name) !== "insurance") return false;
@@ -59,19 +87,70 @@ export function getInsurancePayoutPct(policyType: string, rules: RuleRow[] = [])
   });
   if (match?.percentage) return Number(match.percentage);
 
-  if (t.includes("third") || t === "tp") return FALLBACK.insurance.tp;
-  if (t.includes("comp")) return FALLBACK.insurance.comprehensive;
-  if (t.includes("standalone") || t === "od" || t.includes("own_damage")) return FALLBACK.insurance.standalone;
+  const k = classifyPolicy(policyType);
+  if (k === "third_party") return FALLBACK.insurance.tp;
+  if (k === "comprehensive") return FALLBACK.insurance.comprehensive;
+  if (k === "standalone") return FALLBACK.insurance.standalone;
   return FALLBACK.insurance.default;
 }
 
+/**
+ * Returns the GST-excluded base, plus the components used for comprehensive split.
+ */
+export function deriveInsuranceBase(policy: any) {
+  const totalPremium = Number(policy.premium_amount || 0);
+  const storedNet = Number(policy.net_premium || 0);
+  // baseExGst preference: stored net_premium if > 0, else strip GST
+  const baseExGst = storedNet > 0 ? storedNet : totalPremium > 0 ? totalPremium / (1 + FALLBACK.gstPct / 100) : 0;
+
+  // Optional explicit splits if recorded in metadata / addons
+  const meta = (policy.metadata && typeof policy.metadata === "object" ? policy.metadata : {}) || {};
+  const tpExplicit = Number(meta.tp_premium ?? policy.tp_premium ?? 0) || 0;
+  const paExplicit = Number(meta.pa_premium ?? policy.pa_premium ?? 0) || 0;
+
+  return {
+    totalPremium,
+    gstAmount: totalPremium - baseExGst,
+    baseExGst,
+    tpExplicit,
+    paExplicit,
+  };
+}
+
 export function computeInsurancePayout(policy: any, rules: RuleRow[] = []) {
-  const base = Number(policy.net_premium || policy.premium_amount || 0);
+  const kind = classifyPolicy(policy.policy_type);
   const pct = getInsurancePayoutPct(policy.policy_type, rules);
+  const der = deriveInsuranceBase(policy);
+
+  let base = 0;
+  const breakup: Record<string, number> = {
+    total_premium: der.totalPremium,
+    gst_18pct: der.gstAmount,
+    base_ex_gst: der.baseExGst,
+    tp_less: 0,
+    pa_less: 0,
+  };
+
+  if (kind === "comprehensive") {
+    const tp = der.tpExplicit > 0
+      ? der.tpExplicit
+      : der.baseExGst * FALLBACK.comprehensive_tp_share;
+    const pa = der.paExplicit > 0
+      ? der.paExplicit
+      : der.baseExGst * FALLBACK.comprehensive_pa_share;
+    breakup.tp_less = tp;
+    breakup.pa_less = pa;
+    base = Math.max(0, der.baseExGst - tp - pa);
+  } else if (kind === "third_party" || kind === "standalone") {
+    base = der.baseExGst;
+  } else {
+    base = der.baseExGst;
+  }
+
   const gross = (base * pct) / 100;
-  const tds = gross * 0.05;
+  const tds = gross * (FALLBACK.tdsPct / 100);
   const net = gross - tds;
-  return { base, pct, gross, tds, net };
+  return { kind, base, pct, gross, tds, net, breakup };
 }
 
 /* ---------------- LOANS ---------------- */
@@ -85,7 +164,7 @@ export function computeLoanPayout(loan: any, rules: RuleRow[] = []) {
   const base = Number(loan.disbursement_amount || loan.sanction_amount || loan.loan_amount || 0);
   const pct = getLoanPayoutPct(rules);
   const gross = (base * pct) / 100;
-  const tds = gross * 0.05;
+  const tds = gross * (FALLBACK.tdsPct / 100);
   const net = gross - tds;
   return { base, pct, gross, tds, net };
 }
