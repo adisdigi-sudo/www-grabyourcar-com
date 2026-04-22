@@ -123,33 +123,50 @@ export const FounderMasterReportHub = () => {
     },
   });
 
+  // POLICIES — only ACTIVE policies issued in the period (renewed/lapsed/cancelled excluded)
   const { data: policies = [] } = useQuery({
     queryKey: ["founder-policies", pKey],
     queryFn: async () => {
       const { data } = await (supabase.from("insurance_policies") as any)
         .select("*, insurance_clients(customer_name, vehicle_number, phone, assigned_executive)")
+        .eq("status", "active")
         .gte("issued_date", periodStart).lte("issued_date", periodEnd)
         .order("issued_date", { ascending: false });
       return data || [];
     },
   });
 
+  // LOANS — anything that lives in the period: disbursed in range OR sanctioned in range OR created in range
   const { data: loans = [] } = useQuery({
     queryKey: ["founder-loans", pKey],
     queryFn: async () => {
+      const startTs = periodStart + "T00:00:00";
+      const endTs = periodEnd + "T23:59:59";
+      const orFilter = [
+        `and(disbursement_date.gte.${periodStart},disbursement_date.lte.${periodEnd})`,
+        `and(sanction_date.gte.${periodStart},sanction_date.lte.${periodEnd})`,
+        `and(created_at.gte.${startTs},created_at.lte.${endTs})`,
+      ].join(",");
       const { data } = await (supabase.from("loan_applications") as any).select("*")
-        .gte("disbursement_date", periodStart).lte("disbursement_date", periodEnd)
-        .order("disbursement_date", { ascending: false });
+        .or(orFilter)
+        .order("created_at", { ascending: false });
       return data || [];
     },
   });
 
+  // DEALS — closed_at in range OR created in range (covers both new and recently-closed deals)
   const { data: deals = [] } = useQuery({
     queryKey: ["founder-deals", pKey],
     queryFn: async () => {
+      const startTs = periodStart + "T00:00:00";
+      const endTs = periodEnd + "T23:59:59";
+      const orFilter = [
+        `and(created_at.gte.${startTs},created_at.lte.${endTs})`,
+        `and(closed_at.gte.${startTs},closed_at.lte.${endTs})`,
+      ].join(",");
       const { data } = await (supabase.from("deals") as any)
         .select("*, master_customers(name, phone)")
-        .gte("created_at", periodStart + "T00:00:00").lte("created_at", periodEnd + "T23:59:59")
+        .or(orFilter)
         .order("created_at", { ascending: false });
       return data || [];
     },
@@ -261,18 +278,25 @@ export const FounderMasterReportHub = () => {
         </div>
       }
     >
-      {/* Period filter strip */}
-      <div className="flex items-center gap-2 flex-wrap mb-3 p-3 rounded-lg border bg-gradient-to-r from-amber-50/40 to-white">
+      {/* Period filter strip — Weekly · Monthly · Quarterly · Yearly · Custom Range */}
+      <div className="flex items-center gap-2 flex-wrap mb-3 p-3 rounded-lg border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-white shadow-sm">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Live Period</span>
         <div className="flex items-center gap-1 bg-white rounded-md border p-0.5">
-          {(["week", "month", "quarter", "year", "custom"] as PeriodKind[]).map(k => (
+          {([
+            { k: "week" as PeriodKind, label: "Weekly" },
+            { k: "month" as PeriodKind, label: "Monthly" },
+            { k: "quarter" as PeriodKind, label: "Quarterly" },
+            { k: "year" as PeriodKind, label: "Yearly" },
+            { k: "custom" as PeriodKind, label: "Custom Range" },
+          ]).map(({ k, label }) => (
             <button
               key={k}
               onClick={() => setPeriodKind(k)}
-              className={`text-[11px] px-3 py-1 rounded font-medium capitalize transition ${
+              className={`text-[11px] px-3 py-1 rounded font-medium transition ${
                 periodKind === k ? "bg-amber-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
               }`}
             >
-              {k}
+              {label}
             </button>
           ))}
         </div>
@@ -301,7 +325,7 @@ export const FounderMasterReportHub = () => {
           </>
         )}
 
-        <Badge variant="outline" className="text-[10px] ml-auto">{periodLabel}</Badge>
+        <Badge variant="default" className="text-[10px] ml-auto bg-amber-600">{periodLabel}</Badge>
       </div>
 
       {/* KPI strip */}
@@ -448,7 +472,26 @@ export const FounderMasterReportHub = () => {
                     <td className="px-3 py-2 font-mono">{p.policy_number || p.id.slice(0, 8)}</td>
                     <td className="px-3 py-2">{p.insurance_clients?.customer_name || "—"}<div className="text-[10px] text-slate-500">{p.insurance_clients?.vehicle_number || ""}</div></td>
                     <td className="px-3 py-2"><Badge variant="outline" className="text-[10px] capitalize">{p.policy_type}</Badge><div className="text-[10px] text-slate-500 mt-0.5">{p.insurer}</div></td>
-                    <td className="px-3 py-2 text-right">{inr(p._calc.base)}</td>
+                    <td
+                      className="px-3 py-2 text-right"
+                      title={
+                        `Total Premium: ${inr(p._calc.breakup?.total_premium || 0)}\n` +
+                        `Less GST 18%:  -${inr(p._calc.breakup?.gst_18pct || 0)}\n` +
+                        `Base (ex-GST): ${inr(p._calc.breakup?.base_ex_gst || 0)}\n` +
+                        (p._calc.kind === "comprehensive"
+                          ? `Less TP part: -${inr(p._calc.breakup?.tp_less || 0)}\n` +
+                            `Less PA driver: -${inr(p._calc.breakup?.pa_less || 0)}\n`
+                          : "") +
+                        `Payable Base: ${inr(p._calc.base)}`
+                      }
+                    >
+                      <div className="font-medium">{inr(p._calc.base)}</div>
+                      <div className="text-[10px] text-slate-500 leading-tight">
+                        {inr(p._calc.breakup?.total_premium || 0)} − GST
+                        {p._calc.kind === "comprehensive" && (p._calc.breakup?.tp_less || 0) > 0 && " − TP"}
+                        {p._calc.kind === "comprehensive" && (p._calc.breakup?.pa_less || 0) > 0 && " − PA"}
+                      </div>
+                    </td>
                     <td className="px-3 py-2 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <Input
