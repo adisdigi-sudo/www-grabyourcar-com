@@ -474,6 +474,9 @@ const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
       return tab.startsWith("cars-");
     case "dealer-network":
       return tab.startsWith("dealer-");
+    case "founder-cockpit":
+      // Dedicated founder workspace exposes ONLY the cockpit tab — no dashboard, no other modules.
+      return tab === "founder-cockpit";
     default:
       return tab === DEFAULT_ADMIN_TAB;
   }
