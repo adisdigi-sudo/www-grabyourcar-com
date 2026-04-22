@@ -329,13 +329,34 @@ export const FounderMasterReportHub = () => {
       </div>
 
       {/* KPI strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-3">
         <StatTile label="Revenue (Paid)" value={inr(revenueTotal)} icon={TrendingUp} trend="up" trendLabel={`${invoices.filter((i: any) => i.status === "paid").length} inv`} />
         <StatTile label="Receivables" value={inr(receivablesTotal)} icon={FileText} trend={receivablesTotal > 0 ? "down" : "neutral"} trendLabel={`${invoices.filter((i: any) => i.status !== "paid").length} pending`} />
         <StatTile label="Payroll" value={inr(payrollTotal)} icon={Users} hint={`${payroll.length} emp`} />
         <StatTile label="Expenses" value={inr(expenseTotal)} icon={Wallet} hint={`${expenses.length} entries`} />
         <StatTile label="Total Incentives" value={inr(incentiveTotal)} icon={Target} trend="up" trendLabel="Net of TDS" />
         <StatTile label="Net P&L" value={inr(Math.abs(profit))} icon={profit >= 0 ? TrendingUp : TrendingDown} trend={profit >= 0 ? "up" : "down"} trendLabel={profit >= 0 ? "Surplus" : "Deficit"} />
+      </div>
+
+      {/* Live Vertical Counts — exact records in selected period */}
+      <div className="grid grid-cols-3 gap-3 mb-5 p-3 rounded-lg border bg-slate-50/40">
+        <div className="text-center">
+          <div className="text-[10px] uppercase text-slate-500 font-semibold">Policies Issued</div>
+          <div className="text-xl font-bold text-blue-700">{policies.length}</div>
+          <div className="text-[10px] text-slate-500">Net Payout: {inr(insuranceNet)}</div>
+        </div>
+        <div className="text-center border-x">
+          <div className="text-[10px] uppercase text-slate-500 font-semibold">Car Loan Cases</div>
+          <div className="text-xl font-bold text-emerald-700">{loans.length}</div>
+          <div className="text-[10px] text-slate-500">
+            {loans.filter((l: any) => l.stage === "disbursed").length} disbursed · Net: {inr(loanNet)}
+          </div>
+        </div>
+        <div className="text-center">
+          <div className="text-[10px] uppercase text-slate-500 font-semibold">Car Sales / Deals</div>
+          <div className="text-xl font-bold text-amber-700">{deals.length}</div>
+          <div className="text-[10px] text-slate-500">Net Margin: {inr(dealNet)}</div>
+        </div>
       </div>
 
       {/* Filters */}
@@ -476,18 +497,19 @@ export const FounderMasterReportHub = () => {
                       className="px-3 py-2 text-right"
                       title={
                         `Total Premium: ${inr(p._calc.breakup?.total_premium || 0)}\n` +
-                        `Less GST 18%:  -${inr(p._calc.breakup?.gst_18pct || 0)}\n` +
+                        `Less GST ${p._calc.breakup?.gst_pct ?? 18}%:  -${inr(p._calc.breakup?.gst_amount ?? p._calc.breakup?.gst_18pct ?? 0)}\n` +
                         `Base (ex-GST): ${inr(p._calc.breakup?.base_ex_gst || 0)}\n` +
                         (p._calc.kind === "comprehensive"
                           ? `Less TP part: -${inr(p._calc.breakup?.tp_less || 0)}\n` +
                             `Less PA driver: -${inr(p._calc.breakup?.pa_less || 0)}\n`
                           : "") +
-                        `Payable Base: ${inr(p._calc.base)}`
+                        `Payable Base: ${inr(p._calc.base)}\n` +
+                        `Payout %: ${p._calc.pct}%${p._calc.isCustom ? " (custom)" : ""}`
                       }
                     >
                       <div className="font-medium">{inr(p._calc.base)}</div>
                       <div className="text-[10px] text-slate-500 leading-tight">
-                        {inr(p._calc.breakup?.total_premium || 0)} − GST
+                        {inr(p._calc.breakup?.total_premium || 0)} − {p._calc.breakup?.gst_pct ?? 18}% GST
                         {p._calc.kind === "comprehensive" && (p._calc.breakup?.tp_less || 0) > 0 && " − TP"}
                         {p._calc.kind === "comprehensive" && (p._calc.breakup?.pa_less || 0) > 0 && " − PA"}
                       </div>
