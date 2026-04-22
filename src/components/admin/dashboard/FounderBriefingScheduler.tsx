@@ -119,7 +119,7 @@ export function FounderBriefingScheduler() {
     <Card className="border-border">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <div className="p-1.5 rounded-lg bg-amber-500/15 text-amber-600">
+          <div className="p-1.5 rounded-lg bg-primary/15 text-primary">
             <Bell className="h-4 w-4" />
           </div>
           Auto Briefings
