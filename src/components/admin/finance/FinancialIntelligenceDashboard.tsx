@@ -303,13 +303,13 @@ export const FinancialIntelligenceDashboard = () => {
 
       <div className="grid md:grid-cols-2 gap-4">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="h-4 w-4" /> 6-Month P&L Trend (Live)</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="h-4 w-4" /> P&amp;L Trend ({periodMode === "weekly" ? "12 weeks" : periodMode === "till_date" ? "24 months" : "6 months"})</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {monthlyData.map(m => (
-                <div key={m.month} className="space-y-1">
+              {bucketData.map(m => (
+                <div key={m.key} className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span className="font-medium">{format(new Date(`${m.month}-01`), "MMM yy")}</span>
+                    <span className="font-medium">{m.label}</span>
                     <span className={m.profit >= 0 ? "text-emerald-600 font-semibold" : "text-red-600 font-semibold"}>{fmt(m.profit)}</span>
                   </div>
                   <div className="flex gap-1 h-4">
@@ -373,7 +373,10 @@ export const FinancialIntelligenceDashboard = () => {
         <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><IndianRupee className="h-4 w-4" /> Payroll Cost Summary</CardTitle></CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {months.slice(-4).map(m => {
+            {(periodMode === "weekly"
+              ? Array.from({ length: 4 }, (_, i) => format(subMonths(new Date(), i), "yyyy-MM")).reverse()
+              : buckets.slice(-4)
+            ).map(m => {
               const monthPayroll = payrolls.filter((p: any) => p.payroll_month === m);
               const total = monthPayroll.reduce((s: number, p: any) => s + Number(p.net_salary || 0), 0);
               const headcount = monthPayroll.length;
