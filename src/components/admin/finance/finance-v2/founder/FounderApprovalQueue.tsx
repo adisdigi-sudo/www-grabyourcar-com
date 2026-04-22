@@ -14,12 +14,13 @@ import {
 } from "@/components/ui/select";
 import {
   CheckCircle2, XCircle, Clock, Inbox, Loader2, Eye, History, MessageSquare,
-  Search, Filter, User, Send, ShieldCheck, ShieldX, Hourglass,
+  Search, Filter, User, Send, ShieldCheck, ShieldX, Hourglass, FileDown, Printer, AlertCircle,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { SectionCard } from "../shared/SectionCard";
 import { fmt, VERTICALS, STATUS_META } from "../../corporate-budget/types";
 import { cn } from "@/lib/utils";
+import { buildExportFilename } from "../shared/exportNaming";
 
 type Decision = "approve" | "reject";
 type StatusFilter = "all" | "pending_approval" | "approved" | "rejected";
@@ -113,7 +114,13 @@ export const FounderApprovalQueue = () => {
 
   const decideMutation = useMutation({
     mutationFn: async ({ id, decision, note }: { id: string; decision: Decision; note: string }) => {
-      if (decision === "reject" && !note.trim()) throw new Error("Reason for rejection is required");
+      const trimmed = note.trim();
+      if (decision === "reject" && !trimmed) {
+        throw new Error("Rejection reason is required — please add a comment so the team can act on it.");
+      }
+      if (decision === "reject" && trimmed.length < 5) {
+        throw new Error("Rejection reason is too short — add a clear, actionable note (≥ 5 characters).");
+      }
       const { data: u } = await supabase.auth.getUser();
       const userName = u?.user?.user_metadata?.full_name || u?.user?.email || "Founder";
       const newStatus = decision === "approve" ? "approved" : "rejected";
@@ -124,7 +131,7 @@ export const FounderApprovalQueue = () => {
         approved_by_name: userName,
         approved_at: new Date().toISOString(),
       };
-      if (decision === "reject") updates.rejection_reason = note.trim();
+      if (decision === "reject") updates.rejection_reason = trimmed;
 
       const { error: e1 } = await (supabase.from("corporate_budgets") as any).update(updates).eq("id", id);
       if (e1) throw e1;
@@ -136,7 +143,7 @@ export const FounderApprovalQueue = () => {
         actor_name: userName,
         previous_status: "pending_approval",
         new_status: newStatus,
-        comment: note.trim() || null,
+        comment: trimmed || null,
       });
       if (e2) throw e2;
     },
