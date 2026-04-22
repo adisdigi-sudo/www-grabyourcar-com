@@ -1,23 +1,30 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subMonths } from "date-fns";
+import { format, subMonths, subWeeks, startOfWeek } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import {
   TrendingUp, TrendingDown, AlertTriangle, IndianRupee,
   ArrowUpRight, ArrowDownRight, BarChart3, PieChart,
-  Target, Zap, ShieldAlert, Activity
+  Target, Zap, ShieldAlert, Activity, History
 } from "lucide-react";
 
 const fmt = (v: number) => `Rs. ${Math.round(v).toLocaleString("en-IN")}`;
 const pct = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
 
-interface MonthData {
-  month: string;
+type PeriodMode = "weekly" | "monthly" | "till_date";
+
+interface BucketData {
+  key: string;
+  label: string;
   revenue: number;
   expense: number;
   profit: number;
+  _revBreakdown?: Record<string, number>;
+  _expBreakdown?: Record<string, number>;
 }
 
 const monthKey = (d: string | Date | null | undefined): string | null => {
@@ -29,11 +36,32 @@ const monthKey = (d: string | Date | null | undefined): string | null => {
   } catch { return null; }
 };
 
+const weekKey = (d: string | Date | null | undefined): string | null => {
+  if (!d) return null;
+  try {
+    const dt = typeof d === "string" ? new Date(d) : d;
+    if (isNaN(dt.getTime())) return null;
+    return format(startOfWeek(dt, { weekStartsOn: 1 }), "yyyy-MM-dd");
+  } catch { return null; }
+};
+
 export const FinancialIntelligenceDashboard = () => {
-  const months = useMemo(() => Array.from({ length: 6 }, (_, i) =>
-    format(subMonths(new Date(), i), "yyyy-MM")
-  ).reverse(), []);
-  const startDate = `${months[0]}-01`;
+  const [periodMode, setPeriodMode] = useState<PeriodMode>("monthly");
+
+  const lookbackMonths = periodMode === "till_date" ? 24 : 6;
+  const buckets = useMemo(() => {
+    if (periodMode === "weekly") {
+      return Array.from({ length: 12 }, (_, i) =>
+        format(startOfWeek(subWeeks(new Date(), i), { weekStartsOn: 1 }), "yyyy-MM-dd")
+      ).reverse();
+    }
+    return Array.from({ length: lookbackMonths }, (_, i) =>
+      format(subMonths(new Date(), i), "yyyy-MM")
+    ).reverse();
+  }, [periodMode, lookbackMonths]);
+  const startDate = periodMode === "weekly"
+    ? buckets[0]
+    : `${buckets[0]}-01`;
 
   // ── LIVE REVENUE SOURCES (paid/received only)
   const { data: invoices = [] } = useQuery({
