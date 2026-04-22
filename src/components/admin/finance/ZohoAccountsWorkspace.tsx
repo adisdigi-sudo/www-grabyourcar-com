@@ -28,7 +28,7 @@ const AccountsPurchaseOrders = lazy(() => import("./AccountsPurchaseOrders"));
 const AccountsItemsModule = lazy(() => import("./AccountsItemsModule"));
 const AccountsBudgets = lazy(() => import("./AccountsBudgets"));
 const CorporateBudgetWorkspace = lazy(() => import("./corporate-budget/CorporateBudgetWorkspace"));
-const FinanceWorkspace = lazy(() => import("./finance-v2/FinanceWorkspace"));
+// FinanceWorkspace (CFO/Founder/Accountant role switcher) moved to dedicated CFO Cockpit workspace.
 const VerticalProfitLoss = lazy(() => import("./VerticalProfitLoss"));
 const AccountsFinancialDocuments = lazy(() => import("./AccountsFinancialDocuments"));
 const AccountsGSTReports = lazy(() => import("./AccountsGSTReports"));
@@ -72,7 +72,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
       { id: "corporate-budget", label: "Corporate Budget" },
     ],
   },
-  { id: "finance-office", label: "Finance Office", icon: TrendingUp },
+  // Finance Office (CFO/Founder views) moved to dedicated CFO Cockpit workspace.
   { id: "reports", label: "Reports", icon: BarChart3 },
   { id: "profit-loss", label: "Profit & Loss", icon: Calculator },
   { id: "gst-reports", label: "GST Reports", icon: IndianRupee },
@@ -122,7 +122,7 @@ export const ZohoAccountsWorkspace = ({ initialView = "home" }: ZohoAccountsWork
       case "chart-of-accounts": return <AccountsChartOfAccounts />;
       case "budgets": return <AccountsBudgets />;
       case "corporate-budget": return <CorporateBudgetWorkspace />;
-      case "finance-office": return <FinanceWorkspace />;
+      // Finance Office removed from Accounts — now lives in dedicated CFO Cockpit workspace.
       case "reports": return <FinancialIntelligenceDashboard />;
       case "profit-loss": return <VerticalProfitLoss />;
       case "gst-reports": return <AccountsGSTReports />;
