@@ -472,7 +472,26 @@ export const FounderMasterReportHub = () => {
                     <td className="px-3 py-2 font-mono">{p.policy_number || p.id.slice(0, 8)}</td>
                     <td className="px-3 py-2">{p.insurance_clients?.customer_name || "—"}<div className="text-[10px] text-slate-500">{p.insurance_clients?.vehicle_number || ""}</div></td>
                     <td className="px-3 py-2"><Badge variant="outline" className="text-[10px] capitalize">{p.policy_type}</Badge><div className="text-[10px] text-slate-500 mt-0.5">{p.insurer}</div></td>
-                    <td className="px-3 py-2 text-right">{inr(p._calc.base)}</td>
+                    <td
+                      className="px-3 py-2 text-right"
+                      title={
+                        `Total Premium: ${inr(p._calc.breakup?.total_premium || 0)}\n` +
+                        `Less GST 18%:  -${inr(p._calc.breakup?.gst_18pct || 0)}\n` +
+                        `Base (ex-GST): ${inr(p._calc.breakup?.base_ex_gst || 0)}\n` +
+                        (p._calc.kind === "comprehensive"
+                          ? `Less TP part: -${inr(p._calc.breakup?.tp_less || 0)}\n` +
+                            `Less PA driver: -${inr(p._calc.breakup?.pa_less || 0)}\n`
+                          : "") +
+                        `Payable Base: ${inr(p._calc.base)}`
+                      }
+                    >
+                      <div className="font-medium">{inr(p._calc.base)}</div>
+                      <div className="text-[10px] text-slate-500 leading-tight">
+                        {inr(p._calc.breakup?.total_premium || 0)} − GST
+                        {p._calc.kind === "comprehensive" && (p._calc.breakup?.tp_less || 0) > 0 && " − TP"}
+                        {p._calc.kind === "comprehensive" && (p._calc.breakup?.pa_less || 0) > 0 && " − PA"}
+                      </div>
+                    </td>
                     <td className="px-3 py-2 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <Input
