@@ -62,6 +62,7 @@ const buildPeriod = (kind: PeriodKind, anchor: Date, custom?: { from: string; to
 
 export const FounderMasterReportHub = () => {
   const qc = useQueryClient();
+  const { toast } = useToast();
   const [periodKind, setPeriodKind] = useState<PeriodKind>("month");
   const [anchor, setAnchor] = useState<Date>(new Date());
   const [customFrom, setCustomFrom] = useState<string>(fmtISO(startOfMonth(new Date())));
@@ -69,6 +70,9 @@ export const FounderMasterReportHub = () => {
   const [vertical, setVertical] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [liveOn, setLiveOn] = useState(true);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [drillModule, setDrillModule] = useState<"Policies" | "Loans" | "Deals" | null>(null);
+  const loanChartRef = useRef<HTMLDivElement>(null);
 
   // Custom payout % overrides — keyed by record id
   const [policyOverrides, setPolicyOverrides] = useState<Record<string, number>>({});
