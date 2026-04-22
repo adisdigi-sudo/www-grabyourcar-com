@@ -527,19 +527,17 @@ export const FounderMasterReportHub = () => {
       {/* Live Vertical Counts — exact records in selected period */}
       <div className="grid grid-cols-3 gap-3 mb-5 p-3 rounded-lg border bg-slate-50/40">
         <div className="text-center">
-          <div className="text-[10px] uppercase text-slate-500 font-semibold">Policies Issued</div>
+          <div className="text-[10px] uppercase text-slate-500 font-semibold">Active Policies (Won)</div>
           <div className="text-xl font-bold text-blue-700">{policies.length}</div>
           <div className="text-[10px] text-slate-500">Net Payout: {inr(insuranceNet)}</div>
         </div>
         <div className="text-center border-x">
-          <div className="text-[10px] uppercase text-slate-500 font-semibold">Car Loan Cases</div>
+          <div className="text-[10px] uppercase text-slate-500 font-semibold">Disbursed Loans (Won)</div>
           <div className="text-xl font-bold text-emerald-700">{loans.length}</div>
-          <div className="text-[10px] text-slate-500">
-            {loans.filter((l: any) => l.stage === "disbursed").length} disbursed · Net: {inr(loanNet)}
-          </div>
+          <div className="text-[10px] text-slate-500">Net Payout: {inr(loanNet)}</div>
         </div>
         <div className="text-center">
-          <div className="text-[10px] uppercase text-slate-500 font-semibold">Car Sales / Deals</div>
+          <div className="text-[10px] uppercase text-slate-500 font-semibold">Won Deals (Paid)</div>
           <div className="text-xl font-bold text-amber-700">{deals.length}</div>
           <div className="text-[10px] text-slate-500">Net Margin: {inr(dealNet)}</div>
         </div>
