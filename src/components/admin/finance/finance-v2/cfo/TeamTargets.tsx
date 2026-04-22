@@ -163,13 +163,21 @@ export const TeamTargets = () => {
       icon={Target}
       className="lg:col-span-3"
       action={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Input
             type="month"
             value={filterPeriod}
             onChange={(e) => setFilterPeriod(e.target.value)}
             className="h-8 text-xs w-36"
           />
+          <Button size="sm" variant="outline" className="h-8 text-[11px] gap-1"
+            onClick={downloadCSV} disabled={targets.length === 0}>
+            <FileDown className="h-3 w-3" /> CSV
+          </Button>
+          <Button size="sm" variant="outline" className="h-8 text-[11px] gap-1"
+            onClick={downloadPNG} disabled={targets.length === 0}>
+            <ImageIcon className="h-3 w-3" /> PNG
+          </Button>
           <Button size="sm" className="gap-1 bg-slate-900 hover:bg-slate-800"
             onClick={() => setEditing({ ...blank(), month_year: filterPeriod })}>
             <Plus className="h-3.5 w-3.5" /> Set Target
@@ -177,6 +185,7 @@ export const TeamTargets = () => {
         </div>
       }
     >
+      <div ref={tableRef}>
       {/* Aggregate strip */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         {[
