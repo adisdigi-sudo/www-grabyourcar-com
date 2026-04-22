@@ -501,9 +501,14 @@ const AdminLayout = () => {
   const isBootstrappingAuth = !initialized || isLoading;
 
   const effectiveActiveTab = useMemo(() => normalizeAdminTab(activeTab), [activeTab]);
+  const verticalDefaultTab = useMemo(() => {
+    // Founder Cockpit workspace lands directly on the cockpit (no generic dashboard).
+    if (activeVertical?.slug === "founder-cockpit") return "founder-cockpit";
+    return DEFAULT_ADMIN_TAB;
+  }, [activeVertical?.slug]);
   const resolvedActiveTab = useMemo(() => {
-    return isTabAllowedForVertical(effectiveActiveTab, activeVertical?.slug) ? effectiveActiveTab : DEFAULT_ADMIN_TAB;
-  }, [effectiveActiveTab, activeVertical?.slug]);
+    return isTabAllowedForVertical(effectiveActiveTab, activeVertical?.slug) ? effectiveActiveTab : verticalDefaultTab;
+  }, [effectiveActiveTab, activeVertical?.slug, verticalDefaultTab]);
   useEmployeeTracker({
     enabled: !isLoading && !verticalAccessLoading && !!user,
     userId: user?.id,
