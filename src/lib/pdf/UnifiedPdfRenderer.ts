@@ -92,6 +92,43 @@ export type SectionPayload =
 const PAGE_WIDTH_A4 = 210;
 const PAGE_HEIGHT_A4 = 297;
 
+// Cache loaded images so we don't refetch per render
+const imageCache = new Map<string, { dataUrl: string; w: number; h: number; format: string } | null>();
+
+async function loadImageAsDataUrl(
+  url: string,
+): Promise<{ dataUrl: string; w: number; h: number; format: string } | null> {
+  if (imageCache.has(url)) return imageCache.get(url) ?? null;
+  try {
+    const res = await fetch(url, { mode: "cors", cache: "force-cache" });
+    if (!res.ok) {
+      imageCache.set(url, null);
+      return null;
+    }
+    const blob = await res.blob();
+    const ctype = blob.type || "image/png";
+    const format = ctype.includes("jpeg") || ctype.includes("jpg") ? "JPEG" : "PNG";
+    const dataUrl: string = await new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result));
+      fr.onerror = () => reject(new Error("read fail"));
+      fr.readAsDataURL(blob);
+    });
+    const dims: { w: number; h: number } = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => resolve({ w: 1, h: 1 });
+      img.src = dataUrl;
+    });
+    const result = { dataUrl, w: dims.w, h: dims.h, format };
+    imageCache.set(url, result);
+    return result;
+  } catch {
+    imageCache.set(url, null);
+    return null;
+  }
+}
+
 export class UnifiedPdfRenderer {
   readonly doc: jsPDF;
   readonly branding: ResolvedBranding;
@@ -99,6 +136,9 @@ export class UnifiedPdfRenderer {
   private cursorY: number;
   private headerRendered = false;
   private placeholderCtx: PdfPlaceholderContext = {};
+  private logoAsset: { dataUrl: string; w: number; h: number; format: string } | null = null;
+  private watermarkAsset: { dataUrl: string; w: number; h: number; format: string } | null = null;
+  private signatureAsset: { dataUrl: string; w: number; h: number; format: string } | null = null;
 
   constructor(branding: ResolvedBranding, options: RendererOptions) {
     this.branding = branding;
@@ -109,6 +149,34 @@ export class UnifiedPdfRenderer {
       format: branding.page_size || "a4",
     });
     this.cursorY = branding.margins.top;
+  }
+
+  /** Preload remote brand assets so addImage receives data URLs (avoids silent failures). */
+  async preloadAssets(): Promise<void> {
+    const b = this.branding;
+    const tasks: Promise<void>[] = [];
+    if (b.logo_url) {
+      tasks.push(
+        loadImageAsDataUrl(b.logo_url).then((a) => {
+          this.logoAsset = a;
+        }),
+      );
+    }
+    if (b.watermark_url && b.show_watermark) {
+      tasks.push(
+        loadImageAsDataUrl(b.watermark_url).then((a) => {
+          this.watermarkAsset = a;
+        }),
+      );
+    }
+    if (b.signature_url) {
+      tasks.push(
+        loadImageAsDataUrl(b.signature_url).then((a) => {
+          this.signatureAsset = a;
+        }),
+      );
+    }
+    await Promise.all(tasks);
   }
 
   setPlaceholderContext(ctx: PdfPlaceholderContext) {
@@ -144,13 +212,26 @@ export class UnifiedPdfRenderer {
   }
 
   private drawWatermark() {
-    if (!this.branding.show_watermark || !this.branding.watermark_url) return;
+    if (!this.branding.show_watermark) return;
+    const asset = this.watermarkAsset;
+    if (!asset) return;
     try {
-      const w = 120;
-      const h = 120;
+      // Subtle, centered, aspect-ratio preserved watermark — sits BEHIND content
+      const maxSize = 90; // mm
+      const ratio = asset.w / asset.h || 1;
+      const w = ratio >= 1 ? maxSize : maxSize * ratio;
+      const h = ratio >= 1 ? maxSize / ratio : maxSize;
       const x = (this.pageWidth - w) / 2;
       const y = (this.pageHeight - h) / 2;
-      this.doc.addImage(this.branding.watermark_url, "PNG", x, y, w, h, undefined, "FAST");
+      const gState = (this.doc as any).GState
+        ? new (this.doc as any).GState({ opacity: 0.06 })
+        : null;
+      if (gState) (this.doc as any).setGState(gState);
+      this.doc.addImage(asset.dataUrl, asset.format, x, y, w, h, undefined, "FAST");
+      if (gState) {
+        const reset = new (this.doc as any).GState({ opacity: 1 });
+        (this.doc as any).setGState(reset);
+      }
     } catch {
       /* ignore */
     }
@@ -162,7 +243,6 @@ export class UnifiedPdfRenderer {
     const primary = hexToRgb(b.brand_primary_color);
     const accent = hexToRgb(b.brand_accent_color);
     const x = b.margins.left;
-    const w = this.contentWidth;
     const headerH = 28;
 
     // Background band
@@ -173,10 +253,22 @@ export class UnifiedPdfRenderer {
     this.setFillRGB(accent);
     this.doc.rect(0, headerH, this.pageWidth, 1.5, "F");
 
-    // Logo (left)
-    if (b.logo_url) {
+    // Logo (left) — aspect-ratio preserved, contained inside header band
+    let logoOffset = 0;
+    if (this.logoAsset) {
       try {
-        this.doc.addImage(b.logo_url, "PNG", x, 6, 18, 18, undefined, "FAST");
+        const maxH = 18; // mm
+        const maxW = 22;
+        const ratio = this.logoAsset.w / this.logoAsset.h || 1;
+        let lw = maxH * ratio;
+        let lh = maxH;
+        if (lw > maxW) {
+          lw = maxW;
+          lh = maxW / ratio;
+        }
+        const ly = (headerH - lh) / 2;
+        this.doc.addImage(this.logoAsset.dataUrl, this.logoAsset.format, x, ly, lw, lh, undefined, "FAST");
+        logoOffset = lw + 4;
       } catch {
         /* ignore broken logo */
       }
@@ -186,13 +278,13 @@ export class UnifiedPdfRenderer {
     this.doc.setFont(b.font_heading, "bold");
     this.doc.setFontSize(18);
     this.setTextRGB([255, 255, 255]);
-    this.doc.text(b.company_name, x + (b.logo_url ? 22 : 0), 14);
+    this.doc.text(b.company_name, x + logoOffset, 14);
 
     if (b.company_tagline) {
       this.doc.setFont(b.font_body, "normal");
       this.doc.setFontSize(8.5);
       this.setTextRGB([220, 230, 245]);
-      this.doc.text(b.company_tagline, x + (b.logo_url ? 22 : 0), 19);
+      this.doc.text(b.company_tagline, x + logoOffset, 19);
     }
 
     // Document title (right side)
@@ -489,9 +581,12 @@ export class UnifiedPdfRenderer {
     const x = this.pageWidth - b.margins.right - 60;
     const y = this.cursorY + 4;
 
-    if (b.signature_url) {
+    if (this.signatureAsset) {
       try {
-        this.doc.addImage(b.signature_url, "PNG", x, y, 50, 14, undefined, "FAST");
+        const ratio = this.signatureAsset.w / this.signatureAsset.h || 1;
+        const sw = Math.min(50, 14 * ratio);
+        const sh = sw / ratio;
+        this.doc.addImage(this.signatureAsset.dataUrl, this.signatureAsset.format, x, y, sw, sh, undefined, "FAST");
       } catch {
         /* ignore */
       }
@@ -629,7 +724,9 @@ export class UnifiedPdfRenderer {
  */
 export async function createRenderer(opts: RendererOptions): Promise<UnifiedPdfRenderer> {
   const branding = opts.brandingOverride ?? (await resolveBranding(opts.vertical));
-  return new UnifiedPdfRenderer(branding, opts);
+  const renderer = new UnifiedPdfRenderer(branding, opts);
+  await renderer.preloadAssets();
+  return renderer;
 }
 
 // Re-export for downstream use
