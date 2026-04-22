@@ -1,11 +1,17 @@
 /**
  * Founder report PDF helpers.
- *  - openHtmlPrint(html, title): opens hidden window and triggers print
- *  - buildRowInvoice(args): single-record net-payout invoice
- *  - buildMonthlyStatement(args): consolidated monthly statement
+ *
+ *  - All downloadable PDFs are produced via the **UnifiedPdfRenderer** (jsPDF
+ *    + jspdf-autotable + resolved branding). Logo, watermark, brand colors,
+ *    fonts, and footer are applied automatically — no html2canvas, no print
+ *    dialog, no popup blockers.
+ *  - HTML / CSV builders remain for email payloads and screen previews.
  */
 
 import { inr } from "./payoutEngine";
+import { createRenderer } from "@/lib/pdf/UnifiedPdfRenderer";
+import autoTable from "jspdf-autotable";
+import { hexToRgb } from "@/lib/pdf/colorUtils";
 
 const esc = (v: any) =>
   String(v ?? "")
