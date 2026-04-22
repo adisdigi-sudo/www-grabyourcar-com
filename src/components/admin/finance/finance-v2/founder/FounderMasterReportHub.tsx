@@ -1256,6 +1256,41 @@ export const FounderMasterReportHub = () => {
         rows={drillModule ? drillData[drillModule] || [] : []}
         totalDiff={drillModule ? (reconciliation.find(r => r.module === drillModule)?.diff || 0) : 0}
       />
+
+      {/* Reject / Mark-as-cancelled dialog with reason */}
+      <Dialog open={rejectTarget !== null} onOpenChange={(v) => { if (!v) { setRejectTarget(null); setRejectReason(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-700">
+              <Ban className="h-4 w-4" /> Mark as Rejected
+            </DialogTitle>
+            <DialogDescription>
+              {rejectTarget?.label} ko Founder dashboard ke live totals se hata diya jaayega.
+              {rejectTarget?.kind === "policy" && " Policy status → cancelled."}
+              {rejectTarget?.kind === "loan" && " Loan stage → lost."}
+              {rejectTarget?.kind === "deal" && " Deal status → cancelled."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-slate-700">Reason (required)</label>
+            <Textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="e.g. Customer cancelled, duplicate entry, payment reversed, wrong data…"
+              rows={3}
+              className="text-sm"
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setRejectTarget(null); setRejectReason(""); }} disabled={rejectBusy}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={submitReject} disabled={rejectBusy || !rejectReason.trim()}>
+              {rejectBusy ? "Rejecting…" : "Confirm Reject"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SectionCard>
   );
 };
