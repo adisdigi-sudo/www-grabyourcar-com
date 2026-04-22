@@ -1,16 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, FileSpreadsheet, FileDown, Mail } from "lucide-react";
+import { Loader2, FileSpreadsheet, FileDown, Mail, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   buildFounderCSV, getFounderSnapshotPrintableHTML, downloadFounderCSV,
-  buildFounderSnapshotWithConfig,
+  buildFounderSnapshotWithConfig, previewFounderSnapshotPdf,
   type FounderSnapshotInput, type ExportColumnConfig,
 } from "../shared/founderReportPDF";
 
@@ -44,14 +44,22 @@ export const FounderExportDialog = ({ open, onOpenChange, snapshot }: Props) => 
   const [includeRecon, setIncludeRecon] = useState(true);
   const [includeAudit, setIncludeAudit] = useState(true);
   const [includeKpis, setIncludeKpis] = useState(true);
+  const [includeCover, setIncludeCover] = useState(true);
   const [emailTo, setEmailTo] = useState("");
   const [sending, setSending] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState(false);
 
   const cfg: ExportColumnConfig = {
     policies: polCols, loans: loanCols, deals: dealCols,
     includeReconciliation: includeRecon, includeAudit, includeKpis,
-    includeCounts: includeKpis,
+    includeCounts: includeKpis, includeCoverPage: includeCover,
   };
+
+  // Revoke object URL on unmount or when preview changes
+  useEffect(() => {
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
+  }, [previewUrl]);
 
   const toggle = (arr: string[], setter: (v: string[]) => void, k: string) => {
     setter(arr.includes(k) ? arr.filter(x => x !== k) : [...arr, k]);
@@ -64,6 +72,20 @@ export const FounderExportDialog = ({ open, onOpenChange, snapshot }: Props) => 
 
   const handlePDFDownload = () => {
     buildFounderSnapshotWithConfig(snapshot(), cfg);
+  };
+
+  const handlePreview = async () => {
+    setPreviewing(true);
+    try {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      const url = await previewFounderSnapshotPdf(snapshot(), cfg);
+      setPreviewUrl(url);
+      toast({ title: "Preview ready", description: "Switch to the Preview tab to review the PDF." });
+    } catch (e: any) {
+      toast({ title: "Preview failed", description: e?.message || "Could not render preview.", variant: "destructive" });
+    } finally {
+      setPreviewing(false);
+    }
   };
 
   const utf8ToBase64 = (str: string) => {
@@ -130,15 +152,16 @@ export const FounderExportDialog = ({ open, onOpenChange, snapshot }: Props) => 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Export Founder Report</DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="cols">
-          <TabsList className="grid grid-cols-3">
+          <TabsList className="grid grid-cols-4">
             <TabsTrigger value="cols" className="text-xs">Columns</TabsTrigger>
             <TabsTrigger value="extras" className="text-xs">Sections</TabsTrigger>
+            <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
             <TabsTrigger value="email" className="text-xs">Email Team</TabsTrigger>
           </TabsList>
 
@@ -150,10 +173,32 @@ export const FounderExportDialog = ({ open, onOpenChange, snapshot }: Props) => 
           </TabsContent>
 
           <TabsContent value="extras" className="mt-3 space-y-3">
-            <p className="text-[11px] text-slate-500">Include the on-screen reconciliation and audit info in the export so it matches what you see.</p>
-            <label className="flex items-center gap-2 text-xs"><Checkbox checked={includeKpis} onCheckedChange={v => setIncludeKpis(!!v)} /> KPIs & live counts</label>
-            <label className="flex items-center gap-2 text-xs"><Checkbox checked={includeRecon} onCheckedChange={v => setIncludeRecon(!!v)} /> Auto-Reconciliation results</label>
-            <label className="flex items-center gap-2 text-xs"><Checkbox checked={includeAudit} onCheckedChange={v => setIncludeAudit(!!v)} /> Audit trail (date-range queries)</label>
+            <p className="text-[11px] text-slate-500">Choose what gets baked into the branded PDF / CSV so the file matches what you see on screen.</p>
+            <label className="flex items-center gap-2 text-xs"><Checkbox checked={includeCover} onCheckedChange={v => setIncludeCover(!!v)} /> <span><b>Branded cover page</b> (logo, title, period, confidentiality stamp)</span></label>
+            <label className="flex items-center gap-2 text-xs"><Checkbox checked={includeKpis} onCheckedChange={v => setIncludeKpis(!!v)} /> KPIs &amp; live counts</label>
+            <label className="flex items-center gap-2 text-xs"><Checkbox checked={includeRecon} onCheckedChange={v => setIncludeRecon(!!v)} /> Auto-Reconciliation results inside PDF/CSV</label>
+            <label className="flex items-center gap-2 text-xs"><Checkbox checked={includeAudit} onCheckedChange={v => setIncludeAudit(!!v)} /> Audit trail (date-range queries) inside PDF/CSV</label>
+          </TabsContent>
+
+          <TabsContent value="preview" className="mt-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] text-slate-500">Render the PDF in-app and confirm layout/numbers before downloading.</p>
+              <Button onClick={handlePreview} disabled={previewing} size="sm" className="gap-2">
+                {previewing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
+                {previewing ? "Rendering…" : previewUrl ? "Refresh preview" : "Generate preview"}
+              </Button>
+            </div>
+            {previewUrl ? (
+              <iframe
+                title="Founder Report PDF Preview"
+                src={previewUrl}
+                className="w-full h-[60vh] border rounded-md bg-white"
+              />
+            ) : (
+              <div className="border rounded-md h-[60vh] flex items-center justify-center text-xs text-slate-400 bg-slate-50">
+                Click "Generate preview" to render the branded PDF inline.
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="email" className="mt-3 space-y-3">

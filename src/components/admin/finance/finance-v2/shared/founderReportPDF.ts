@@ -101,12 +101,155 @@ function drawKpiStrip(doc: any, y: number, items: Array<{ label: string; value: 
   return y + (rowIdx + 1) * (cardH + gap) + 2;
 }
 
-/** Render & save a branded PDF using UnifiedPdfRenderer. */
+/** Internal: full-page branded cover (logo, title, period, confidentiality stamp). */
+function drawCoverPage(renderer: any, opts: { title: string; subtitle?: string; periodLabel?: string; periodRange?: string; meta: Record<string, string> }) {
+  const doc: any = renderer.doc;
+  const b = renderer.branding;
+  const accent = hexToRgb(b.brand_accent_color);
+  const primary = hexToRgb(b.brand_primary_color);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const left = b.margins.left;
+  const right = b.margins.right;
+  const contentW = pageWidth - left - right;
+
+  // Top brand band
+  doc.setFillColor(primary[0], primary[1], primary[2]);
+  doc.rect(0, 0, pageWidth, 60, "F");
+  doc.setFillColor(accent[0], accent[1], accent[2]);
+  doc.rect(0, 60, pageWidth, 2, "F");
+
+  // Logo (centered) — reuse renderer's preloaded logo if available
+  const logo = (renderer as any).logoAsset;
+  let logoBottomY = 28;
+  if (logo) {
+    try {
+      const maxH = 26;
+      const ratio = (logo.w / logo.h) || 1;
+      const lh = maxH;
+      const lw = lh * ratio;
+      const lx = (pageWidth - lw) / 2;
+      const ly = 14;
+      doc.addImage(logo.dataUrl, logo.format, lx, ly, lw, lh, undefined, "FAST");
+      logoBottomY = ly + lh + 4;
+    } catch { /* ignore */ }
+  }
+
+  // Company name centered
+  doc.setFont(b.font_heading, "bold");
+  doc.setFontSize(16);
+  doc.setTextColor(255, 255, 255);
+  doc.text(b.company_name, pageWidth / 2, Math.max(logoBottomY, 28), { align: "center" });
+
+  if (b.company_tagline) {
+    doc.setFont(b.font_body, "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(220, 230, 245);
+    doc.text(b.company_tagline, pageWidth / 2, Math.max(logoBottomY, 28) + 6, { align: "center" });
+  }
+
+  // Big report title block
+  const blockY = 95;
+  doc.setFont(b.font_heading, "bold");
+  doc.setFontSize(28);
+  doc.setTextColor(15, 23, 42);
+  const titleLines = doc.splitTextToSize(opts.title, contentW);
+  doc.text(titleLines, pageWidth / 2, blockY, { align: "center" });
+  let y = blockY + titleLines.length * 11 + 4;
+
+  if (opts.subtitle) {
+    doc.setFont(b.font_body, "normal");
+    doc.setFontSize(12);
+    doc.setTextColor(71, 85, 105);
+    doc.text(opts.subtitle, pageWidth / 2, y, { align: "center" });
+    y += 8;
+  }
+
+  // Accent divider
+  doc.setDrawColor(accent[0], accent[1], accent[2]);
+  doc.setLineWidth(0.6);
+  doc.line(pageWidth / 2 - 18, y + 3, pageWidth / 2 + 18, y + 3);
+  y += 14;
+
+  // Period card
+  if (opts.periodLabel) {
+    const cardW = Math.min(contentW, 130);
+    const cardX = (pageWidth - cardW) / 2;
+    const cardH = opts.periodRange ? 28 : 22;
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(cardX, y, cardW, cardH, 2, 2, "FD");
+
+    doc.setFont(b.font_body, "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text("REPORTING PERIOD", pageWidth / 2, y + 7, { align: "center" });
+
+    doc.setFont(b.font_heading, "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42);
+    doc.text(opts.periodLabel, pageWidth / 2, y + 16, { align: "center" });
+
+    if (opts.periodRange) {
+      doc.setFont(b.font_body, "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text(opts.periodRange, pageWidth / 2, y + 23, { align: "center" });
+    }
+    y += cardH + 12;
+  }
+
+  // Meta key-value strip (filters, generator, etc.)
+  if (opts.meta && Object.keys(opts.meta).length) {
+    doc.setFont(b.font_body, "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(71, 85, 105);
+    Object.entries(opts.meta).forEach(([k, v]) => {
+      doc.setFont(b.font_body, "bold");
+      doc.setTextColor(100, 116, 139);
+      doc.text(`${k}:`, pageWidth / 2 - 4, y, { align: "right" });
+      doc.setFont(b.font_body, "normal");
+      doc.setTextColor(15, 23, 42);
+      doc.text(String(v), pageWidth / 2 + 4, y, { align: "left" });
+      y += 6;
+    });
+  }
+
+  // Confidentiality stamp (rotated, accent border) — bottom of cover
+  const stampY = pageHeight - 70;
+  const stampW = 110;
+  const stampX = (pageWidth - stampW) / 2;
+  doc.setDrawColor(accent[0], accent[1], accent[2]);
+  doc.setLineWidth(1.2);
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(stampX, stampY, stampW, 22, 2, 2, "FD");
+  doc.setFont(b.font_heading, "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(accent[0], accent[1], accent[2]);
+  doc.text("CONFIDENTIAL", pageWidth / 2, stampY + 10, { align: "center" });
+  doc.setFont(b.font_body, "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139);
+  doc.text("For internal leadership review only · Do not distribute", pageWidth / 2, stampY + 17, { align: "center" });
+
+  // Footer line
+  doc.setFont(b.font_body, "italic");
+  doc.setFontSize(8);
+  doc.setTextColor(148, 163, 184);
+  doc.text(`Generated ${new Date().toLocaleString("en-IN")} · ${b.company_name} Finance Office`, pageWidth / 2, pageHeight - 18, { align: "center" });
+}
+
+/** Render a branded PDF using UnifiedPdfRenderer. Returns Blob if returnBlob=true, else saves. */
 async function renderBrandedPdf(opts: {
   fileName: string;
   title: string;
   subtitle?: string;
   meta: Record<string, string>;
+  coverPage?: boolean;
+  coverPeriodLabel?: string;
+  coverPeriodRange?: string;
+  returnBlob?: boolean;
   build: (ctx: {
     doc: any;
     accent: [number, number, number];
@@ -122,7 +265,7 @@ async function renderBrandedPdf(opts: {
     kpiStrip: (items: Array<{ label: string; value: string; accent?: boolean }>) => void;
     paragraph: (text: string) => void;
   }) => void;
-}) {
+}): Promise<Blob | void> {
   const renderer = await createRenderer({
     vertical: "founder-cockpit",
     documentType: "report",
@@ -130,7 +273,19 @@ async function renderBrandedPdf(opts: {
     documentSubtitle: opts.subtitle,
   });
 
-  // Render branded header + watermark
+  // Optional cover page (drawn on page 1, then we add a fresh page for the report body)
+  if (opts.coverPage !== false) {
+    drawCoverPage(renderer, {
+      title: opts.title,
+      subtitle: opts.subtitle,
+      periodLabel: opts.coverPeriodLabel,
+      periodRange: opts.coverPeriodRange,
+      meta: opts.meta,
+    });
+    (renderer as any).doc.addPage();
+  }
+
+  // Render branded header + watermark on body page
   renderer.renderHeader();
 
   const doc: any = renderer.doc;
@@ -237,6 +392,9 @@ async function renderBrandedPdf(opts: {
     { align: "center" },
   );
 
+  if (opts.returnBlob) {
+    return await renderer.toBlob();
+  }
   await renderer.save(opts.fileName);
 }
 
@@ -393,7 +551,7 @@ export interface FounderSnapshotInput {
 }
 
 /** Internal: build the branded Founder Snapshot PDF, honouring optional column/section config. */
-function renderFounderSnapshotPdf(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}): Promise<void> {
+function renderFounderSnapshotPdf(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}, returnBlob = false): Promise<Blob | void> {
   const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
   const polTotals = {
     base: sum(s.policies.map((p) => p.base)),
@@ -461,6 +619,10 @@ function renderFounderSnapshotPdf(s: FounderSnapshotInput, cfg: ExportColumnConf
     fileName: `Founder-Snapshot-${s.periodLabel.replace(/\s+/g, "_")}.pdf`,
     title: "Founder Master Report",
     subtitle: `Snapshot · ${s.periodKind}`,
+    coverPage: cfg.includeCoverPage !== false,
+    coverPeriodLabel: s.periodLabel,
+    coverPeriodRange: `${s.periodStart}  →  ${s.periodEnd}`,
+    returnBlob,
     meta: {
       Period: `${s.periodLabel} (${s.periodStart} → ${s.periodEnd})`,
       Vertical: s.filters.vertical || "All",
@@ -547,16 +709,17 @@ export function buildFounderSnapshot(s: FounderSnapshotInput) {
 /* ============== CSV Snapshot Export ============== */
 
 export interface ExportColumnConfig {
-  policies?: string[];   // subset of: ref,customer,type,base,pct,gross,tds,net
-  loans?: string[];      // subset of: ref,customer,bank,stage,base,pct,gross,tds,net
-  deals?: string[];      // subset of: ref,customer,vertical,value,margin,pct,net,received,pending
+  policies?: string[];
+  loans?: string[];
+  deals?: string[];
   includeReconciliation?: boolean;
   includeAudit?: boolean;
   includeKpis?: boolean;
   includeCounts?: boolean;
+  includeCoverPage?: boolean;
 }
 
-const DEFAULT_COLS: Required<Omit<ExportColumnConfig, "includeReconciliation" | "includeAudit" | "includeKpis" | "includeCounts">> = {
+const DEFAULT_COLS: Required<Omit<ExportColumnConfig, "includeReconciliation" | "includeAudit" | "includeKpis" | "includeCounts" | "includeCoverPage">> = {
   policies: ["ref", "customer", "type", "base", "pct", "gross", "tds", "net"],
   loans: ["ref", "customer", "bank", "stage", "base", "pct", "gross", "tds", "net"],
   deals: ["ref", "customer", "vertical", "value", "margin", "pct", "net", "received", "pending"],
@@ -747,6 +910,13 @@ export function buildFounderSnapshotWithConfig(s: FounderSnapshotInput, cfg: Exp
     console.error("[buildFounderSnapshotWithConfig] PDF render failed:", err);
     alert("Could not generate the Founder snapshot PDF. Please try again.");
   });
+}
+
+/** Render the Founder snapshot PDF and return an object URL for in-app preview (iframe). */
+export async function previewFounderSnapshotPdf(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}): Promise<string> {
+  const blob = await renderFounderSnapshotPdf(s, cfg, true);
+  if (!(blob instanceof Blob)) throw new Error("PDF preview generation failed");
+  return URL.createObjectURL(blob);
 }
 
 export function getFounderSnapshotPrintableHTML(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}): string {

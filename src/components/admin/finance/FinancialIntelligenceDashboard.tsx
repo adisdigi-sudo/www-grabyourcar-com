@@ -1,23 +1,30 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subMonths } from "date-fns";
+import { format, subMonths, subWeeks, startOfWeek } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import {
   TrendingUp, TrendingDown, AlertTriangle, IndianRupee,
   ArrowUpRight, ArrowDownRight, BarChart3, PieChart,
-  Target, Zap, ShieldAlert, Activity
+  Target, Zap, ShieldAlert, Activity, History
 } from "lucide-react";
 
 const fmt = (v: number) => `Rs. ${Math.round(v).toLocaleString("en-IN")}`;
 const pct = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
 
-interface MonthData {
-  month: string;
+type PeriodMode = "weekly" | "monthly" | "till_date";
+
+interface BucketData {
+  key: string;
+  label: string;
   revenue: number;
   expense: number;
   profit: number;
+  _revBreakdown?: Record<string, number>;
+  _expBreakdown?: Record<string, number>;
 }
 
 const monthKey = (d: string | Date | null | undefined): string | null => {
@@ -29,11 +36,32 @@ const monthKey = (d: string | Date | null | undefined): string | null => {
   } catch { return null; }
 };
 
+const weekKey = (d: string | Date | null | undefined): string | null => {
+  if (!d) return null;
+  try {
+    const dt = typeof d === "string" ? new Date(d) : d;
+    if (isNaN(dt.getTime())) return null;
+    return format(startOfWeek(dt, { weekStartsOn: 1 }), "yyyy-MM-dd");
+  } catch { return null; }
+};
+
 export const FinancialIntelligenceDashboard = () => {
-  const months = useMemo(() => Array.from({ length: 6 }, (_, i) =>
-    format(subMonths(new Date(), i), "yyyy-MM")
-  ).reverse(), []);
-  const startDate = `${months[0]}-01`;
+  const [periodMode, setPeriodMode] = useState<PeriodMode>("monthly");
+
+  const lookbackMonths = periodMode === "till_date" ? 24 : 6;
+  const buckets = useMemo(() => {
+    if (periodMode === "weekly") {
+      return Array.from({ length: 12 }, (_, i) =>
+        format(startOfWeek(subWeeks(new Date(), i), { weekStartsOn: 1 }), "yyyy-MM-dd")
+      ).reverse();
+    }
+    return Array.from({ length: lookbackMonths }, (_, i) =>
+      format(subMonths(new Date(), i), "yyyy-MM")
+    ).reverse();
+  }, [periodMode, lookbackMonths]);
+  const startDate = periodMode === "weekly"
+    ? buckets[0]
+    : `${buckets[0]}-01`;
 
   // ── LIVE REVENUE SOURCES (paid/received only)
   const { data: invoices = [] } = useQuery({
@@ -117,10 +145,15 @@ export const FinancialIntelligenceDashboard = () => {
     },
   });
 
-  // Aggregate monthly revenue & expense from live data
-  const monthlyData: MonthData[] = useMemo(() => {
-    return months.map(m => {
-      // Revenue = sum across all paid sources
+  // Resolve which key fn to use based on period
+  const keyFn = periodMode === "weekly" ? weekKey : monthKey;
+  const labelFn = (k: string) =>
+    periodMode === "weekly"
+      ? `W/o ${format(new Date(k), "dd MMM")}`
+      : format(new Date(`${k}-01`), "MMM yy");
+
+  const bucketData: BucketData[] = useMemo(() => {
+    return buckets.map(b => {
       let rev = 0;
       const revBreakdown: Record<string, number> = {};
       const add = (cat: string, amount: number) => {
@@ -128,44 +161,61 @@ export const FinancialIntelligenceDashboard = () => {
         revBreakdown[cat] = (revBreakdown[cat] || 0) + amount;
       };
       invoices
-        .filter((i: any) => i.status === "paid" && monthKey(i.paid_at || i.invoice_date) === m)
+        .filter((i: any) => i.status === "paid" && keyFn(i.paid_at || i.invoice_date) === b)
         .forEach((i: any) => add(i.vertical_name || "Invoiced", Number(i.total_amount || 0)));
-      // Standalone payments not linked to an invoice (avoid double counting)
       payments
-        .filter((p: any) => !p.invoice_number && monthKey(p.payment_date) === m && !/^\[DEBIT\]/i.test(String(p.notes || "")))
+        .filter((p: any) => !p.invoice_number && keyFn(p.payment_date) === b && !/^\[DEBIT\]/i.test(String(p.notes || "")))
         .forEach((p: any) => add("Direct Payments", Number(p.amount || 0)));
       deals
-        .filter((d: any) => monthKey(d.closed_at || d.created_at) === m)
+        .filter((d: any) => keyFn(d.closed_at || d.created_at) === b)
         .forEach((d: any) => add(d.vertical_name || "Deals", Number(d.payment_received_amount || 0)));
       hsrp
-        .filter((h: any) => monthKey(h.created_at) === m)
+        .filter((h: any) => keyFn(h.created_at) === b)
         .forEach((h: any) => add("HSRP", Number(h.payment_amount || h.service_price || 0)));
       accessory
-        .filter((a: any) => monthKey(a.created_at) === m)
+        .filter((a: any) => keyFn(a.created_at) === b)
         .forEach((a: any) => add("Accessories", Number(a.total_amount || 0)));
       rentals
-        .filter((r: any) => monthKey(r.created_at) === m)
+        .filter((r: any) => keyFn(r.created_at) === b)
         .forEach((r: any) => add("Self Drive", Number(r.total_amount || 0)));
 
-      // Expenses = payroll for that month + debit payments
       let exp = 0;
       const expBreakdown: Record<string, number> = {};
-      const monthPayroll = payrolls
-        .filter((p: any) => p.payroll_month === m)
-        .reduce((s: number, p: any) => s + Number(p.net_salary || 0), 0);
-      if (monthPayroll > 0) { exp += monthPayroll; expBreakdown["Payroll"] = monthPayroll; }
+      // Payroll only aligns to months — for weekly view, distribute monthly payroll evenly
+      if (periodMode === "weekly") {
+        const m = format(new Date(b), "yyyy-MM");
+        const monthPayroll = payrolls
+          .filter((p: any) => p.payroll_month === m)
+          .reduce((s: number, p: any) => s + Number(p.net_salary || 0), 0);
+        const weeklyShare = monthPayroll / 4;
+        if (weeklyShare > 0) { exp += weeklyShare; expBreakdown["Payroll (1/4 mo)"] = weeklyShare; }
+      } else {
+        const monthPayroll = payrolls
+          .filter((p: any) => p.payroll_month === b)
+          .reduce((s: number, p: any) => s + Number(p.net_salary || 0), 0);
+        if (monthPayroll > 0) { exp += monthPayroll; expBreakdown["Payroll"] = monthPayroll; }
+      }
 
       const refunds = payments
-        .filter((p: any) => monthKey(p.payment_date) === m && /^\[DEBIT\]/i.test(String(p.notes || "")))
+        .filter((p: any) => keyFn(p.payment_date) === b && /^\[DEBIT\]/i.test(String(p.notes || "")))
         .reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
       if (refunds > 0) { exp += refunds; expBreakdown["Refunds"] = refunds; }
 
-      return { month: m, revenue: rev, expense: exp, profit: rev - exp, _revBreakdown: revBreakdown, _expBreakdown: expBreakdown } as MonthData & { _revBreakdown: Record<string, number>; _expBreakdown: Record<string, number> };
+      return { key: b, label: labelFn(b), revenue: rev, expense: exp, profit: rev - exp, _revBreakdown: revBreakdown, _expBreakdown: expBreakdown };
     });
-  }, [months, invoices, payments, deals, hsrp, accessory, rentals, payrolls]);
+  }, [buckets, periodMode, invoices, payments, deals, hsrp, accessory, rentals, payrolls]);
 
-  const currentMonth = monthlyData[monthlyData.length - 1];
-  const prevMonth = monthlyData[monthlyData.length - 2];
+  const currentMonth = bucketData[bucketData.length - 1] || { key: "", label: "", revenue: 0, expense: 0, profit: 0 };
+  const prevMonth = bucketData[bucketData.length - 2];
+
+  // Cumulative till-date totals across the active bucket window
+  const tillDate = useMemo(() => {
+    const rev = bucketData.reduce((s, b) => s + b.revenue, 0);
+    const exp = bucketData.reduce((s, b) => s + b.expense, 0);
+    return { revenue: rev, expense: exp, profit: rev - exp };
+  }, [bucketData]);
+
+  // (currentMonth/prevMonth resolved above from bucketData)
 
   const revChange = prevMonth?.revenue > 0 ? ((currentMonth.revenue - prevMonth.revenue) / prevMonth.revenue) * 100 : 0;
   const expChange = prevMonth?.expense > 0 ? ((currentMonth.expense - prevMonth.expense) / prevMonth.expense) * 100 : 0;
@@ -203,17 +253,48 @@ export const FinancialIntelligenceDashboard = () => {
   const paidInvoices = invoices.filter((i: any) => i.status === "paid").reduce((s: number, i: any) => s + Number(i.total_amount || 0), 0);
   const collectionRate = totalInvoiced > 0 ? (paidInvoices / totalInvoiced) * 100 : 0;
 
-  const maxRev = Math.max(...monthlyData.map(m => Math.max(m.revenue, m.expense)), 1);
+  const maxRev = Math.max(...bucketData.map(m => Math.max(m.revenue, m.expense)), 1);
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white"><Zap className="h-5 w-5" /></div>
-          Financial Intelligence
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">Live data from invoices • payments • deals • bookings • payroll</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white"><Zap className="h-5 w-5" /></div>
+            Financial Intelligence
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Live data from invoices • payments • deals • bookings • payroll</p>
+        </div>
+        <Tabs value={periodMode} onValueChange={v => setPeriodMode(v as PeriodMode)}>
+          <TabsList>
+            <TabsTrigger value="weekly" className="text-xs">Weekly</TabsTrigger>
+            <TabsTrigger value="monthly" className="text-xs">Monthly</TabsTrigger>
+            <TabsTrigger value="till_date" className="text-xs gap-1"><History className="h-3.5 w-3.5" /> Till Date</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
+
+      {/* Cumulative till-date P&L card */}
+      <Card className="border-2 border-dashed">
+        <CardContent className="p-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Window</p>
+            <p className="text-sm font-semibold flex items-center gap-2">{periodMode === "weekly" ? "Last 12 weeks" : periodMode === "till_date" ? "Last 24 months" : "Last 6 months"} <Badge variant="outline" className="text-[9px]">cumulative</Badge></p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total Revenue</p>
+            <p className="text-lg font-bold text-emerald-600">{fmt(tillDate.revenue)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total Expenses</p>
+            <p className="text-lg font-bold text-red-600">{fmt(tillDate.expense)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Net P&amp;L (till date)</p>
+            <p className={`text-lg font-bold ${tillDate.profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>{fmt(tillDate.profit)}</p>
+          </div>
+        </CardContent>
+      </Card>
 
       {alerts.length > 0 && (
         <div className="space-y-2">
@@ -253,13 +334,13 @@ export const FinancialIntelligenceDashboard = () => {
 
       <div className="grid md:grid-cols-2 gap-4">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="h-4 w-4" /> 6-Month P&L Trend (Live)</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="h-4 w-4" /> P&amp;L Trend ({periodMode === "weekly" ? "12 weeks" : periodMode === "till_date" ? "24 months" : "6 months"})</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {monthlyData.map(m => (
-                <div key={m.month} className="space-y-1">
+              {bucketData.map(m => (
+                <div key={m.key} className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span className="font-medium">{format(new Date(`${m.month}-01`), "MMM yy")}</span>
+                    <span className="font-medium">{m.label}</span>
                     <span className={m.profit >= 0 ? "text-emerald-600 font-semibold" : "text-red-600 font-semibold"}>{fmt(m.profit)}</span>
                   </div>
                   <div className="flex gap-1 h-4">
@@ -323,7 +404,10 @@ export const FinancialIntelligenceDashboard = () => {
         <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><IndianRupee className="h-4 w-4" /> Payroll Cost Summary</CardTitle></CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {months.slice(-4).map(m => {
+            {(periodMode === "weekly"
+              ? Array.from({ length: 4 }, (_, i) => format(subMonths(new Date(), i), "yyyy-MM")).reverse()
+              : buckets.slice(-4)
+            ).map(m => {
               const monthPayroll = payrolls.filter((p: any) => p.payroll_month === m);
               const total = monthPayroll.reduce((s: number, p: any) => s + Number(p.net_salary || 0), 0);
               const headcount = monthPayroll.length;
