@@ -16,6 +16,9 @@ const FounderAICoach = lazy(() =>
 const FounderBriefingScheduler = lazy(() =>
   import("./FounderBriefingScheduler").then((m) => ({ default: m.FounderBriefingScheduler })),
 );
+const BudgetEngine = lazy(() =>
+  import("./budget-engine/BudgetEngine").then((m) => ({ default: m.BudgetEngine })),
+);
 
 const SectionFallback = () => (
   <div className="rounded-2xl border border-border bg-card/60 px-4 py-6 text-sm text-muted-foreground">
@@ -40,6 +43,10 @@ export const FounderCockpitPage = () => {
 
       <Suspense fallback={<SectionFallback />}>
         <FounderCommandCenter />
+      </Suspense>
+
+      <Suspense fallback={<SectionFallback />}>
+        <BudgetEngine />
       </Suspense>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
