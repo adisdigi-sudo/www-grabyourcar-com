@@ -392,98 +392,156 @@ export interface FounderSnapshotInput {
   audit: Array<{ module: string; query: string; rows: number }>;
 }
 
-export function buildFounderSnapshot(s: FounderSnapshotInput) {
+/** Internal: build the branded Founder Snapshot PDF, honouring optional column/section config. */
+function renderFounderSnapshotPdf(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}): Promise<void> {
   const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
   const polTotals = {
-    base: sum(s.policies.map(p => p.base)),
-    gross: sum(s.policies.map(p => p.gross)),
-    tds: sum(s.policies.map(p => p.tds)),
-    net: sum(s.policies.map(p => p.net)),
+    base: sum(s.policies.map((p) => p.base)),
+    gross: sum(s.policies.map((p) => p.gross)),
+    tds: sum(s.policies.map((p) => p.tds)),
+    net: sum(s.policies.map((p) => p.net)),
   };
   const loanTotals = {
-    base: sum(s.loans.map(l => l.base)),
-    gross: sum(s.loans.map(l => l.gross)),
-    tds: sum(s.loans.map(l => l.tds)),
-    net: sum(s.loans.map(l => l.net)),
+    base: sum(s.loans.map((l) => l.base)),
+    gross: sum(s.loans.map((l) => l.gross)),
+    tds: sum(s.loans.map((l) => l.tds)),
+    net: sum(s.loans.map((l) => l.net)),
   };
   const dealTotals = {
-    value: sum(s.deals.map(d => d.value)),
-    margin: sum(s.deals.map(d => d.margin)),
-    net: sum(s.deals.map(d => d.net)),
-    received: sum(s.deals.map(d => d.received)),
-    pending: sum(s.deals.map(d => d.pending)),
+    value: sum(s.deals.map((d) => d.value)),
+    margin: sum(s.deals.map((d) => d.margin)),
+    net: sum(s.deals.map((d) => d.net)),
+    received: sum(s.deals.map((d) => d.received)),
+    pending: sum(s.deals.map((d) => d.pending)),
   };
 
-  const html = `
-    <h1>Founder Master Report — Snapshot</h1>
-    <p class="muted">
-      Period: <b>${esc(s.periodLabel)}</b> (${esc(s.periodKind)}) · ${esc(s.periodStart)} → ${esc(s.periodEnd)}<br/>
-      Filters: vertical=<b>${esc(s.filters.vertical)}</b>${s.filters.search ? ` · search="${esc(s.filters.search)}"` : ""}<br/>
-      Generated ${new Date().toLocaleString("en-IN")}
-    </p>
+  const includeKpis = cfg.includeKpis !== false;
+  const includeCounts = cfg.includeCounts !== false;
+  const includeRecon = cfg.includeReconciliation !== false;
+  const includeAudit = cfg.includeAudit !== false;
+  const policiesCols = cfg.policies?.length ? cfg.policies : DEFAULT_COLS.policies;
+  const loansCols = cfg.loans?.length ? cfg.loans : DEFAULT_COLS.loans;
+  const dealsCols = cfg.deals?.length ? cfg.deals : DEFAULT_COLS.deals;
 
-    <h2>Headline KPIs</h2>
-    <table>
-      <tr><th>Metric</th><th class="num">Amount</th><th>Notes</th></tr>
-      <tr><td>Revenue (Paid Invoices)</td><td class="num">${inr(s.kpis.revenue)}</td><td>${s.counts.invoicesPaid} paid invoices</td></tr>
-      <tr><td>Receivables</td><td class="num">${inr(s.kpis.receivables)}</td><td>${s.counts.invoices - s.counts.invoicesPaid} pending</td></tr>
-      <tr><td>Payroll (Net)</td><td class="num">${inr(s.kpis.payroll)}</td><td>—</td></tr>
-      <tr><td>Operational Expenses</td><td class="num">${inr(s.kpis.expenses)}</td><td>—</td></tr>
-      <tr><td>Total Incentives (Net of TDS)</td><td class="num">${inr(s.kpis.incentives)}</td><td>Insurance + Loans + Deals</td></tr>
-      <tr class="totals"><td>Net Profit / Loss</td><td class="num">${s.kpis.profit >= 0 ? "" : "- "}${inr(Math.abs(s.kpis.profit))}</td><td>${s.kpis.profit >= 0 ? "Surplus" : "Deficit"}</td></tr>
-    </table>
+  // Map column key -> renderer hint (header + cell renderer + numeric flag)
+  const colRenderers: Record<string, { label: string; render: (row: any) => string; numeric: boolean }> = {
+    ref: { label: "Reference", render: (r) => String(r.ref ?? "—"), numeric: false },
+    customer: { label: "Customer", render: (r) => String(r.customer ?? "—"), numeric: false },
+    type: { label: "Type", render: (r) => String(r.type ?? "—"), numeric: false },
+    bank: { label: "Bank", render: (r) => String(r.bank ?? "—"), numeric: false },
+    stage: { label: "Stage", render: (r) => String(r.stage ?? "—"), numeric: false },
+    vertical: { label: "Vertical", render: (r) => String(r.vertical ?? "—"), numeric: false },
+    base: { label: "Base", render: (r) => inr(r.base ?? 0), numeric: true },
+    pct: { label: "%", render: (r) => `${Number(r.pct ?? 0).toFixed(2)}%`, numeric: true },
+    gross: { label: "Gross", render: (r) => inr(r.gross ?? 0), numeric: true },
+    tds: { label: "TDS", render: (r) => inr(r.tds ?? 0), numeric: true },
+    net: { label: "Net", render: (r) => inr(r.net ?? 0), numeric: true },
+    value: { label: "Value", render: (r) => inr(r.value ?? 0), numeric: true },
+    margin: { label: "Margin", render: (r) => inr(r.margin ?? 0), numeric: true },
+    received: { label: "Received", render: (r) => inr(r.received ?? 0), numeric: true },
+    pending: { label: "Pending", render: (r) => inr(r.pending ?? 0), numeric: true },
+  };
 
-    <h2>Live Vertical Counts</h2>
-    <table>
-      <tr><th>Vertical</th><th class="num">Records</th><th>Detail</th></tr>
-      <tr><td>Policies Issued</td><td class="num">${s.counts.policies}</td><td>Net Payout: ${inr(polTotals.net)}</td></tr>
-      <tr><td>Car Loan Cases</td><td class="num">${s.counts.loans}</td><td>${s.counts.loansDisbursed} disbursed · Net: ${inr(loanTotals.net)}</td></tr>
-      <tr><td>Car Sales / Deals</td><td class="num">${s.counts.deals}</td><td>Net Margin: ${inr(dealTotals.net)}</td></tr>
-    </table>
+  const buildTableArgs = (cols: string[], rows: any[], totals: Record<string, number>) => {
+    const head = ["#", ...cols.map((c) => colRenderers[c]?.label ?? c)];
+    const body = rows.map((r, i) => [i + 1, ...cols.map((c) => (colRenderers[c] ? colRenderers[c].render(r) : String(r[c] ?? "")))]);
+    const numCols = cols
+      .map((c, idx) => (colRenderers[c]?.numeric ? idx + 1 : -1))
+      .filter((i) => i >= 0);
+    const footRow: any[] = ["", "TOTAL"];
+    for (let i = 1; i < cols.length; i++) {
+      const c = cols[i];
+      if (totals[c] !== undefined) footRow.push(inr(totals[c]));
+      else footRow.push("—");
+    }
+    return { head, body, numCols, foot: [footRow] };
+  };
 
-    <h2>Reconciliation</h2>
-    <table>
-      <tr><th>Module</th><th class="num">Summary Net</th><th class="num">Table Net</th><th class="num">Diff</th><th>Status</th></tr>
-      ${s.reconciliation.map(r => `
-        <tr>
-          <td>${esc(r.module)}</td>
-          <td class="num">${inr(r.summaryNet)}</td>
-          <td class="num">${inr(r.tableNet)}</td>
-          <td class="num">${inr(r.diff)}</td>
-          <td>${esc(r.status)}</td>
-        </tr>`).join("")}
-    </table>
+  return renderBrandedPdf({
+    fileName: `Founder-Snapshot-${s.periodLabel.replace(/\s+/g, "_")}.pdf`,
+    title: "Founder Master Report",
+    subtitle: `Snapshot · ${s.periodKind}`,
+    meta: {
+      Period: `${s.periodLabel} (${s.periodStart} → ${s.periodEnd})`,
+      Vertical: s.filters.vertical || "All",
+      ...(s.filters.search ? { Search: s.filters.search } : {}),
+      Generated: new Date().toLocaleString("en-IN"),
+    },
+    build: (ctx) => {
+      if (includeKpis) {
+        ctx.section("Headline KPIs");
+        ctx.kpiStrip([
+          { label: "Revenue (Paid)", value: inr(s.kpis.revenue) },
+          { label: "Receivables", value: inr(s.kpis.receivables) },
+          { label: "Payroll (Net)", value: inr(s.kpis.payroll) },
+          { label: "Op. Expenses", value: inr(s.kpis.expenses) },
+          { label: "Incentives Net", value: inr(s.kpis.incentives) },
+          {
+            label: s.kpis.profit >= 0 ? "Net Surplus" : "Net Deficit",
+            value: `${s.kpis.profit >= 0 ? "" : "- "}${inr(Math.abs(s.kpis.profit))}`,
+            accent: true,
+          },
+        ]);
+      }
 
-    <h2>Audit Trail — Date-range queries</h2>
-    <table>
-      <tr><th>Module</th><th>Query</th><th class="num">Rows</th></tr>
-      ${s.audit.map(a => `<tr><td>${esc(a.module)}</td><td style="font-family:monospace;font-size:10px">${esc(a.query)}</td><td class="num">${a.rows}</td></tr>`).join("")}
-    </table>
+      if (includeCounts) {
+        ctx.section("Live Vertical Counts");
+        ctx.addTable(
+          ["Vertical", "Records", "Detail"],
+          [
+            ["Policies Issued", String(s.counts.policies), `Net Payout: ${inr(polTotals.net)}`],
+            ["Car Loan Cases", String(s.counts.loans), `${s.counts.loansDisbursed} disbursed · Net: ${inr(loanTotals.net)}`],
+            ["Car Sales / Deals", String(s.counts.deals), `Net Margin: ${inr(dealTotals.net)}`],
+            ["Invoices", String(s.counts.invoices), `${s.counts.invoicesPaid} paid`],
+          ],
+          { numCols: [1] },
+        );
+      }
 
-    <h2>Policies (${s.policies.length})</h2>
-    <table>
-      <tr><th>#</th><th>Policy</th><th>Customer</th><th>Type</th><th class="num">Base</th><th class="num">%</th><th class="num">Gross</th><th class="num">TDS</th><th class="num">Net</th></tr>
-      ${s.policies.map((p,i) => `<tr><td>${i+1}</td><td>${esc(p.ref)}</td><td>${esc(p.customer)}</td><td>${esc(p.type)}</td><td class="num">${inr(p.base)}</td><td class="num">${p.pct}%</td><td class="num">${inr(p.gross)}</td><td class="num">${inr(p.tds)}</td><td class="num">${inr(p.net)}</td></tr>`).join("")}
-      <tr class="totals"><td colspan="4">TOTAL</td><td class="num">${inr(polTotals.base)}</td><td class="num">—</td><td class="num">${inr(polTotals.gross)}</td><td class="num">${inr(polTotals.tds)}</td><td class="num">${inr(polTotals.net)}</td></tr>
-    </table>
+      if (includeRecon && s.reconciliation.length) {
+        ctx.section("Auto-Reconciliation");
+        ctx.addTable(
+          ["Module", "Summary Net", "Table Net", "Diff", "Status"],
+          s.reconciliation.map((r) => [r.module, inr(r.summaryNet), inr(r.tableNet), inr(r.diff), r.status]),
+          { numCols: [1, 2, 3] },
+        );
+      }
 
-    <h2>Car Loans (${s.loans.length})</h2>
-    <table>
-      <tr><th>#</th><th>Customer</th><th>Bank</th><th>Stage</th><th class="num">Net Disb.</th><th class="num">%</th><th class="num">Gross</th><th class="num">TDS</th><th class="num">Net</th></tr>
-      ${s.loans.map((l,i) => `<tr><td>${i+1}</td><td>${esc(l.customer)}</td><td>${esc(l.bank)}</td><td>${esc(l.stage)}</td><td class="num">${inr(l.base)}</td><td class="num">${l.pct}%</td><td class="num">${inr(l.gross)}</td><td class="num">${inr(l.tds)}</td><td class="num">${inr(l.net)}</td></tr>`).join("")}
-      <tr class="totals"><td colspan="4">TOTAL</td><td class="num">${inr(loanTotals.base)}</td><td class="num">—</td><td class="num">${inr(loanTotals.gross)}</td><td class="num">${inr(loanTotals.tds)}</td><td class="num">${inr(loanTotals.net)}</td></tr>
-    </table>
+      if (includeAudit && s.audit.length) {
+        ctx.section("Audit Trail · Date-range Queries");
+        ctx.addTable(
+          ["Module", "Query", "Rows"],
+          s.audit.map((a) => [a.module, a.query, String(a.rows)]),
+          { numCols: [2] },
+        );
+      }
 
-    <h2>Car Deals (${s.deals.length})</h2>
-    <table>
-      <tr><th>#</th><th>Deal</th><th>Customer</th><th>Vertical</th><th class="num">Value</th><th class="num">Margin</th><th class="num">%</th><th class="num">Net</th><th class="num">Received</th><th class="num">Pending</th></tr>
-      ${s.deals.map((d,i) => `<tr><td>${i+1}</td><td>${esc(d.ref)}</td><td>${esc(d.customer)}</td><td>${esc(d.vertical)}</td><td class="num">${inr(d.value)}</td><td class="num">${inr(d.margin)}</td><td class="num">${d.pct.toFixed(1)}%</td><td class="num">${inr(d.net)}</td><td class="num">${inr(d.received)}</td><td class="num">${inr(d.pending)}</td></tr>`).join("")}
-      <tr class="totals"><td colspan="4">TOTAL</td><td class="num">${inr(dealTotals.value)}</td><td class="num">${inr(dealTotals.margin)}</td><td class="num">—</td><td class="num">${inr(dealTotals.net)}</td><td class="num">${inr(dealTotals.received)}</td><td class="num">${inr(dealTotals.pending)}</td></tr>
-    </table>
+      if (policiesCols.length && s.policies.length) {
+        ctx.section(`Policies (${s.policies.length})`);
+        const t = buildTableArgs(policiesCols, s.policies, polTotals as any);
+        ctx.addTable(t.head, t.body, { numCols: t.numCols, foot: t.foot });
+      }
 
-    <div class="stamp">Founder Master Report Snapshot · GYC Finance Office · Confidential</div>
-  `;
-  openHtmlPrint(html, `Founder-Snapshot-${s.periodLabel}`);
+      if (loansCols.length && s.loans.length) {
+        ctx.section(`Car Loans (${s.loans.length})`);
+        const t = buildTableArgs(loansCols, s.loans, loanTotals as any);
+        ctx.addTable(t.head, t.body, { numCols: t.numCols, foot: t.foot });
+      }
+
+      if (dealsCols.length && s.deals.length) {
+        ctx.section(`Car Deals (${s.deals.length})`);
+        const t = buildTableArgs(dealsCols, s.deals, dealTotals as any);
+        ctx.addTable(t.head, t.body, { numCols: t.numCols, foot: t.foot });
+      }
+    },
+  });
+}
+
+export function buildFounderSnapshot(s: FounderSnapshotInput) {
+  renderFounderSnapshotPdf(s).catch((err) => {
+    console.error("[buildFounderSnapshot] PDF render failed:", err);
+    alert("Could not generate the Founder snapshot PDF. Please try again.");
+  });
 }
 
 /* ============== CSV Snapshot Export ============== */
