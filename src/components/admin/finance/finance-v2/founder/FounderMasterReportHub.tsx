@@ -305,6 +305,50 @@ export const FounderMasterReportHub = () => {
     { module: "Expenses", query: `expense_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: expenses.length },
   ]), [periodStart, periodEnd, policies.length, loans.length, deals.length, invoices.length, payroll.length, expenses.length]);
 
+  // Drill rows for the reconciliation modal — surfaces records that contributed to mismatch
+  const drillData = useMemo(() => {
+    const polRows = policyComputed.map((p: any) => {
+      const def = computeInsurancePayout(p, rules);
+      const expected = def.net;
+      const actual = p._calc.net;
+      const diff = expected - actual;
+      return {
+        id: p.id,
+        ref: p.policy_number || p.id.slice(0, 8),
+        customer: p.insurance_clients?.customer_name || "—",
+        meta: `${p.policy_type} · ${p.insurer}`,
+        summaryNet: expected, tableNet: actual, diff,
+        reason: p._calc.isCustom ? `Custom % ${p._calc.pct}% (default ${def.pct}%)` : (Math.abs(diff) < 1 ? "Match" : "Rule/data variance"),
+      };
+    }).filter((r: any) => Math.abs(r.diff) >= 1);
+
+    const loanRows = loanComputed.map((l: any) => {
+      const def = computeLoanPayout(l, rules);
+      const expected = def.net; const actual = l._calc.net; const diff = expected - actual;
+      return {
+        id: l.id,
+        ref: l.disbursement_reference || l.id.slice(0, 8),
+        customer: l.customer_name || "—",
+        meta: `${l.lender_name || "—"} · ${l.car_model || "—"}`,
+        summaryNet: expected, tableNet: actual, diff,
+        reason: l._calc.isCustom ? `Custom % ${l._calc.pct}% (default ${def.pct}%)` : (Math.abs(diff) < 1 ? "Match" : "Rule/data variance"),
+      };
+    }).filter((r: any) => Math.abs(r.diff) >= 1);
+
+    const dealRows = dealComputed
+      .filter((d: any) => (d._calc.received || 0) < (d._calc.net || 0) || (d._calc.pending || 0) > 0)
+      .map((d: any) => ({
+        id: d.id,
+        ref: d.deal_number || d.id.slice(0, 8),
+        customer: d.master_customers?.name || "—",
+        meta: d.vertical_name || "—",
+        summaryNet: d._calc.net, tableNet: d._calc.received || 0, diff: (d._calc.net || 0) - (d._calc.received || 0),
+        reason: (d._calc.pending || 0) > 0 ? `Pending receivable ${inr(d._calc.pending)}` : "Partial receipt",
+      }));
+
+    return { Policies: polRows, Loans: loanRows, Deals: dealRows } as Record<string, any[]>;
+  }, [policyComputed, loanComputed, dealComputed, rules]);
+
   const verticals = useMemo(() => {
     const set = new Set<string>();
     invoices.forEach((i: any) => i.vertical_name && set.add(i.vertical_name));
