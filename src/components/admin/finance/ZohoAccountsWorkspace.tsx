@@ -27,6 +27,7 @@ const AccountsVendorCredits = lazy(() => import("./AccountsVendorCredits"));
 const AccountsPurchaseOrders = lazy(() => import("./AccountsPurchaseOrders"));
 const AccountsItemsModule = lazy(() => import("./AccountsItemsModule"));
 const AccountsBudgets = lazy(() => import("./AccountsBudgets"));
+const CorporateBudgetWorkspace = lazy(() => import("./corporate-budget/CorporateBudgetWorkspace"));
 const VerticalProfitLoss = lazy(() => import("./VerticalProfitLoss"));
 const AccountsFinancialDocuments = lazy(() => import("./AccountsFinancialDocuments"));
 const AccountsGSTReports = lazy(() => import("./AccountsGSTReports"));
@@ -61,12 +62,13 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     ],
   },
   { id: "banking", label: "Banking", icon: Landmark },
-  {
+    {
     id: "accountant", label: "Accountant", icon: Calculator,
     children: [
       { id: "manual-journals", label: "Manual Journals" },
       { id: "chart-of-accounts", label: "Chart of Accounts" },
-      { id: "budgets", label: "Budgets" },
+      { id: "budgets", label: "Budgets (Simple)" },
+      { id: "corporate-budget", label: "Corporate Budget" },
     ],
   },
   { id: "reports", label: "Reports", icon: BarChart3 },
@@ -117,6 +119,7 @@ export const ZohoAccountsWorkspace = ({ initialView = "home" }: ZohoAccountsWork
       case "manual-journals": return <AccountsDeepWorkspace initialTab="journal" />;
       case "chart-of-accounts": return <AccountsChartOfAccounts />;
       case "budgets": return <AccountsBudgets />;
+      case "corporate-budget": return <CorporateBudgetWorkspace />;
       case "reports": return <FinancialIntelligenceDashboard />;
       case "profit-loss": return <VerticalProfitLoss />;
       case "gst-reports": return <AccountsGSTReports />;
