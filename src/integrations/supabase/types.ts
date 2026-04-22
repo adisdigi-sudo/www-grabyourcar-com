@@ -18042,6 +18042,51 @@ export type Database = {
         }
         Relationships: []
       }
+      spend_plans: {
+        Row: {
+          base_amount: number
+          base_period: string
+          category_name: string
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          updated_at: string
+          vertical: string | null
+        }
+        Insert: {
+          base_amount?: number
+          base_period?: string
+          category_name: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          updated_at?: string
+          vertical?: string | null
+        }
+        Update: {
+          base_amount?: number
+          base_period?: string
+          category_name?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          updated_at?: string
+          vertical?: string | null
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
