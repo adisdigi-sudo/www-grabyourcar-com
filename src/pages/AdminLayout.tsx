@@ -303,6 +303,9 @@ const EmployeeDailyReportsDashboard = lazy(() =>
 const FounderCockpitPage = lazy(() =>
   import("@/components/admin/dashboard/FounderCockpitPage").then((module) => ({ default: module.FounderCockpitPage })),
 );
+const CFOCockpitPage = lazy(() =>
+  import("@/components/admin/dashboard/CFOCockpitPage").then((module) => ({ default: module.CFOCockpitPage })),
+);
 const AdminPanelLoader = ({ className }: { className?: string }) => (
   <div className={cn("flex min-h-[240px] items-center justify-center", className)}>
     <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
@@ -331,7 +334,7 @@ const VALID_ADMIN_TABS = new Set([
   "accounts-bills", "accounts-banking", "accounts-chart", "accounts-journal", "accounts-reports", "accounts-documents",
   "hr-core", "hr-recruitment", "hr-workforce", "hr-attendance", "hr-payroll", "hr-expense", "hr-performance", "hr-engagement",
   "hr-assets", "hr-helpdesk", "hr-task-escalation", "hr-daily-reports", "ai-cofounder", "my-hr", "my-team",
-  "founder-cockpit"
+  "founder-cockpit", "cfo-cockpit"
 ]);
 
 const getInitialAdminTab = () => {
@@ -477,6 +480,9 @@ const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
     case "founder-cockpit":
       // Dedicated founder workspace exposes ONLY the cockpit tab — no dashboard, no other modules.
       return tab === "founder-cockpit";
+    case "cfo-cockpit":
+      // Dedicated CFO workspace — only CFO cockpit tab.
+      return tab === "cfo-cockpit";
     default:
       return tab === DEFAULT_ADMIN_TAB;
   }
@@ -504,6 +510,7 @@ const AdminLayout = () => {
   const verticalDefaultTab = useMemo(() => {
     // Founder Cockpit workspace lands directly on the cockpit (no generic dashboard).
     if (activeVertical?.slug === "founder-cockpit") return "founder-cockpit";
+    if (activeVertical?.slug === "cfo-cockpit") return "cfo-cockpit";
     return DEFAULT_ADMIN_TAB;
   }, [activeVertical?.slug]);
   const resolvedActiveTab = useMemo(() => {
@@ -744,6 +751,8 @@ const AdminLayout = () => {
         return <SalesVerticalWorkspace />;
       case "founder-cockpit":
         return <FounderCockpitPage />;
+      case "cfo-cockpit":
+        return <CFOCockpitPage />;
       case "loan-crm":
         return <LoanCRMDashboard />;
       case "unified-crm":

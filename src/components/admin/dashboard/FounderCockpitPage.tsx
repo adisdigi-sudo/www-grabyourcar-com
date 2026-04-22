@@ -22,6 +22,9 @@ const BudgetApprovalQueue = lazy(() =>
 const MonthlyPLHistoryCard = lazy(() =>
   import("@/components/admin/finance/finance-v2/shared/MonthlyPLHistoryCard").then((m) => ({ default: m.MonthlyPLHistoryCard })),
 );
+const LiveTeamPerformance = lazy(() =>
+  import("./LiveTeamPerformance").then((m) => ({ default: m.LiveTeamPerformance })),
+);
 
 const SectionFallback = () => (
   <div className="rounded-2xl border border-border bg-card/60 px-4 py-6 text-sm text-muted-foreground">
@@ -46,6 +49,10 @@ export const FounderCockpitPage = () => {
 
       <Suspense fallback={<SectionFallback />}>
         <FounderCommandCenter />
+      </Suspense>
+
+      <Suspense fallback={<SectionFallback />}>
+        <LiveTeamPerformance />
       </Suspense>
 
       <Suspense fallback={<SectionFallback />}>
