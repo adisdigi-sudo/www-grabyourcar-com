@@ -210,8 +210,11 @@ export const BudgetPlannerDialog = ({ open, onClose }: BudgetPlannerDialogProps)
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Q1 2026 — All Verticals Operating Budget"
-                  className="mt-1.5"
+                  className={cn("mt-1.5", showErrors && titleError && "border-red-400 focus-visible:ring-red-400")}
                 />
+                {showErrors && titleError && (
+                  <p className="text-[10px] text-red-600 mt-1">Plan title is required.</p>
+                )}
               </div>
               <div>
                 <Label className="text-xs font-medium text-slate-700">Description (optional)</Label>
