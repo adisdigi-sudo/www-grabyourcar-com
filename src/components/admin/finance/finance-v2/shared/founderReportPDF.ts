@@ -551,7 +551,7 @@ export interface FounderSnapshotInput {
 }
 
 /** Internal: build the branded Founder Snapshot PDF, honouring optional column/section config. */
-function renderFounderSnapshotPdf(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}): Promise<void> {
+function renderFounderSnapshotPdf(s: FounderSnapshotInput, cfg: ExportColumnConfig = {}, returnBlob = false): Promise<Blob | void> {
   const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
   const polTotals = {
     base: sum(s.policies.map((p) => p.base)),
@@ -619,6 +619,10 @@ function renderFounderSnapshotPdf(s: FounderSnapshotInput, cfg: ExportColumnConf
     fileName: `Founder-Snapshot-${s.periodLabel.replace(/\s+/g, "_")}.pdf`,
     title: "Founder Master Report",
     subtitle: `Snapshot · ${s.periodKind}`,
+    coverPage: cfg.includeCoverPage !== false,
+    coverPeriodLabel: s.periodLabel,
+    coverPeriodRange: `${s.periodStart}  →  ${s.periodEnd}`,
+    returnBlob,
     meta: {
       Period: `${s.periodLabel} (${s.periodStart} → ${s.periodEnd})`,
       Vertical: s.filters.vertical || "All",
