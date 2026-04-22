@@ -298,15 +298,22 @@ export const BudgetPlannerDialog = ({ open, onClose }: BudgetPlannerDialogProps)
                 <div className="col-span-1"></div>
               </div>
               <div className="divide-y">
-                {rows.map((r, idx) => (
+                {rows.map((r, idx) => {
+                  const err = rowErrors[idx];
+                  const showCatErr = showErrors && err.category;
+                  const showAmtErr = showErrors && err.amount;
+                  return (
                   <div key={r.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 px-3 py-2.5 bg-white hover:bg-slate-50/50">
                     <div className="md:col-span-3">
                       <Input
                         value={r.category_name}
                         onChange={(e) => updateRow(r.id, { category_name: e.target.value })}
                         placeholder={`Category ${idx + 1} (e.g. Salaries, Ads)`}
-                        className="h-9 text-sm"
+                        className={cn("h-9 text-sm", showCatErr && "border-red-400 focus-visible:ring-red-400")}
                       />
+                      {showCatErr && (
+                        <p className="text-[10px] text-red-600 mt-1">Category required</p>
+                      )}
                     </div>
                     <div className="md:col-span-2">
                       <Select value={r.vertical} onValueChange={(v) => updateRow(r.id, { vertical: v })}>
@@ -331,8 +338,11 @@ export const BudgetPlannerDialog = ({ open, onClose }: BudgetPlannerDialogProps)
                         value={r.planned_amount || ""}
                         onChange={(e) => updateRow(r.id, { planned_amount: Number(e.target.value) || 0 })}
                         placeholder="0"
-                        className="h-9 text-sm text-right tabular-nums"
+                        className={cn("h-9 text-sm text-right tabular-nums", showAmtErr && "border-red-400 focus-visible:ring-red-400")}
                       />
+                      {showAmtErr && (
+                        <p className="text-[10px] text-red-600 mt-1 text-right">Amount must be &gt; 0</p>
+                      )}
                     </div>
                     <div className="md:col-span-2">
                       <Input
@@ -354,9 +364,15 @@ export const BudgetPlannerDialog = ({ open, onClose }: BudgetPlannerDialogProps)
                       </Button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
+            {showErrors && hasLineErrors && (
+              <p className="text-[11px] text-red-600 px-1">
+                Fix the highlighted lines — every allocation needs a category and a positive amount.
+              </p>
+            )}
           </section>
 
           {/* Auto-Split Summary */}
