@@ -80,6 +80,56 @@ export const FounderMasterReportHub = () => {
   const [policyOverrides, setPolicyOverrides] = useState<Record<string, number>>({});
   const [loanOverrides, setLoanOverrides] = useState<Record<string, number>>({});
 
+  // Reject dialog state — for marking records as rejected/cancelled with reason
+  const [rejectTarget, setRejectTarget] = useState<{
+    kind: "policy" | "loan" | "deal";
+    id: string;
+    label: string;
+  } | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectBusy, setRejectBusy] = useState(false);
+
+  const submitReject = async () => {
+    if (!rejectTarget) return;
+    if (!rejectReason.trim()) {
+      toast({ title: "Reason required", description: "Please add a short reason.", variant: "destructive" });
+      return;
+    }
+    setRejectBusy(true);
+    try {
+      const reason = rejectReason.trim();
+      const stamp = `[REJECTED ${new Date().toLocaleString("en-IN")}] ${reason}`;
+      if (rejectTarget.kind === "policy") {
+        const { data: cur } = await (supabase.from("insurance_policies") as any)
+          .select("notes").eq("id", rejectTarget.id).maybeSingle();
+        const merged = [cur?.notes, stamp].filter(Boolean).join("\n");
+        const { error } = await (supabase.from("insurance_policies") as any)
+          .update({ status: "cancelled", notes: merged }).eq("id", rejectTarget.id);
+        if (error) throw error;
+      } else if (rejectTarget.kind === "loan") {
+        const { error } = await (supabase.from("loan_applications") as any)
+          .update({ stage: "lost", lost_reason: reason }).eq("id", rejectTarget.id);
+        if (error) throw error;
+      } else {
+        const { data: cur } = await (supabase.from("deals") as any)
+          .select("notes").eq("id", rejectTarget.id).maybeSingle();
+        const merged = [cur?.notes, stamp].filter(Boolean).join("\n");
+        const { error } = await (supabase.from("deals") as any)
+          .update({ deal_status: "cancelled", notes: merged }).eq("id", rejectTarget.id);
+        if (error) throw error;
+      }
+      toast({ title: "Marked as rejected", description: `${rejectTarget.label} removed from live totals.` });
+      const keyMap: Record<string, string> = { policy: "founder-policies", loan: "founder-loans", deal: "founder-deals" };
+      qc.invalidateQueries({ queryKey: [keyMap[rejectTarget.kind], pKey] });
+      setRejectTarget(null);
+      setRejectReason("");
+    } catch (e: any) {
+      toast({ title: "Couldn't reject", description: e?.message || "Try again.", variant: "destructive" });
+    } finally {
+      setRejectBusy(false);
+    }
+  };
+
   const period = useMemo(
     () => buildPeriod(periodKind, anchor, { from: customFrom, to: customTo }),
     [periodKind, anchor, customFrom, customTo]
