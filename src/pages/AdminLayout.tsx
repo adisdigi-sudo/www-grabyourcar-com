@@ -354,7 +354,8 @@ const ADMIN_BOOTSTRAP_TIMEOUT_MS = 12000;
 
 const UNIVERSAL_ADMIN_TABS = new Set([
   DEFAULT_ADMIN_TAB,
-  "founder-cockpit",
+  // "founder-cockpit" intentionally NOT universal — it's now scoped to the dedicated
+  // "founder-cockpit" workspace so it doesn't show inside HR / Marketing / Sales / etc.
   "live-chats",
   "ai-cofounder",
   "my-hr",
@@ -473,6 +474,9 @@ const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
       return tab.startsWith("cars-");
     case "dealer-network":
       return tab.startsWith("dealer-");
+    case "founder-cockpit":
+      // Dedicated founder workspace exposes ONLY the cockpit tab — no dashboard, no other modules.
+      return tab === "founder-cockpit";
     default:
       return tab === DEFAULT_ADMIN_TAB;
   }
@@ -497,9 +501,14 @@ const AdminLayout = () => {
   const isBootstrappingAuth = !initialized || isLoading;
 
   const effectiveActiveTab = useMemo(() => normalizeAdminTab(activeTab), [activeTab]);
+  const verticalDefaultTab = useMemo(() => {
+    // Founder Cockpit workspace lands directly on the cockpit (no generic dashboard).
+    if (activeVertical?.slug === "founder-cockpit") return "founder-cockpit";
+    return DEFAULT_ADMIN_TAB;
+  }, [activeVertical?.slug]);
   const resolvedActiveTab = useMemo(() => {
-    return isTabAllowedForVertical(effectiveActiveTab, activeVertical?.slug) ? effectiveActiveTab : DEFAULT_ADMIN_TAB;
-  }, [effectiveActiveTab, activeVertical?.slug]);
+    return isTabAllowedForVertical(effectiveActiveTab, activeVertical?.slug) ? effectiveActiveTab : verticalDefaultTab;
+  }, [effectiveActiveTab, activeVertical?.slug, verticalDefaultTab]);
   useEmployeeTracker({
     enabled: !isLoading && !verticalAccessLoading && !!user,
     userId: user?.id,

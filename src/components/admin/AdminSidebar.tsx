@@ -74,7 +74,10 @@ interface NavItem {
 const navItems: NavItem[] = [
   // ── Universal ──
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "founder-cockpit", label: "👑 Founder Cockpit", icon: Crown, badge: "NEW", allowedRoles: ["super_admin", "admin"] },
+  // Founder Cockpit is now a dedicated workspace (vertical: "founder-cockpit") — accessible only after
+  // selecting that workspace from the workspace selector. Removed from universal nav so it does not
+  // appear inside HR / Marketing / Sales / etc.
+  { id: "founder-cockpit", label: "👑 Founder Cockpit", icon: Crown, badge: "NEW", verticals: ["founder-cockpit"], allowedRoles: ["super_admin", "admin"] },
   { id: "live-chats", label: "💬 Live Chats", icon: MessageCircle, badge: "LIVE" },
   { id: "ai-cofounder", label: "🤖 AI Co-Founder", icon: Brain, badge: "AI" },
   { id: "my-hr", label: "📋 My HR", icon: LayoutDashboard },
@@ -440,6 +443,11 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
           return null;
         })
         .filter(Boolean) as NavItem[];
+    }
+
+    // Founder Cockpit is a single-purpose workspace — show ONLY the cockpit entry.
+    if (normalizedActiveSlug === "founder-cockpit") {
+      items = items.filter(item => item.id === "founder-cockpit");
     }
 
     return items
