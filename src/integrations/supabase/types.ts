@@ -2486,6 +2486,194 @@ export type Database = {
           },
         ]
       }
+      budget_allocations: {
+        Row: {
+          actual_closures: number | null
+          actual_leads: number | null
+          actual_revenue: number | null
+          ai_suggestion: string | null
+          allocated_amount: number
+          budget_id: string
+          channel: string
+          channel_label: string | null
+          cost_per_message: number | null
+          created_at: string
+          expected_closures: number | null
+          expected_leads: number | null
+          expected_revenue: number | null
+          expected_volume: number | null
+          id: string
+          notes: string | null
+          spent_amount: number
+          target_vertical: string | null
+          updated_at: string
+        }
+        Insert: {
+          actual_closures?: number | null
+          actual_leads?: number | null
+          actual_revenue?: number | null
+          ai_suggestion?: string | null
+          allocated_amount?: number
+          budget_id: string
+          channel: string
+          channel_label?: string | null
+          cost_per_message?: number | null
+          created_at?: string
+          expected_closures?: number | null
+          expected_leads?: number | null
+          expected_revenue?: number | null
+          expected_volume?: number | null
+          id?: string
+          notes?: string | null
+          spent_amount?: number
+          target_vertical?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actual_closures?: number | null
+          actual_leads?: number | null
+          actual_revenue?: number | null
+          ai_suggestion?: string | null
+          allocated_amount?: number
+          budget_id?: string
+          channel?: string
+          channel_label?: string | null
+          cost_per_message?: number | null
+          created_at?: string
+          expected_closures?: number | null
+          expected_leads?: number | null
+          expected_revenue?: number | null
+          expected_volume?: number | null
+          id?: string
+          notes?: string | null
+          spent_amount?: number
+          target_vertical?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_allocations_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_budgets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budget_incentive_payouts: {
+        Row: {
+          achieved_count: number | null
+          achieved_revenue: number | null
+          achievement_pct: number | null
+          approved_at: string | null
+          approved_by: string | null
+          base_incentive: number | null
+          bonus_incentive: number | null
+          created_at: string
+          employee_name: string
+          id: string
+          month_year: string
+          notes: string | null
+          paid_at: string | null
+          payment_reference: string | null
+          rules_applied: Json | null
+          status: string
+          total_incentive: number | null
+          updated_at: string
+          user_id: string | null
+          vertical_name: string
+        }
+        Insert: {
+          achieved_count?: number | null
+          achieved_revenue?: number | null
+          achievement_pct?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          base_incentive?: number | null
+          bonus_incentive?: number | null
+          created_at?: string
+          employee_name: string
+          id?: string
+          month_year: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_reference?: string | null
+          rules_applied?: Json | null
+          status?: string
+          total_incentive?: number | null
+          updated_at?: string
+          user_id?: string | null
+          vertical_name: string
+        }
+        Update: {
+          achieved_count?: number | null
+          achieved_revenue?: number | null
+          achievement_pct?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          base_incentive?: number | null
+          bonus_incentive?: number | null
+          created_at?: string
+          employee_name?: string
+          id?: string
+          month_year?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_reference?: string | null
+          rules_applied?: Json | null
+          status?: string
+          total_incentive?: number | null
+          updated_at?: string
+          user_id?: string | null
+          vertical_name?: string
+        }
+        Relationships: []
+      }
+      budget_incentive_rules: {
+        Row: {
+          applies_to: string
+          created_at: string
+          id: string
+          incentive_amount: number
+          incentive_type: string
+          is_active: boolean | null
+          notes: string | null
+          rule_name: string
+          slab_max: number | null
+          slab_min: number
+          updated_at: string
+          vertical_name: string
+        }
+        Insert: {
+          applies_to?: string
+          created_at?: string
+          id?: string
+          incentive_amount: number
+          incentive_type?: string
+          is_active?: boolean | null
+          notes?: string | null
+          rule_name: string
+          slab_max?: number | null
+          slab_min: number
+          updated_at?: string
+          vertical_name: string
+        }
+        Update: {
+          applies_to?: string
+          created_at?: string
+          id?: string
+          incentive_amount?: number
+          incentive_type?: string
+          is_active?: boolean | null
+          notes?: string | null
+          rule_name?: string
+          slab_max?: number | null
+          slab_min?: number
+          updated_at?: string
+          vertical_name?: string
+        }
+        Relationships: []
+      }
       budgets: {
         Row: {
           actual_amount: number | null
@@ -3791,6 +3979,66 @@ export type Database = {
           recovery_email_sent_at?: string | null
           session_id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      channel_performance: {
+        Row: {
+          channel: string
+          conversion_rate: number | null
+          cost_per_closure: number | null
+          cost_per_lead: number | null
+          created_at: string
+          id: string
+          is_profitable: boolean | null
+          last_calculated_at: string | null
+          month_year: string
+          net_profit: number | null
+          roi: number | null
+          total_closures: number | null
+          total_leads: number | null
+          total_revenue: number | null
+          total_spend: number | null
+          updated_at: string
+          vertical_name: string | null
+        }
+        Insert: {
+          channel: string
+          conversion_rate?: number | null
+          cost_per_closure?: number | null
+          cost_per_lead?: number | null
+          created_at?: string
+          id?: string
+          is_profitable?: boolean | null
+          last_calculated_at?: string | null
+          month_year: string
+          net_profit?: number | null
+          roi?: number | null
+          total_closures?: number | null
+          total_leads?: number | null
+          total_revenue?: number | null
+          total_spend?: number | null
+          updated_at?: string
+          vertical_name?: string | null
+        }
+        Update: {
+          channel?: string
+          conversion_rate?: number | null
+          cost_per_closure?: number | null
+          cost_per_lead?: number | null
+          created_at?: string
+          id?: string
+          is_profitable?: boolean | null
+          last_calculated_at?: string | null
+          month_year?: string
+          net_profit?: number | null
+          roi?: number | null
+          total_closures?: number | null
+          total_leads?: number | null
+          total_revenue?: number | null
+          total_spend?: number | null
+          updated_at?: string
+          vertical_name?: string | null
         }
         Relationships: []
       }
@@ -5144,6 +5392,72 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_marketing_spend: {
+        Row: {
+          allocation_id: string | null
+          budget_id: string | null
+          channel: string
+          closures: number | null
+          cost_per_lead: number | null
+          created_at: string
+          id: string
+          leads_generated: number | null
+          notes: string | null
+          recorded_by: string | null
+          revenue: number | null
+          spend_date: string
+          spent_amount: number
+          vertical: string | null
+        }
+        Insert: {
+          allocation_id?: string | null
+          budget_id?: string | null
+          channel: string
+          closures?: number | null
+          cost_per_lead?: number | null
+          created_at?: string
+          id?: string
+          leads_generated?: number | null
+          notes?: string | null
+          recorded_by?: string | null
+          revenue?: number | null
+          spend_date?: string
+          spent_amount?: number
+          vertical?: string | null
+        }
+        Update: {
+          allocation_id?: string | null
+          budget_id?: string | null
+          channel?: string
+          closures?: number | null
+          cost_per_lead?: number | null
+          created_at?: string
+          id?: string
+          leads_generated?: number | null
+          notes?: string | null
+          recorded_by?: string | null
+          revenue?: number | null
+          spend_date?: string
+          spent_amount?: number
+          vertical?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_marketing_spend_allocation_id_fkey"
+            columns: ["allocation_id"]
+            isOneToOne: false
+            referencedRelation: "budget_allocations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_marketing_spend_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_budgets"
             referencedColumns: ["id"]
           },
         ]
@@ -8068,6 +8382,63 @@ export type Database = {
           user_id?: string
           user_name?: string | null
           vertical_name?: string | null
+        }
+        Relationships: []
+      }
+      employee_targets: {
+        Row: {
+          achieved_closures: number | null
+          achieved_leads: number | null
+          achieved_revenue: number | null
+          achievement_pct: number | null
+          created_at: string
+          employee_name: string
+          id: string
+          incentive_amount: number | null
+          month_year: string
+          notes: string | null
+          target_closures: number | null
+          target_leads: number | null
+          target_revenue: number | null
+          updated_at: string
+          user_id: string | null
+          vertical_name: string
+        }
+        Insert: {
+          achieved_closures?: number | null
+          achieved_leads?: number | null
+          achieved_revenue?: number | null
+          achievement_pct?: number | null
+          created_at?: string
+          employee_name: string
+          id?: string
+          incentive_amount?: number | null
+          month_year: string
+          notes?: string | null
+          target_closures?: number | null
+          target_leads?: number | null
+          target_revenue?: number | null
+          updated_at?: string
+          user_id?: string | null
+          vertical_name: string
+        }
+        Update: {
+          achieved_closures?: number | null
+          achieved_leads?: number | null
+          achieved_revenue?: number | null
+          achievement_pct?: number | null
+          created_at?: string
+          employee_name?: string
+          id?: string
+          incentive_amount?: number | null
+          month_year?: string
+          notes?: string | null
+          target_closures?: number | null
+          target_leads?: number | null
+          target_revenue?: number | null
+          updated_at?: string
+          user_id?: string | null
+          vertical_name?: string
         }
         Relationships: []
       }
@@ -13795,6 +14166,75 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_budgets: {
+        Row: {
+          actual_closures: number | null
+          actual_leads: number | null
+          actual_revenue: number | null
+          budget_name: string
+          created_at: string
+          created_by: string | null
+          expected_closures: number | null
+          expected_leads: number | null
+          expected_revenue: number | null
+          id: string
+          month_year: string | null
+          notes: string | null
+          period_end: string
+          period_start: string
+          period_type: string
+          status: string
+          total_allocated: number
+          total_budget: number
+          total_spent: number
+          updated_at: string
+        }
+        Insert: {
+          actual_closures?: number | null
+          actual_leads?: number | null
+          actual_revenue?: number | null
+          budget_name: string
+          created_at?: string
+          created_by?: string | null
+          expected_closures?: number | null
+          expected_leads?: number | null
+          expected_revenue?: number | null
+          id?: string
+          month_year?: string | null
+          notes?: string | null
+          period_end: string
+          period_start: string
+          period_type?: string
+          status?: string
+          total_allocated?: number
+          total_budget?: number
+          total_spent?: number
+          updated_at?: string
+        }
+        Update: {
+          actual_closures?: number | null
+          actual_leads?: number | null
+          actual_revenue?: number | null
+          budget_name?: string
+          created_at?: string
+          created_by?: string | null
+          expected_closures?: number | null
+          expected_leads?: number | null
+          expected_revenue?: number | null
+          id?: string
+          month_year?: string | null
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          status?: string
+          total_allocated?: number
+          total_budget?: number
+          total_spent?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       marketing_campaigns: {
         Row: {
           ab_test_enabled: boolean | null
@@ -18274,6 +18714,65 @@ export type Database = {
           vertical_slug?: string
         }
         Relationships: []
+      }
+      vertical_targets: {
+        Row: {
+          achieved_closures: number | null
+          achieved_leads: number | null
+          achieved_revenue: number | null
+          budget_id: string | null
+          created_at: string
+          id: string
+          month_year: string
+          notes: string | null
+          period_type: string
+          target_closures: number | null
+          target_leads: number | null
+          target_revenue: number | null
+          updated_at: string
+          vertical_name: string
+        }
+        Insert: {
+          achieved_closures?: number | null
+          achieved_leads?: number | null
+          achieved_revenue?: number | null
+          budget_id?: string | null
+          created_at?: string
+          id?: string
+          month_year: string
+          notes?: string | null
+          period_type?: string
+          target_closures?: number | null
+          target_leads?: number | null
+          target_revenue?: number | null
+          updated_at?: string
+          vertical_name: string
+        }
+        Update: {
+          achieved_closures?: number | null
+          achieved_leads?: number | null
+          achieved_revenue?: number | null
+          budget_id?: string | null
+          created_at?: string
+          id?: string
+          month_year?: string
+          notes?: string | null
+          period_type?: string
+          target_closures?: number | null
+          target_leads?: number | null
+          target_revenue?: number | null
+          updated_at?: string
+          vertical_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vertical_targets_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_budgets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       verticals: {
         Row: {
