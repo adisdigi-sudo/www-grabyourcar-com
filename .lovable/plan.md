@@ -1,63 +1,244 @@
+# Master Plan — 3 Major Refactors
 
-What I found
+> **Status**: Planning only. No code changes yet.
+> **User intent**: Clean, corporate, role-separated workspaces. Insurance-style live performance everywhere. Marketing/Tech reduced to essentials. CFO rebuilt from scratch in corporate style.
 
-- `vite.config.ts` is not the source of the issue. It contains Vite/dev-server/build settings only — no security headers.
-- The header risk is in `vercel.json`, which applies:
-  - `X-Frame-Options: DENY`
-  - `X-Content-Type-Options: nosniff`
-  - `X-XSS-Protection: 1; mode=block`
-- Of these, the dangerous one for an editor/iframe workflow is `X-Frame-Options: DENY`. If the app is rendered inside an iframe, that can block it.
-- But the stronger root cause in this project appears to be the app’s own recovery logic:
-  - `src/main.tsx` always installs the startup shell
-  - `src/lib/adminPreviewStability.ts` treats embedded preview windows as “stabilized”
-  - `src/lib/startupShell.ts` keeps a full-screen recovery shell until DOM heuristics say the app is “ready”
-  - session replay shows the “Dev connection lost / CRM shell active” path fired on `/workspace`
+---
 
-So this looks like a combination of:
-1. A potentially iframe-hostile header setup
-2. An over-aggressive blank-screen recovery system that is now trapping the preview
+## 🎯 PART 1 — Performance Dashboards in All 7 Verticals
 
-Different approach
+**Pattern reference**: Insurance Performance Dashboard
+- Period filter: Today / Yesterday / This Week / This Month / This Quarter / This Year / Custom
+- KPI cards (4–6): revenue, conversions, pending, conversion rate
+- Achiever Leaderboard (employee → count, value, incentive)
+- Detailed table (expandable, exportable)
+- Live data only (no mocks)
 
-Instead of adding more recovery patches, I would simplify the system:
+### Verticals to build
 
-- Make embedded editor preview “fail open”, not “fail closed”
-- Stop using the global full-screen startup shell inside the editor iframe
-- Keep loading/error handling local to `/workspace` and admin pages
-- Relax iframe-blocking headers only where embedding is required
+| # | Vertical | Source table | Won metric | Achiever | Incentive |
+|---|----------|--------------|------------|----------|-----------|
+| 1 | Insurance | insurance_clients (won) | premium_amount | assigned_executive | new ₹500 / renewal ₹300 |
+| 2 | Car Loans | loan_applications (disbursed) | disbursement_amount | assigned_to | % from incentive_rules |
+| 3 | HSRP | hsrp_bookings (paid) | payment_amount | assigned_to | per plate |
+| 4 | Car Sales (Dealer) | deals (closed+received) | deal_value | assigned_to | per deal |
+| 5 | Self-Drive Rentals | rental_bookings (paid) | total_amount | assigned_to | per booking |
+| 6 | Accessories | accessory_orders (delivered) | total_amount | system | flat ₹50/order |
+| 7 | Used Cars | deals filtered Used Car | deal_value | assigned_to | rules |
 
-Implementation plan
+### Approach
+- Reusable component: `<VerticalPerformanceDashboard verticalSlug config />`
+- Build Loans first → approve → reuse for next 6
+- Each vertical ~30 min once template locked
 
-1. Reduce the blast radius of the startup shell
-- Update `src/lib/adminPreviewStability.ts`
-- Change `shouldStabilizeStartupShellWindow()` so embedded editor previews do not trigger the global shell/recovery behavior
-- Keep shell protection only for true top-level sensitive/admin contexts if still needed
+### Files to create
+```
+src/components/admin/shared/performance/
+  ├── VerticalPerformanceDashboard.tsx
+  ├── PerformanceKPICards.tsx
+  ├── PerformanceLeaderboard.tsx
+  ├── PerformanceDetailTable.tsx
+  ├── PeriodFilter.tsx
+  └── usePerformanceData.ts
+src/lib/performance/
+  ├── verticalConfigs.ts
+  └── incentiveCalculator.ts
+```
 
-2. Simplify boot/reconnect behavior
-- Update `src/main.tsx`
-- Gate `ensureStartupShell()` and `installStartupShellHealthMonitor()` behind the stricter rule
-- Update `src/lib/startupShell.ts` and `src/components/bootstrap/BootstrapRuntime.tsx`
-- Remove the embedded-preview dependency on DOM “app ready” heuristics and reconnect recovery overlays
+---
 
-3. Keep page-level recovery only
-- Leave `WorkspaceSelector.tsx` responsible for its own loading / timeout / retry UI
-- If needed, do the same pattern in the CRM shell instead of one global white overlay controller
+## 🎯 PART 2 — Marketing & Tech Cleanup (Corporate Rebuild)
 
-4. Fix the header strategy
-- Update `vercel.json`
-- Remove blanket `X-Frame-Options: DENY` from routes/environments that must render in an iframe
-- Prefer a scoped `Content-Security-Policy: frame-ancestors ...` approach if embedding allowlists are needed
-- Keep `X-Content-Type-Options: nosniff`
-- Remove deprecated `X-XSS-Protection`
+### Current problem
+- 15+ tabs in UnifiedMarketingHub
+- 6 more in MarketingCommandCenter
+- Massive overlap, no single source of truth
 
-5. Validate after implementation
-- Check `/workspace` in embedded preview
-- Check `/workspace` in standalone tab
-- Confirm editing works again after reconnect
-- Confirm no iframe-blocking headers are applied where preview/editor needs embedding
+### New 3-Pillar Structure
 
-Expected result
+```
+Marketing & Tech Workspace
+├── WEBSITE          ├── MARKETING              ├── TECH
+│  • Pages/CMS       │  Channels:                │  • Integrations
+│  • SEO Manager     │   - Email                 │  • Edge Functions
+│  • Blog            │   - WhatsApp              │  • DB Health
+│  • Forms           │   - SMS                   │  • API Keys
+│  • Analytics       │   - RCS                   │  • Webhooks
+│  • Frontend        │   - Meta Ads (live)       │  • Logs
+│  • Backend         │   - Google Ads (live)     │
+│                    │  • Unified ROI Dashboard  │
+│                    │  • Audiences              │
+│                    │  • Automations            │
+```
 
-- The blank white screen should stop because the editor preview will no longer get trapped behind the recovery shell
-- Security remains intact, but without using an iframe-breaking global header
-- The app becomes easier to debug because loading failures are handled locally instead of by a complex global recovery layer
+### KEEP (migrate into new structure)
+- Website CMS, SEO, blog, forms
+- Email: merge Campaigns + Templates + Subscribers + Sequences into ONE tab with sub-views
+- WhatsApp: existing WAHubLayout (already complete)
+- SMS / RCS: minimal new tabs
+- Meta Ads + Google Ads: live sync dashboards
+- Unified ROI: cross-channel spend vs revenue
+
+### DELETE / ARCHIVE
+- Standalone tabs: Lead Scoring (→ CRM), Journeys (→ automation), Pop-ups, Cart Recovery, Polls, Dynamic Content (→ all merge under Email Advanced)
+- MarketingCommandCenter page
+- Duplicate Email Inbox
+
+### New files
+```
+src/components/admin/marketing-tech/
+  ├── MarketingTechWorkspace.tsx
+  ├── website/WebsiteColumn.tsx
+  ├── marketing/MarketingColumn.tsx
+  ├── marketing/UnifiedROIDashboard.tsx
+  ├── marketing/channels/
+  │     ├── EmailChannel.tsx
+  │     ├── WhatsAppChannel.tsx
+  │     ├── SMSChannel.tsx
+  │     ├── RCSChannel.tsx
+  │     ├── MetaAdsChannel.tsx
+  │     └── GoogleAdsChannel.tsx
+  └── tech/TechColumn.tsx
+```
+
+### Mockup process
+1. Build empty 3-column shell
+2. Show screenshot
+3. Get approval
+4. Migrate existing components
+5. Then delete old tabs
+
+---
+
+## 🎯 PART 3 — CFO Workspace Complete Rebuild (Corporate Style)
+
+### User decision
+> "existing sab delete, new tab add, clearly cleanly rich design corporate style rebuild"
+
+### Role-based 3-View Architecture
+
+```
+Finance Workspace (new top-level tab)
+├── 🟢 Accountant View (data entry, daily ops)
+│     ├── Daily Expenses Entry
+│     ├── Invoice Management
+│     ├── Vendor Payments
+│     ├── Bank Reconciliation
+│     └── Document Upload (bills, receipts)
+│
+├── 🔵 CFO View (planning, approval, P&L design)
+│     ├── Budget Planner (auto split D/W/M/Q/Y)
+│     ├── Budget Execution Tracker (planned vs actual live)
+│     ├── Approval Inbox (incoming spend requests)
+│     ├── Team Targets & Performance (vertical-wise)
+│     ├── Loan Documents Drawer
+│     ├── Company Documents Drawer
+│     ├── Draft Reports Builder
+│     ├── Monthly P&L Designer (drag fields)
+│     └── Cash Flow Forecast
+│
+└── 🟡 Founder View (read-only oversight + final auth)
+      ├── Executive Dashboard (one-page)
+      ├── Pending Final Approvals (CFO-screened)
+      ├── Monthly P&L (read + download PDF/Excel)
+      ├── All Reports Library (downloadable)
+      ├── Approve / Reject Center
+      └── P&L Comparison (MoM, YoY)
+```
+
+### Tab placement
+- New top-level **Finance** tab (replaces current CFO Board)
+- Inside Finance → 3 view-tabs: Accountant | CFO | Founder
+- Auto-route by role; super_admin sees all 3
+
+### Design language (Corporate)
+- Muted slate/navy palette, serif headings (Playfair Display)
+- Generous white space, subtle borders, NO gradients on KPIs
+- Print-friendly P&L (real financial-statement look)
+- Excel-style tables with grid lines
+- Color: green=surplus, red=deficit, neutral elsewhere
+
+### New files
+```
+src/components/admin/finance-v2/
+  ├── FinanceWorkspace.tsx
+  ├── accountant/
+  │     ├── AccountantDashboard.tsx
+  │     ├── DailyExpensesEntry.tsx
+  │     ├── InvoiceManagement.tsx
+  │     ├── VendorPayments.tsx
+  │     ├── BankReconciliation.tsx
+  │     └── DocumentUpload.tsx
+  ├── cfo/
+  │     ├── CFODashboard.tsx
+  │     ├── BudgetPlanner.tsx
+  │     ├── BudgetExecutionTracker.tsx
+  │     ├── ApprovalInbox.tsx
+  │     ├── TeamTargets.tsx
+  │     ├── LoanDocsDrawer.tsx
+  │     ├── CompanyDocsDrawer.tsx
+  │     ├── ReportsBuilder.tsx
+  │     ├── MonthlyPLDesigner.tsx
+  │     └── CashFlowForecast.tsx
+  └── founder/
+        ├── FounderDashboard.tsx
+        ├── PendingApprovals.tsx
+        ├── MonthlyPLViewer.tsx
+        ├── ReportsLibrary.tsx
+        ├── ApprovalCenter.tsx
+        └── PLComparison.tsx
+```
+
+### Data sources (already exist)
+- expenses, invoices, bank_accounts, bank_transactions
+- marketing_budgets (corporate-budget-engine)
+- approvals_queue, pl_entries, team_members
+- All vertical "won" tables for revenue
+- incentive_rules
+
+### Tables to ADD
+- cfo_documents (loan docs, company docs, drafts)
+- cfo_pl_templates (saved P&L layouts)
+- team_targets (per vertical, per period)
+
+### DELETE
+- src/components/admin/finance/cfo-board/ (entire folder)
+- All registrations pointing to old CFO Board
+
+---
+
+## 📋 Recommended Build Order
+
+| Phase | What | Turns | Why |
+|-------|------|-------|-----|
+| 1 | CFO Workspace rebuild | 2-3 | User most confused here, fresh start clears fastest |
+| 2 | Marketing & Tech 3-column shell + mockup | 1 | Show structure before deleting |
+| 3 | Marketing & Tech migration | 2-3 | Risky — must not break working flows |
+| 4 | Performance dashboard — Loans first | 1 | Template establishment |
+| 5 | Performance dashboards — remaining 6 | 2 | Repeat pattern |
+
+**Total**: 8-10 focused turns.
+
+---
+
+## ❓ Decisions Needed
+
+1. **CFO build order**: Accountant first / Founder first / CFO middle first?
+2. **Marketing migration**: Parallel old+new during transition, or hard cutover?
+3. **Performance template**: Incentives editable per-vertical from CFO, or hardcoded per incentive_rules?
+4. **Founder approval**: Auto-notify via WhatsApp on CFO escalation?
+
+---
+
+## ⚠️ Risks
+
+| Risk | Mitigation |
+|------|-----------|
+| Deleting CFO Board breaks references | Search all imports before delete, redirect routes |
+| Marketing migration breaks live email/WA | Keep edge functions untouched, only refactor UI shell |
+| Performance shows wrong numbers (insurance bug repeat) | Use SAME query as each vertical's existing performance page |
+| 3-role split confuses single-user setup | Super admin sees all 3 via tab switcher; additive not exclusive |
+
+---
+
+*End of plan. Awaiting direction on which phase to start.*
