@@ -78,6 +78,7 @@ const navItems: NavItem[] = [
   // selecting that workspace from the workspace selector. Removed from universal nav so it does not
   // appear inside HR / Marketing / Sales / etc.
   { id: "founder-cockpit", label: "👑 Founder Cockpit", icon: Crown, badge: "NEW", verticals: ["founder-cockpit"], allowedRoles: ["super_admin", "admin"] },
+  { id: "cfo-cockpit", label: "📊 CFO Cockpit", icon: BarChart3, badge: "NEW", verticals: ["cfo-cockpit"], allowedRoles: ["super_admin", "admin", "finance"] },
   { id: "live-chats", label: "💬 Live Chats", icon: MessageCircle, badge: "LIVE" },
   { id: "ai-cofounder", label: "🤖 AI Co-Founder", icon: Brain, badge: "AI" },
   { id: "my-hr", label: "📋 My HR", icon: LayoutDashboard },
