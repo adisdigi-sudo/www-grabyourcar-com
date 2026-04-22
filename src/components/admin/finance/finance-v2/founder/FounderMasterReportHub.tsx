@@ -278,18 +278,25 @@ export const FounderMasterReportHub = () => {
         </div>
       }
     >
-      {/* Period filter strip */}
-      <div className="flex items-center gap-2 flex-wrap mb-3 p-3 rounded-lg border bg-gradient-to-r from-amber-50/40 to-white">
+      {/* Period filter strip — Weekly · Monthly · Quarterly · Yearly · Custom Range */}
+      <div className="flex items-center gap-2 flex-wrap mb-3 p-3 rounded-lg border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-white shadow-sm">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Live Period</span>
         <div className="flex items-center gap-1 bg-white rounded-md border p-0.5">
-          {(["week", "month", "quarter", "year", "custom"] as PeriodKind[]).map(k => (
+          {([
+            { k: "week" as PeriodKind, label: "Weekly" },
+            { k: "month" as PeriodKind, label: "Monthly" },
+            { k: "quarter" as PeriodKind, label: "Quarterly" },
+            { k: "year" as PeriodKind, label: "Yearly" },
+            { k: "custom" as PeriodKind, label: "Custom Range" },
+          ]).map(({ k, label }) => (
             <button
               key={k}
               onClick={() => setPeriodKind(k)}
-              className={`text-[11px] px-3 py-1 rounded font-medium capitalize transition ${
+              className={`text-[11px] px-3 py-1 rounded font-medium transition ${
                 periodKind === k ? "bg-amber-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
               }`}
             >
-              {k}
+              {label}
             </button>
           ))}
         </div>
@@ -318,7 +325,7 @@ export const FounderMasterReportHub = () => {
           </>
         )}
 
-        <Badge variant="outline" className="text-[10px] ml-auto">{periodLabel}</Badge>
+        <Badge variant="default" className="text-[10px] ml-auto bg-amber-600">{periodLabel}</Badge>
       </div>
 
       {/* KPI strip */}
