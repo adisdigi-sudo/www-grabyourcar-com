@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Trophy, Target, TrendingUp } from "lucide-react";
+import { Trophy, Target, TrendingUp, User } from "lucide-react";
 import { fmtINR } from "./periodMath";
 
 type RangeKey = "today" | "week" | "month" | "quarter" | "half" | "year";
@@ -48,124 +48,78 @@ export const AchievementsTab = () => {
   const since = useMemo(() => startOf(range).toISOString(), [range]);
   const sinceDate = useMemo(() => startOf(range).toISOString().split("T")[0], [range]);
 
-  // Insurance policies issued
-  const { data: policies = [] } = useQuery({
-    queryKey: ["ach-policies", since],
+  // Won insurance policies = clients with lead_status='won' OR pipeline_stage='policy_issued'
+  const { data: wonPolicies = [], isLoading } = useQuery({
+    queryKey: ["cfo-won-insurance", since],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("insurance_clients")
+        .select("id, customer_name, phone, vehicle_number, current_premium, quote_amount, current_insurer, current_policy_type, current_policy_number, assigned_executive, lead_status, pipeline_stage, booking_date, updated_at, created_at")
+        .or("lead_status.eq.won,pipeline_stage.eq.policy_issued")
+        .gte("updated_at", since)
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Active incentive rules for insurance (per-policy fixed amounts)
+  const { data: rules = [] } = useQuery({
+    queryKey: ["cfo-insurance-rules"],
     queryFn: async () => {
       const { data } = await supabase
-        .from("insurance_policies")
-        .select("id, premium_amount, status, issued_date, created_at")
-        .gte("created_at", since);
+        .from("incentive_rules")
+        .select("rule_name, rule_type, fixed_amount, percentage")
+        .eq("vertical_name", "insurance")
+        .eq("is_active", true)
+        .eq("rule_type", "fixed");
       return data || [];
     },
   });
 
-  // Loans disbursed
-  const { data: loans = [] } = useQuery({
-    queryKey: ["ach-loans", since],
-    queryFn: async () => {
-      const { data } = await (supabase.from("loan_applications") as any)
-        .select("id, loan_amount, status, created_at")
-        .gte("created_at", since);
-      return data || [];
-    },
-  });
+  // Resolve incentive per policy: detect renewal vs new from policy_type / rule names
+  const newRuleAmt = useMemo(() => {
+    const r = rules.find((x: any) => /new/i.test(x.rule_name));
+    return Number(r?.fixed_amount || 500);
+  }, [rules]);
+  const renewalRuleAmt = useMemo(() => {
+    const r = rules.find((x: any) => /renew/i.test(x.rule_name));
+    return Number(r?.fixed_amount || 300);
+  }, [rules]);
 
-  // Car deals
-  const { data: deals = [] } = useQuery({
-    queryKey: ["ach-deals", since],
-    queryFn: async () => {
-      const { data } = await (supabase.from("deals") as any)
-        .select("id, deal_value, payment_received_amount, payment_status, vertical_name, created_at")
-        .gte("created_at", since);
-      return data || [];
-    },
-  });
+  const enriched = useMemo(() => {
+    return wonPolicies.map((p: any) => {
+      const isRenewal = /renew/i.test(String(p.current_policy_type || ""));
+      const incentive = isRenewal ? renewalRuleAmt : newRuleAmt;
+      const premium = Number(p.current_premium || p.quote_amount || 0);
+      return {
+        ...p,
+        policy_kind: isRenewal ? "Renewal" : "New",
+        premium,
+        incentive,
+        achiever: p.assigned_executive || "Unassigned",
+        won_date: p.booking_date || (p.updated_at || "").split("T")[0],
+      };
+    });
+  }, [wonPolicies, newRuleAmt, renewalRuleAmt]);
 
-  // HSRP bookings
-  const { data: hsrp = [] } = useQuery({
-    queryKey: ["ach-hsrp", since],
-    queryFn: async () => {
-      const { data } = await (supabase.from("hsrp_bookings") as any)
-        .select("id, payment_amount, service_price, payment_status, created_at")
-        .gte("created_at", since);
-      return data || [];
-    },
-  });
+  // Per-employee aggregation
+  const byAchiever = useMemo(() => {
+    const m = new Map<string, { name: string; count: number; revenue: number; incentive: number }>();
+    for (const p of enriched) {
+      const key = p.achiever;
+      const cur = m.get(key) || { name: key, count: 0, revenue: 0, incentive: 0 };
+      cur.count += 1;
+      cur.revenue += p.premium;
+      cur.incentive += p.incentive;
+      m.set(key, cur);
+    }
+    return Array.from(m.values()).sort((a, b) => b.count - a.count);
+  }, [enriched]);
 
-  // Rentals
-  const { data: rentals = [] } = useQuery({
-    queryKey: ["ach-rentals", since],
-    queryFn: async () => {
-      const { data } = await (supabase.from("rental_bookings") as any)
-        .select("id, total_amount, payment_status, created_at")
-        .gte("created_at", since);
-      return data || [];
-    },
-  });
-
-  // Accessories orders
-  const { data: orders = [] } = useQuery({
-    queryKey: ["ach-orders", since],
-    queryFn: async () => {
-      const { data } = await (supabase.from("accessory_orders") as any)
-        .select("id, total_amount, payment_status, created_at")
-        .gte("created_at", since);
-      return data || [];
-    },
-  });
-
-  const verticals = useMemo(() => {
-    const policiesPaid = policies.filter((p: any) => p.status === "active");
-    const loansApproved = loans.filter((l: any) => ["approved", "disbursed"].includes(String(l.status).toLowerCase()));
-    const dealsPaid = deals.filter((d: any) => d.payment_status === "received");
-    const hsrpPaid = hsrp.filter((h: any) => h.payment_status === "paid");
-    const rentalsPaid = rentals.filter((r: any) => r.payment_status === "paid");
-    const ordersPaid = orders.filter((o: any) => o.payment_status === "paid");
-
-    return [
-      {
-        name: "Insurance",
-        count: policiesPaid.length,
-        revenue: policiesPaid.reduce((s: number, p: any) => s + Number(p.premium_amount || 0), 0),
-        unit: "policies",
-      },
-      {
-        name: "Car Loans",
-        count: loansApproved.length,
-        revenue: loansApproved.reduce((s: number, l: any) => s + Number(l.loan_amount || 0), 0),
-        unit: "loans",
-      },
-      {
-        name: "Car Sales",
-        count: dealsPaid.filter((d: any) => (d.vertical_name || "").toLowerCase().includes("sales") || !d.vertical_name).length,
-        revenue: dealsPaid.reduce((s: number, d: any) => s + Number(d.payment_received_amount || d.deal_value || 0), 0),
-        unit: "deals",
-      },
-      {
-        name: "HSRP",
-        count: hsrpPaid.length,
-        revenue: hsrpPaid.reduce((s: number, h: any) => s + Number(h.payment_amount || h.service_price || 0), 0),
-        unit: "bookings",
-      },
-      {
-        name: "Self Drive Rental",
-        count: rentalsPaid.length,
-        revenue: rentalsPaid.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0),
-        unit: "rentals",
-      },
-      {
-        name: "Accessories",
-        count: ordersPaid.length,
-        revenue: ordersPaid.reduce((s: number, o: any) => s + Number(o.total_amount || 0), 0),
-        unit: "orders",
-      },
-    ];
-  }, [policies, loans, deals, hsrp, rentals, orders]);
-
-  const totalCount = verticals.reduce((s, v) => s + v.count, 0);
-  const totalRevenue = verticals.reduce((s, v) => s + v.revenue, 0);
-  const avgPerUnit = totalCount > 0 ? totalRevenue / totalCount : 0;
+  const totalCount = enriched.length;
+  const totalRevenue = enriched.reduce((s, p) => s + p.premium, 0);
+  const totalIncentive = enriched.reduce((s, p) => s + p.incentive, 0);
 
   return (
     <div className="space-y-6">
@@ -181,82 +135,121 @@ export const AchievementsTab = () => {
             </SelectContent>
           </Select>
         </div>
-        <p className="text-xs text-muted-foreground">Auto-pulled from CRM • Since {sinceDate}</p>
+        <p className="text-xs text-muted-foreground">
+          Won Insurance Policies only • Since {sinceDate} • Incentive: New ₹{newRuleAmt} / Renewal ₹{renewalRuleAmt}
+        </p>
       </div>
 
-      {/* Top stats */}
+      {/* Top KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-l-4 border-l-emerald-500">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">Total Conversions</p>
+              <p className="text-sm text-muted-foreground">Won Policies</p>
               <Trophy className="h-4 w-4 text-emerald-600" />
             </div>
             <p className="text-2xl font-bold mt-2">{totalCount}</p>
-            <p className="text-xs text-muted-foreground mt-1">across all verticals</p>
+            <p className="text-xs text-muted-foreground mt-1">Insurance only</p>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-blue-500">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">Total Revenue Generated</p>
+              <p className="text-sm text-muted-foreground">Premium Collected</p>
               <TrendingUp className="h-4 w-4 text-blue-600" />
             </div>
             <p className="text-2xl font-bold mt-2 text-blue-700">{fmtINR(totalRevenue)}</p>
             <p className="text-xs text-muted-foreground mt-1">{RANGE_LABELS[range]}</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-purple-500">
+        <Card className="border-l-4 border-l-amber-500">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">Avg per Conversion</p>
-              <Target className="h-4 w-4 text-purple-600" />
+              <p className="text-sm text-muted-foreground">Eligible Incentive</p>
+              <Target className="h-4 w-4 text-amber-600" />
             </div>
-            <p className="text-2xl font-bold mt-2">{fmtINR(avgPerUnit)}</p>
+            <p className="text-2xl font-bold mt-2 text-amber-700">{fmtINR(totalIncentive)}</p>
+            <p className="text-xs text-muted-foreground mt-1">Auto-calculated per policy</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Per vertical */}
+      {/* Per Achiever */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Achievements by Vertical</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <User className="h-4 w-4" /> Achievers Leaderboard
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Vertical</TableHead>
-                <TableHead className="text-right">Count</TableHead>
-                <TableHead className="text-right">Revenue</TableHead>
-                <TableHead className="text-right">Avg / Unit</TableHead>
-                <TableHead>Performance</TableHead>
+                <TableHead>Employee</TableHead>
+                <TableHead className="text-right">Policies Won</TableHead>
+                <TableHead className="text-right">Premium</TableHead>
+                <TableHead className="text-right">Eligible Incentive</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {verticals.map(v => {
-                const share = totalRevenue > 0 ? (v.revenue / totalRevenue) * 100 : 0;
-                return (
-                  <TableRow key={v.name}>
-                    <TableCell className="font-medium">{v.name}</TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="secondary">{v.count} {v.unit}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">{fmtINR(v.revenue)}</TableCell>
-                    <TableCell className="text-right text-xs text-muted-foreground">
-                      {fmtINR(v.count > 0 ? v.revenue / v.count : 0)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full bg-primary" style={{ width: `${share}%` }} />
-                        </div>
-                        <span className="text-xs text-muted-foreground w-10 text-right">{share.toFixed(0)}%</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {byAchiever.length === 0 && (
+                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No won policies in this period</TableCell></TableRow>
+              )}
+              {byAchiever.map(a => (
+                <TableRow key={a.name}>
+                  <TableCell className="font-medium">{a.name}</TableCell>
+                  <TableCell className="text-right">
+                    <Badge variant="secondary">{a.count}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">{fmtINR(a.revenue)}</TableCell>
+                  <TableCell className="text-right font-semibold text-amber-700">{fmtINR(a.incentive)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Per Policy detail */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Won Policies — Detail</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Customer</TableHead>
+                <TableHead>Vehicle</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Insurer</TableHead>
+                <TableHead>Achiever</TableHead>
+                <TableHead className="text-right">Premium</TableHead>
+                <TableHead className="text-right">Incentive</TableHead>
+                <TableHead>Won Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading && (
+                <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
+              )}
+              {!isLoading && enriched.length === 0 && (
+                <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">No won policies</TableCell></TableRow>
+              )}
+              {enriched.map((p: any) => (
+                <TableRow key={p.id}>
+                  <TableCell className="font-medium">{p.customer_name || "—"}</TableCell>
+                  <TableCell className="text-xs">{p.vehicle_number || "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant={p.policy_kind === "Renewal" ? "outline" : "default"}>{p.policy_kind}</Badge>
+                  </TableCell>
+                  <TableCell className="text-xs">{p.current_insurer || "—"}</TableCell>
+                  <TableCell className="text-xs">{p.achiever}</TableCell>
+                  <TableCell className="text-right">{fmtINR(p.premium)}</TableCell>
+                  <TableCell className="text-right text-amber-700 font-medium">{fmtINR(p.incentive)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{p.won_date || "—"}</TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </CardContent>
