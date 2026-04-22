@@ -751,6 +751,8 @@ const AdminLayout = () => {
         return <SalesVerticalWorkspace />;
       case "founder-cockpit":
         return <FounderCockpitPage />;
+      case "cfo-cockpit":
+        return <CFOCockpitPage />;
       case "loan-crm":
         return <LoanCRMDashboard />;
       case "unified-crm":
