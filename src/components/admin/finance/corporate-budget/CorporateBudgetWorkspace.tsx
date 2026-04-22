@@ -36,6 +36,9 @@ import {
 import { BudgetEditor } from "./BudgetEditor";
 import { BudgetDetailDialog } from "./BudgetDetailDialog";
 import { CategoryManager } from "./CategoryManager";
+import { CFODashboard } from "./CFODashboard";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Activity, FileText } from "lucide-react";
 import { fmt, STATUS_META } from "./types";
 
 const CorporateBudgetWorkspace = () => {
@@ -85,7 +88,7 @@ const CorporateBudgetWorkspace = () => {
           <div>
             <h2 className="text-xl font-bold">Corporate Budget Engine</h2>
             <p className="text-sm text-muted-foreground">
-              Plan expenses by category × vertical × department · Founder approval mandatory
+              Plan expenses · Auto-track actuals · CFO-style live P&L
             </p>
           </div>
         </div>
@@ -102,6 +105,22 @@ const CorporateBudgetWorkspace = () => {
           </Button>
         </div>
       </div>
+
+      <Tabs defaultValue="cfo" className="w-full">
+        <TabsList className="grid w-full md:w-auto grid-cols-2 md:inline-grid md:grid-cols-2">
+          <TabsTrigger value="cfo" className="gap-2">
+            <Activity className="h-4 w-4" /> CFO Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="plans" className="gap-2">
+            <FileText className="h-4 w-4" /> Budget Plans
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="cfo" className="mt-5">
+          <CFODashboard />
+        </TabsContent>
+
+        <TabsContent value="plans" className="mt-5 space-y-6">
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -263,6 +282,8 @@ const CorporateBudgetWorkspace = () => {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
 
       <BudgetEditor
         open={editorOpen}
