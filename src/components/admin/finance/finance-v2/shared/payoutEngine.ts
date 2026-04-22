@@ -1,23 +1,20 @@
 /**
- * Payout Calc Engine — pulls from commission_rules table when available,
- * falls back to industry-standard slabs.
+ * Payout Calc Engine — Founder-locked formulas.
  *
- * INSURANCE (FOUNDER-LOCKED FORMULAS)
- *   - Strip 18% GST first:  baseExGst = total_premium / 1.18  (or net_premium if column populated)
+ * INSURANCE
  *
  *   STANDALONE OD
- *     base   = baseExGst
- *     payout = base × % (default 15%)
+ *     base   = total_premium − 18% GST   (i.e. total_premium / 1.18)
+ *     payout = base × %  (default 15%)
  *
  *   THIRD PARTY (TP)
- *     base   = baseExGst (TP itself is the entire premium)
- *     payout = base × % (default 2.5%)
+ *     base   = total_premium − 18% GST
+ *     payout = base × %  (default 2.5%)
  *
  *   COMPREHENSIVE
- *     base = baseExGst − tp_premium − pa_premium
- *     (tp_premium / pa_premium come from policy.addons / metadata if recorded;
- *      otherwise estimated from defaults: TP ≈ 18% of baseExGst, PA = 0)
- *     payout = base × % (default 12%)
+ *     step 1: less_18_5 = total_premium − 18.5%   (total_premium / 1.185)
+ *     step 2: base      = less_18_5 − tp_premium − pa_driver_premium  (if available)
+ *     payout = base × %  (default 12%)
  *
  *   TDS = 5% of gross payout
  *
@@ -52,12 +49,13 @@ const FALLBACK = {
     comprehensive: 12,
     default: 10,
   } as Record<string, number>,
-  // Default split ratios used ONLY when explicit tp_premium/pa_premium are missing
-  comprehensive_tp_share: 0.18, // ~18% of net (ex-GST) goes to mandatory TP
-  comprehensive_pa_share: 0,    // PA optional; 0 unless user records it
+  // Default share for mandatory TP inside a comprehensive policy when not explicitly recorded
+  comprehensive_tp_share: 0.18,
+  comprehensive_pa_share: 0,
   loan: 1.2,
   dealTdsPct: 5,
-  gstPct: 18,
+  gstPct: 18,            // standalone & third-party
+  gstPctComprehensive: 18.5,  // founder-locked: comprehensive uses 18.5%
   tdsPct: 5,
 };
 
