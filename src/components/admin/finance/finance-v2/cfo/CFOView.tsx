@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -10,8 +11,12 @@ import { format } from "date-fns";
 import { SectionCard } from "../shared/SectionCard";
 import { StatTile } from "../shared/StatTile";
 import { fmt } from "../../corporate-budget/types";
+import { BudgetPlannerDialog } from "./BudgetPlannerDialog";
+import { BudgetDetailDialog } from "../../corporate-budget/BudgetDetailDialog";
 
 const CFOView = () => {
+  const [plannerOpen, setPlannerOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const { data: budgets = [] } = useQuery({
     queryKey: ["cfo-budgets-overview"],
     queryFn: async () => {
@@ -82,7 +87,7 @@ const CFOView = () => {
           icon={Calendar}
           className="lg:col-span-2"
           action={
-            <Button size="sm" className="gap-1">
+            <Button size="sm" className="gap-1 bg-slate-900 hover:bg-slate-800" onClick={() => setPlannerOpen(true)}>
               <ClipboardList className="h-3.5 w-3.5" /> New Plan
             </Button>
           }
@@ -98,7 +103,10 @@ const CFOView = () => {
                 const planned = Number(b.total_planned || 0);
                 const pct = planned > 0 ? Math.min(100, Math.round((used / planned) * 100)) : 0;
                 return (
-                  <div key={b.id} className="rounded-lg border bg-white p-3">
+                  <button
+                    key={b.id}
+                    onClick={() => setDetailId(b.id)}
+                    className="w-full text-left rounded-lg border bg-white p-3 hover:border-slate-400 hover:shadow-sm transition-all">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
@@ -120,7 +128,7 @@ const CFOView = () => {
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -210,6 +218,9 @@ const CFOView = () => {
           </div>
         </SectionCard>
       </div>
+
+      <BudgetPlannerDialog open={plannerOpen} onClose={() => setPlannerOpen(false)} />
+      <BudgetDetailDialog budgetId={detailId} onClose={() => setDetailId(null)} />
     </div>
   );
 };
