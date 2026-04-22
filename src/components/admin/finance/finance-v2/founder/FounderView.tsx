@@ -8,6 +8,7 @@ import { SectionCard } from "../shared/SectionCard";
 import { StatTile } from "../shared/StatTile";
 import { fmt } from "../../corporate-budget/types";
 import { FounderApprovalQueue } from "./FounderApprovalQueue";
+import { FounderMasterReportHub } from "./FounderMasterReportHub";
 
 const FounderView = () => {
   const { data: pendingFinal = [] } = useQuery({
