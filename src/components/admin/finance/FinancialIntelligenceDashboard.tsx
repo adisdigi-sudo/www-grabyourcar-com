@@ -257,13 +257,44 @@ export const FinancialIntelligenceDashboard = () => {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white"><Zap className="h-5 w-5" /></div>
-          Financial Intelligence
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">Live data from invoices • payments • deals • bookings • payroll</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white"><Zap className="h-5 w-5" /></div>
+            Financial Intelligence
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Live data from invoices • payments • deals • bookings • payroll</p>
+        </div>
+        <Tabs value={periodMode} onValueChange={v => setPeriodMode(v as PeriodMode)}>
+          <TabsList>
+            <TabsTrigger value="weekly" className="text-xs">Weekly</TabsTrigger>
+            <TabsTrigger value="monthly" className="text-xs">Monthly</TabsTrigger>
+            <TabsTrigger value="till_date" className="text-xs gap-1"><History className="h-3.5 w-3.5" /> Till Date</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
+
+      {/* Cumulative till-date P&L card */}
+      <Card className="border-2 border-dashed">
+        <CardContent className="p-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Window</p>
+            <p className="text-sm font-semibold flex items-center gap-2">{periodMode === "weekly" ? "Last 12 weeks" : periodMode === "till_date" ? "Last 24 months" : "Last 6 months"} <Badge variant="outline" className="text-[9px]">cumulative</Badge></p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total Revenue</p>
+            <p className="text-lg font-bold text-emerald-600">{fmt(tillDate.revenue)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total Expenses</p>
+            <p className="text-lg font-bold text-red-600">{fmt(tillDate.expense)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Net P&amp;L (till date)</p>
+            <p className={`text-lg font-bold ${tillDate.profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>{fmt(tillDate.profit)}</p>
+          </div>
+        </CardContent>
+      </Card>
 
       {alerts.length > 0 && (
         <div className="space-y-2">
