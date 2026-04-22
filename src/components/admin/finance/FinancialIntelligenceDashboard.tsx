@@ -145,10 +145,15 @@ export const FinancialIntelligenceDashboard = () => {
     },
   });
 
-  // Aggregate monthly revenue & expense from live data
-  const monthlyData: MonthData[] = useMemo(() => {
-    return months.map(m => {
-      // Revenue = sum across all paid sources
+  // Resolve which key fn to use based on period
+  const keyFn = periodMode === "weekly" ? weekKey : monthKey;
+  const labelFn = (k: string) =>
+    periodMode === "weekly"
+      ? `W/o ${format(new Date(k), "dd MMM")}`
+      : format(new Date(`${k}-01`), "MMM yy");
+
+  const bucketData: BucketData[] = useMemo(() => {
+    return buckets.map(b => {
       let rev = 0;
       const revBreakdown: Record<string, number> = {};
       const add = (cat: string, amount: number) => {
@@ -156,41 +161,59 @@ export const FinancialIntelligenceDashboard = () => {
         revBreakdown[cat] = (revBreakdown[cat] || 0) + amount;
       };
       invoices
-        .filter((i: any) => i.status === "paid" && monthKey(i.paid_at || i.invoice_date) === m)
+        .filter((i: any) => i.status === "paid" && keyFn(i.paid_at || i.invoice_date) === b)
         .forEach((i: any) => add(i.vertical_name || "Invoiced", Number(i.total_amount || 0)));
-      // Standalone payments not linked to an invoice (avoid double counting)
       payments
-        .filter((p: any) => !p.invoice_number && monthKey(p.payment_date) === m && !/^\[DEBIT\]/i.test(String(p.notes || "")))
+        .filter((p: any) => !p.invoice_number && keyFn(p.payment_date) === b && !/^\[DEBIT\]/i.test(String(p.notes || "")))
         .forEach((p: any) => add("Direct Payments", Number(p.amount || 0)));
       deals
-        .filter((d: any) => monthKey(d.closed_at || d.created_at) === m)
+        .filter((d: any) => keyFn(d.closed_at || d.created_at) === b)
         .forEach((d: any) => add(d.vertical_name || "Deals", Number(d.payment_received_amount || 0)));
       hsrp
-        .filter((h: any) => monthKey(h.created_at) === m)
+        .filter((h: any) => keyFn(h.created_at) === b)
         .forEach((h: any) => add("HSRP", Number(h.payment_amount || h.service_price || 0)));
       accessory
-        .filter((a: any) => monthKey(a.created_at) === m)
+        .filter((a: any) => keyFn(a.created_at) === b)
         .forEach((a: any) => add("Accessories", Number(a.total_amount || 0)));
       rentals
-        .filter((r: any) => monthKey(r.created_at) === m)
+        .filter((r: any) => keyFn(r.created_at) === b)
         .forEach((r: any) => add("Self Drive", Number(r.total_amount || 0)));
 
-      // Expenses = payroll for that month + debit payments
       let exp = 0;
       const expBreakdown: Record<string, number> = {};
-      const monthPayroll = payrolls
-        .filter((p: any) => p.payroll_month === m)
-        .reduce((s: number, p: any) => s + Number(p.net_salary || 0), 0);
-      if (monthPayroll > 0) { exp += monthPayroll; expBreakdown["Payroll"] = monthPayroll; }
+      // Payroll only aligns to months — for weekly view, distribute monthly payroll evenly
+      if (periodMode === "weekly") {
+        const m = format(new Date(b), "yyyy-MM");
+        const monthPayroll = payrolls
+          .filter((p: any) => p.payroll_month === m)
+          .reduce((s: number, p: any) => s + Number(p.net_salary || 0), 0);
+        const weeklyShare = monthPayroll / 4;
+        if (weeklyShare > 0) { exp += weeklyShare; expBreakdown["Payroll (1/4 mo)"] = weeklyShare; }
+      } else {
+        const monthPayroll = payrolls
+          .filter((p: any) => p.payroll_month === b)
+          .reduce((s: number, p: any) => s + Number(p.net_salary || 0), 0);
+        if (monthPayroll > 0) { exp += monthPayroll; expBreakdown["Payroll"] = monthPayroll; }
+      }
 
       const refunds = payments
-        .filter((p: any) => monthKey(p.payment_date) === m && /^\[DEBIT\]/i.test(String(p.notes || "")))
+        .filter((p: any) => keyFn(p.payment_date) === b && /^\[DEBIT\]/i.test(String(p.notes || "")))
         .reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
       if (refunds > 0) { exp += refunds; expBreakdown["Refunds"] = refunds; }
 
-      return { month: m, revenue: rev, expense: exp, profit: rev - exp, _revBreakdown: revBreakdown, _expBreakdown: expBreakdown } as MonthData & { _revBreakdown: Record<string, number>; _expBreakdown: Record<string, number> };
+      return { key: b, label: labelFn(b), revenue: rev, expense: exp, profit: rev - exp, _revBreakdown: revBreakdown, _expBreakdown: expBreakdown };
     });
-  }, [months, invoices, payments, deals, hsrp, accessory, rentals, payrolls]);
+  }, [buckets, periodMode, invoices, payments, deals, hsrp, accessory, rentals, payrolls]);
+
+  const currentMonth = bucketData[bucketData.length - 1] || { key: "", label: "", revenue: 0, expense: 0, profit: 0 };
+  const prevMonth = bucketData[bucketData.length - 2];
+
+  // Cumulative till-date totals across the active bucket window
+  const tillDate = useMemo(() => {
+    const rev = bucketData.reduce((s, b) => s + b.revenue, 0);
+    const exp = bucketData.reduce((s, b) => s + b.expense, 0);
+    return { revenue: rev, expense: exp, profit: rev - exp };
+  }, [bucketData]);
 
   const currentMonth = monthlyData[monthlyData.length - 1];
   const prevMonth = monthlyData[monthlyData.length - 2];
