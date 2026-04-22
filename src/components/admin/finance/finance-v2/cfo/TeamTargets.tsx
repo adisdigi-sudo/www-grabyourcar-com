@@ -49,6 +49,47 @@ export const TeamTargets = () => {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<TargetForm | null>(null);
   const [filterPeriod, setFilterPeriod] = useState<string>(format(new Date(), "yyyy-MM"));
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  const downloadCSV = () => {
+    const rows: string[] = [];
+    rows.push(`"Team Targets","${filterPeriod}","Generated ${format(new Date(), "dd MMM yyyy, p")}"`);
+    rows.push("");
+    rows.push('"Vertical","Period","Target Revenue","Achieved Revenue","Revenue %","Target Leads","Achieved Leads","Target Closures","Achieved Closures"');
+    for (const t of targets) {
+      const pct = t.target_revenue > 0 ? Math.round((Number(t.achieved_revenue || 0) / Number(t.target_revenue)) * 100) : 0;
+      rows.push([
+        `"${t.vertical_name}"`, `"${t.period_type} ${t.month_year}"`,
+        t.target_revenue || 0, t.achieved_revenue || 0, pct,
+        t.target_leads || 0, t.achieved_leads || 0,
+        t.target_closures || 0, t.achieved_closures || 0,
+      ].join(","));
+    }
+    rows.push("");
+    rows.push(`"TOTAL","",${totals.revenue},${totals.achieved},${totals.revenue > 0 ? Math.round((totals.achieved / totals.revenue) * 100) : 0},${totals.leads},${totals.leadsAch},${totals.closures},${totals.closuresAch}`);
+    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `team-targets-${filterPeriod}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV downloaded");
+  };
+
+  const downloadPNG = async () => {
+    if (!tableRef.current) return;
+    try {
+      const dataUrl = await toPng(tableRef.current, { backgroundColor: "#ffffff", pixelRatio: 2, cacheBust: true });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `team-targets-${filterPeriod}.png`;
+      a.click();
+      toast.success("PNG exported");
+    } catch {
+      toast.error("PNG export failed");
+    }
+  };
 
   const { data: targets = [], isLoading } = useQuery({
     queryKey: ["team-targets-cfo", filterPeriod],
