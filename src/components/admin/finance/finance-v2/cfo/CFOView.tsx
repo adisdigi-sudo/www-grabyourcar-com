@@ -180,27 +180,29 @@ const CFOView = () => {
           )}
         </SectionCard>
 
-        {/* Team Targets */}
-        <SectionCard title="Team Targets" description="Vertical-wise revenue & conversion targets" icon={Target}>
-          <div className="rounded-lg border border-dashed py-8 text-center text-sm text-slate-500">
-            Target setting screen (next turn).
-          </div>
-        </SectionCard>
+        {/* Utilization Insights — full width charts */}
+        <UtilizationInsights />
 
-        {/* Monthly P&L Designer */}
+        {/* Team Targets — full width */}
+        <TeamTargets />
+
+        {/* Monthly P&L Designer launcher */}
         <SectionCard
           title="Monthly P&L Designer"
-          description="Drag-build profit & loss layouts per period"
+          description="Allocate revenue & expense buckets per category, generate downloadable P&L"
           icon={FileSpreadsheet}
           className="lg:col-span-2"
           action={
-            <Button size="sm" variant="outline" className="gap-1">
+            <Button size="sm" variant="outline" className="gap-1" onClick={() => setPlDesignerOpen(true)}>
               <ArrowRight className="h-3.5 w-3.5" /> Open Designer
             </Button>
           }
         >
-          <div className="rounded-lg border border-dashed py-10 text-center text-sm text-slate-500">
-            Excel-style P&L builder · revenue lines from each vertical · custom expense buckets · save as template.
+          <div className="rounded-lg border bg-slate-50/50 p-4">
+            <p className="text-sm font-medium text-slate-900">Excel-style P&L builder</p>
+            <p className="text-xs text-slate-500 mt-1">
+              Auto-fill from live invoices & expenses · per-vertical revenue lines · custom expense buckets · CSV / PDF export.
+            </p>
           </div>
         </SectionCard>
 
