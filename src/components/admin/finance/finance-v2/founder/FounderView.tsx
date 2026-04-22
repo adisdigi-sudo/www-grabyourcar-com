@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { SectionCard } from "../shared/SectionCard";
 import { StatTile } from "../shared/StatTile";
 import { fmt } from "../../corporate-budget/types";
+import { FounderApprovalQueue } from "./FounderApprovalQueue";
 
 const FounderView = () => {
   const { data: pendingFinal = [] } = useQuery({
@@ -73,44 +74,8 @@ const FounderView = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Final Approval Center */}
-        <SectionCard
-          title="Final Approval Center"
-          description="CFO-screened budgets awaiting founder sign-off"
-          icon={CheckCircle2}
-          className="lg:col-span-2"
-        >
-          {pendingFinal.length === 0 ? (
-            <div className="rounded-lg border border-dashed py-10 text-center text-sm text-slate-500">
-              All clear — nothing awaiting your sign-off.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {pendingFinal.map((b: any) => (
-                <div key={b.id} className="rounded-lg border border-amber-200 bg-amber-50/40 p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm text-slate-900 truncate">{b.title}</p>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
-                        Submitted by {b.submitted_by_name || "—"} ·{" "}
-                        {b.submitted_at && format(new Date(b.submitted_at), "dd MMM, p")}
-                      </p>
-                    </div>
-                    <p className="text-sm font-semibold tabular-nums shrink-0">{fmt(b.total_planned)}</p>
-                  </div>
-                  <div className="flex items-center justify-end gap-2 mt-3">
-                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
-                      <XCircle className="h-3 w-3" /> Reject
-                    </Button>
-                    <Button size="sm" className="h-7 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700">
-                      <CheckCircle2 className="h-3 w-3" /> Approve
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </SectionCard>
+        {/* Approval Queue with full review/approve/reject + comments */}
+        <FounderApprovalQueue />
 
         {/* Reports Library */}
         <SectionCard title="Reports Library" description="Download P&L · Balance Sheet · GST" icon={FileText}>
