@@ -282,6 +282,8 @@ const CorporateBudgetWorkspace = () => {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
 
       <BudgetEditor
         open={editorOpen}
