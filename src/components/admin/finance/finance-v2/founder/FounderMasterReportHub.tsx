@@ -10,10 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Wallet, Users, Shield, Banknote, Car, FileText, Target, FileDown,
   TrendingUp, TrendingDown, Search, Filter, FileSpreadsheet, BarChart3,
-  Radio, RotateCcw, Image as ImageIcon, Download,
+  Radio, RotateCcw, Image as ImageIcon, Download, Ban,
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import { SectionCard } from "../shared/SectionCard";
@@ -77,6 +79,56 @@ export const FounderMasterReportHub = () => {
   // Custom payout % overrides — keyed by record id
   const [policyOverrides, setPolicyOverrides] = useState<Record<string, number>>({});
   const [loanOverrides, setLoanOverrides] = useState<Record<string, number>>({});
+
+  // Reject dialog state — for marking records as rejected/cancelled with reason
+  const [rejectTarget, setRejectTarget] = useState<{
+    kind: "policy" | "loan" | "deal";
+    id: string;
+    label: string;
+  } | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectBusy, setRejectBusy] = useState(false);
+
+  const submitReject = async () => {
+    if (!rejectTarget) return;
+    if (!rejectReason.trim()) {
+      toast({ title: "Reason required", description: "Please add a short reason.", variant: "destructive" });
+      return;
+    }
+    setRejectBusy(true);
+    try {
+      const reason = rejectReason.trim();
+      const stamp = `[REJECTED ${new Date().toLocaleString("en-IN")}] ${reason}`;
+      if (rejectTarget.kind === "policy") {
+        const { data: cur } = await (supabase.from("insurance_policies") as any)
+          .select("notes").eq("id", rejectTarget.id).maybeSingle();
+        const merged = [cur?.notes, stamp].filter(Boolean).join("\n");
+        const { error } = await (supabase.from("insurance_policies") as any)
+          .update({ status: "cancelled", notes: merged }).eq("id", rejectTarget.id);
+        if (error) throw error;
+      } else if (rejectTarget.kind === "loan") {
+        const { error } = await (supabase.from("loan_applications") as any)
+          .update({ stage: "lost", lost_reason: reason }).eq("id", rejectTarget.id);
+        if (error) throw error;
+      } else {
+        const { data: cur } = await (supabase.from("deals") as any)
+          .select("notes").eq("id", rejectTarget.id).maybeSingle();
+        const merged = [cur?.notes, stamp].filter(Boolean).join("\n");
+        const { error } = await (supabase.from("deals") as any)
+          .update({ deal_status: "cancelled", notes: merged }).eq("id", rejectTarget.id);
+        if (error) throw error;
+      }
+      toast({ title: "Marked as rejected", description: `${rejectTarget.label} removed from live totals.` });
+      const keyMap: Record<string, string> = { policy: "founder-policies", loan: "founder-loans", deal: "founder-deals" };
+      qc.invalidateQueries({ queryKey: [keyMap[rejectTarget.kind], pKey] });
+      setRejectTarget(null);
+      setRejectReason("");
+    } catch (e: any) {
+      toast({ title: "Couldn't reject", description: e?.message || "Try again.", variant: "destructive" });
+    } finally {
+      setRejectBusy(false);
+    }
+  };
 
   const period = useMemo(
     () => buildPeriod(periodKind, anchor, { from: customFrom, to: customTo }),
@@ -144,38 +196,29 @@ export const FounderMasterReportHub = () => {
     },
   });
 
-  // LOANS — anything that lives in the period: disbursed in range OR sanctioned in range OR created in range
+  // LOANS — ONLY DISBURSED (won) cases in the selected period
   const { data: loans = [] } = useQuery({
     queryKey: ["founder-loans", pKey],
     queryFn: async () => {
-      const startTs = periodStart + "T00:00:00";
-      const endTs = periodEnd + "T23:59:59";
-      const orFilter = [
-        `and(disbursement_date.gte.${periodStart},disbursement_date.lte.${periodEnd})`,
-        `and(sanction_date.gte.${periodStart},sanction_date.lte.${periodEnd})`,
-        `and(created_at.gte.${startTs},created_at.lte.${endTs})`,
-      ].join(",");
       const { data } = await (supabase.from("loan_applications") as any).select("*")
-        .or(orFilter)
-        .order("created_at", { ascending: false });
+        .eq("stage", "disbursed")
+        .gte("disbursement_date", periodStart).lte("disbursement_date", periodEnd)
+        .order("disbursement_date", { ascending: false });
       return data || [];
     },
   });
 
-  // DEALS — closed_at in range OR created in range (covers both new and recently-closed deals)
+  // DEALS — ONLY WON deals (payment received) closed in the selected period
   const { data: deals = [] } = useQuery({
     queryKey: ["founder-deals", pKey],
     queryFn: async () => {
       const startTs = periodStart + "T00:00:00";
       const endTs = periodEnd + "T23:59:59";
-      const orFilter = [
-        `and(created_at.gte.${startTs},created_at.lte.${endTs})`,
-        `and(closed_at.gte.${startTs},closed_at.lte.${endTs})`,
-      ].join(",");
       const { data } = await (supabase.from("deals") as any)
         .select("*, master_customers(name, phone)")
-        .or(orFilter)
-        .order("created_at", { ascending: false });
+        .eq("payment_status", "received")
+        .or(`and(closed_at.gte.${startTs},closed_at.lte.${endTs}),and(created_at.gte.${startTs},created_at.lte.${endTs})`)
+        .order("closed_at", { ascending: false });
       return data || [];
     },
   });
@@ -298,8 +341,8 @@ export const FounderMasterReportHub = () => {
   // Audit trail — exact filters used per query
   const auditTrail = useMemo(() => ([
     { module: "Policies", query: `status=active AND issued_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: policies.length },
-    { module: "Loans",    query: `disbursement_date OR sanction_date OR created_at BETWEEN ${periodStart} AND ${periodEnd}`, rows: loans.length },
-    { module: "Deals",    query: `created_at OR closed_at BETWEEN ${periodStart} AND ${periodEnd}`, rows: deals.length },
+    { module: "Loans",    query: `stage=disbursed AND disbursement_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: loans.length },
+    { module: "Deals",    query: `payment_status=received AND (closed_at OR created_at) BETWEEN ${periodStart} AND ${periodEnd}`, rows: deals.length },
     { module: "Invoices", query: `invoice_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: invoices.length },
     { module: "Payroll",  query: `payroll_month IN months(${periodStart}..${periodEnd})`, rows: payroll.length },
     { module: "Expenses", query: `expense_date BETWEEN ${periodStart} AND ${periodEnd}`, rows: expenses.length },
@@ -405,7 +448,7 @@ export const FounderMasterReportHub = () => {
   return (
     <SectionCard
       title="Founder Master Report Hub"
-      description="Live · Period-filtered · Custom payout %: P&L · Payroll · Policies · Loans · Deals · Invoices · Team."
+      description="Live · Won-only (Active Policies · Disbursed Loans · Paid Deals) · Period-filtered · Inline reject with reason."
       icon={BarChart3}
       className="lg:col-span-3"
       action={
@@ -484,19 +527,17 @@ export const FounderMasterReportHub = () => {
       {/* Live Vertical Counts — exact records in selected period */}
       <div className="grid grid-cols-3 gap-3 mb-5 p-3 rounded-lg border bg-slate-50/40">
         <div className="text-center">
-          <div className="text-[10px] uppercase text-slate-500 font-semibold">Policies Issued</div>
+          <div className="text-[10px] uppercase text-slate-500 font-semibold">Active Policies (Won)</div>
           <div className="text-xl font-bold text-blue-700">{policies.length}</div>
           <div className="text-[10px] text-slate-500">Net Payout: {inr(insuranceNet)}</div>
         </div>
         <div className="text-center border-x">
-          <div className="text-[10px] uppercase text-slate-500 font-semibold">Car Loan Cases</div>
+          <div className="text-[10px] uppercase text-slate-500 font-semibold">Disbursed Loans (Won)</div>
           <div className="text-xl font-bold text-emerald-700">{loans.length}</div>
-          <div className="text-[10px] text-slate-500">
-            {loans.filter((l: any) => l.stage === "disbursed").length} disbursed · Net: {inr(loanNet)}
-          </div>
+          <div className="text-[10px] text-slate-500">Net Payout: {inr(loanNet)}</div>
         </div>
         <div className="text-center">
-          <div className="text-[10px] uppercase text-slate-500 font-semibold">Car Sales / Deals</div>
+          <div className="text-[10px] uppercase text-slate-500 font-semibold">Won Deals (Paid)</div>
           <div className="text-xl font-bold text-amber-700">{deals.length}</div>
           <div className="text-[10px] text-slate-500">Net Margin: {inr(dealNet)}</div>
         </div>
@@ -833,11 +874,21 @@ export const FounderMasterReportHub = () => {
                   <th className="px-3 py-2 text-right">Gross</th>
                   <th className="px-3 py-2 text-right">TDS</th>
                   <th className="px-3 py-2 text-right">Net Payout</th>
-                  <th className="px-3 py-2 text-center">PDF</th>
+                  <th className="px-3 py-2 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {policyComputed.filter((p: any) => filterText(`${p.policy_number} ${p.insurance_clients?.customer_name || ""}`)).map((p: any) => (
+                {(() => {
+                  const visible = policyComputed.filter((p: any) => filterText(`${p.policy_number} ${p.insurance_clients?.customer_name || ""}`));
+                  const totals = visible.reduce((a, p: any) => ({
+                    base: a.base + (p._calc.base || 0),
+                    gross: a.gross + (p._calc.gross || 0),
+                    tds: a.tds + (p._calc.tds || 0),
+                    net: a.net + (p._calc.net || 0),
+                  }), { base: 0, gross: 0, tds: 0, net: 0 });
+                  return (
+                    <>
+                      {visible.map((p: any) => (
                   <tr key={p.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2 font-mono">{p.policy_number || p.id.slice(0, 8)}</td>
                     <td className="px-3 py-2">{p.insurance_clients?.customer_name || "—"}<div className="text-[10px] text-slate-500">{p.insurance_clients?.vehicle_number || ""}</div></td>
@@ -882,16 +933,36 @@ export const FounderMasterReportHub = () => {
                     <td className="px-3 py-2 text-right text-red-600">{inr(p._calc.tds)}</td>
                     <td className="px-3 py-2 text-right font-semibold text-emerald-700">{inr(p._calc.net)}</td>
                     <td className="px-3 py-2 text-center">
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => buildRowInvoice({
-                        module: "insurance", reference: p.policy_number || p.id.slice(0, 8),
-                        customer: p.insurance_clients?.customer_name || "—",
-                        meta: [["Insurer", p.insurer], ["Type", p.policy_type], ["Vehicle", p.insurance_clients?.vehicle_number || "—"], ["Issued", p.issued_date || "—"], ["Payout %", `${p._calc.pct}%${p._calc.isCustom ? " (custom)" : ""}`]],
-                        base: { label: "Net Premium", amount: p._calc.base }, pct: p._calc.pct, gross: p._calc.gross, tds: p._calc.tds, net: p._calc.net,
-                      })}><FileDown className="h-3.5 w-3.5" /></Button>
+                      <div className="flex items-center justify-center gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Download PDF" onClick={() => buildRowInvoice({
+                          module: "insurance", reference: p.policy_number || p.id.slice(0, 8),
+                          customer: p.insurance_clients?.customer_name || "—",
+                          meta: [["Insurer", p.insurer], ["Type", p.policy_type], ["Vehicle", p.insurance_clients?.vehicle_number || "—"], ["Issued", p.issued_date || "—"], ["Payout %", `${p._calc.pct}%${p._calc.isCustom ? " (custom)" : ""}`]],
+                          base: { label: "Net Premium", amount: p._calc.base }, pct: p._calc.pct, gross: p._calc.gross, tds: p._calc.tds, net: p._calc.net,
+                        })}><FileDown className="h-3.5 w-3.5" /></Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50" title="Mark Rejected / Cancel"
+                          onClick={() => { setRejectTarget({ kind: "policy", id: p.id, label: `Policy ${p.policy_number || p.id.slice(0,8)}` }); setRejectReason(""); }}>
+                          <Ban className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
-                {policies.length === 0 && <tr><td colSpan={9} className="px-3 py-8 text-center text-slate-500">No policies issued in {periodLabel}</td></tr>}
+                {policies.length === 0 && <tr><td colSpan={9} className="px-3 py-8 text-center text-slate-500">No active (won) policies in {periodLabel}</td></tr>}
+                {visible.length > 0 && (
+                  <tr className="bg-slate-100 font-bold border-t-2 border-slate-300">
+                    <td className="px-3 py-2" colSpan={3}>TOTAL — {visible.length} policies</td>
+                    <td className="px-3 py-2 text-right">{inr(totals.base)}</td>
+                    <td className="px-3 py-2" />
+                    <td className="px-3 py-2 text-right">{inr(totals.gross)}</td>
+                    <td className="px-3 py-2 text-right text-red-700">{inr(totals.tds)}</td>
+                    <td className="px-3 py-2 text-right text-emerald-700">{inr(totals.net)}</td>
+                    <td />
+                  </tr>
+                )}
+                    </>
+                  );
+                })()}
               </tbody>
             </table>
           </div>
@@ -925,11 +996,21 @@ export const FounderMasterReportHub = () => {
                   <th className="px-3 py-2 text-right">Gross</th>
                   <th className="px-3 py-2 text-right">TDS</th>
                   <th className="px-3 py-2 text-right">Net</th>
-                  <th className="px-3 py-2 text-center">PDF</th>
+                  <th className="px-3 py-2 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {loanComputed.filter((l: any) => filterText(`${l.customer_name || ""} ${l.disbursement_reference || ""}`)).map((l: any) => (
+                {(() => {
+                  const visible = loanComputed.filter((l: any) => filterText(`${l.customer_name || ""} ${l.disbursement_reference || ""}`));
+                  const totals = visible.reduce((a, l: any) => ({
+                    base: a.base + (l._calc.base || 0),
+                    gross: a.gross + (l._calc.gross || 0),
+                    tds: a.tds + (l._calc.tds || 0),
+                    net: a.net + (l._calc.net || 0),
+                  }), { base: 0, gross: 0, tds: 0, net: 0 });
+                  return (
+                    <>
+                      {visible.map((l: any) => (
                   <tr key={l.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2 font-medium">{l.customer_name}<div className="text-[10px] text-slate-500">{l.phone}</div></td>
                     <td className="px-3 py-2">{l.lender_name || "—"}<div className="text-[10px] text-slate-500">{l.car_model || ""}</div></td>
@@ -953,16 +1034,36 @@ export const FounderMasterReportHub = () => {
                     <td className="px-3 py-2 text-right text-red-600">{inr(l._calc.tds)}</td>
                     <td className="px-3 py-2 text-right font-semibold text-emerald-700">{inr(l._calc.net)}</td>
                     <td className="px-3 py-2 text-center">
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => buildRowInvoice({
-                        module: "loan", reference: l.disbursement_reference || l.id.slice(0, 8),
-                        customer: l.customer_name || "—",
-                        meta: [["Bank", l.lender_name || "—"], ["Car", l.car_model || "—"], ["Sanction", String(l.sanction_amount || "—")], ["Disbursed", l.disbursement_date || "—"], ["Payout %", `${l._calc.pct}%${l._calc.isCustom ? " (custom)" : ""}`]],
-                        base: { label: "Net Disbursement", amount: l._calc.base }, pct: l._calc.pct, gross: l._calc.gross, tds: l._calc.tds, net: l._calc.net,
-                      })}><FileDown className="h-3.5 w-3.5" /></Button>
+                      <div className="flex items-center justify-center gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Download PDF" onClick={() => buildRowInvoice({
+                          module: "loan", reference: l.disbursement_reference || l.id.slice(0, 8),
+                          customer: l.customer_name || "—",
+                          meta: [["Bank", l.lender_name || "—"], ["Car", l.car_model || "—"], ["Sanction", String(l.sanction_amount || "—")], ["Disbursed", l.disbursement_date || "—"], ["Payout %", `${l._calc.pct}%${l._calc.isCustom ? " (custom)" : ""}`]],
+                          base: { label: "Net Disbursement", amount: l._calc.base }, pct: l._calc.pct, gross: l._calc.gross, tds: l._calc.tds, net: l._calc.net,
+                        })}><FileDown className="h-3.5 w-3.5" /></Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50" title="Mark Rejected / Lost"
+                          onClick={() => { setRejectTarget({ kind: "loan", id: l.id, label: `Loan ${l.customer_name || l.id.slice(0,8)}` }); setRejectReason(""); }}>
+                          <Ban className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
-                {loans.length === 0 && <tr><td colSpan={8} className="px-3 py-8 text-center text-slate-500">No disbursements in {periodLabel}</td></tr>}
+                {loans.length === 0 && <tr><td colSpan={8} className="px-3 py-8 text-center text-slate-500">No won/disbursed loans in {periodLabel}</td></tr>}
+                {visible.length > 0 && (
+                  <tr className="bg-slate-100 font-bold border-t-2 border-slate-300">
+                    <td className="px-3 py-2" colSpan={2}>TOTAL — {visible.length} disbursed</td>
+                    <td className="px-3 py-2 text-right">{inr(totals.base)}</td>
+                    <td className="px-3 py-2" />
+                    <td className="px-3 py-2 text-right">{inr(totals.gross)}</td>
+                    <td className="px-3 py-2 text-right text-red-700">{inr(totals.tds)}</td>
+                    <td className="px-3 py-2 text-right text-emerald-700">{inr(totals.net)}</td>
+                    <td />
+                  </tr>
+                )}
+                    </>
+                  );
+                })()}
               </tbody>
             </table>
           </div>
@@ -997,11 +1098,24 @@ export const FounderMasterReportHub = () => {
                   <th className="px-3 py-2 text-right">TDS</th>
                   <th className="px-3 py-2 text-right">Net</th>
                   <th className="px-3 py-2 text-right">Received / Pending</th>
-                  <th className="px-3 py-2 text-center">PDF</th>
+                  <th className="px-3 py-2 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {dealComputed.filter((d: any) => filterVert(d.vertical_name) && filterText(`${d.deal_number || ""} ${d.master_customers?.name || ""}`)).map((d: any) => (
+                {(() => {
+                  const visible = dealComputed.filter((d: any) => filterVert(d.vertical_name) && filterText(`${d.deal_number || ""} ${d.master_customers?.name || ""}`));
+                  const totals = visible.reduce((a, d: any) => ({
+                    value: a.value + (d._calc.dealValue || 0),
+                    payout: a.payout + (d._calc.dealerPayout || 0),
+                    margin: a.margin + (d._calc.grossMargin || 0),
+                    tds: a.tds + (d._calc.tds || 0),
+                    net: a.net + (d._calc.net || 0),
+                    received: a.received + (d._calc.received || 0),
+                    pending: a.pending + (d._calc.pending || 0),
+                  }), { value: 0, payout: 0, margin: 0, tds: 0, net: 0, received: 0, pending: 0 });
+                  return (
+                    <>
+                      {visible.map((d: any) => (
                   <tr key={d.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2 font-mono">{d.deal_number || d.id.slice(0, 8)}</td>
                     <td className="px-3 py-2">{d.master_customers?.name || "—"}<div className="text-[10px] text-slate-500">{d.vertical_name}</div></td>
@@ -1015,16 +1129,40 @@ export const FounderMasterReportHub = () => {
                       <span className="text-emerald-700">{inr(d._calc.received)}</span> / <span className="text-amber-700">{inr(d._calc.pending)}</span>
                     </td>
                     <td className="px-3 py-2 text-center">
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => buildRowInvoice({
-                        module: "deal", reference: d.deal_number || d.id.slice(0, 8),
-                        customer: d.master_customers?.name || "—",
-                        meta: [["Vertical", d.vertical_name || "—"], ["Deal Value", inr(d._calc.dealValue)], ["Received", inr(d._calc.received)], ["Pending", inr(d._calc.pending)]],
-                        base: { label: "Gross Margin", amount: d._calc.grossMargin }, pct: d._calc.pct, gross: d._calc.grossMargin, tds: d._calc.tds, net: d._calc.net,
-                      })}><FileDown className="h-3.5 w-3.5" /></Button>
+                      <div className="flex items-center justify-center gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Download PDF" onClick={() => buildRowInvoice({
+                          module: "deal", reference: d.deal_number || d.id.slice(0, 8),
+                          customer: d.master_customers?.name || "—",
+                          meta: [["Vertical", d.vertical_name || "—"], ["Deal Value", inr(d._calc.dealValue)], ["Received", inr(d._calc.received)], ["Pending", inr(d._calc.pending)]],
+                          base: { label: "Gross Margin", amount: d._calc.grossMargin }, pct: d._calc.pct, gross: d._calc.grossMargin, tds: d._calc.tds, net: d._calc.net,
+                        })}><FileDown className="h-3.5 w-3.5" /></Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50" title="Mark Rejected / Cancel"
+                          onClick={() => { setRejectTarget({ kind: "deal", id: d.id, label: `Deal ${d.deal_number || d.id.slice(0,8)}` }); setRejectReason(""); }}>
+                          <Ban className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
-                {deals.length === 0 && <tr><td colSpan={10} className="px-3 py-8 text-center text-slate-500">No deals in {periodLabel}</td></tr>}
+                {deals.length === 0 && <tr><td colSpan={10} className="px-3 py-8 text-center text-slate-500">No won (paid) deals in {periodLabel}</td></tr>}
+                {visible.length > 0 && (
+                  <tr className="bg-slate-100 font-bold border-t-2 border-slate-300">
+                    <td className="px-3 py-2" colSpan={2}>TOTAL — {visible.length} deals</td>
+                    <td className="px-3 py-2 text-right">{inr(totals.value)}</td>
+                    <td className="px-3 py-2 text-right text-red-700">{inr(totals.payout)}</td>
+                    <td className="px-3 py-2 text-right">{inr(totals.margin)}</td>
+                    <td className="px-3 py-2" />
+                    <td className="px-3 py-2 text-right text-red-700">{inr(totals.tds)}</td>
+                    <td className="px-3 py-2 text-right text-emerald-700">{inr(totals.net)}</td>
+                    <td className="px-3 py-2 text-right text-[11px]">
+                      <span className="text-emerald-700">{inr(totals.received)}</span> / <span className="text-amber-700">{inr(totals.pending)}</span>
+                    </td>
+                    <td />
+                  </tr>
+                )}
+                    </>
+                  );
+                })()}
               </tbody>
             </table>
           </div>
@@ -1118,6 +1256,41 @@ export const FounderMasterReportHub = () => {
         rows={drillModule ? drillData[drillModule] || [] : []}
         totalDiff={drillModule ? (reconciliation.find(r => r.module === drillModule)?.diff || 0) : 0}
       />
+
+      {/* Reject / Mark-as-cancelled dialog with reason */}
+      <Dialog open={rejectTarget !== null} onOpenChange={(v) => { if (!v) { setRejectTarget(null); setRejectReason(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-700">
+              <Ban className="h-4 w-4" /> Mark as Rejected
+            </DialogTitle>
+            <DialogDescription>
+              {rejectTarget?.label} ko Founder dashboard ke live totals se hata diya jaayega.
+              {rejectTarget?.kind === "policy" && " Policy status → cancelled."}
+              {rejectTarget?.kind === "loan" && " Loan stage → lost."}
+              {rejectTarget?.kind === "deal" && " Deal status → cancelled."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-slate-700">Reason (required)</label>
+            <Textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="e.g. Customer cancelled, duplicate entry, payment reversed, wrong data…"
+              rows={3}
+              className="text-sm"
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setRejectTarget(null); setRejectReason(""); }} disabled={rejectBusy}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={submitReject} disabled={rejectBusy || !rejectReason.trim()}>
+              {rejectBusy ? "Rejecting…" : "Confirm Reject"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SectionCard>
   );
 };
