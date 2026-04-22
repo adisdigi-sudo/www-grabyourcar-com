@@ -450,6 +450,10 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
     if (normalizedActiveSlug === "founder-cockpit") {
       items = items.filter(item => item.id === "founder-cockpit");
     }
+    // CFO Cockpit is a single-purpose workspace — show ONLY the CFO cockpit entry.
+    if (normalizedActiveSlug === "cfo-cockpit") {
+      items = items.filter(item => item.id === "cfo-cockpit");
+    }
 
     return items
       .map(item => {
