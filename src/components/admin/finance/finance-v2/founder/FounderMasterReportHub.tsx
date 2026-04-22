@@ -123,33 +123,50 @@ export const FounderMasterReportHub = () => {
     },
   });
 
+  // POLICIES — only ACTIVE policies issued in the period (renewed/lapsed/cancelled excluded)
   const { data: policies = [] } = useQuery({
     queryKey: ["founder-policies", pKey],
     queryFn: async () => {
       const { data } = await (supabase.from("insurance_policies") as any)
         .select("*, insurance_clients(customer_name, vehicle_number, phone, assigned_executive)")
+        .eq("status", "active")
         .gte("issued_date", periodStart).lte("issued_date", periodEnd)
         .order("issued_date", { ascending: false });
       return data || [];
     },
   });
 
+  // LOANS — anything that lives in the period: disbursed in range OR sanctioned in range OR created in range
   const { data: loans = [] } = useQuery({
     queryKey: ["founder-loans", pKey],
     queryFn: async () => {
+      const startTs = periodStart + "T00:00:00";
+      const endTs = periodEnd + "T23:59:59";
+      const orFilter = [
+        `and(disbursement_date.gte.${periodStart},disbursement_date.lte.${periodEnd})`,
+        `and(sanction_date.gte.${periodStart},sanction_date.lte.${periodEnd})`,
+        `and(created_at.gte.${startTs},created_at.lte.${endTs})`,
+      ].join(",");
       const { data } = await (supabase.from("loan_applications") as any).select("*")
-        .gte("disbursement_date", periodStart).lte("disbursement_date", periodEnd)
-        .order("disbursement_date", { ascending: false });
+        .or(orFilter)
+        .order("created_at", { ascending: false });
       return data || [];
     },
   });
 
+  // DEALS — closed_at in range OR created in range (covers both new and recently-closed deals)
   const { data: deals = [] } = useQuery({
     queryKey: ["founder-deals", pKey],
     queryFn: async () => {
+      const startTs = periodStart + "T00:00:00";
+      const endTs = periodEnd + "T23:59:59";
+      const orFilter = [
+        `and(created_at.gte.${startTs},created_at.lte.${endTs})`,
+        `and(closed_at.gte.${startTs},closed_at.lte.${endTs})`,
+      ].join(",");
       const { data } = await (supabase.from("deals") as any)
         .select("*, master_customers(name, phone)")
-        .gte("created_at", periodStart + "T00:00:00").lte("created_at", periodEnd + "T23:59:59")
+        .or(orFilter)
         .order("created_at", { ascending: false });
       return data || [];
     },
