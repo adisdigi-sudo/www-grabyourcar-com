@@ -94,20 +94,24 @@ export function getInsurancePayoutPct(policyType: string, rules: RuleRow[] = [])
 
 /**
  * Returns the GST-excluded base, plus the components used for comprehensive split.
+ * GST rate depends on policy kind:
+ *   • standalone / third_party → 18%
+ *   • comprehensive            → 18.5% (founder-locked)
  */
-export function deriveInsuranceBase(policy: any) {
+export function deriveInsuranceBase(policy: any, kind?: PolicyKind) {
   const totalPremium = Number(policy.premium_amount || 0);
-  const storedNet = Number(policy.net_premium || 0);
-  // baseExGst preference: stored net_premium if > 0, else strip GST
-  const baseExGst = storedNet > 0 ? storedNet : totalPremium > 0 ? totalPremium / (1 + FALLBACK.gstPct / 100) : 0;
+  const k = kind || classifyPolicy(policy.policy_type);
+  const gstPct = k === "comprehensive" ? FALLBACK.gstPctComprehensive : FALLBACK.gstPct;
+  const baseExGst = totalPremium > 0 ? totalPremium / (1 + gstPct / 100) : 0;
 
   // Optional explicit splits if recorded in metadata / addons
   const meta = (policy.metadata && typeof policy.metadata === "object" ? policy.metadata : {}) || {};
   const tpExplicit = Number(meta.tp_premium ?? policy.tp_premium ?? 0) || 0;
-  const paExplicit = Number(meta.pa_premium ?? policy.pa_premium ?? 0) || 0;
+  const paExplicit = Number(meta.pa_premium ?? policy.pa_premium ?? meta.pa_driver_premium ?? 0) || 0;
 
   return {
     totalPremium,
+    gstPct,
     gstAmount: totalPremium - baseExGst,
     baseExGst,
     tpExplicit,
@@ -118,18 +122,21 @@ export function deriveInsuranceBase(policy: any) {
 export function computeInsurancePayout(policy: any, rules: RuleRow[] = []) {
   const kind = classifyPolicy(policy.policy_type);
   const pct = getInsurancePayoutPct(policy.policy_type, rules);
-  const der = deriveInsuranceBase(policy);
+  const der = deriveInsuranceBase(policy, kind);
 
   let base = 0;
   const breakup: Record<string, number> = {
     total_premium: der.totalPremium,
-    gst_18pct: der.gstAmount,
+    gst_pct: der.gstPct,
+    gst_amount: der.gstAmount,
     base_ex_gst: der.baseExGst,
     tp_less: 0,
     pa_less: 0,
   };
 
   if (kind === "comprehensive") {
+    // Step 2 of comprehensive: subtract TP + PA-driver components if recorded.
+    // If not explicitly recorded, default TP estimate is used; PA defaults to 0.
     const tp = der.tpExplicit > 0
       ? der.tpExplicit
       : der.baseExGst * FALLBACK.comprehensive_tp_share;
@@ -140,6 +147,7 @@ export function computeInsurancePayout(policy: any, rules: RuleRow[] = []) {
     breakup.pa_less = pa;
     base = Math.max(0, der.baseExGst - tp - pa);
   } else if (kind === "third_party" || kind === "standalone") {
+    // Standalone OD & Third-Party: just total_premium − 18% GST, no further deduction
     base = der.baseExGst;
   } else {
     base = der.baseExGst;
