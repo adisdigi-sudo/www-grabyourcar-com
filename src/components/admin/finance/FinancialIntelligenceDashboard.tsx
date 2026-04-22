@@ -215,8 +215,7 @@ export const FinancialIntelligenceDashboard = () => {
     return { revenue: rev, expense: exp, profit: rev - exp };
   }, [bucketData]);
 
-  const currentMonth = monthlyData[monthlyData.length - 1];
-  const prevMonth = monthlyData[monthlyData.length - 2];
+  // (currentMonth/prevMonth resolved above from bucketData)
 
   const revChange = prevMonth?.revenue > 0 ? ((currentMonth.revenue - prevMonth.revenue) / prevMonth.revenue) * 100 : 0;
   const expChange = prevMonth?.expense > 0 ? ((currentMonth.expense - prevMonth.expense) / prevMonth.expense) * 100 : 0;
@@ -254,7 +253,7 @@ export const FinancialIntelligenceDashboard = () => {
   const paidInvoices = invoices.filter((i: any) => i.status === "paid").reduce((s: number, i: any) => s + Number(i.total_amount || 0), 0);
   const collectionRate = totalInvoiced > 0 ? (paidInvoices / totalInvoiced) * 100 : 0;
 
-  const maxRev = Math.max(...monthlyData.map(m => Math.max(m.revenue, m.expense)), 1);
+  const maxRev = Math.max(...bucketData.map(m => Math.max(m.revenue, m.expense)), 1);
 
   return (
     <div className="space-y-4">
