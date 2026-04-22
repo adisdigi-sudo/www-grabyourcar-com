@@ -36,6 +36,9 @@ import {
 import { BudgetEditor } from "./BudgetEditor";
 import { BudgetDetailDialog } from "./BudgetDetailDialog";
 import { CategoryManager } from "./CategoryManager";
+import { CFODashboard } from "./CFODashboard";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Activity, FileText } from "lucide-react";
 import { fmt, STATUS_META } from "./types";
 
 const CorporateBudgetWorkspace = () => {
