@@ -1104,6 +1104,20 @@ export const FounderMasterReportHub = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      <FounderExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        snapshot={buildSnapshot}
+      />
+
+      <ReconciliationDrillModal
+        open={drillModule !== null}
+        onOpenChange={(v) => !v && setDrillModule(null)}
+        module={drillModule}
+        rows={drillModule ? drillData[drillModule] || [] : []}
+        totalDiff={drillModule ? (reconciliation.find(r => r.module === drillModule)?.diff || 0) : 0}
+      />
     </SectionCard>
   );
 };
