@@ -357,7 +357,11 @@ export const UtilizationInsights = () => {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={timeData} margin={{ top: 8, right: 8, left: -10, bottom: 8 }}>
+            <LineChart data={timeData} margin={{ top: 8, right: 8, left: -10, bottom: 8 }}
+              onClick={(e: any) => {
+                const row = e?.activePayload?.[0]?.payload;
+                if (row) openMonthDrill(row);
+              }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="month" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
@@ -371,12 +375,15 @@ export const UtilizationInsights = () => {
                   </span>
                 )}
               />
-              <Line type="monotone" dataKey="Planned" stroke="#94a3b8" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} hide={hidden.Planned} />
-              <Line type="monotone" dataKey="Actual" stroke="#0f172a" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} hide={hidden.Actual} />
+              <Line type="monotone" dataKey="Planned" stroke="#94a3b8" strokeWidth={2} dot={{ r: 3, cursor: "pointer" }} activeDot={{ r: 5, cursor: "pointer" }} hide={hidden.Planned} />
+              <Line type="monotone" dataKey="Actual" stroke="#0f172a" strokeWidth={2} dot={{ r: 3, cursor: "pointer" }} activeDot={{ r: 5, cursor: "pointer" }} hide={hidden.Actual} />
             </LineChart>
           </ResponsiveContainer>
+          <p className="text-[10px] text-slate-500 mt-1 text-center">Click any point to drill down for that month</p>
         </div>
       </div>
+
+      <UtilizationDrillDownDialog context={drill} onClose={() => setDrill(null)} />
     </SectionCard>
   );
 };
