@@ -74,6 +74,9 @@ const FounderView = () => {
         />
       </div>
 
+      {/* Master deep-detail report hub */}
+      <FounderMasterReportHub />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Approval Queue with full review/approve/reject + comments */}
         <FounderApprovalQueue />
