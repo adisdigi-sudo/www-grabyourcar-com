@@ -366,13 +366,9 @@ export const FounderMasterReportHub = () => {
       className="lg:col-span-3"
       action={
         <div className="flex items-center gap-2 flex-wrap">
-          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
-            onClick={() => buildFounderCSV(buildSnapshot())}>
-            <FileSpreadsheet className="h-3 w-3" /> Export CSV
-          </Button>
-          <Button size="sm" variant="outline" className="h-7 gap-1 text-xs"
-            onClick={() => buildFounderSnapshot(buildSnapshot())}>
-            <FileDown className="h-3 w-3" /> Export PDF
+          <Button size="sm" variant="default" className="h-7 gap-1 text-xs"
+            onClick={() => setExportDialogOpen(true)}>
+            <Download className="h-3 w-3" /> Export…
           </Button>
           <Badge variant={liveOn ? "default" : "secondary"} className="gap-1 text-[10px] cursor-pointer" onClick={() => setLiveOn(v => !v)}>
             <Radio className={`h-2.5 w-2.5 ${liveOn ? "animate-pulse" : ""}`} />
