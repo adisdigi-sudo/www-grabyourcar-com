@@ -13,9 +13,13 @@ import { StatTile } from "../shared/StatTile";
 import { fmt } from "../../corporate-budget/types";
 import { BudgetPlannerDialog } from "./BudgetPlannerDialog";
 import { BudgetDetailDialog } from "../../corporate-budget/BudgetDetailDialog";
+import { UtilizationInsights } from "./UtilizationInsights";
+import { TeamTargets } from "./TeamTargets";
+import { MonthlyPLDesigner } from "./MonthlyPLDesigner";
 
 const CFOView = () => {
   const [plannerOpen, setPlannerOpen] = useState(false);
+  const [plDesignerOpen, setPlDesignerOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const { data: budgets = [] } = useQuery({
     queryKey: ["cfo-budgets-overview"],
