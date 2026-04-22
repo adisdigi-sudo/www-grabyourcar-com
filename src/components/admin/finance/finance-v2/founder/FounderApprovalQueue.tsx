@@ -472,13 +472,23 @@ th{background:#0f172a;color:white;text-transform:uppercase;font-size:10px;letter
 
               {/* ---- AUDIT TIMELINE ---- */}
               <div className="rounded-lg border bg-white p-4">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
                     <History className="h-3.5 w-3.5" /> Audit Trail
+                    <Badge variant="outline" className="text-[10px] ml-1">
+                      {timeline.length} {timeline.length === 1 ? "event" : "events"}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="text-[10px]">
-                    {timeline.length} {timeline.length === 1 ? "event" : "events"}
-                  </Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1"
+                      onClick={exportTimelineCSV} disabled={timeline.length === 0}>
+                      <FileDown className="h-3 w-3" /> CSV
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1"
+                      onClick={exportTimelinePDF} disabled={timeline.length === 0}>
+                      <Printer className="h-3 w-3" /> PDF
+                    </Button>
+                  </div>
                 </div>
                 {timeline.length === 0 ? (
                   <p className="text-xs text-slate-500 text-center py-4">No audit events recorded yet.</p>
@@ -536,20 +546,36 @@ th{background:#0f172a;color:white;text-transform:uppercase;font-size:10px;letter
                   pendingDecision === "approve" ? "border-emerald-300 bg-emerald-50/40" :
                   pendingDecision === "reject" ? "border-red-300 bg-red-50/40" :
                   "border-slate-200 bg-slate-50/30")}>
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700 mb-2">
-                    <MessageSquare className="h-3 w-3" />
-                    {pendingDecision === "reject" ? "Rejection reason (required)" :
-                     pendingDecision === "approve" ? "Approval note (optional)" :
-                     "Add comment (optional)"}
+                  <div className="flex items-center justify-between gap-1.5 text-xs font-medium text-slate-700 mb-2">
+                    <span className="flex items-center gap-1.5">
+                      <MessageSquare className="h-3 w-3" />
+                      {pendingDecision === "reject" ? (
+                        <>Rejection reason <span className="text-red-600">(required, min 5 chars)</span></>
+                      ) : pendingDecision === "approve" ? "Approval note (optional)"
+                       : "Add comment (optional)"}
+                    </span>
+                    {pendingDecision === "reject" && (
+                      <span className={cn("text-[10px] tabular-nums",
+                        rejectionInvalid ? "text-red-600" : "text-emerald-700")}>
+                        {comment.trim().length}/5+
+                      </span>
+                    )}
                   </div>
                   <Textarea
                     rows={3}
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
+                    className={cn(pendingDecision === "reject" && rejectionInvalid && "border-red-400 focus-visible:ring-red-300")}
                     placeholder={pendingDecision === "reject"
-                      ? "Explain why this plan needs revision..."
+                      ? "Explain why this plan needs revision (required for audit trail)..."
                       : "Sign-off note for the team..."}
                   />
+                  {pendingDecision === "reject" && rejectionInvalid && (
+                    <p className="text-[11px] text-red-600 mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      A clear rejection reason is required so the team can act on the feedback.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -563,8 +589,15 @@ th{background:#0f172a;color:white;text-transform:uppercase;font-size:10px;letter
             {open?.status === "pending_approval" && (
               <>
                 <Button variant="outline" className="gap-1 border-red-300 text-red-700 hover:bg-red-50"
-                  onClick={() => openId && decideMutation.mutate({ id: openId, decision: "reject", note: comment })}
-                  disabled={decideMutation.isPending || (pendingDecision === "reject" && !comment.trim())}>
+                  onClick={() => {
+                    setPendingDecision("reject");
+                    if (rejectionInvalid) {
+                      toast.error("Add a rejection reason (min 5 characters) before rejecting.");
+                      return;
+                    }
+                    openId && decideMutation.mutate({ id: openId, decision: "reject", note: comment });
+                  }}
+                  disabled={decideMutation.isPending || (pendingDecision === "reject" && rejectionInvalid)}>
                   {decideMutation.isPending && pendingDecision === "reject" && <Loader2 className="h-3 w-3 animate-spin" />}
                   <XCircle className="h-3 w-3" /> Reject
                 </Button>
