@@ -392,6 +392,9 @@ async function renderBrandedPdf(opts: {
     { align: "center" },
   );
 
+  if (opts.returnBlob) {
+    return await renderer.toBlob();
+  }
   await renderer.save(opts.fileName);
 }
 
