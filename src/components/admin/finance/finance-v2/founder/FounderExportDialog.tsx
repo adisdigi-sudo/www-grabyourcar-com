@@ -1,16 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, FileSpreadsheet, FileDown, Mail } from "lucide-react";
+import { Loader2, FileSpreadsheet, FileDown, Mail, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   buildFounderCSV, getFounderSnapshotPrintableHTML, downloadFounderCSV,
-  buildFounderSnapshotWithConfig,
+  buildFounderSnapshotWithConfig, previewFounderSnapshotPdf,
   type FounderSnapshotInput, type ExportColumnConfig,
 } from "../shared/founderReportPDF";
 
@@ -44,14 +44,22 @@ export const FounderExportDialog = ({ open, onOpenChange, snapshot }: Props) => 
   const [includeRecon, setIncludeRecon] = useState(true);
   const [includeAudit, setIncludeAudit] = useState(true);
   const [includeKpis, setIncludeKpis] = useState(true);
+  const [includeCover, setIncludeCover] = useState(true);
   const [emailTo, setEmailTo] = useState("");
   const [sending, setSending] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState(false);
 
   const cfg: ExportColumnConfig = {
     policies: polCols, loans: loanCols, deals: dealCols,
     includeReconciliation: includeRecon, includeAudit, includeKpis,
-    includeCounts: includeKpis,
+    includeCounts: includeKpis, includeCoverPage: includeCover,
   };
+
+  // Revoke object URL on unmount or when preview changes
+  useEffect(() => {
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
+  }, [previewUrl]);
 
   const toggle = (arr: string[], setter: (v: string[]) => void, k: string) => {
     setter(arr.includes(k) ? arr.filter(x => x !== k) : [...arr, k]);
