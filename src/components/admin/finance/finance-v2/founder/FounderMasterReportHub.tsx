@@ -996,11 +996,21 @@ export const FounderMasterReportHub = () => {
                   <th className="px-3 py-2 text-right">Gross</th>
                   <th className="px-3 py-2 text-right">TDS</th>
                   <th className="px-3 py-2 text-right">Net</th>
-                  <th className="px-3 py-2 text-center">PDF</th>
+                  <th className="px-3 py-2 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {loanComputed.filter((l: any) => filterText(`${l.customer_name || ""} ${l.disbursement_reference || ""}`)).map((l: any) => (
+                {(() => {
+                  const visible = loanComputed.filter((l: any) => filterText(`${l.customer_name || ""} ${l.disbursement_reference || ""}`));
+                  const totals = visible.reduce((a, l: any) => ({
+                    base: a.base + (l._calc.base || 0),
+                    gross: a.gross + (l._calc.gross || 0),
+                    tds: a.tds + (l._calc.tds || 0),
+                    net: a.net + (l._calc.net || 0),
+                  }), { base: 0, gross: 0, tds: 0, net: 0 });
+                  return (
+                    <>
+                      {visible.map((l: any) => (
                   <tr key={l.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2 font-medium">{l.customer_name}<div className="text-[10px] text-slate-500">{l.phone}</div></td>
                     <td className="px-3 py-2">{l.lender_name || "—"}<div className="text-[10px] text-slate-500">{l.car_model || ""}</div></td>
@@ -1024,16 +1034,36 @@ export const FounderMasterReportHub = () => {
                     <td className="px-3 py-2 text-right text-red-600">{inr(l._calc.tds)}</td>
                     <td className="px-3 py-2 text-right font-semibold text-emerald-700">{inr(l._calc.net)}</td>
                     <td className="px-3 py-2 text-center">
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => buildRowInvoice({
-                        module: "loan", reference: l.disbursement_reference || l.id.slice(0, 8),
-                        customer: l.customer_name || "—",
-                        meta: [["Bank", l.lender_name || "—"], ["Car", l.car_model || "—"], ["Sanction", String(l.sanction_amount || "—")], ["Disbursed", l.disbursement_date || "—"], ["Payout %", `${l._calc.pct}%${l._calc.isCustom ? " (custom)" : ""}`]],
-                        base: { label: "Net Disbursement", amount: l._calc.base }, pct: l._calc.pct, gross: l._calc.gross, tds: l._calc.tds, net: l._calc.net,
-                      })}><FileDown className="h-3.5 w-3.5" /></Button>
+                      <div className="flex items-center justify-center gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Download PDF" onClick={() => buildRowInvoice({
+                          module: "loan", reference: l.disbursement_reference || l.id.slice(0, 8),
+                          customer: l.customer_name || "—",
+                          meta: [["Bank", l.lender_name || "—"], ["Car", l.car_model || "—"], ["Sanction", String(l.sanction_amount || "—")], ["Disbursed", l.disbursement_date || "—"], ["Payout %", `${l._calc.pct}%${l._calc.isCustom ? " (custom)" : ""}`]],
+                          base: { label: "Net Disbursement", amount: l._calc.base }, pct: l._calc.pct, gross: l._calc.gross, tds: l._calc.tds, net: l._calc.net,
+                        })}><FileDown className="h-3.5 w-3.5" /></Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50" title="Mark Rejected / Lost"
+                          onClick={() => { setRejectTarget({ kind: "loan", id: l.id, label: `Loan ${l.customer_name || l.id.slice(0,8)}` }); setRejectReason(""); }}>
+                          <Ban className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
-                {loans.length === 0 && <tr><td colSpan={8} className="px-3 py-8 text-center text-slate-500">No disbursements in {periodLabel}</td></tr>}
+                {loans.length === 0 && <tr><td colSpan={8} className="px-3 py-8 text-center text-slate-500">No won/disbursed loans in {periodLabel}</td></tr>}
+                {visible.length > 0 && (
+                  <tr className="bg-slate-100 font-bold border-t-2 border-slate-300">
+                    <td className="px-3 py-2" colSpan={2}>TOTAL — {visible.length} disbursed</td>
+                    <td className="px-3 py-2 text-right">{inr(totals.base)}</td>
+                    <td className="px-3 py-2" />
+                    <td className="px-3 py-2 text-right">{inr(totals.gross)}</td>
+                    <td className="px-3 py-2 text-right text-red-700">{inr(totals.tds)}</td>
+                    <td className="px-3 py-2 text-right text-emerald-700">{inr(totals.net)}</td>
+                    <td />
+                  </tr>
+                )}
+                    </>
+                  );
+                })()}
               </tbody>
             </table>
           </div>
