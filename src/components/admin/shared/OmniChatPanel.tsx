@@ -561,6 +561,13 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
 
   const filteredThreads = threads.filter((t) => {
     if (allowedKeys && !allowedKeys.has(normalizePhone(t.phone).slice(-10))) return false;
+
+    // Status filter chips
+    if (statusFilter === "unread" && !(t.unread_count && t.unread_count > 0)) return false;
+    if (statusFilter === "pending" && !t.has_pending_reply) return false;
+    if (statusFilter === "responded" && t.status !== "resolved") return false;
+    if (statusFilter === "open" && t.status === "resolved") return false;
+
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -569,6 +576,9 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
       t.last_message?.toLowerCase().includes(q)
     );
   });
+
+  const totalReplies = threads.reduce((sum, t) => sum + (t.reply_count || 0), 0);
+  const pendingCount = threads.filter((t) => t.has_pending_reply).length;
 
   const channelIcon = (ch: string) => {
     if (ch === "email") return <Mail className="h-3 w-3 text-primary" />;
