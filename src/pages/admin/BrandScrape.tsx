@@ -83,12 +83,16 @@ export default function BrandScrape() {
             const brocOk = !broc.error && (broc.data as { success?: boolean })?.success;
             if (brocOk) {
               // mark brochure_found on latest job row for this model
-              await supabase
+              const { data: latest } = await supabase
                 .from("car_scrape_jobs")
-                .update({ brochure_found: true })
+                .select("id")
                 .eq("car_id", carId)
                 .order("created_at", { ascending: false })
-                .limit(1);
+                .limit(1)
+                .maybeSingle();
+              if (latest?.id) {
+                await supabase.from("car_scrape_jobs").update({ brochure_found: true }).eq("id", latest.id);
+              }
             }
           }
         }
