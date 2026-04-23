@@ -404,12 +404,17 @@ export default function DealerInquiryHub() {
       <TabsList>
         <TabsTrigger value="inquiry" className="gap-1"><Car className="h-4 w-4" /> Smart Inquiry</TabsTrigger>
         <TabsTrigger value="conversations" className="gap-1"><MessagesSquare className="h-4 w-4" /> Conversations</TabsTrigger>
+        <TabsTrigger value="flow" className="gap-1"><Workflow className="h-4 w-4" /> Reply Flow</TabsTrigger>
         <TabsTrigger value="tracker" className="gap-1"><Activity className="h-4 w-4" /> Live Tracker</TabsTrigger>
         <TabsTrigger value="history" className="gap-1"><History className="h-4 w-4" /> Campaign History</TabsTrigger>
       </TabsList>
 
       <TabsContent value="conversations" className="space-y-4">
         {activeTab === "conversations" ? <DealerConversationsHub /> : null}
+      </TabsContent>
+
+      <TabsContent value="flow" className="space-y-4">
+        {activeTab === "flow" ? <DealerReplyFlowBuilder /> : null}
       </TabsContent>
 
       <TabsContent value="tracker" className="space-y-4">
