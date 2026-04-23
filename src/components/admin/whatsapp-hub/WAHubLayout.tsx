@@ -28,6 +28,7 @@ import { WAHubSalesEngines } from "./modules/WAHubSalesEngines";
 import { WAHubSmartTriggers } from "./modules/WAHubSmartTriggers";
 import { WAHubAutoPilotPreview } from "./modules/WAHubAutoPilotPreview";
 import { WAHubCostDashboard } from "./modules/WAHubCostDashboard";
+import { WAHubConversationsLog } from "./modules/WAHubConversationsLog";
 import { EmailMarketingHub } from "../marketing/email/EmailMarketingHub";
 
 type Module =
