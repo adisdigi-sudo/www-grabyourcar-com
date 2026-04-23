@@ -643,8 +643,21 @@ export default function DealerStockHub() {
         <TabsContent value="extract" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg"><Sparkles className="h-5 w-5" /> AI Auto-Extract from Dealer Replies</CardTitle>
-              <p className="text-xs text-muted-foreground">Click <strong>Save Stock</strong> to instantly parse cars into your inventory.</p>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg"><Sparkles className="h-5 w-5" /> AI Auto-Extract from Dealer Replies</CardTitle>
+                  <p className="text-xs text-muted-foreground">Click <strong>Save Stock</strong> to parse one reply, or use <strong>Auto-Extract All</strong> to bulk-process every visible reply.</p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={extractAllReplies}
+                  disabled={bulkExtracting || replies.length === 0}
+                  className="gap-1 shrink-0"
+                >
+                  {bulkExtracting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  Auto-Extract All ({replies.length})
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {repliesLoading ? <div className="text-center py-6"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div> : (
@@ -669,7 +682,7 @@ export default function DealerStockHub() {
                       <pre className="whitespace-pre-wrap text-xs font-mono bg-background p-2 rounded border max-h-32 overflow-auto">{r.message}</pre>
                     </div>
                   ))}
-                  {replies.length === 0 && <div className="text-center py-8 text-muted-foreground"><Inbox className="h-8 w-8 mx-auto mb-2 opacity-50" />No replies yet</div>}
+                  {replies.length === 0 && <div className="text-center py-8 text-muted-foreground"><Inbox className="h-8 w-8 mx-auto mb-2 opacity-50" />No dealer replies yet — once dealers reply on WhatsApp they'll appear here automatically.</div>}
                 </div>
               )}
             </CardContent>
