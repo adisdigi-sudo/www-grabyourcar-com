@@ -242,8 +242,25 @@ export default function DealerInquiryHub() {
     setMessage(tpl.build(b, m, v, c));
   }, [templateType, selectedBrand, selectedModel, selectedVariant, selectedColor]);
 
-  const states = useMemo(() => [...new Set(reps.map((r: any) => r.state).filter(Boolean))].sort(), [reps]);
-  const cities = useMemo(() => [...new Set(reps.map((r: any) => r.city).filter(Boolean))].sort(), [reps]);
+  // Merge DB-derived options with master India lists so dropdowns are NEVER empty
+  const stateOptions = useMemo(() => {
+    const fromReps = new Set(reps.map((r: any) => r.state).filter(Boolean));
+    const merged = new Set<string>([...INDIAN_STATES, ...fromReps]);
+    return Array.from(merged).sort().map((s) => ({ value: s, label: s }));
+  }, [reps]);
+
+  const cityOptions = useMemo(() => {
+    const fromReps: string[] = reps.map((r: any) => r.city).filter(Boolean);
+    let pool: string[];
+    if (stateFilter !== "all" && INDIAN_CITIES_BY_STATE[stateFilter]) {
+      pool = [...INDIAN_CITIES_BY_STATE[stateFilter], ...fromReps];
+    } else {
+      pool = [...ALL_INDIAN_CITIES, ...fromReps];
+    }
+    const merged = Array.from(new Set(pool)).sort();
+    return merged.map((c) => ({ value: c, label: c }));
+  }, [reps, stateFilter]);
+
   const whatsappReps = reps.filter((r: any) => r.whatsapp_number);
 
   const brandLabel = selectedBrand !== "all" ? selectedBrand : "[Brand]";
