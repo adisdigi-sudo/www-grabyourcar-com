@@ -159,8 +159,8 @@ async function resolveApprovedTemplate(
 
   const candidates = [
     preferredTemplate,
-    "insurancefollowup",
     "welcome_new_lead",
+    "insurancefollowup",
     "grabyourcarintroduction",
     ...(approvedTemplates || []).map((row: any) => row.name),
   ].filter((value, index, array): value is string => Boolean(value) && array.indexOf(value) === index);
@@ -281,7 +281,7 @@ serve(async (req) => {
   try {
     const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
     const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
-    const WHATSAPP_WABA_ID = Deno.env.get("WHATSAPP_WABA_ID");
+    const WHATSAPP_WABA_ID = Deno.env.get("WHATSAPP_WABA_ID") || Deno.env.get("WHATSAPP_BUSINESS_ACCOUNT_ID");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
