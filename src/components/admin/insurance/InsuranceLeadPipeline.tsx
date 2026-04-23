@@ -1771,7 +1771,31 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
                       }
                       setSavingEdit(true);
                       try {
-                        const normalizedStage = normalizeStage(selectedClient.pipeline_stage, selectedClient.lead_status);
+                        // Re-fetch latest server state to avoid stale overwrites
+                        // (e.g. user marked Won via WonPolicyDialog, then saved this form
+                        // with stale "new_lead" still loaded into editFields).
+                        const { data: liveClient } = await supabase
+                          .from("insurance_clients")
+                          .select("pipeline_stage, lead_status, current_policy_number, booking_date, journey_last_event, journey_last_event_at")
+                          .eq("id", selectedClient.id)
+                          .maybeSingle();
+                        const liveStage = normalizeStage(
+                          liveClient?.pipeline_stage ?? selectedClient.pipeline_stage,
+                          liveClient?.lead_status ?? selectedClient.lead_status,
+                        );
+                        const userExplicitlyChoseStage =
+                          editFields.pipeline_stage &&
+                          editFields.pipeline_stage !== normalizeStage(selectedClient.pipeline_stage, selectedClient.lead_status, selectedClient);
+                        const isLiveTerminal = liveStage === "policy_issued" || liveStage === "won" || liveStage === "lost";
+                        const formStage = editFields.pipeline_stage || liveStage;
+                        const formIsTerminal = formStage === "policy_issued" || formStage === "won" || formStage === "lost";
+
+                        // If the live record is already terminal and the user did NOT
+                        // explicitly pick a different terminal stage, lock pipeline_stage
+                        // to the live terminal value.
+                        const lockTerminal = isLiveTerminal && !(userExplicitlyChoseStage && formIsTerminal);
+
+                        const normalizedStage = lockTerminal ? liveStage : normalizeStage(selectedClient.pipeline_stage, selectedClient.lead_status);
                         const fallbackBookingDate =
                           selectedClient.booking_date ||
                           selectedClient.policy_start_date ||
@@ -1780,16 +1804,24 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
                           new Date().toISOString().split("T")[0];
 
                         let newStage = editFields.pipeline_stage || normalizedStage;
+
+                        // Hard guard: if the live record is already terminal (policy_issued / won)
+                        // and the user did not explicitly choose a different terminal stage,
+                        // never downgrade it from the edit form.
+                        if (lockTerminal) {
+                          newStage = liveStage;
+                        }
+
                         const followUpDateSet = !!editFields.follow_up_date;
                         const followUpDateCleared = !editFields.follow_up_date && selectedClient.follow_up_date;
 
                         // Auto-promote to follow_up when follow-up date is set
                         const earlyStages = ["new_lead", "smart_calling", "quote_shared"];
-                        if (followUpDateSet && earlyStages.includes(newStage)) {
+                        if (!lockTerminal && followUpDateSet && earlyStages.includes(newStage)) {
                           newStage = "follow_up";
                         }
                         // Demote from follow_up when follow-up date is cleared (only if user didn't explicitly pick a stage)
-                        if (followUpDateCleared && newStage === "follow_up" && !editFields.pipeline_stage) {
+                        if (!lockTerminal && followUpDateCleared && newStage === "follow_up" && !editFields.pipeline_stage) {
                           newStage = "quote_shared";
                         }
 
@@ -1849,7 +1881,11 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
                         setSelectedClient(data as Client);
                         queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
                         queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
-                        toast.success("Lead updated");
+                        if (lockTerminal) {
+                          toast.success("Lead saved (kept as Policy Issued — active policy on record)");
+                        } else {
+                          toast.success("Lead updated");
+                        }
 
                         // Log activity when auto-promoted to follow_up
                         if (followUpDateSet && earlyStages.includes(normalizedStage)) {
