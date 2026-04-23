@@ -27,6 +27,11 @@ function buildKiaIndiaShowroomUrl(modelName: string) {
   return `https://www.kia.com/in/our-vehicles/${slug}/showroom.html`;
 }
 
+function buildHyundaiIndiaShowroomUrl(modelName: string) {
+  const slug = modelName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  return `https://www.hyundai.com/in/en/find-a-car/${slug}/highlights`;
+}
+
 function extractPdfLinks(text: string): string[] {
   const re = /(https?:\/\/[^\s"')\]]+\.pdf(?:\?[^\s"')\]]*)?)/gi;
   const out = new Set<string>();
