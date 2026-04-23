@@ -81,7 +81,7 @@ export const trackConversion = async (event: ConversionEvent): Promise<void> => 
       session_id: getSessionId(),
       user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
       referrer: typeof document !== "undefined" ? document.referrer : null,
-      metadata: (event.metadata as Record<string, unknown>) || {},
+      metadata: ((event.metadata as Record<string, unknown>) || {}) as never,
     }]);
   } catch (e) {
     // Tracking should never break the app
