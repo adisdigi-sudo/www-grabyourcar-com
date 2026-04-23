@@ -823,16 +823,28 @@ export default function DealerStockHub() {
 
               {/* Preview + send */}
               <div className="border-t pt-3 space-y-3">
-                <div>
-                  <Label className="text-xs">Meta Template (utility/marketing)</Label>
-                  <Select value={bcastTemplate} onValueChange={setBcastTemplate}>
-                    <SelectTrigger><SelectValue placeholder="Select approved template" /></SelectTrigger>
-                    <SelectContent>
-                      {templates.map((t: any) => (
-                        <SelectItem key={t.name} value={t.name}>{t.display_name || t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Meta Template (approved)</Label>
+                    <Select value={bcastTemplate} onValueChange={setBcastTemplate}>
+                      <SelectTrigger><SelectValue placeholder={templates.length ? `Select approved template (${templates.length})` : "No approved templates"} /></SelectTrigger>
+                      <SelectContent>
+                        {templates.map((t: any) => (
+                          <SelectItem key={t.name} value={t.name}>
+                            {t.name} {t.category ? <span className="text-muted-foreground text-[10px] ml-1">· {t.category}</span> : null}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Or Custom Template Name</Label>
+                    <Input
+                      placeholder="e.g. ready_stock_alert"
+                      value={bcastTemplate.startsWith("__custom__") ? bcastTemplate.slice(10) : ""}
+                      onChange={(e) => setBcastTemplate(e.target.value ? e.target.value : "")}
+                    />
+                  </div>
                 </div>
                 {bcastSelectedStockIds.length > 0 && (
                   <div>
