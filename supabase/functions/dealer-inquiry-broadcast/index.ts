@@ -509,7 +509,7 @@ serve(async (req) => {
       try {
         const windowOpen = await hasOpenConversationWindow(supabase, phone.full);
         const recentBlock = await hasRecentProviderBlock(supabase, phone.full);
-        const shouldAutoOpenWindow = false;
+        const shouldAutoOpenWindow = mode === "text_only" && !windowOpen;
         const shouldSendTemplate = mode === "template_only" || mode === "template_then_text" || shouldAutoOpenWindow;
         const templateVariableCount = countResolvedTemplateParams(templateDefinition?.components);
         const templateCanCarryInquiry = shouldSendTemplate && templateVariableCount > 0 && Boolean(message?.trim());
@@ -518,36 +518,9 @@ serve(async (req) => {
           && (mode === "template_then_text"
             ? true
             : mode === "text_only"
-              ? windowOpen
+                ? true
               : false);
-        const actualMode = shouldAutoOpenWindow ? "template_only" : mode;
-
-        if (mode === "text_only" && !windowOpen) {
-          blocked++;
-          failed++;
-          const reason = "Custom inquiry text can only be sent in an open WhatsApp chat window. This dealer's chat window is closed, so no template or wrong message was sent.";
-          errors.push(`${rawPhone}: ${reason}`);
-          recipientRows.push({
-            campaign_id: campaign?.id,
-            dealer_rep_id: recipientInfo.dealer_rep_id || null,
-            dealer_name: recipientInfo.dealer_name || null,
-            rep_name: recipientInfo.rep_name || null,
-            phone: rawPhone,
-            send_status: "failed",
-            qualification_data: mergeTrackingData(null, {
-              requested_mode: mode,
-              actual_mode: "blocked_closed_window",
-              conversation_window_open: false,
-              opener_template_name: null,
-              provider_message_id: null,
-              template_provider_message_id: null,
-              text_provider_message_id: null,
-              last_error: reason,
-              error_code: "closed_window",
-            }),
-          });
-          continue;
-        }
+        const actualMode = shouldAutoOpenWindow ? "text_only_auto_open" : mode;
 
         if (!windowOpen && recentBlock.blocked) {
           blocked++;
