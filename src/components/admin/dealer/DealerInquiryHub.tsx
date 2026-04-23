@@ -19,6 +19,8 @@ import { format } from "date-fns";
 import DealerCampaignTracker from "./DealerCampaignTracker";
 import DealerConversationsHub from "./DealerConversationsHub";
 import DealerReplyFlowBuilder from "./DealerReplyFlowBuilder";
+import { ComboBoxWithCustom } from "@/components/ui/combo-box-with-custom";
+import { INDIAN_STATES, INDIAN_CITIES_BY_STATE, ALL_INDIAN_CITIES, CAR_COLORS, COMMON_VARIANTS } from "@/lib/indiaMasterData";
 
 const TEMPLATES: Record<string, { label: string; icon: string; build: (b: string, m: string, v: string, c: string) => string }> = {
   urgent_ready_buyer: {
@@ -240,8 +242,25 @@ export default function DealerInquiryHub() {
     setMessage(tpl.build(b, m, v, c));
   }, [templateType, selectedBrand, selectedModel, selectedVariant, selectedColor]);
 
-  const states = useMemo(() => [...new Set(reps.map((r: any) => r.state).filter(Boolean))].sort(), [reps]);
-  const cities = useMemo(() => [...new Set(reps.map((r: any) => r.city).filter(Boolean))].sort(), [reps]);
+  // Merge DB-derived options with master India lists so dropdowns are NEVER empty
+  const stateOptions = useMemo(() => {
+    const fromReps = new Set(reps.map((r: any) => r.state).filter(Boolean));
+    const merged = new Set<string>([...INDIAN_STATES, ...fromReps]);
+    return Array.from(merged).sort().map((s) => ({ value: s, label: s }));
+  }, [reps]);
+
+  const cityOptions = useMemo(() => {
+    const fromReps: string[] = reps.map((r: any) => r.city).filter(Boolean);
+    let pool: string[];
+    if (stateFilter !== "all" && INDIAN_CITIES_BY_STATE[stateFilter]) {
+      pool = [...INDIAN_CITIES_BY_STATE[stateFilter], ...fromReps];
+    } else {
+      pool = [...ALL_INDIAN_CITIES, ...fromReps];
+    }
+    const merged = Array.from(new Set(pool)).sort();
+    return merged.map((c) => ({ value: c, label: c }));
+  }, [reps, stateFilter]);
+
   const whatsappReps = reps.filter((r: any) => r.whatsapp_number);
 
   const brandLabel = selectedBrand !== "all" ? selectedBrand : "[Brand]";
@@ -426,76 +445,84 @@ export default function DealerInquiryHub() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-wrap gap-3 items-end">
-              <div className="min-w-[160px]">
+              <div className="min-w-[170px]">
                 <Label className="text-xs mb-1 block">Brand *</Label>
-                <Select value={selectedBrand} onValueChange={v => { setSelectedBrand(v); setSelectedModel("all"); setSelectedVariant("all"); setSelectedColor("all"); setSelectedIds([]); applyTemplate(templateType); }}>
-                  <SelectTrigger><SelectValue placeholder="Select Brand" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Brands</SelectItem>
-                    {brands.map((b: any) => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <ComboBoxWithCustom
+                  value={selectedBrand}
+                  onChange={(v) => { setSelectedBrand(v); setSelectedModel("all"); setSelectedVariant("all"); setSelectedColor("all"); setSelectedIds([]); applyTemplate(templateType); }}
+                  options={brands.map((b: any) => ({ value: b.name, label: b.name }))}
+                  placeholder="Select Brand"
+                  allOptionLabel="All Brands"
+                  customLabel="Add custom brand"
+                />
               </div>
-              <div className="min-w-[160px]">
+              <div className="min-w-[170px]">
                 <Label className="text-xs mb-1 block flex items-center gap-1"><Car className="h-3 w-3" /> Model</Label>
-                <Select value={selectedModel} onValueChange={v => { updateCarAndTemplate(setSelectedModel, v); setSelectedVariant("all"); setSelectedColor("all"); }} disabled={selectedBrand === "all"}>
-                  <SelectTrigger><SelectValue placeholder="Select Model" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Models</SelectItem>
-                    {models.map((m: any) => <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <ComboBoxWithCustom
+                  value={selectedModel}
+                  onChange={(v) => { updateCarAndTemplate(setSelectedModel, v); setSelectedVariant("all"); setSelectedColor("all"); }}
+                  options={models.map((m: any) => ({ value: m.name, label: m.name }))}
+                  placeholder="Select Model"
+                  allOptionLabel="All Models"
+                  customLabel="Add custom model"
+                  disabled={selectedBrand === "all"}
+                />
               </div>
               <div className="min-w-[180px]">
                 <Label className="text-xs mb-1 block">Variant</Label>
-                <Select value={selectedVariant} onValueChange={v => updateCarAndTemplate(setSelectedVariant, v)} disabled={selectedModel === "all"}>
-                  <SelectTrigger><SelectValue placeholder="Select Variant" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Variants</SelectItem>
-                    {variants.map((v: any) => <SelectItem key={v.id} value={v.name}>{v.name} ({v.fuel_type}/{v.transmission})</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <ComboBoxWithCustom
+                  value={selectedVariant}
+                  onChange={(v) => updateCarAndTemplate(setSelectedVariant, v)}
+                  options={[
+                    ...variants.map((v: any) => ({ value: v.name, label: `${v.name} (${v.fuel_type}/${v.transmission})` })),
+                    ...COMMON_VARIANTS.map((v) => ({ value: v, label: v })),
+                  ]}
+                  placeholder="Select Variant"
+                  allOptionLabel="All Variants"
+                  customLabel="Add custom variant"
+                  disabled={selectedModel === "all"}
+                />
               </div>
-              <div className="min-w-[140px]">
+              <div className="min-w-[160px]">
                 <Label className="text-xs mb-1 block flex items-center gap-1"><Palette className="h-3 w-3" /> Color</Label>
-                <Select value={selectedColor} onValueChange={v => updateCarAndTemplate(setSelectedColor, v)} disabled={selectedModel === "all"}>
-                  <SelectTrigger><SelectValue placeholder="Color" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Any Color</SelectItem>
-                    {colors.map((c: any) => (
-                      <SelectItem key={c.id} value={c.name}>
-                        <div className="flex items-center gap-2">
-                          {c.hex_code && <span className="w-3 h-3 rounded-full border" style={{ backgroundColor: c.hex_code }} />}
-                          {c.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ComboBoxWithCustom
+                  value={selectedColor}
+                  onChange={(v) => updateCarAndTemplate(setSelectedColor, v)}
+                  options={[
+                    ...colors.map((c: any) => ({ value: c.name, label: c.name })),
+                    ...CAR_COLORS.map((c) => ({ value: c, label: c })),
+                  ]}
+                  placeholder="Color"
+                  allOptionLabel="Any Color"
+                  customLabel="Add custom color"
+                  disabled={selectedModel === "all"}
+                />
               </div>
             </div>
 
             {/* Location filters */}
             <div className="flex flex-wrap gap-3 items-end mt-3">
-              <div className="min-w-[140px]">
+              <div className="min-w-[170px]">
                 <Label className="text-xs mb-1 block">State</Label>
-                <Select value={stateFilter} onValueChange={setStateFilter}>
-                  <SelectTrigger><SelectValue placeholder="State" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All States</SelectItem>
-                    {states.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <ComboBoxWithCustom
+                  value={stateFilter}
+                  onChange={(v) => { setStateFilter(v); setCityFilter("all"); }}
+                  options={stateOptions}
+                  placeholder="State"
+                  allOptionLabel="All States"
+                  customLabel="Add custom state"
+                />
               </div>
-              <div className="min-w-[140px]">
+              <div className="min-w-[170px]">
                 <Label className="text-xs mb-1 block">City</Label>
-                <Select value={cityFilter} onValueChange={setCityFilter}>
-                  <SelectTrigger><SelectValue placeholder="City" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Cities</SelectItem>
-                    {cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <ComboBoxWithCustom
+                  value={cityFilter}
+                  onChange={setCityFilter}
+                  options={cityOptions}
+                  placeholder="City"
+                  allOptionLabel="All Cities"
+                  customLabel="Add custom city"
+                />
               </div>
               <div className="flex gap-2 ml-auto">
                 <Dialog open={addOpen} onOpenChange={setAddOpen}>
@@ -506,15 +533,37 @@ export default function DealerInquiryHub() {
                       <div><Label>Name *</Label><Input value={addForm.name} onChange={e => setAddForm(p => ({ ...p, name: e.target.value }))} /></div>
                       <div><Label>WhatsApp Number *</Label><Input value={addForm.whatsapp_number} onChange={e => setAddForm(p => ({ ...p, whatsapp_number: e.target.value }))} placeholder="9876543210" /></div>
                       <div><Label>Brand *</Label>
-                        <Select value={addForm.brand} onValueChange={v => setAddForm(p => ({ ...p, brand: v }))}>
-                          <SelectTrigger><SelectValue placeholder="Select Brand" /></SelectTrigger>
-                          <SelectContent>{brands.map((b: any) => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}</SelectContent>
-                        </Select>
+                        <ComboBoxWithCustom
+                          value={addForm.brand}
+                          onChange={(v) => setAddForm(p => ({ ...p, brand: v }))}
+                          options={brands.map((b: any) => ({ value: b.name, label: b.name }))}
+                          placeholder="Select Brand"
+                          showAllOption={false}
+                          customLabel="Add custom brand"
+                        />
                       </div>
                       <div><Label>Dealer Name</Label><Input value={addForm.dealer_name} onChange={e => setAddForm(p => ({ ...p, dealer_name: e.target.value }))} /></div>
                       <div className="grid grid-cols-2 gap-2">
-                        <div><Label>City</Label><Input value={addForm.city} onChange={e => setAddForm(p => ({ ...p, city: e.target.value }))} /></div>
-                        <div><Label>State</Label><Input value={addForm.state} onChange={e => setAddForm(p => ({ ...p, state: e.target.value }))} /></div>
+                        <div><Label>State</Label>
+                          <ComboBoxWithCustom
+                            value={addForm.state || ""}
+                            onChange={(v) => setAddForm(p => ({ ...p, state: v, city: "" }))}
+                            options={INDIAN_STATES.map((s) => ({ value: s, label: s }))}
+                            placeholder="State"
+                            showAllOption={false}
+                            customLabel="Add custom state"
+                          />
+                        </div>
+                        <div><Label>City</Label>
+                          <ComboBoxWithCustom
+                            value={addForm.city || ""}
+                            onChange={(v) => setAddForm(p => ({ ...p, city: v }))}
+                            options={(addForm.state && INDIAN_CITIES_BY_STATE[addForm.state] ? INDIAN_CITIES_BY_STATE[addForm.state] : ALL_INDIAN_CITIES).map((c) => ({ value: c, label: c }))}
+                            placeholder="City"
+                            showAllOption={false}
+                            customLabel="Add custom city"
+                          />
+                        </div>
                       </div>
                       <Button onClick={handleAddDealer}>Add Dealer</Button>
                     </div>
