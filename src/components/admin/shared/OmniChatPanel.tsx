@@ -324,22 +324,57 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
     try {
       const { data: inboxThreads, error: inboxError } = await supabase
         .from("wa_conversations")
-        .select("id, phone, customer_name, last_message, last_message_at, unread_count, window_expires_at")
+        .select("id, phone, customer_name, last_message, last_message_at, last_customer_message_at, unread_count, window_expires_at, status")
         .order("last_message_at", { ascending: false })
         .limit(200);
 
       if (inboxError) throw inboxError;
 
-      const mappedThreads: ChatThread[] = (inboxThreads || []).map((thread) => ({
-        id: thread.id,
-        phone: thread.phone,
-        customer_name: thread.customer_name,
-        last_message: thread.last_message || "",
-        last_at: thread.last_message_at || new Date().toISOString(),
-        channel: "whatsapp",
-        unread_count: thread.unread_count || 0,
-        window_expires_at: thread.window_expires_at,
-      }));
+      // Pull recent messages for the same threads to derive reply_count + has_pending_reply.
+      // (One bounded query is much cheaper than N per-thread counts.)
+      const threadIds = (inboxThreads || []).map((t) => t.id);
+      const inboundCount: Record<string, number> = {};
+      const lastInboundAt: Record<string, number> = {};
+      const lastOutboundAt: Record<string, number> = {};
+      if (threadIds.length) {
+        const { data: msgs } = await supabase
+          .from("wa_inbox_messages")
+          .select("conversation_id, direction, created_at")
+          .in("conversation_id", threadIds)
+          .order("created_at", { ascending: false })
+          .limit(2000);
+        for (const m of (msgs || []) as Array<{ conversation_id: string; direction: string; created_at: string }>) {
+          const ts = new Date(m.created_at).getTime();
+          if (m.direction === "inbound") {
+            inboundCount[m.conversation_id] = (inboundCount[m.conversation_id] || 0) + 1;
+            if (!lastInboundAt[m.conversation_id] || ts > lastInboundAt[m.conversation_id]) {
+              lastInboundAt[m.conversation_id] = ts;
+            }
+          } else {
+            if (!lastOutboundAt[m.conversation_id] || ts > lastOutboundAt[m.conversation_id]) {
+              lastOutboundAt[m.conversation_id] = ts;
+            }
+          }
+        }
+      }
+
+      const mappedThreads: ChatThread[] = (inboxThreads || []).map((thread) => {
+        const lastIn = lastInboundAt[thread.id] || (thread.last_customer_message_at ? new Date(thread.last_customer_message_at).getTime() : 0);
+        const lastOut = lastOutboundAt[thread.id] || 0;
+        return {
+          id: thread.id,
+          phone: thread.phone,
+          customer_name: thread.customer_name,
+          last_message: thread.last_message || "",
+          last_at: thread.last_message_at || new Date().toISOString(),
+          channel: "whatsapp",
+          unread_count: thread.unread_count || 0,
+          window_expires_at: thread.window_expires_at,
+          status: thread.status || null,
+          reply_count: inboundCount[thread.id] || 0,
+          has_pending_reply: lastIn > 0 && lastIn > lastOut,
+        };
+      });
 
       setThreads(mappedThreads);
     } catch (err) {
@@ -347,6 +382,30 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
       setThreads([]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function markAsResponded(thread: ChatThread) {
+    if (!thread || thread.isDraft) return;
+    setMarkingResponded(true);
+    try {
+      const { error } = await supabase
+        .from("wa_conversations")
+        .update({ status: "resolved", unread_count: 0 })
+        .eq("id", thread.id);
+      if (error) throw error;
+      toast({ title: "✅ Marked as responded" });
+      // Optimistic local update + reload
+      setThreads((prev) => prev.map((t) => t.id === thread.id ? { ...t, status: "resolved", unread_count: 0, has_pending_reply: false } : t));
+      setSelectedThread((cur) => cur && cur.id === thread.id ? { ...cur, status: "resolved", unread_count: 0, has_pending_reply: false } : cur);
+    } catch (err) {
+      toast({
+        title: "Could not update status",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setMarkingResponded(false);
     }
   }
 
