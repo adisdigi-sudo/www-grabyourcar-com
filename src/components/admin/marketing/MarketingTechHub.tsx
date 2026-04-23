@@ -368,6 +368,24 @@ export function MarketingTechHub() {
             <RevenueIntelligenceDashboard />
           </Suspense>
         </TabsContent>
+
+        <TabsContent value="banners">
+          <Suspense fallback={<SectionFallback />}>
+            <PromoBannerManager />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="conversions">
+          <Suspense fallback={<SectionFallback />}>
+            <MarketingConversionDashboard />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="audit">
+          <Suspense fallback={<SectionFallback />}>
+            <MarketingAuditChecklist />
+          </Suspense>
+        </TabsContent>
       </Tabs>
 
       {/* Optional: keep old command center accessible at the bottom for legacy users */}
