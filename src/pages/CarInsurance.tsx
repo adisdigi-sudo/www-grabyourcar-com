@@ -98,6 +98,9 @@ const CarInsurance = () => {
       <Header />
 
       <main className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 pt-3">
+          <PromoBanner scope="car-insurance" />
+        </div>
         {/* ===== HERO — Premium Clean Layout ===== */}
         <section className="relative bg-background pt-8 pb-16 md:pt-14 md:pb-24">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,hsl(var(--primary)/0.04),transparent)]" />

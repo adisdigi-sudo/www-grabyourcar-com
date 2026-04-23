@@ -28,6 +28,7 @@ import { useState } from "react";
 import { CrossSellWidget } from "@/components/CrossSellWidget";
 import { HSRPUnifiedBookingForm } from "@/components/hsrp/HSRPUnifiedBookingForm";
 import { HSRPOrderTracker } from "@/components/hsrp/HSRPOrderTracker";
+import { PromoBanner } from "@/components/marketing/PromoBanner";
 import { HSRPComplianceChecker } from "@/components/hsrp/HSRPComplianceChecker";
 import { HSRPTestimonials } from "@/components/hsrp/HSRPTestimonials";
 import { useHSRPPricing, formatPrice } from "@/hooks/useHSRPPricing";
@@ -90,6 +91,10 @@ const HSRP = () => {
 
       <div className="min-h-screen bg-background">
         <Header />
+
+        <div className="container mx-auto px-4 pt-3">
+          <PromoBanner scope="hsrp" />
+        </div>
 
         <ServiceBanner
           highlightText="Mandatory"
