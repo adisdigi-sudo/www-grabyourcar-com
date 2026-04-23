@@ -166,7 +166,8 @@ export default function DealerInquiryHub() {
         .select("*").order("created_at", { ascending: false }).limit(20);
       return data || [];
     },
-    refetchInterval: 3000,
+    staleTime: 15_000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: approvedTemplates = [] } = useQuery({
@@ -397,7 +398,7 @@ export default function DealerInquiryHub() {
   };
 
   return (
-    <Tabs defaultValue="inquiry" className="space-y-4">
+    <Tabs defaultValue="inquiry" className="space-y-4" activationMode="manual">
       <TabsList>
         <TabsTrigger value="inquiry" className="gap-1"><Car className="h-4 w-4" /> Smart Inquiry</TabsTrigger>
         <TabsTrigger value="conversations" className="gap-1"><MessagesSquare className="h-4 w-4" /> Conversations</TabsTrigger>
@@ -405,15 +406,15 @@ export default function DealerInquiryHub() {
         <TabsTrigger value="history" className="gap-1"><History className="h-4 w-4" /> Campaign History</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="conversations" className="space-y-4">
+      <TabsContent value="conversations" className="space-y-4" forceMount={false}>
         <DealerConversationsHub />
       </TabsContent>
 
-      <TabsContent value="tracker" className="space-y-4">
+      <TabsContent value="tracker" className="space-y-4" forceMount={false}>
         <DealerCampaignTracker />
       </TabsContent>
 
-      <TabsContent value="inquiry" className="space-y-4">
+      <TabsContent value="inquiry" className="space-y-4" forceMount={false}>
         {/* Car Selection Bar */}
         <Card>
           <CardContent className="pt-6">
@@ -751,7 +752,7 @@ export default function DealerInquiryHub() {
       </TabsContent>
 
       {/* Campaign History Tab */}
-      <TabsContent value="history">
+      <TabsContent value="history" forceMount={false}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Recent Campaigns</CardTitle>
