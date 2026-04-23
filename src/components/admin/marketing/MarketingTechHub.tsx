@@ -15,6 +15,10 @@ import {
   IndianRupee,
   ArrowUpRight,
   RefreshCw,
+  Bot,
+  BarChart3,
+  FileText,
+  Brain,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +38,24 @@ const MarketingCommandCenter = lazy(() =>
 );
 const AdSpendAnalytics = lazy(() =>
   import("./AdSpendAnalytics").then((m) => ({ default: m.AdSpendAnalytics })),
+);
+const AutomationCenter = lazy(() =>
+  import("@/components/admin/automation/AutomationCenter").then((m) => ({ default: m.AutomationCenter })).catch(() => ({ default: () => <SectionFallback /> })),
+);
+const AIAutomationHub = lazy(() =>
+  import("@/components/admin/ai-automation/AIAutomationHub").then((m) => ({ default: m.AIAutomationHub })).catch(() => ({ default: () => <SectionFallback /> })),
+);
+const TemplatesHub = lazy(() =>
+  import("@/components/admin/templates-hub/TemplatesHub").then((m) => ({ default: m.TemplatesHub })).catch(() => ({ default: () => <SectionFallback /> })),
+);
+const UnifiedCustomerProfile = lazy(() =>
+  import("@/components/admin/UnifiedCustomerProfile").then((m) => ({ default: m.UnifiedCustomerProfile })).catch(() => ({ default: () => <SectionFallback /> })),
+);
+const RevenueIntelligenceDashboard = lazy(() =>
+  import("@/components/admin/RevenueIntelligenceDashboard").then((m) => ({ default: m.RevenueIntelligenceDashboard })).catch(() => ({ default: () => <SectionFallback /> })),
+);
+const JourneyAutomationPanel = lazy(() =>
+  import("@/components/admin/JourneyAutomationPanel").then((m) => ({ default: m.JourneyAutomationPanel })).catch(() => ({ default: () => <SectionFallback /> })),
 );
 
 const SectionFallback = () => (
