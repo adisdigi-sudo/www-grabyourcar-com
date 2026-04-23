@@ -172,6 +172,10 @@ function buildDealerTemplateValues(params: {
     ];
   }
 
+  if (params.templateName === "welcome_new_lead") {
+    return [inquiryMessage || vehicleContext || `${params.dealerName} - New inquiry from GrabYourCar`];
+  }
+
   if (params.variableCount === 1) {
     return [inquiryMessage ? `${params.dealerName} — ${shortInquiry}` : `${params.dealerName}`];
   }
@@ -401,7 +405,7 @@ serve(async (req) => {
 
     // Determine send mode
     const mode = send_mode || (template_name ? "template_then_text" : "text_only");
-    const metaTemplate = template_name || "booking_confirmation";
+    const metaTemplate = template_name || "welcome_new_lead";
 
     // Pre-resolve template definition ONCE (we'll rebuild components per dealer with their name)
     const inquiryLabel = [brand, model, variant].filter(Boolean).join(" ") || "vehicle inquiry";
