@@ -4,12 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Car, CheckCircle2, Target, Handshake, BarChart3, TrendingUp, MessageSquare, PhoneCall } from "lucide-react";
+import { Car, CheckCircle2, Target, Handshake, BarChart3, TrendingUp, PhoneCall } from "lucide-react";
 import { SalesWorkspace } from "../sales/SalesWorkspace";
 import { SalesDealTracker } from "../sales/SalesDealTracker";
 import { SalesRealTimeDashboard } from "../sales/SalesRealTimeDashboard";
 import { SalesPerformanceDashboard } from "../sales/SalesPerformanceDashboard";
-import { VerticalMessagingTab } from "../shared/VerticalMessagingTab";
 import { VerticalReplyAgentsCard } from "../automation/VerticalReplyAgentsCard";
 import { CallingQueueWorkspace } from "../calling/CallingQueueWorkspace";
 
@@ -100,7 +99,7 @@ export function SalesVerticalWorkspace() {
       <VerticalReplyAgentsCard verticalSlug="sales" verticalLabel="Automotive Sales" />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full grid grid-cols-6">
+        <TabsList className="w-full grid grid-cols-5">
           <TabsTrigger value="pipeline" className="gap-1.5">
             <Target className="h-3.5 w-3.5" /> Pipeline
           </TabsTrigger>
@@ -115,9 +114,6 @@ export function SalesVerticalWorkspace() {
           </TabsTrigger>
           <TabsTrigger value="performance" className="gap-1.5">
             <TrendingUp className="h-3.5 w-3.5" /> Performance
-          </TabsTrigger>
-          <TabsTrigger value="conversations" className="gap-1.5">
-            <MessageSquare className="h-3.5 w-3.5" /> Conversations
           </TabsTrigger>
         </TabsList>
 
@@ -144,10 +140,6 @@ export function SalesVerticalWorkspace() {
             onCustomRangeChange={setCustomRange}
           />
           <SalesPerformanceDashboard leads={filteredLeads} dateFilter={dateFilter} />
-        </TabsContent>
-
-        <TabsContent value="conversations" className="mt-4">
-          <VerticalMessagingTab scope="sales" />
         </TabsContent>
 
       </Tabs>
