@@ -340,7 +340,18 @@ export function WAConversationInbox() {
             </ScrollArea>
 
             {/* Reply Input */}
-            <div className="p-3 border-t">
+            <div className="p-3 border-t space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] text-muted-foreground">
+                  💡 Use a template to bypass the 24h window or send a structured message
+                </p>
+                <WaTemplatePickerButton
+                  onPick={handleSendTemplate}
+                  disabled={isSending}
+                  withLabel
+                  align="end"
+                />
+              </div>
               <div className="flex gap-2">
                 <Input
                   placeholder="Type a reply..."
