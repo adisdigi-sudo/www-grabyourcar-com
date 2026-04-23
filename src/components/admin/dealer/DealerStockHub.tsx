@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Send, Package, Sparkles, Loader2, Search, Share2, Trash2, Car, IndianRupee, Inbox } from "lucide-react";
+import { Send, Package, Sparkles, Loader2, Search, Share2, Trash2, Car, IndianRupee, Inbox, Users, Megaphone } from "lucide-react";
 import { format } from "date-fns";
 
 const STOCK_REQUEST_TEMPLATE = `Hi {rep_name} 👋
