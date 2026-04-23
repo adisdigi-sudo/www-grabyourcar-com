@@ -14510,6 +14510,51 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_conversion_events: {
+        Row: {
+          campaign: string | null
+          created_at: string
+          cta_label: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          page_path: string
+          referrer: string | null
+          session_id: string | null
+          source: string | null
+          user_agent: string | null
+          vertical: string | null
+        }
+        Insert: {
+          campaign?: string | null
+          created_at?: string
+          cta_label?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          page_path: string
+          referrer?: string | null
+          session_id?: string | null
+          source?: string | null
+          user_agent?: string | null
+          vertical?: string | null
+        }
+        Update: {
+          campaign?: string | null
+          created_at?: string
+          cta_label?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          page_path?: string
+          referrer?: string | null
+          session_id?: string | null
+          source?: string | null
+          user_agent?: string | null
+          vertical?: string | null
+        }
+        Relationships: []
+      }
       master_customers: {
         Row: {
           assigned_to: string | null
@@ -16026,6 +16071,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      promotional_banners: {
+        Row: {
+          color_theme: string
+          created_at: string
+          created_by: string | null
+          cta_label: string | null
+          cta_url: string | null
+          display_order: number
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          message: string
+          offer_type: string
+          page_scope: string[]
+          slug: string
+          starts_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          color_theme?: string
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
+          display_order?: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          message: string
+          offer_type?: string
+          page_scope?: string[]
+          slug: string
+          starts_at?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          color_theme?: string
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
+          display_order?: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          message?: string
+          offer_type?: string
+          page_scope?: string[]
+          slug?: string
+          starts_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       quick_replies: {
         Row: {
