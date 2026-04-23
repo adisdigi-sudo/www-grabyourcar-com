@@ -201,6 +201,7 @@ export default function DealerStockHub() {
   });
 
   const [extractingId, setExtractingId] = useState<string | null>(null);
+  const [bulkExtracting, setBulkExtracting] = useState(false);
   const [previewCars, setPreviewCars] = useState<any[] | null>(null);
   const [previewMeta, setPreviewMeta] = useState<{ rep_id?: string; brand?: string; message: string } | null>(null);
 
@@ -231,6 +232,33 @@ export default function DealerStockHub() {
       toast.error(e.message || "Extract failed");
     } finally {
       setExtractingId(null);
+    }
+  };
+
+  const extractAllReplies = async () => {
+    if (replies.length === 0) return toast.error("No replies to extract");
+    setBulkExtracting(true);
+    let totalSaved = 0;
+    let processed = 0;
+    try {
+      for (const r of replies) {
+        try {
+          const { data } = await supabase.functions.invoke("dealer-stock-extractor", {
+            body: {
+              message: r.message,
+              dealer_rep_id: r.dealer_rep_id,
+              default_brand: r.dealer_representatives?.brand,
+              auto_save: true,
+            },
+          });
+          totalSaved += data?.saved || 0;
+        } catch {/* skip */}
+        processed++;
+      }
+      toast.success(`✅ Processed ${processed} replies → saved ${totalSaved} cars`);
+      qc.invalidateQueries({ queryKey: ["dealer-inventory-live"] });
+    } finally {
+      setBulkExtracting(false);
     }
   };
 
@@ -615,8 +643,21 @@ export default function DealerStockHub() {
         <TabsContent value="extract" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg"><Sparkles className="h-5 w-5" /> AI Auto-Extract from Dealer Replies</CardTitle>
-              <p className="text-xs text-muted-foreground">Click <strong>Save Stock</strong> to instantly parse cars into your inventory.</p>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg"><Sparkles className="h-5 w-5" /> AI Auto-Extract from Dealer Replies</CardTitle>
+                  <p className="text-xs text-muted-foreground">Click <strong>Save Stock</strong> to parse one reply, or use <strong>Auto-Extract All</strong> to bulk-process every visible reply.</p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={extractAllReplies}
+                  disabled={bulkExtracting || replies.length === 0}
+                  className="gap-1 shrink-0"
+                >
+                  {bulkExtracting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  Auto-Extract All ({replies.length})
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {repliesLoading ? <div className="text-center py-6"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div> : (
@@ -641,7 +682,7 @@ export default function DealerStockHub() {
                       <pre className="whitespace-pre-wrap text-xs font-mono bg-background p-2 rounded border max-h-32 overflow-auto">{r.message}</pre>
                     </div>
                   ))}
-                  {replies.length === 0 && <div className="text-center py-8 text-muted-foreground"><Inbox className="h-8 w-8 mx-auto mb-2 opacity-50" />No replies yet</div>}
+                  {replies.length === 0 && <div className="text-center py-8 text-muted-foreground"><Inbox className="h-8 w-8 mx-auto mb-2 opacity-50" />No dealer replies yet — once dealers reply on WhatsApp they'll appear here automatically.</div>}
                 </div>
               )}
             </CardContent>
@@ -841,8 +882,8 @@ export default function DealerStockHub() {
                     <Label className="text-xs">Or Custom Template Name</Label>
                     <Input
                       placeholder="e.g. ready_stock_alert"
-                      value={bcastTemplate.startsWith("__custom__") ? bcastTemplate.slice(10) : ""}
-                      onChange={(e) => setBcastTemplate(e.target.value ? e.target.value : "")}
+                      value={bcastTemplate}
+                      onChange={(e) => setBcastTemplate(e.target.value)}
                     />
                   </div>
                 </div>
