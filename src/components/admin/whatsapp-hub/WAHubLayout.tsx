@@ -28,12 +28,14 @@ import { WAHubSalesEngines } from "./modules/WAHubSalesEngines";
 import { WAHubSmartTriggers } from "./modules/WAHubSmartTriggers";
 import { WAHubAutoPilotPreview } from "./modules/WAHubAutoPilotPreview";
 import { WAHubCostDashboard } from "./modules/WAHubCostDashboard";
+import { WAHubConversationsLog } from "./modules/WAHubConversationsLog";
 import { EmailMarketingHub } from "../marketing/email/EmailMarketingHub";
 
 type Module =
   | "inbox" | "templates" | "broadcasts" | "bulk-broadcaster" | "flows" | "contacts" | "analytics"
   | "team" | "crm-messages" | "surveys" | "interactive" | "campaign-roi"
-  | "sales-engines" | "smart-triggers" | "auto-pilot-preview" | "email-hub" | "cost-dashboard";
+  | "sales-engines" | "smart-triggers" | "auto-pilot-preview" | "email-hub" | "cost-dashboard"
+  | "conversations-log";
 
 interface NavItem {
   id: Module;
@@ -48,6 +50,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   // Conversations
   { id: "inbox", label: "Inbox", icon: InboxIcon, section: "Conversations", description: "Live chats" },
+  { id: "conversations-log", label: "Conversations Log", icon: MessageSquare, badge: "NEW", section: "Conversations", description: "Tagged + filterable live messages" },
   { id: "crm-messages", label: "CRM Messages", icon: MessageSquareText, section: "Conversations" },
 
   // Content
@@ -100,6 +103,7 @@ export function WAHubLayout() {
       case "auto-pilot-preview": return <div className="h-full overflow-auto p-4"><WAHubAutoPilotPreview /></div>;
       case "email-hub": return <EmailMarketingHub />;
       case "cost-dashboard": return <WAHubCostDashboard />;
+      case "conversations-log": return <WAHubConversationsLog />;
       default: return <WAHubInbox />;
     }
   };

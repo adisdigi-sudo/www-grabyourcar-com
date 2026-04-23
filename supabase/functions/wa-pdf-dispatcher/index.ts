@@ -210,6 +210,12 @@ serve(async (req) => {
             customer_name: customerName,
             message_context: `wa_pdf_auto:${rule.vertical}:${rule.event_name}:${rule.pdf_type}`,
             vertical: rule.vertical,
+            intent: rule.pdf_type === "policy" ? "policy_document"
+                  : rule.pdf_type === "quote" ? "quote_share"
+                  : rule.pdf_type === "renewal" ? "renewal_reminder"
+                  : "policy_document",
+            intent_meta: { rule_id: rule.id, event: rule.event_name, pdf_type: rule.pdf_type },
+            lead_id: payload.recordId || null,
           }),
         });
         const result = await resp.json();

@@ -20256,6 +20256,9 @@ export type Database = {
           error_message: string | null
           failed_at: string | null
           id: string
+          intent: string | null
+          intent_meta: Json | null
+          lead_id: string | null
           media_filename: string | null
           media_mime_type: string | null
           media_url: string | null
@@ -20268,6 +20271,7 @@ export type Database = {
           template_name: string | null
           template_variables: Json | null
           updated_at: string | null
+          vertical: string | null
           wa_message_id: string | null
         }
         Insert: {
@@ -20281,6 +20285,9 @@ export type Database = {
           error_message?: string | null
           failed_at?: string | null
           id?: string
+          intent?: string | null
+          intent_meta?: Json | null
+          lead_id?: string | null
           media_filename?: string | null
           media_mime_type?: string | null
           media_url?: string | null
@@ -20293,6 +20300,7 @@ export type Database = {
           template_name?: string | null
           template_variables?: Json | null
           updated_at?: string | null
+          vertical?: string | null
           wa_message_id?: string | null
         }
         Update: {
@@ -20306,6 +20314,9 @@ export type Database = {
           error_message?: string | null
           failed_at?: string | null
           id?: string
+          intent?: string | null
+          intent_meta?: Json | null
+          lead_id?: string | null
           media_filename?: string | null
           media_mime_type?: string | null
           media_url?: string | null
@@ -20318,6 +20329,7 @@ export type Database = {
           template_name?: string | null
           template_variables?: Json | null
           updated_at?: string | null
+          vertical?: string | null
           wa_message_id?: string | null
         }
         Relationships: [
