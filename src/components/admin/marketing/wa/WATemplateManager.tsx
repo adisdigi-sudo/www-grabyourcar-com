@@ -150,7 +150,29 @@ export function WATemplateManager() {
   const [form, setForm] = useState({
     name: "", category: "Utility", content: "", language: "en", footer: "",
   });
+  const createBodyRef = useRef<HTMLTextAreaElement | null>(null);
+  const editBodyRef = useRef<HTMLTextAreaElement | null>(null);
   const { toast } = useToast();
+
+  // Insert {{var}} at cursor in the target textarea (or append)
+  const insertVariable = (varKey: string, target: "create" | "edit") => {
+    const ref = target === "create" ? createBodyRef.current : editBodyRef.current;
+    const token = `{{${varKey}}}`;
+    if (!ref) {
+      setForm(f => ({ ...f, content: (f.content || "") + token }));
+      return;
+    }
+    const start = ref.selectionStart ?? ref.value.length;
+    const end = ref.selectionEnd ?? ref.value.length;
+    const next = ref.value.slice(0, start) + token + ref.value.slice(end);
+    setForm(f => ({ ...f, content: next }));
+    requestAnimationFrame(() => {
+      ref.focus();
+      const pos = start + token.length;
+      ref.setSelectionRange(pos, pos);
+    });
+  };
+
 
   useEffect(() => { fetchTemplates(); }, []);
 
