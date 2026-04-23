@@ -32,9 +32,8 @@ import { InsuranceKpiDetailDialog } from "./InsuranceKpiDetailDialog";
 import { InsuranceRenewalCampaign } from "./InsuranceRenewalCampaign";
 import { InsurancePerformance } from "./InsurancePerformance";
 import { OmniChatPanel } from "../shared/OmniChatPanel";
-import { VerticalMessagingTab } from "../shared/VerticalMessagingTab";
 
-type ActiveView = "pipeline" | "calling" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "renewal_campaign" | "performance" | "conversations";
+type ActiveView = "pipeline" | "calling" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "renewal_campaign" | "performance";
 type KpiType = "total_leads" | "in_pipeline" | "won" | "active_policies" | "conversion" | null;
 
 type LegacyInsuranceLead = {
@@ -496,7 +495,6 @@ export function InsuranceWorkspace() {
     { key: "bulk_tools" as const, label: "Bulk Tools", icon: Wrench, count: 0, urgent: false },
     { key: "renewal_campaign" as const, label: "Renewal Campaign", icon: Rocket, count: 0, urgent: false },
     { key: "performance" as const, label: "Performance", icon: TrendingUp, count: wonCountMonth, urgent: false },
-    { key: "conversations" as const, label: "Conversations", icon: MessageSquare, count: 0, urgent: false },
   ];
 
   return (
@@ -1031,11 +1029,6 @@ export function InsuranceWorkspace() {
       {activeView === "performance" && (
         <AdminRenderBoundary contextLabel="Insurance performance">
           <InsurancePerformance clients={dedupedClients} policies={performancePolicies as PolicyRecord[]} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} monthOptions={monthOptions} />
-        </AdminRenderBoundary>
-      )}
-      {activeView === "conversations" && (
-        <AdminRenderBoundary contextLabel="Insurance conversations">
-          <VerticalMessagingTab scope="insurance" />
         </AdminRenderBoundary>
       )}
 
