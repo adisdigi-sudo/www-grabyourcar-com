@@ -44,6 +44,12 @@ type ApprovedTemplate = {
   components?: Array<Record<string, unknown>>;
 };
 
+type SendOutcome = {
+  success: boolean;
+  provider_message_id: string | undefined;
+  error: string | undefined;
+};
+
 function countTemplateParams(text?: string | null): number {
   return (text?.match(/\{\{\d+\}\}/g) || []).length;
 }
@@ -400,10 +406,11 @@ serve(async (req) => {
       color || "available",
     ];
     const requiresMessagePacking = Boolean(message?.trim()) && mode !== "template_only";
+    const wabaId = WHATSAPP_WABA_ID ?? null;
     const templateDefinition = await resolveApprovedTemplate(
       supabase,
       WHATSAPP_ACCESS_TOKEN,
-      WHATSAPP_WABA_ID,
+      wabaId,
       [
         ...(Array.isArray(template_variables) ? template_variables.filter((v: unknown): v is string => typeof v === "string" && v.trim().length > 0) : []),
         ...baseFallback,
@@ -415,7 +422,7 @@ serve(async (req) => {
     // Also fetch raw Meta definition so we can rebuild per-dealer
     const rawMetaDefinition = await fetchApprovedMetaTemplateDefinition(
       WHATSAPP_ACCESS_TOKEN,
-      WHATSAPP_WABA_ID,
+      wabaId,
       templateDefinition?.name || metaTemplate,
     );
 
@@ -518,8 +525,8 @@ serve(async (req) => {
           continue;
         }
 
-        let templateResult = { success: !shouldSendTemplate, provider_message_id: undefined as string | undefined, error: undefined as string | undefined };
-        let textResult = { success: !requiresTextMessage, provider_message_id: undefined as string | undefined, error: undefined as string | undefined };
+        let templateResult: SendOutcome = { success: !shouldSendTemplate, provider_message_id: undefined, error: undefined };
+        let textResult: SendOutcome = { success: !requiresTextMessage, provider_message_id: undefined, error: undefined };
 
         // Step 1: Send approved template (opens 24-hour window when needed)
         if (shouldSendTemplate && activeTemplate) {
@@ -649,9 +656,10 @@ serve(async (req) => {
     }
 
     const followupScheduled = Boolean(ai_followup_enabled && campaign?.id && sent > 0);
+    const campaignId = campaign?.id || null;
 
     // Schedule AI follow-up if enabled and at least one message really sent
-    if (followupScheduled) {
+    if (followupScheduled && campaignId) {
       const delayMs = (ai_followup_delay_minutes || 3) * 60 * 1000;
       const followupUrl = `${SUPABASE_URL}/functions/v1/dealer-ai-followup`;
       const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
@@ -661,15 +669,15 @@ serve(async (req) => {
           await fetch(followupUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${anonKey}` },
-            body: JSON.stringify({ campaign_id: campaign.id }),
+            body: JSON.stringify({ campaign_id: campaignId }),
           });
-          console.log(`AI follow-up triggered for campaign ${campaign.id}`);
+          console.log(`AI follow-up triggered for campaign ${campaignId}`);
         } catch (e) {
           console.error("Failed to trigger AI follow-up:", e);
         }
       }, delayMs);
 
-      console.log(`AI follow-up scheduled in ${ai_followup_delay_minutes} minutes for campaign ${campaign.id}`);
+      console.log(`AI follow-up scheduled in ${ai_followup_delay_minutes} minutes for campaign ${campaignId}`);
     }
 
     // Legacy log
