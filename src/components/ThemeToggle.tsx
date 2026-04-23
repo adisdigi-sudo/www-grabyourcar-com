@@ -1,8 +1,10 @@
+import { forwardRef } from "react";
 import { Laptop, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { Button } from "@/components/ui/button";
 
-export function ThemeToggle() {
+export const ThemeToggle = forwardRef<HTMLButtonElement, React.ComponentPropsWithoutRef<typeof Button>>(
+function ThemeToggle({ className, ...props }, ref) {
   const { setTheme, theme } = useTheme();
 
   const currentTheme = theme ?? "system";
@@ -31,15 +33,19 @@ export function ThemeToggle() {
 
   return (
     <Button
+      ref={ref}
       variant="ghost"
       size="icon"
-      className="h-9 w-9"
+      className={className ?? "h-9 w-9"}
       onClick={cycleTheme}
       title={`Switch to ${nextThemeLabel} theme`}
       aria-label={`Current theme ${currentTheme}. Switch to ${nextThemeLabel} theme`}
+      {...props}
     >
       <Icon className="h-4 w-4" />
       <span className="sr-only">Toggle theme</span>
     </Button>
   );
-}
+});
+
+ThemeToggle.displayName = "ThemeToggle";
