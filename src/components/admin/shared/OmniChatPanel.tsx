@@ -61,6 +61,12 @@ interface ChatThread {
   unread_count?: number;
   isDraft?: boolean;
   window_expires_at?: string | null;
+  /** True when the most recent inbound (customer) message is newer than the most recent outbound (agent) reply. */
+  has_pending_reply?: boolean;
+  /** Conversation status (e.g. open / resolved). Used by the "Responded" filter. */
+  status?: string | null;
+  /** Total inbound messages from the customer in this thread (used for the reply-count badge). */
+  reply_count?: number;
 }
 
 interface ChatMessage {
