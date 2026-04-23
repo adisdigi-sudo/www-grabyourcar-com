@@ -24,6 +24,7 @@ import {
 import { InsuranceContentSection } from "@/components/insurance/InsuranceContentSection";
 import { InsuranceOfferBanners } from "@/components/insurance/InsuranceOfferBanners";
 import { InsuranceGrabCTA } from "@/components/insurance/InsuranceGrabCTA";
+import { PromoBanner } from "@/components/marketing/PromoBanner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
