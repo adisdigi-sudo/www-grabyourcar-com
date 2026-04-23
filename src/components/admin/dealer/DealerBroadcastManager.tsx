@@ -94,7 +94,6 @@ export default function DealerBroadcastManager() {
     },
   });
 
-  const brands = [...new Set(reps.map((r: any) => r.brand))].sort();
   const companyTypes = [...new Set(reps.map((r: any) => r.dealer_companies?.dealer_type).filter(Boolean))];
 
   const filteredReps = reps.filter((r: any) => {
@@ -159,7 +158,7 @@ export default function DealerBroadcastManager() {
         {[
           { label: "Total Partners", value: reps.length, icon: Users, gradient: "from-blue-500 to-indigo-600" },
           { label: "With WhatsApp", value: reps.filter((r: any) => r.whatsapp_number).length, icon: MessageCircle, gradient: "from-green-500 to-emerald-600" },
-          { label: "Brands Covered", value: brands.length, icon: Building2, gradient: "from-purple-500 to-violet-600" },
+          { label: "Brands Covered", value: allCarBrands.length, icon: Building2, gradient: "from-purple-500 to-violet-600" },
           { label: "Broadcasts Sent", value: history.length, icon: Send, gradient: "from-amber-500 to-orange-600" },
         ].map(s => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -190,11 +189,25 @@ export default function DealerBroadcastManager() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
               </div>
-              <Select value={brandFilter} onValueChange={setBrandFilter}>
-                <SelectTrigger className="w-[140px]"><Filter className="h-4 w-4 mr-1" /><SelectValue placeholder="Brand" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Brands</SelectItem>
-                  {brands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+              <Select value={brandFilter} onValueChange={(v) => { setBrandFilter(v); setModelFilter("all"); setVariantFilter("all"); }}>
+                <SelectTrigger className="w-[160px]"><Filter className="h-4 w-4 mr-1" /><SelectValue placeholder="Brand" /></SelectTrigger>
+                <SelectContent className="max-h-[320px]">
+                  <SelectItem value="all">All Brands ({allCarBrands.length})</SelectItem>
+                  {allCarBrands.map((b: any) => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={modelFilter} onValueChange={(v) => { setModelFilter(v); setVariantFilter("all"); }} disabled={brandFilter === "all"}>
+                <SelectTrigger className="w-[160px]"><SelectValue placeholder={brandFilter === "all" ? "Pick brand first" : "Model"} /></SelectTrigger>
+                <SelectContent className="max-h-[320px]">
+                  <SelectItem value="all">All Models ({carModels.length})</SelectItem>
+                  {(carModels as any[]).map((m) => <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={variantFilter} onValueChange={setVariantFilter} disabled={modelFilter === "all"}>
+                <SelectTrigger className="w-[160px]"><SelectValue placeholder={modelFilter === "all" ? "Pick model first" : "Variant"} /></SelectTrigger>
+                <SelectContent className="max-h-[320px]">
+                  <SelectItem value="all">All Variants ({carVariants.length})</SelectItem>
+                  {(carVariants as any[]).map((v) => <SelectItem key={v.id} value={v.name}>{v.name}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
