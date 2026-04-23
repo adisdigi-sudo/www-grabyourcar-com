@@ -74,11 +74,14 @@ Deno.serve(async (req) => {
     if (!firecrawlKey) throw new Error('FIRECRAWL_API_KEY not configured');
 
     // Build list of source pages to scrape: caller override > OEM showroom > CarDekho
+    const brandLower = body.brand.toLowerCase();
+    const oemSources: string[] = [];
+    if (brandLower === 'kia') oemSources.push(buildKiaIndiaShowroomUrl(body.modelName));
+    if (brandLower === 'hyundai') oemSources.push(buildHyundaiIndiaShowroomUrl(body.modelName));
+
     const sources: string[] = body.sourceUrls && body.sourceUrls.length
       ? body.sourceUrls
-      : (body.brand.toLowerCase() === 'kia'
-          ? [buildKiaIndiaShowroomUrl(body.modelName), buildCardekhoBrochureUrl(body.brand, body.modelName)]
-          : [buildCardekhoBrochureUrl(body.brand, body.modelName)]);
+      : [...oemSources, buildCardekhoBrochureUrl(body.brand, body.modelName)];
 
     const candidates: { url: string; source: string; score: number }[] = [];
     const modelTokens = body.modelName.toLowerCase().split(/\s+/);
