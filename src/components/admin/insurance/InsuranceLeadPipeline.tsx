@@ -1804,16 +1804,24 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
                           new Date().toISOString().split("T")[0];
 
                         let newStage = editFields.pipeline_stage || normalizedStage;
+
+                        // Hard guard: if the live record is already terminal (policy_issued / won)
+                        // and the user did not explicitly choose a different terminal stage,
+                        // never downgrade it from the edit form.
+                        if (lockTerminal) {
+                          newStage = liveStage;
+                        }
+
                         const followUpDateSet = !!editFields.follow_up_date;
                         const followUpDateCleared = !editFields.follow_up_date && selectedClient.follow_up_date;
 
                         // Auto-promote to follow_up when follow-up date is set
                         const earlyStages = ["new_lead", "smart_calling", "quote_shared"];
-                        if (followUpDateSet && earlyStages.includes(newStage)) {
+                        if (!lockTerminal && followUpDateSet && earlyStages.includes(newStage)) {
                           newStage = "follow_up";
                         }
                         // Demote from follow_up when follow-up date is cleared (only if user didn't explicitly pick a stage)
-                        if (followUpDateCleared && newStage === "follow_up" && !editFields.pipeline_stage) {
+                        if (!lockTerminal && followUpDateCleared && newStage === "follow_up" && !editFields.pipeline_stage) {
                           newStage = "quote_shared";
                         }
 
