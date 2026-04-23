@@ -145,40 +145,30 @@ function buildDealerTemplateValues(params: {
   color?: string | null;
   message?: string | null;
 }): string[] {
-  const inquiryMessage = normalizeTemplateText(params.message);
+  // IMPORTANT: We never pack inquiry text into "booking_confirmation" variables — that
+  // template literally tells the dealer their booking is confirmed which is misleading.
+  // We just fill variables with neutral, dealer-friendly values so the template renders.
   const vehicleContext = normalizeTemplateText(
     [params.inquiryLabel, params.color].filter(Boolean).join(" "),
     140,
-  );
-  const shortInquiry = inquiryMessage || vehicleContext || "Need quick confirmation";
+  ) || params.inquiryLabel || "vehicle inquiry";
 
   if (params.variableCount <= 0) return [];
 
-  if (params.templateName === "booking_confirmation") {
-    return [
-      inquiryMessage
-        ? `${params.dealerName} — ${normalizeTemplateText(params.message, 180)}`
-        : params.dealerName,
-      params.bookingRef,
-      vehicleContext,
-      shortInquiry,
-    ];
-  }
-
   if (params.variableCount === 1) {
-    return [inquiryMessage ? `${params.dealerName} — ${shortInquiry}` : `${params.dealerName}`];
+    return [params.dealerName];
   }
 
   if (params.variableCount === 2) {
-    return [params.dealerName, shortInquiry];
+    return [params.dealerName, vehicleContext];
   }
 
   return [
     params.dealerName,
-    vehicleContext || params.inquiryLabel,
-    shortInquiry,
+    vehicleContext,
     params.bookingRef,
     params.color || "available",
+    "GrabYourCar",
     "GrabYourCar",
   ];
 }
