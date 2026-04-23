@@ -518,7 +518,13 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
                   <Button
                     key={child.id}
                     variant="ghost"
-                    onClick={() => handleNavClick(child.id)}
+                    onClick={() => {
+                      if (child.externalPath) {
+                        navigate(withPreviewParams(child.externalPath));
+                      } else {
+                        handleNavClick(child.id);
+                      }
+                    }}
                     className={cn(
                       "w-full justify-start gap-3 px-3 py-3 h-auto font-normal text-sm touch-manipulation",
                       "min-h-[44px]",
