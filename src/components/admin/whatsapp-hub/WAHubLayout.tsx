@@ -7,7 +7,7 @@ import {
   MessageSquare, LayoutTemplate, Megaphone, Workflow, Users, BarChart3,
   UsersRound, ChevronLeft, ChevronRight, Wifi, WifiOff, Search,
   MessageSquareText, ClipboardList, MousePointer,
-  TrendingUp, Sparkles, Zap, Mail, Inbox as InboxIcon, Bot, Wallet,
+  TrendingUp, Sparkles, Zap, Mail, Inbox as InboxIcon, Bot, Wallet, Map,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -29,13 +29,14 @@ import { WAHubSmartTriggers } from "./modules/WAHubSmartTriggers";
 import { WAHubAutoPilotPreview } from "./modules/WAHubAutoPilotPreview";
 import { WAHubCostDashboard } from "./modules/WAHubCostDashboard";
 import { WAHubConversationsLog } from "./modules/WAHubConversationsLog";
+import { WAHubFlowMap } from "./modules/WAHubFlowMap";
 import { EmailMarketingHub } from "../marketing/email/EmailMarketingHub";
 
 type Module =
   | "inbox" | "templates" | "broadcasts" | "bulk-broadcaster" | "flows" | "contacts" | "analytics"
   | "team" | "crm-messages" | "surveys" | "interactive" | "campaign-roi"
   | "sales-engines" | "smart-triggers" | "auto-pilot-preview" | "email-hub" | "cost-dashboard"
-  | "conversations-log";
+  | "conversations-log" | "flow-map";
 
 interface NavItem {
   id: Module;
@@ -61,7 +62,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: "surveys", label: "Surveys", icon: ClipboardList, section: "Content" },
 
   // Automation
-  { id: "smart-triggers", label: "Auto-Replies", icon: Zap, badge: "🔥", section: "Automation", description: "Trigger setup" },
+  { id: "flow-map", label: "Flow Map", icon: Map, badge: "★", section: "Automation", description: "Visual map of every auto-message" },
+  { id: "smart-triggers", label: "Auto-Replies", icon: Zap, badge: "🔥", section: "Automation", description: "Keyword triggers + AI rules" },
   { id: "flows", label: "Flows", icon: Workflow, section: "Automation" },
   { id: "sales-engines", label: "Sales Engines", icon: Sparkles, section: "Automation" },
   { id: "auto-pilot-preview", label: "Auto-Pilot Preview", icon: Bot, badge: "NEW", section: "Automation", description: "Approve AI messages before send" },
@@ -104,6 +106,7 @@ export function WAHubLayout() {
       case "email-hub": return <EmailMarketingHub />;
       case "cost-dashboard": return <WAHubCostDashboard />;
       case "conversations-log": return <WAHubConversationsLog />;
+      case "flow-map": return <WAHubFlowMap />;
       default: return <WAHubInbox />;
     }
   };
