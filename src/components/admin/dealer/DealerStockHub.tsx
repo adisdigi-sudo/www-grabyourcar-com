@@ -69,14 +69,18 @@ export default function DealerStockHub() {
   const { data: templates = [] } = useQuery<any[]>({
     queryKey: ["wa-templates-stock"],
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data, error } = await (supabase as any)
         .from("whatsapp_templates")
-        .select("name, display_name, body, status, category")
-        .eq("status", "APPROVED")
+        .select("name, content, category, approval_status, is_approved, is_active")
+        .or("approval_status.eq.approved,is_approved.eq.true")
         .order("name");
-      return ((data as any[]) || []).filter(
-        (t: any) => !/booking|policy|loan|invoice|otp|payment|feedback/i.test([t.name, t.display_name, t.body].join(" "))
-      );
+      if (error) {
+        console.error("[StockHub] templates load error:", error);
+        return [];
+      }
+      return ((data as any[]) || [])
+        .filter((t: any) => t.is_active !== false)
+        .filter((t: any) => !/booking|policy|loan|invoice|otp|payment|feedback/i.test([t.name, t.category, t.content].filter(Boolean).join(" ")));
     },
   });
 
