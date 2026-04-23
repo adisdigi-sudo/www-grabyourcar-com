@@ -132,17 +132,56 @@ export default function DealerStockHub() {
     }
   };
 
+  // 📥 Pull recent INBOUND messages from any phone that matches a dealer rep.
+  // (Previously this read from dealer_chat_history which is unused — bug.)
   const { data: replies = [], isLoading: repliesLoading } = useQuery<any[]>({
-    queryKey: ["dealer-stock-replies"],
+    queryKey: ["dealer-stock-replies", reps.length],
+    enabled: reps.length > 0,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("dealer_chat_history")
-        .select("id, dealer_rep_id, dealer_company_id, message, sender_name, sender_phone, created_at, dealer_representatives(id, name, brand)")
+      // Build a phone → rep map (last 10 digits is the canonical key)
+      const phoneToRep = new Map<string, any>();
+      for (const r of reps as any[]) {
+        const k = String(r.whatsapp_number || "").replace(/\D/g, "").slice(-10);
+        if (k) phoneToRep.set(k, r);
+      }
+      if (phoneToRep.size === 0) return [];
+
+      // 1) Get all conversations whose phone matches a dealer rep
+      const { data: convos } = await (supabase as any)
+        .from("wa_conversations")
+        .select("id, phone, customer_name")
+        .order("last_message_at", { ascending: false })
+        .limit(500);
+      const dealerConvos = (convos || []).filter((c: any) => phoneToRep.has(String(c.phone || "").slice(-10)));
+      if (dealerConvos.length === 0) return [];
+
+      const convoIds = dealerConvos.map((c: any) => c.id);
+      const convoById = new Map(dealerConvos.map((c: any) => [c.id, c]));
+
+      // 2) Get latest 80 inbound text messages from those conversations
+      const { data: msgs } = await (supabase as any)
+        .from("wa_inbox_messages")
+        .select("id, conversation_id, content, created_at, message_type")
+        .in("conversation_id", convoIds)
         .eq("direction", "inbound")
         .order("created_at", { ascending: false })
         .limit(80);
-      if (error) throw error;
-      return (data as any[]) || [];
+
+      return ((msgs || []) as any[])
+        .filter((m: any) => (m.content || "").trim().length > 0)
+        .map((m: any) => {
+          const convo = convoById.get(m.conversation_id) as any;
+          const rep = phoneToRep.get(String(convo?.phone || "").slice(-10));
+          return {
+            id: m.id,
+            message: m.content,
+            sender_name: rep?.name || convo?.customer_name || convo?.phone,
+            sender_phone: convo?.phone,
+            created_at: m.created_at,
+            dealer_rep_id: rep?.id || null,
+            dealer_representatives: rep ? { id: rep.id, name: rep.name, brand: rep.brand } : null,
+          };
+        });
     },
   });
 
