@@ -14,8 +14,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Send, Users, MessageCircle, Plus, Upload, Phone, Zap, Bot, Car, Palette, History, Loader2 } from "lucide-react";
+import { Send, Users, MessageCircle, Plus, Upload, Phone, Zap, Bot, Car, Palette, History, Loader2, Activity } from "lucide-react";
 import { format } from "date-fns";
+import DealerCampaignTracker from "./DealerCampaignTracker";
 
 const TEMPLATES: Record<string, { label: string; icon: string; build: (b: string, m: string, v: string, c: string) => string }> = {
   discount_inquiry: {
@@ -320,8 +321,13 @@ export default function DealerInquiryHub() {
     <Tabs defaultValue="inquiry" className="space-y-4">
       <TabsList>
         <TabsTrigger value="inquiry" className="gap-1"><Car className="h-4 w-4" /> Smart Inquiry</TabsTrigger>
+        <TabsTrigger value="tracker" className="gap-1"><Activity className="h-4 w-4" /> Live Tracker</TabsTrigger>
         <TabsTrigger value="history" className="gap-1"><History className="h-4 w-4" /> Campaign History</TabsTrigger>
       </TabsList>
+
+      <TabsContent value="tracker" className="space-y-4">
+        <DealerCampaignTracker />
+      </TabsContent>
 
       <TabsContent value="inquiry" className="space-y-4">
         {/* Car Selection Bar */}
