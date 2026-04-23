@@ -135,19 +135,31 @@ export const CarDatabaseWorkspace = ({ initialTab = 'upload' }: { initialTab?: C
 
       {activeTab === 'manage' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex items-center gap-3 px-4 py-3 border-b bg-muted/20">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/20 flex-wrap">
+            <div className="relative flex-1 min-w-[220px] max-w-xs">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={searchFilter} onChange={e => setSearchFilter(e.target.value)} placeholder="Search by name, brand, or slug..." className="pl-9 h-9" />
+              <Input value={searchFilter} onChange={e => setSearchFilter(e.target.value)} placeholder="Search name, brand, slug..." className="pl-9 h-9" />
             </div>
             <Select value={brandFilter} onValueChange={setBrandFilter}>
-              <SelectTrigger className="h-9 w-44"><SelectValue placeholder="All Brands" /></SelectTrigger>
+              <SelectTrigger className="h-9 w-40"><SelectValue placeholder="All Brands" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All Brands</SelectItem>
                 {(dbBrands || []).map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" className="h-9" onClick={() => refetchCars()}><RefreshCw className="h-4 w-4" /></Button>
+            <Input value={modelFilter} onChange={e => setModelFilter(e.target.value)} placeholder="Filter by model..." className="h-9 w-44" />
+            <Select value={cityFilter} onValueChange={setCityFilter}>
+              <SelectTrigger className="h-9 w-36"><SelectValue placeholder="All Cities" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Cities</SelectItem>
+                {CITY_OPTIONS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={clearFilters}>Clear</Button>
+            )}
+            <Button variant="outline" size="sm" className="h-9 ml-auto" onClick={() => refetchCars()}><RefreshCw className="h-4 w-4" /></Button>
+            <Badge variant="secondary" className="text-xs">{filteredExisting.length} of {existingCars?.length || 0}</Badge>
           </div>
           <ScrollArea className="flex-1">
             <table className="w-full text-sm">
