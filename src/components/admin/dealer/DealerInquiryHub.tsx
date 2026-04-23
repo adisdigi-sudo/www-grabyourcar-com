@@ -192,8 +192,14 @@ export default function DealerInquiryHub() {
     const templateExists = approvedTemplates.some((tpl: any) => tpl.name === metaTemplate);
     if (templateExists) return;
 
-    const utilityTemplate = approvedTemplates.find((tpl: any) => String(tpl.category).toLowerCase() === "utility");
-    setMetaTemplate((utilityTemplate || approvedTemplates[0]).name);
+    // Prefer neutral inquiry-style templates; never auto-pick booking_confirmation
+    // (it tells the dealer their booking is confirmed, which is wrong for an inquiry).
+    const preferredOrder = ["welcome_new_lead", "grabyourcarintroduction", "insurancefollowup"];
+    const preferred = preferredOrder
+      .map((name) => approvedTemplates.find((tpl: any) => tpl.name === name))
+      .find(Boolean);
+    const safeFallback = approvedTemplates.find((tpl: any) => tpl.name !== "booking_confirmation");
+    setMetaTemplate((preferred || safeFallback || approvedTemplates[0]).name);
   }, [approvedTemplates, metaTemplate]);
 
   const states = useMemo(() => [...new Set(reps.map((r: any) => r.state).filter(Boolean))].sort(), [reps]);
