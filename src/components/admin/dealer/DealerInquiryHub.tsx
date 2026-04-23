@@ -154,6 +154,19 @@ export default function DealerInquiryHub() {
     refetchInterval: 3000,
   });
 
+  const { data: approvedTemplates = [] } = useQuery({
+    queryKey: ["dealer-inquiry-approved-templates"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("wa_templates")
+        .select("name, display_name, category, language, header_type, status")
+        .eq("status", "approved")
+        .order("category")
+        .order("name");
+      return data || [];
+    },
+  });
+
   useEffect(() => {
     const channel = supabase
       .channel("dealer-inquiry-live-sync")
@@ -173,6 +186,15 @@ export default function DealerInquiryHub() {
       void supabase.removeChannel(channel);
     };
   }, [qc]);
+
+  useEffect(() => {
+    if (!approvedTemplates.length) return;
+    const templateExists = approvedTemplates.some((tpl: any) => tpl.name === metaTemplate);
+    if (templateExists) return;
+
+    const utilityTemplate = approvedTemplates.find((tpl: any) => String(tpl.category).toLowerCase() === "utility");
+    setMetaTemplate((utilityTemplate || approvedTemplates[0]).name);
+  }, [approvedTemplates, metaTemplate]);
 
   const states = useMemo(() => [...new Set(reps.map((r: any) => r.state).filter(Boolean))].sort(), [reps]);
   const cities = useMemo(() => [...new Set(reps.map((r: any) => r.city).filter(Boolean))].sort(), [reps]);
@@ -567,10 +589,18 @@ export default function DealerInquiryHub() {
                     <Select value={metaTemplate} onValueChange={setMetaTemplate}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="booking_confirmation">🧾 Utility Opener (approved)</SelectItem>
+                        {approvedTemplates.length === 0 ? (
+                          <SelectItem value="booking_confirmation">booking_confirmation</SelectItem>
+                        ) : approvedTemplates.map((tpl: any) => (
+                          <SelectItem key={tpl.name} value={tpl.name}>
+                            {tpl.display_name || tpl.name} ({tpl.category || "general"})
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground mt-1">Yeh approved utility template hai jo pehle chat window safely open karta hai.</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Approved templates live load ho rahe hain. Dealer inquiry ke liye utility template sabse safe rehta hai.
+                    </p>
                   </div>
                 )}
 
