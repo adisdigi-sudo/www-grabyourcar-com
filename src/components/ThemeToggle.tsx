@@ -36,7 +36,7 @@ function ThemeToggle({ className, ...props }, ref) {
       ref={ref}
       variant="ghost"
       size="icon"
-      className={className ?? "h-9 w-9"}
+      className={["h-9 w-9", className].filter(Boolean).join(" ")}
       onClick={cycleTheme}
       title={`Switch to ${nextThemeLabel} theme`}
       aria-label={`Current theme ${currentTheme}. Switch to ${nextThemeLabel} theme`}
