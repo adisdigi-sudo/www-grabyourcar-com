@@ -68,7 +68,9 @@ interface NavItem {
   allowedRoles?: AppRole[];
   /** Which vertical slugs this item belongs to. undefined = show in all verticals */
   verticals?: string[];
-  children?: { id: string; label: string; icon: React.ElementType; badge?: string; allowedRoles?: AppRole[]; verticals?: string[] }[];
+  /** If set, clicking this child navigates to this route instead of switching admin tab */
+  externalPath?: string;
+  children?: { id: string; label: string; icon: React.ElementType; badge?: string; allowedRoles?: AppRole[]; verticals?: string[]; externalPath?: string }[];
 }
 
 const navItems: NavItem[] = [
@@ -189,7 +191,8 @@ const navItems: NavItem[] = [
     verticals: ["car-database"],
     allowedRoles: ["super_admin", "admin"],
     children: [
-      { id: "cars-workspace", label: "📊 Car Data Entry", icon: Car },
+      { id: "cars-workspace", label: "📊 Manage All Cars", icon: Car },
+      { id: "cars-brand-scrape", label: "🤖 Brand Scrape (Auto)", icon: Globe, externalPath: "/admin/brand-scrape" },
     ]
   },
 
@@ -515,7 +518,13 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
                   <Button
                     key={child.id}
                     variant="ghost"
-                    onClick={() => handleNavClick(child.id)}
+                    onClick={() => {
+                      if (child.externalPath) {
+                        navigate(withPreviewParams(child.externalPath));
+                      } else {
+                        handleNavClick(child.id);
+                      }
+                    }}
                     className={cn(
                       "w-full justify-start gap-3 px-3 py-3 h-auto font-normal text-sm touch-manipulation",
                       "min-h-[44px]",
