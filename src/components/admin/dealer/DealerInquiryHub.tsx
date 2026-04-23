@@ -252,7 +252,7 @@ export default function DealerInquiryHub() {
           ai_followup_enabled: aiFollowup,
           ai_followup_script: aiScript === "custom" ? customScript : AI_SCRIPTS.find(s => s.id === aiScript)?.script || "",
           ai_followup_delay_minutes: followupDelay,
-          template_name: sendMode !== "text_only" ? metaTemplate : null,
+          template_name: metaTemplate,
           template_variables: [],
           send_mode: sendMode,
           recipients: selectedReps.map((r: any) => ({
@@ -575,34 +575,32 @@ export default function DealerInquiryHub() {
                     </SelectContent>
                   </Select>
                   {sendMode === "text_only" && (
-                    <p className="text-xs text-green-600 mt-1">✅ Direct text bhejega; agar 24-hour chat closed hai to safe approved opener template se window khol dega</p>
+                    <p className="text-xs text-green-600 mt-1">✅ Pehle selected approved template use hoga; agar chat window open hai tab detailed text bhi jayega</p>
                   )}
                   {sendMode === "template_then_text" && (
-                    <p className="text-xs text-muted-foreground mt-1">ℹ️ Pehle approved opener template, uske baad detailed text message jayega</p>
+                    <p className="text-xs text-muted-foreground mt-1">ℹ️ Closed chat me inquiry selected template ke andar hi bhejega; open chat me uske baad detailed text bhi jayega</p>
                   )}
                 </div>
 
                 {/* Meta Template */}
-                {sendMode !== "text_only" && (
-                  <div>
-                    <Label className="text-xs">Meta Approved Template *</Label>
-                    <Select value={metaTemplate} onValueChange={setMetaTemplate}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {approvedTemplates.length === 0 ? (
-                          <SelectItem value="booking_confirmation">booking_confirmation</SelectItem>
-                        ) : approvedTemplates.map((tpl: any) => (
-                          <SelectItem key={tpl.name} value={tpl.name}>
-                            {tpl.display_name || tpl.name} ({tpl.category || "general"})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Approved templates live load ho rahe hain. Dealer inquiry ke liye utility template sabse safe rehta hai.
-                    </p>
-                  </div>
-                )}
+                <div>
+                  <Label className="text-xs">Meta Approved Template *</Label>
+                  <Select value={metaTemplate} onValueChange={setMetaTemplate}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {approvedTemplates.length === 0 ? (
+                        <SelectItem value="booking_confirmation">booking_confirmation</SelectItem>
+                      ) : approvedTemplates.map((tpl: any) => (
+                        <SelectItem key={tpl.name} value={tpl.name}>
+                          {tpl.display_name || tpl.name} ({tpl.category || "general"})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Har send mode me selected approved template use hoga. Closed dealer chat me isi template ke andar inquiry pack karke bheji jayegi.
+                  </p>
+                </div>
 
                 {/* Smart Template */}
                 {sendMode !== "template_only" && (

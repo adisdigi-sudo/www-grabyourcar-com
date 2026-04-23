@@ -114,6 +114,69 @@ function buildTemplateComponents(
   return components;
 }
 
+function countResolvedTemplateParams(components?: Array<Record<string, unknown>>): number {
+  if (!Array.isArray(components)) return 0;
+  return components.reduce((total, component) => {
+    const parameters = Array.isArray((component as { parameters?: unknown[] }).parameters)
+      ? ((component as { parameters?: unknown[] }).parameters as unknown[])
+      : [];
+    return total + parameters.length;
+  }, 0);
+}
+
+function normalizeTemplateText(value?: string | null, maxLength = 700): string {
+  const normalized = String(value || "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  return normalized.slice(0, maxLength);
+}
+
+function buildDealerTemplateValues(params: {
+  templateName: string;
+  variableCount: number;
+  dealerName: string;
+  bookingRef: string;
+  inquiryLabel: string;
+  color?: string | null;
+  message?: string | null;
+}): string[] {
+  const inquiryMessage = normalizeTemplateText(params.message);
+  const vehicleContext = normalizeTemplateText(
+    [params.inquiryLabel, params.color].filter(Boolean).join(" "),
+    140,
+  );
+  const shortInquiry = inquiryMessage || vehicleContext || "Need quick confirmation";
+
+  if (params.variableCount <= 0) return [];
+
+  if (params.templateName === "booking_confirmation") {
+    return [
+      inquiryMessage
+        ? `${params.dealerName} — ${normalizeTemplateText(params.message, 180)}`
+        : params.dealerName,
+      params.bookingRef,
+      vehicleContext,
+      shortInquiry,
+    ];
+  }
+
+  if (params.variableCount === 1) {
+    return [inquiryMessage ? `${params.dealerName} — ${shortInquiry}` : `${params.dealerName}`];
+  }
+
+  if (params.variableCount === 2) {
+    return [params.dealerName, shortInquiry];
+  }
+
+  return [
+    params.dealerName,
+    vehicleContext || params.inquiryLabel,
+    shortInquiry,
+    params.bookingRef,
+    params.color || "available",
+    "GrabYourCar",
+  ];
+}
+
 async function fetchApprovedMetaTemplateDefinition(
   token: string,
   businessAccountId: string | null,
@@ -393,17 +456,29 @@ serve(async (req) => {
         const windowOpen = await hasOpenConversationWindow(supabase, phone.full);
         const shouldAutoOpenWindow = mode === "text_only" && !windowOpen;
         const shouldSendTemplate = mode === "template_only" || mode === "template_then_text" || shouldAutoOpenWindow;
-        const requiresTextMessage = (mode === "text_only" || mode === "template_then_text") && Boolean(message && message.trim());
-        const actualMode = shouldAutoOpenWindow ? "template_then_text" : mode;
+        const templateVariableCount = countResolvedTemplateParams(templateDefinition?.components);
+        const templateCanCarryInquiry = shouldSendTemplate && templateVariableCount > 0 && Boolean(message?.trim());
+        const requiresTextMessage =
+          (mode === "text_only" || mode === "template_then_text")
+          && Boolean(message && message.trim())
+          && (windowOpen || !templateCanCarryInquiry);
+        const actualMode = shouldAutoOpenWindow
+          ? templateCanCarryInquiry
+            ? "template_only"
+            : "template_then_text"
+          : mode;
 
         // Build per-dealer template with their name as first variable
         const dealerName = recipientInfo.rep_name || recipientInfo.dealer_name || "Partner";
-        const perDealerValues = [
+        const perDealerValues = buildDealerTemplateValues({
+          templateName: templateDefinition?.name || metaTemplate,
+          variableCount: templateVariableCount,
           dealerName,
           bookingRef,
           inquiryLabel,
-          color || "available",
-        ];
+          color,
+          message,
+        });
         let activeTemplate: ApprovedTemplate | null = null;
         if (shouldSendTemplate && templateDefinition) {
           if (rawMetaDefinition?.components) {
@@ -517,6 +592,7 @@ serve(async (req) => {
               actual_mode: actualMode,
               conversation_window_open: windowOpen,
               opener_template_name: activeTemplate?.name || null,
+              template_carries_message: templateCanCarryInquiry,
               provider_message_id: textResult.provider_message_id || templateResult.provider_message_id || null,
               template_provider_message_id: templateResult.provider_message_id || null,
               text_provider_message_id: textResult.provider_message_id || null,
@@ -537,6 +613,7 @@ serve(async (req) => {
               actual_mode: actualMode,
               conversation_window_open: windowOpen,
               opener_template_name: activeTemplate?.name || null,
+              template_carries_message: templateCanCarryInquiry,
               provider_message_id: textResult.provider_message_id || templateResult.provider_message_id || null,
               template_provider_message_id: templateResult.provider_message_id || null,
               text_provider_message_id: textResult.provider_message_id || null,
