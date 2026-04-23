@@ -826,6 +826,37 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                     </Button>
                   ))}
                 </div>
+                {selectedThread.window_expires_at && !isWindowOpen && (
+                  <div className="flex items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-2 py-1">
+                    <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                      ⏰ 24hr window closed — use approved template
+                    </p>
+                    <Popover open={showTemplates} onOpenChange={setShowTemplates}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 border-amber-400">
+                          <LayoutTemplate className="h-3 w-3" /> Pick template
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-2" align="end">
+                        <p className="text-xs font-semibold mb-2">📋 Approved Templates</p>
+                        <div className="space-y-1 max-h-56 overflow-auto">
+                          {templates.length === 0 ? (
+                            <p className="text-xs text-muted-foreground p-2">No approved templates</p>
+                          ) : templates.map(tpl => (
+                            <button
+                              key={tpl.id}
+                              onClick={() => sendTemplateFromPicker(tpl)}
+                              className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors"
+                            >
+                              <span className="font-medium">{tpl.display_name || tpl.name}</span>
+                              <p className="text-muted-foreground truncate">{tpl.body}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
                 <div className="flex gap-1.5">
                   <input
                     ref={fileInputRef}
