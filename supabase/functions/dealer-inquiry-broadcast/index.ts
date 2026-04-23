@@ -15,27 +15,56 @@ function normalizePhone(phone: string): { full: string; short: string; valid: bo
 
 async function hasOpenConversationWindow(supabase: any, phone: string): Promise<boolean> {
   const now = new Date();
+  const shortPhone = phone.replace(/^91/, "");
 
-  const { data: convo } = await supabase
+  const { data: convoRows } = await supabase
     .from("wa_conversations")
     .select("window_expires_at")
-    .eq("phone", phone)
-    .maybeSingle();
+    .in("phone", [phone, shortPhone])
+    .order("updated_at", { ascending: false })
+    .limit(5);
 
-  if (convo?.window_expires_at && new Date(convo.window_expires_at) > now) {
+  const convo = convoRows?.find((row: any) => row?.window_expires_at && new Date(row.window_expires_at) > now);
+  if (convo?.window_expires_at) {
     return true;
   }
 
-  const { data: legacy } = await supabase
+  const { data: legacyRows } = await supabase
     .from("whatsapp_conversations")
     .select("last_message_at")
-    .eq("phone_number", phone)
-    .maybeSingle();
+    .in("phone_number", [phone, shortPhone])
+    .order("last_message_at", { ascending: false })
+    .limit(5);
+
+  const legacy = legacyRows?.find((row: any) => row?.last_message_at);
 
   return Boolean(
     legacy?.last_message_at &&
     now.getTime() - new Date(legacy.last_message_at).getTime() < 24 * 60 * 60 * 1000,
   );
+}
+
+async function hasRecentProviderBlock(supabase: any, phone: string): Promise<{ blocked: boolean; error?: string }> {
+  const shortPhone = phone.replace(/^91/, "");
+  const cutoff = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+
+  const { data } = await supabase
+    .from("dealer_inquiry_recipients")
+    .select("qualification_data, created_at")
+    .in("phone", [phone, shortPhone])
+    .gte("created_at", cutoff)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const blockedRow = (data || []).find((row: any) => {
+    const tracking = row?.qualification_data || {};
+    return tracking?.provider_status === "failed" && String(tracking?.error_code || "") === "131049";
+  });
+
+  return {
+    blocked: Boolean(blockedRow),
+    error: blockedRow?.qualification_data?.last_error || "Recent provider block detected",
+  };
 }
 
 type ApprovedTemplate = {
@@ -454,7 +483,7 @@ serve(async (req) => {
       status: "sending",
     }).select("id").single();
 
-    let sent = 0, failed = 0;
+    let sent = 0, failed = 0, blocked = 0;
     const errors: string[] = [];
     const recipientRows: any[] = [];
 
@@ -479,18 +508,73 @@ serve(async (req) => {
 
       try {
         const windowOpen = await hasOpenConversationWindow(supabase, phone.full);
-        const shouldAutoOpenWindow = mode === "text_only" && !windowOpen;
+        const recentBlock = await hasRecentProviderBlock(supabase, phone.full);
+        const shouldAutoOpenWindow = false;
         const shouldSendTemplate = mode === "template_only" || mode === "template_then_text" || shouldAutoOpenWindow;
         const templateVariableCount = countResolvedTemplateParams(templateDefinition?.components);
         const templateCanCarryInquiry = shouldSendTemplate && templateVariableCount > 0 && Boolean(message?.trim());
         const requiresTextMessage =
           Boolean(message && message.trim())
           && (mode === "template_then_text"
-            ? windowOpen
+            ? true
             : mode === "text_only"
               ? windowOpen
               : false);
         const actualMode = shouldAutoOpenWindow ? "template_only" : mode;
+
+        if (mode === "text_only" && !windowOpen) {
+          blocked++;
+          failed++;
+          const reason = "Custom inquiry text can only be sent in an open WhatsApp chat window. This dealer's chat window is closed, so no template or wrong message was sent.";
+          errors.push(`${rawPhone}: ${reason}`);
+          recipientRows.push({
+            campaign_id: campaign?.id,
+            dealer_rep_id: recipientInfo.dealer_rep_id || null,
+            dealer_name: recipientInfo.dealer_name || null,
+            rep_name: recipientInfo.rep_name || null,
+            phone: rawPhone,
+            send_status: "failed",
+            qualification_data: mergeTrackingData(null, {
+              requested_mode: mode,
+              actual_mode: "blocked_closed_window",
+              conversation_window_open: false,
+              opener_template_name: null,
+              provider_message_id: null,
+              template_provider_message_id: null,
+              text_provider_message_id: null,
+              last_error: reason,
+              error_code: "closed_window",
+            }),
+          });
+          continue;
+        }
+
+        if (!windowOpen && recentBlock.blocked) {
+          blocked++;
+          failed++;
+          const reason = recentBlock.error || "Meta recently blocked outreach to this dealer number.";
+          errors.push(`${rawPhone}: ${reason}`);
+          recipientRows.push({
+            campaign_id: campaign?.id,
+            dealer_rep_id: recipientInfo.dealer_rep_id || null,
+            dealer_name: recipientInfo.dealer_name || null,
+            rep_name: recipientInfo.rep_name || null,
+            phone: rawPhone,
+            send_status: "failed",
+            qualification_data: mergeTrackingData(null, {
+              requested_mode: mode,
+              actual_mode: "blocked_recent_provider_failure",
+              conversation_window_open: false,
+              opener_template_name: null,
+              provider_message_id: null,
+              template_provider_message_id: null,
+              text_provider_message_id: null,
+              last_error: reason,
+              error_code: "131049",
+            }),
+          });
+          continue;
+        }
 
         // Build per-dealer template with their name as first variable
         const dealerName = recipientInfo.rep_name || recipientInfo.dealer_name || "Partner";
@@ -702,12 +786,12 @@ serve(async (req) => {
       details: { brand, model, variant, color, sent, failed, campaign_id: campaign?.id, mode, template: metaTemplate, followup_scheduled: followupScheduled, errors: errors.slice(0, 20) },
     });
 
-    console.log(`Dealer inquiry broadcast (${mode}): ${sent} submitted, ${failed} failed / ${phones.length}`);
+    console.log(`Dealer inquiry broadcast (${mode}): ${sent} submitted, ${failed} failed, ${blocked} blocked / ${phones.length}`);
 
     return new Response(JSON.stringify({
       success: true,
       campaign_id: campaign?.id,
-      summary: { total: phones.length, sent, failed, mode },
+      summary: { total: phones.length, sent, failed, blocked, mode },
       followup_scheduled: followupScheduled,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
