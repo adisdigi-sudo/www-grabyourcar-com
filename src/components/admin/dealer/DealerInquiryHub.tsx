@@ -14,10 +14,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Send, Users, MessageCircle, Plus, Upload, Phone, Zap, Bot, Car, Palette, History, Loader2, Activity, MessagesSquare } from "lucide-react";
+import { Send, Users, MessageCircle, Plus, Upload, Phone, Zap, Bot, Car, Palette, History, Loader2, Activity, MessagesSquare, Workflow } from "lucide-react";
 import { format } from "date-fns";
 import DealerCampaignTracker from "./DealerCampaignTracker";
 import DealerConversationsHub from "./DealerConversationsHub";
+import DealerReplyFlowBuilder from "./DealerReplyFlowBuilder";
 
 const TEMPLATES: Record<string, { label: string; icon: string; build: (b: string, m: string, v: string, c: string) => string }> = {
   urgent_ready_buyer: {
