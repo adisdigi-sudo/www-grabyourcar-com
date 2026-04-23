@@ -643,6 +643,136 @@ export default function DealerStockHub() {
             </CardContent>
           </Card>
         </TabsContent>
+        <TabsContent value="broadcast" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg"><Megaphone className="h-5 w-5" /> Send Available Stock to Customers</CardTitle>
+              <p className="text-xs text-muted-foreground">Pick cars from your live stock, pick customers from your leads, one click → WhatsApp.</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* LEFT: pick stock cars */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-semibold">1️⃣ Pick cars to send</Label>
+                    <Badge variant="outline">{bcastSelectedStockIds.length} selected</Badge>
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search e.g. Audi A6" className="pl-8" value={bcastSearch} onChange={(e) => setBcastSearch(e.target.value)} />
+                  </div>
+                  <div className="border rounded-md max-h-[320px] overflow-auto">
+                    {bcastFilteredStock.length === 0 ? (
+                      <p className="text-center text-muted-foreground text-xs py-6">No matching available stock</p>
+                    ) : (
+                      <div className="divide-y">
+                        {bcastFilteredStock.map((s: any) => (
+                          <label key={s.id} className="flex items-center gap-2 p-2 text-xs hover:bg-muted/40 cursor-pointer">
+                            <Checkbox
+                              checked={bcastSelectedStockIds.includes(s.id)}
+                              onCheckedChange={(v) => {
+                                if (v) setBcastSelectedStockIds([...bcastSelectedStockIds, s.id]);
+                                else setBcastSelectedStockIds(bcastSelectedStockIds.filter((x) => x !== s.id));
+                              }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">{s.brand} {s.model} {s.variant || ""}</div>
+                              <div className="text-muted-foreground text-[10px] truncate">
+                                {s.color || "—"} • {s.manufacturing_year || "—"} • {s.on_road_price ? `₹${Number(s.on_road_price).toLocaleString("en-IN")}` : "Price NA"} • {s.dealer_representatives?.dealer_companies?.company_name || "Dealer"}
+                              </div>
+                            </div>
+                            <Badge variant="secondary" className="text-[9px]">Qty {s.quantity || 1}</Badge>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* RIGHT: pick customers */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-semibold">2️⃣ Pick customers</Label>
+                    <Badge variant="outline">{bcastSelectedLeadIds.length} / {bcastFilteredLeads.length}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input placeholder="Search name / phone / car..." className="pl-8" value={bcastLeadSearch} onChange={(e) => setBcastLeadSearch(e.target.value)} />
+                    </div>
+                    <label className="flex items-center gap-1.5 text-[11px] whitespace-nowrap">
+                      <Checkbox checked={bcastOnlyMatching} onCheckedChange={(v) => setBcastOnlyMatching(!!v)} />
+                      Only matching car
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <Checkbox
+                      checked={bcastFilteredLeads.length > 0 && bcastSelectedLeadIds.length === bcastFilteredLeads.length}
+                      onCheckedChange={toggleAllBcastLeads}
+                    />
+                    <span>Select all visible</span>
+                  </div>
+                  <div className="border rounded-md max-h-[280px] overflow-auto">
+                    {bcastFilteredLeads.length === 0 ? (
+                      <p className="text-center text-muted-foreground text-xs py-6">
+                        {bcastOnlyMatching && bcastSelectedStockIds.length > 0
+                          ? "No leads match the selected cars. Uncheck 'Only matching car' to broaden."
+                          : "No leads"}
+                      </p>
+                    ) : (
+                      <div className="divide-y">
+                        {bcastFilteredLeads.map((l: any) => (
+                          <label key={l.id} className="flex items-center gap-2 p-2 text-xs hover:bg-muted/40 cursor-pointer">
+                            <Checkbox
+                              checked={bcastSelectedLeadIds.includes(l.id)}
+                              onCheckedChange={(v) => {
+                                if (v) setBcastSelectedLeadIds([...bcastSelectedLeadIds, l.id]);
+                                else setBcastSelectedLeadIds(bcastSelectedLeadIds.filter((x) => x !== l.id));
+                              }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">{l.customer_name || l.name || "Customer"}</div>
+                              <div className="text-muted-foreground text-[10px] truncate">
+                                {l.phone} {l.car_brand && `• Wants ${l.car_brand} ${l.car_model || ""}`}
+                              </div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview + send */}
+              <div className="border-t pt-3 space-y-3">
+                <div>
+                  <Label className="text-xs">Meta Template (utility/marketing)</Label>
+                  <Select value={bcastTemplate} onValueChange={setBcastTemplate}>
+                    <SelectTrigger><SelectValue placeholder="Select approved template" /></SelectTrigger>
+                    <SelectContent>
+                      {templates.map((t: any) => (
+                        <SelectItem key={t.name} value={t.name}>{t.display_name || t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {bcastSelectedStockIds.length > 0 && (
+                  <div>
+                    <Label className="text-xs">Message Preview</Label>
+                    <pre className="whitespace-pre-wrap text-[11px] font-mono bg-muted p-2 rounded border max-h-40 overflow-auto">
+                      {buildStockBroadcastBody()}
+                    </pre>
+                  </div>
+                )}
+                <Button onClick={sendStockToCustomers} disabled={bcastSending || bcastSelectedStockIds.length === 0 || bcastSelectedLeadIds.length === 0} size="lg" className="w-full gap-2">
+                  {bcastSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Send {bcastSelectedStockIds.length} car{bcastSelectedStockIds.length !== 1 ? "s" : ""} to {bcastSelectedLeadIds.length} customer{bcastSelectedLeadIds.length !== 1 ? "s" : ""}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       <Dialog open={!!previewCars} onOpenChange={(o) => !o && setPreviewCars(null)}>
