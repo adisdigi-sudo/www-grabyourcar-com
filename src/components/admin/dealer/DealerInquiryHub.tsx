@@ -76,6 +76,7 @@ function isDealerInquirySafeTemplate(template?: { name?: string | null; display_
 
 export default function DealerInquiryHub() {
   const qc = useQueryClient();
+  const [activeTab, setActiveTab] = useState("inquiry");
   const [selectedBrand, setSelectedBrand] = useState("all");
   const [selectedModel, setSelectedModel] = useState("all");
   const [selectedVariant, setSelectedVariant] = useState("all");
@@ -398,7 +399,7 @@ export default function DealerInquiryHub() {
   };
 
   return (
-    <Tabs defaultValue="inquiry" className="space-y-4" activationMode="manual">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4" activationMode="manual">
       <TabsList>
         <TabsTrigger value="inquiry" className="gap-1"><Car className="h-4 w-4" /> Smart Inquiry</TabsTrigger>
         <TabsTrigger value="conversations" className="gap-1"><MessagesSquare className="h-4 w-4" /> Conversations</TabsTrigger>
@@ -406,15 +407,15 @@ export default function DealerInquiryHub() {
         <TabsTrigger value="history" className="gap-1"><History className="h-4 w-4" /> Campaign History</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="conversations" className="space-y-4" forceMount={false}>
-        <DealerConversationsHub />
+      <TabsContent value="conversations" className="space-y-4">
+        {activeTab === "conversations" ? <DealerConversationsHub /> : null}
       </TabsContent>
 
-      <TabsContent value="tracker" className="space-y-4" forceMount={false}>
-        <DealerCampaignTracker />
+      <TabsContent value="tracker" className="space-y-4">
+        {activeTab === "tracker" ? <DealerCampaignTracker /> : null}
       </TabsContent>
 
-      <TabsContent value="inquiry" className="space-y-4" forceMount={false}>
+      <TabsContent value="inquiry" className="space-y-4">
         {/* Car Selection Bar */}
         <Card>
           <CardContent className="pt-6">
@@ -752,8 +753,8 @@ export default function DealerInquiryHub() {
       </TabsContent>
 
       {/* Campaign History Tab */}
-      <TabsContent value="history" forceMount={false}>
-        <Card>
+      <TabsContent value="history">
+        {activeTab === "history" ? <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Recent Campaigns</CardTitle>
           </CardHeader>
@@ -798,7 +799,7 @@ export default function DealerInquiryHub() {
               </TableBody>
             </Table>
           </CardContent>
-        </Card>
+        </Card> : null}
       </TabsContent>
     </Tabs>
   );
