@@ -176,9 +176,8 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
 
   const isWindowOpen = !!(selectedThread?.window_expires_at && new Date(selectedThread.window_expires_at) > new Date());
 
-  async function sendTemplateFromPicker(tpl: TemplateOption) {
+  async function sendTemplateFromPicker(tpl: WaTemplateOption) {
     if (!selectedThread) return;
-    setShowTemplates(false);
     setSending(true);
     try {
       const vars: Record<string, string> = {};
