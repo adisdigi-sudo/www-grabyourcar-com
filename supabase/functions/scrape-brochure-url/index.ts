@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
           let score = 0;
           if (lower.includes('brochure')) score += 5;
           for (const t of modelTokens) if (t.length > 2 && lower.includes(t)) score += 3;
-          if (lower.includes('kia.com') || lower.includes('hyundai.com')) score += 2;
+          if (lower.includes('kia.com') || lower.includes('hyundai.com') || lower.includes('tatamotors.com')) score += 2;
           candidates.push({ url, source: src, score });
         }
       } catch (e) {
