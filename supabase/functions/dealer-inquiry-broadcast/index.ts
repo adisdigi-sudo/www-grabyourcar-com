@@ -522,33 +522,6 @@ serve(async (req) => {
               : false);
         const actualMode = shouldAutoOpenWindow ? "text_only_auto_open" : mode;
 
-        if (!windowOpen && recentBlock.blocked) {
-          blocked++;
-          failed++;
-          const reason = recentBlock.error || "Meta recently blocked outreach to this dealer number.";
-          errors.push(`${rawPhone}: ${reason}`);
-          recipientRows.push({
-            campaign_id: campaign?.id,
-            dealer_rep_id: recipientInfo.dealer_rep_id || null,
-            dealer_name: recipientInfo.dealer_name || null,
-            rep_name: recipientInfo.rep_name || null,
-            phone: rawPhone,
-            send_status: "failed",
-            qualification_data: mergeTrackingData(null, {
-              requested_mode: mode,
-              actual_mode: "blocked_recent_provider_failure",
-              conversation_window_open: false,
-              opener_template_name: null,
-              provider_message_id: null,
-              template_provider_message_id: null,
-              text_provider_message_id: null,
-              last_error: reason,
-              error_code: "131049",
-            }),
-          });
-          continue;
-        }
-
         // Build per-dealer template with their name as first variable
         const dealerName = recipientInfo.rep_name || recipientInfo.dealer_name || "Partner";
         const perDealerValues = buildDealerTemplateValues({
@@ -661,6 +634,8 @@ serve(async (req) => {
               requested_mode: mode,
               actual_mode: actualMode,
               conversation_window_open: windowOpen,
+              had_recent_provider_block: recentBlock.blocked,
+              recent_provider_block_reason: recentBlock.error || null,
               opener_template_name: activeTemplate?.name || null,
               template_carries_message: templateCanCarryInquiry,
               provider_message_id: textResult.provider_message_id || templateResult.provider_message_id || null,
@@ -682,6 +657,8 @@ serve(async (req) => {
               requested_mode: mode,
               actual_mode: actualMode,
               conversation_window_open: windowOpen,
+              had_recent_provider_block: recentBlock.blocked,
+              recent_provider_block_reason: recentBlock.error || null,
               opener_template_name: activeTemplate?.name || null,
               template_carries_message: templateCanCarryInquiry,
               provider_message_id: textResult.provider_message_id || templateResult.provider_message_id || null,
