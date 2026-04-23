@@ -19,6 +19,9 @@ import {
   BarChart3,
   FileText,
   Brain,
+  Megaphone,
+  ListChecks,
+  LineChart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -56,6 +59,15 @@ const RevenueIntelligenceDashboard = lazy(() =>
 );
 const JourneyAutomationPanel = lazy(() =>
   import("@/components/admin/JourneyAutomationPanel").then((m) => ({ default: m.JourneyAutomationPanel })),
+);
+const PromoBannerManager = lazy(() =>
+  import("./PromoBannerManager").then((m) => ({ default: m.PromoBannerManager })),
+);
+const MarketingConversionDashboard = lazy(() =>
+  import("./MarketingConversionDashboard").then((m) => ({ default: m.MarketingConversionDashboard })),
+);
+const MarketingAuditChecklist = lazy(() =>
+  import("./MarketingAuditChecklist").then((m) => ({ default: m.MarketingAuditChecklist })),
 );
 
 const SectionFallback = () => (
@@ -279,6 +291,18 @@ export function MarketingTechHub() {
           <TabsTrigger value="analytics" className="gap-2">
             <BarChart3 className="h-4 w-4" />
             <span>Analytics</span>
+          </TabsTrigger>
+          <TabsTrigger value="banners" className="gap-2">
+            <Megaphone className="h-4 w-4" />
+            <span>Banners</span>
+          </TabsTrigger>
+          <TabsTrigger value="conversions" className="gap-2">
+            <LineChart className="h-4 w-4" />
+            <span>Conversions</span>
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="gap-2">
+            <ListChecks className="h-4 w-4" />
+            <span>Audit</span>
           </TabsTrigger>
         </TabsList>
 
