@@ -60,7 +60,24 @@ serve(async (req) => {
       mediaFileName,
       sent_by,
       sent_by_name,
+      intent,
+      intent_meta,
+      lead_id,
+      vertical,
     } = body;
+
+    // Auto-infer intent if not provided
+    let resolvedIntent: string | null = intent || null;
+    if (!resolvedIntent) {
+      const tn = String(template_name || "").toLowerCase();
+      if (tn.includes("feedback")) resolvedIntent = "feedback";
+      else if (tn.includes("renewal") || tn.includes("expir")) resolvedIntent = "renewal_reminder";
+      else if (tn.includes("quote") || tn.includes("offer")) resolvedIntent = "quote_share";
+      else if (tn.includes("policy") || tn.includes("pdf") || tn.includes("document")) resolvedIntent = "policy_document";
+      else if (tn.includes("followup") || tn.includes("follow_up") || tn.includes("nurture")) resolvedIntent = "followup";
+      else if (template_name) resolvedIntent = "template_other";
+      else resolvedIntent = "manual_chat";
+    }
 
     const resolvedMediaUrl = media_url || mediaUrl || null;
     const resolvedMediaFilename = media_filename || mediaFileName || null;
@@ -371,6 +388,10 @@ serve(async (req) => {
         error_code: success ? null : (result.error?.code?.toString() || null),
         sent_by,
         sent_by_name,
+        intent: resolvedIntent,
+        intent_meta: intent_meta || null,
+        lead_id: lead_id || null,
+        vertical: vertical || null,
       });
 
       await supabase.from("wa_conversations").update({
