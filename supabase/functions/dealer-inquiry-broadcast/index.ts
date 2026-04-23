@@ -316,15 +316,16 @@ serve(async (req) => {
 
     // Determine send mode
     const mode = send_mode || (template_name ? "template_then_text" : "text_only");
-    // Prefer dealer_inquiry_v1 (UTILITY, 4 vars: dealer_name, brand, model, variant) when approved
-    const metaTemplate = template_name || "dealer_inquiry_v1";
+    const metaTemplate = template_name || "booking_confirmation";
 
     // Pre-resolve template definition ONCE (we'll rebuild components per dealer with their name)
+    const inquiryLabel = [brand, model, variant].filter(Boolean).join(" ") || "vehicle inquiry";
+    const bookingRef = `INQ-${Date.now().toString().slice(-6)}`;
     const baseFallback = [
-      brand || "GrabYourCar",
-      model || "car inquiry",
-      variant || "best offer",
-      color || "available color",
+      "Partner",
+      bookingRef,
+      inquiryLabel,
+      color || "available",
     ];
     const templateDefinition = await resolveApprovedTemplate(
       supabase,
