@@ -280,6 +280,11 @@ async function sendText(
   return { success: false, error: result.error?.message || JSON.stringify(result) };
 }
 
+function shouldRetryTextAfterTemplate(error?: string): boolean {
+  const msg = String(error || "").toLowerCase();
+  return msg.includes("131047") || msg.includes("re-engagement");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -472,13 +477,28 @@ serve(async (req) => {
         // Step 2: Send detailed text message (after template opens window if required)
         if (requiresTextMessage) {
           if (shouldSendTemplate) {
-            // Wait 1.5s for template to be accepted and the chat window to open
-            await new Promise(r => setTimeout(r, 1500));
+            let attempts = 0;
+            let windowReady = false;
+
+            while (attempts < 5 && !windowReady) {
+              await new Promise(r => setTimeout(r, attempts === 0 ? 2000 : 1500));
+              windowReady = await hasOpenConversationWindow(supabase, phone.full);
+              attempts += 1;
+            }
           }
+
           textResult = await sendText(
             WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID,
             phone.full, message
           );
+
+          if (!textResult.success && shouldSendTemplate && shouldRetryTextAfterTemplate(textResult.error)) {
+            await new Promise(r => setTimeout(r, 2500));
+            textResult = await sendText(
+              WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID,
+              phone.full, message
+            );
+          }
         }
 
         const overallSuccess = requiresTextMessage ? textResult.success : templateResult.success;
