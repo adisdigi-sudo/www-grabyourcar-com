@@ -1881,7 +1881,11 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
                         setSelectedClient(data as Client);
                         queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
                         queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
-                        toast.success("Lead updated");
+                        if (lockTerminal) {
+                          toast.success("Lead saved (kept as Policy Issued — active policy on record)");
+                        } else {
+                          toast.success("Lead updated");
+                        }
 
                         // Log activity when auto-promoted to follow_up
                         if (followUpDateSet && earlyStages.includes(normalizedStage)) {
