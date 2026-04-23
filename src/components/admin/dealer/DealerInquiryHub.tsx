@@ -80,7 +80,7 @@ export default function DealerInquiryHub() {
   const [bulkBrand, setBulkBrand] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [sendMode, setSendMode] = useState<"template_then_text" | "template_only" | "text_only">("text_only");
-  const [metaTemplate, setMetaTemplate] = useState("booking_confirmation");
+  const [metaTemplate, setMetaTemplate] = useState("welcome_new_lead");
   const [addForm, setAddForm] = useState({ name: "", whatsapp_number: "", dealer_name: "", brand: "", city: "", state: "" });
 
   // Data queries
@@ -192,8 +192,14 @@ export default function DealerInquiryHub() {
     const templateExists = approvedTemplates.some((tpl: any) => tpl.name === metaTemplate);
     if (templateExists) return;
 
-    const utilityTemplate = approvedTemplates.find((tpl: any) => String(tpl.category).toLowerCase() === "utility");
-    setMetaTemplate((utilityTemplate || approvedTemplates[0]).name);
+    // Prefer neutral inquiry-style templates; never auto-pick booking_confirmation
+    // (it tells the dealer their booking is confirmed, which is wrong for an inquiry).
+    const preferredOrder = ["welcome_new_lead", "grabyourcarintroduction", "insurancefollowup"];
+    const preferred = preferredOrder
+      .map((name) => approvedTemplates.find((tpl: any) => tpl.name === name))
+      .find(Boolean);
+    const safeFallback = approvedTemplates.find((tpl: any) => tpl.name !== "booking_confirmation");
+    setMetaTemplate((preferred || safeFallback || approvedTemplates[0]).name);
   }, [approvedTemplates, metaTemplate]);
 
   const states = useMemo(() => [...new Set(reps.map((r: any) => r.state).filter(Boolean))].sort(), [reps]);
@@ -589,7 +595,7 @@ export default function DealerInquiryHub() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {approvedTemplates.length === 0 ? (
-                        <SelectItem value="booking_confirmation">booking_confirmation</SelectItem>
+                        <SelectItem value="welcome_new_lead">welcome_new_lead</SelectItem>
                       ) : approvedTemplates.map((tpl: any) => (
                         <SelectItem key={tpl.name} value={tpl.name}>
                           {tpl.display_name || tpl.name} ({tpl.category || "general"})

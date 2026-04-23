@@ -145,40 +145,30 @@ function buildDealerTemplateValues(params: {
   color?: string | null;
   message?: string | null;
 }): string[] {
-  const inquiryMessage = normalizeTemplateText(params.message);
+  // IMPORTANT: We never pack inquiry text into "booking_confirmation" variables — that
+  // template literally tells the dealer their booking is confirmed which is misleading.
+  // We just fill variables with neutral, dealer-friendly values so the template renders.
   const vehicleContext = normalizeTemplateText(
     [params.inquiryLabel, params.color].filter(Boolean).join(" "),
     140,
-  );
-  const shortInquiry = inquiryMessage || vehicleContext || "Need quick confirmation";
+  ) || params.inquiryLabel || "vehicle inquiry";
 
   if (params.variableCount <= 0) return [];
 
-  if (params.templateName === "booking_confirmation") {
-    return [
-      inquiryMessage
-        ? `${params.dealerName} — ${normalizeTemplateText(params.message, 180)}`
-        : params.dealerName,
-      params.bookingRef,
-      vehicleContext,
-      shortInquiry,
-    ];
-  }
-
   if (params.variableCount === 1) {
-    return [inquiryMessage ? `${params.dealerName} — ${shortInquiry}` : `${params.dealerName}`];
+    return [params.dealerName];
   }
 
   if (params.variableCount === 2) {
-    return [params.dealerName, shortInquiry];
+    return [params.dealerName, vehicleContext];
   }
 
   return [
     params.dealerName,
-    vehicleContext || params.inquiryLabel,
-    shortInquiry,
+    vehicleContext,
     params.bookingRef,
     params.color || "available",
+    "GrabYourCar",
     "GrabYourCar",
   ];
 }
@@ -227,13 +217,15 @@ async function resolveApprovedTemplate(
     .select("name, header_type, variables, category")
     .eq("status", "approved");
 
+  // NOTE: Do NOT auto-fallback to "booking_confirmation" — that template tells dealers
+  // their booking is confirmed, which is wrong for an inquiry. Prefer neutral templates.
   const candidates = [
     preferredTemplate,
-    "booking_confirmation",
     "welcome_new_lead",
-    "insurancefollowup",
     "grabyourcarintroduction",
+    "insurancefollowup",
     ...(approvedTemplates || [])
+      .filter((row: any) => row.name !== "booking_confirmation")
       .sort((a: any, b: any) => {
         const aUtility = String(a.category || "").toLowerCase() === "utility" ? 0 : 1;
         const bUtility = String(b.category || "").toLowerCase() === "utility" ? 0 : 1;
@@ -394,18 +386,18 @@ serve(async (req) => {
 
     // Determine send mode
     const mode = send_mode || (template_name ? "template_then_text" : "text_only");
-    const metaTemplate = template_name || "booking_confirmation";
+    // Default to a neutral intro template — NEVER booking_confirmation (that says "booking confirmed")
+    const metaTemplate = template_name || "welcome_new_lead";
 
     // Pre-resolve template definition ONCE (we'll rebuild components per dealer with their name)
     const inquiryLabel = [brand, model, variant].filter(Boolean).join(" ") || "vehicle inquiry";
     const bookingRef = `INQ-${Date.now().toString().slice(-6)}`;
     const baseFallback = [
       "Partner",
-      bookingRef,
       inquiryLabel,
+      bookingRef,
       color || "available",
     ];
-    const requiresMessagePacking = Boolean(message?.trim()) && mode !== "template_only";
     const wabaId = WHATSAPP_WABA_ID ?? null;
     const templateDefinition = await resolveApprovedTemplate(
       supabase,
@@ -416,7 +408,7 @@ serve(async (req) => {
         ...baseFallback,
       ],
       metaTemplate,
-      requiresMessagePacking,
+      false, // Don't require variable capacity — inquiry text is sent as separate free-text, not packed
     );
 
     // Also fetch raw Meta definition so we can rebuild per-dealer
