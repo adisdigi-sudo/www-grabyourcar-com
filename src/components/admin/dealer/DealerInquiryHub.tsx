@@ -17,9 +17,9 @@ import { toast } from "sonner";
 import { Send, Users, MessageCircle, Plus, Upload, Phone, Zap, Bot, Car, Palette, History, Loader2, Activity, MessagesSquare, Workflow, Package } from "lucide-react";
 import { format } from "date-fns";
 import DealerCampaignTracker from "./DealerCampaignTracker";
-import DealerConversationsHub from "./DealerConversationsHub";
 import DealerReplyFlowBuilder from "./DealerReplyFlowBuilder";
 import DealerStockHub from "./DealerStockHub";
+import { OmniMessagingWorkspace } from "../shared/OmniMessagingWorkspace";
 import { ComboBoxWithCustom } from "@/components/ui/combo-box-with-custom";
 import { INDIAN_STATES, INDIAN_CITIES_BY_STATE, ALL_INDIAN_CITIES, CAR_COLORS, COMMON_VARIANTS } from "@/lib/indiaMasterData";
 
@@ -435,7 +435,12 @@ export default function DealerInquiryHub() {
       </TabsContent>
 
       <TabsContent value="conversations" className="space-y-4">
-        {activeTab === "conversations" ? <DealerConversationsHub /> : null}
+        {activeTab === "conversations" ? (
+          <OmniMessagingWorkspace
+            scopeLabel="Dealer Network"
+            allowedPhones={Array.from(new Set((reps || []).map((r: any) => r.whatsapp_number).filter(Boolean)))}
+          />
+        ) : null}
       </TabsContent>
 
       <TabsContent value="flow" className="space-y-4">
