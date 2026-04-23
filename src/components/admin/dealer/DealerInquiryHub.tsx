@@ -290,7 +290,11 @@ export default function DealerInquiryHub() {
           variant: selectedVariant !== "all" ? selectedVariant : null,
           color: selectedColor !== "all" ? selectedColor : null,
           ai_followup_enabled: aiFollowup,
-          ai_followup_script: aiScript === "custom" ? customScript : AI_SCRIPTS.find(s => s.id === aiScript)?.script || "",
+          ai_followup_script: aiScript === "custom"
+            ? customScript
+            : aiScript === "short_template"
+              ? (customScript || AI_SCRIPTS.find(s => s.id === "short_template")?.script || "")
+              : AI_SCRIPTS.find(s => s.id === aiScript)?.script || "",
           ai_followup_delay_minutes: followupDelay,
           template_name: metaTemplate,
           template_variables: [],
