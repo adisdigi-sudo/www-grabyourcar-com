@@ -59,6 +59,13 @@ const AI_SCRIPTS = [
   { id: "custom", label: "Custom Script", script: "" },
 ];
 
+const DEALER_INQUIRY_TEMPLATE_BLOCKLIST = /(booking|confirm(?:ed|ation)?|insurance|policy|renewal|loan|payment|receipt|invoice|feedback|deliver(?:y|ed)?|appointment|otp)/i;
+
+function isDealerInquirySafeTemplate(template?: { name?: string | null; display_name?: string | null; body?: string | null }) {
+  const haystack = [template?.name, template?.display_name, template?.body].filter(Boolean).join(" ");
+  return !DEALER_INQUIRY_TEMPLATE_BLOCKLIST.test(haystack);
+}
+
 export default function DealerInquiryHub() {
   const qc = useQueryClient();
   const [selectedBrand, setSelectedBrand] = useState("all");
@@ -80,7 +87,7 @@ export default function DealerInquiryHub() {
   const [bulkBrand, setBulkBrand] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [sendMode, setSendMode] = useState<"template_then_text" | "template_only" | "text_only">("text_only");
-  const [metaTemplate, setMetaTemplate] = useState("booking_confirmation");
+  const [metaTemplate, setMetaTemplate] = useState("welcome_new_lead");
   const [addForm, setAddForm] = useState({ name: "", whatsapp_number: "", dealer_name: "", brand: "", city: "", state: "" });
 
   // Data queries
@@ -159,7 +166,7 @@ export default function DealerInquiryHub() {
     queryFn: async () => {
       const { data } = await supabase
         .from("wa_templates")
-        .select("name, display_name, category, language, header_type, status")
+        .select("name, display_name, category, language, header_type, status, body, variables")
         .eq("status", "approved")
         .order("category")
         .order("name");
@@ -187,14 +194,28 @@ export default function DealerInquiryHub() {
     };
   }, [qc]);
 
+  const inquirySafeTemplates = useMemo(
+    () => approvedTemplates.filter((tpl: any) => isDealerInquirySafeTemplate(tpl)),
+    [approvedTemplates],
+  );
+
+  const selectableTemplates = useMemo(
+    () => (inquirySafeTemplates.length ? inquirySafeTemplates : approvedTemplates.filter((tpl: any) => tpl.name !== "booking_confirmation")),
+    [approvedTemplates, inquirySafeTemplates],
+  );
+
   useEffect(() => {
-    if (!approvedTemplates.length) return;
-    const templateExists = approvedTemplates.some((tpl: any) => tpl.name === metaTemplate);
+    if (!selectableTemplates.length) return;
+    const templateExists = selectableTemplates.some((tpl: any) => tpl.name === metaTemplate);
     if (templateExists) return;
 
-    const utilityTemplate = approvedTemplates.find((tpl: any) => String(tpl.category).toLowerCase() === "utility");
-    setMetaTemplate((utilityTemplate || approvedTemplates[0]).name);
-  }, [approvedTemplates, metaTemplate]);
+    const preferredNames = ["welcome_new_lead", "grabyourcarintroduction"];
+    const preferred = preferredNames
+      .map((name) => selectableTemplates.find((tpl: any) => tpl.name === name))
+      .find(Boolean);
+
+    setMetaTemplate((preferred || selectableTemplates[0]).name);
+  }, [selectableTemplates, metaTemplate]);
 
   const states = useMemo(() => [...new Set(reps.map((r: any) => r.state).filter(Boolean))].sort(), [reps]);
   const cities = useMemo(() => [...new Set(reps.map((r: any) => r.city).filter(Boolean))].sort(), [reps]);
