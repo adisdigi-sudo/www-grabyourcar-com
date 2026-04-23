@@ -399,6 +399,7 @@ serve(async (req) => {
       inquiryLabel,
       color || "available",
     ];
+    const requiresMessagePacking = Boolean(message?.trim()) && mode !== "template_only";
     const templateDefinition = await resolveApprovedTemplate(
       supabase,
       WHATSAPP_ACCESS_TOKEN,
@@ -408,6 +409,7 @@ serve(async (req) => {
         ...baseFallback,
       ],
       metaTemplate,
+      requiresMessagePacking,
     );
 
     // Also fetch raw Meta definition so we can rebuild per-dealer
@@ -463,9 +465,12 @@ serve(async (req) => {
         const templateVariableCount = countResolvedTemplateParams(templateDefinition?.components);
         const templateCanCarryInquiry = shouldSendTemplate && templateVariableCount > 0 && Boolean(message?.trim());
         const requiresTextMessage =
-          (mode === "text_only" || mode === "template_then_text")
-          && Boolean(message && message.trim())
-          && (windowOpen || !templateCanCarryInquiry);
+          Boolean(message && message.trim())
+          && (mode === "template_then_text"
+            ? windowOpen
+            : mode === "text_only"
+              ? windowOpen
+              : false);
         const actualMode = shouldAutoOpenWindow
           ? templateCanCarryInquiry
             ? "template_only"
@@ -555,17 +560,6 @@ serve(async (req) => {
 
         // Step 2: Send detailed text message (after template opens window if required)
         if (requiresTextMessage) {
-          if (shouldSendTemplate) {
-            let attempts = 0;
-            let windowReady = false;
-
-            while (attempts < 5 && !windowReady) {
-              await new Promise(r => setTimeout(r, attempts === 0 ? 2000 : 1500));
-              windowReady = await hasOpenConversationWindow(supabase, phone.full);
-              attempts += 1;
-            }
-          }
-
           textResult = await sendText(
             WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID,
             phone.full, message
