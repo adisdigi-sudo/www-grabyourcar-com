@@ -72,9 +72,16 @@ serve(async (req) => {
     const carInfo = [campaign.brand, campaign.model, campaign.variant, campaign.color].filter(Boolean).join(" ");
     const script = campaign.ai_followup_script || "Ask about best discount, availability, and delivery timeline.";
 
+    // ─── Custom template path ───
+    // If the script looks like a finished message (contains {brand} or {model} or is long-ish prose), treat it as the literal template.
+    const isCustomTemplate = /\{(rep_name|dealer|brand|model|variant|color)\}/i.test(script);
+
     let aiMessage = "";
 
-    if (LOVABLE_API_KEY) {
+    if (isCustomTemplate) {
+      // User-defined template — leave as-is, will personalize per recipient below
+      aiMessage = script;
+    } else if (LOVABLE_API_KEY) {
       try {
         const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -83,20 +90,15 @@ serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
+            model: "google/gemini-2.5-flash",
             messages: [
               {
                 role: "system",
-                content: `You are a professional car procurement executive at GrabYourCar. You are following up with car dealers on WhatsApp to qualify their offers. Be polite, professional, and direct. Keep message under 200 words. Use WhatsApp formatting (*bold*, _italic_). Include the salesperson greeting by name if provided. End with a clear call-to-action.`,
+                content: `You write extremely SHORT WhatsApp follow-ups for car dealers. HARD RULES:\n- Maximum 3 lines, under 280 characters total.\n- Greet by name in line 1 (e.g. "Hi {name},").\n- Line 2: one direct ask covering the points.\n- Line 3: short sign-off "— GrabYourCar".\n- Use *bold* sparingly, no emoji spam (max 1).\n- No fluff, no thank-you paragraphs.`,
               },
               {
                 role: "user",
-                content: `Generate a WhatsApp follow-up message for a dealer about ${carInfo || "cars"}. 
-
-The initial inquiry was already sent. Now follow up with these qualification questions:
-${script}
-
-Make it conversational and professional. Sign off as "GrabYourCar Team".`,
+                content: `Car: ${carInfo || "the vehicle"}\nAsk these points in ONE short line: ${script}`,
               },
             ],
           }),
@@ -104,16 +106,17 @@ Make it conversational and professional. Sign off as "GrabYourCar Team".`,
 
         if (aiResp.ok) {
           const aiData = await aiResp.json();
-          aiMessage = aiData.choices?.[0]?.message?.content || "";
+          aiMessage = (aiData.choices?.[0]?.message?.content || "").trim();
         }
       } catch (e) {
         console.error("AI generation failed:", e);
       }
     }
 
-    // Fallback if AI fails
+    // Fallback if AI fails — short version
     if (!aiMessage) {
-      aiMessage = `Hi! 👋\n\nThis is a follow-up from *GrabYourCar* regarding *${carInfo || "our earlier inquiry"}*.\n\nCould you please share:\n${script.split(/\d+\)/).filter(Boolean).map((q: string) => `• ${q.trim()}`).join("\n")}\n\nLooking forward to your response! 🙏\n\n— *GrabYourCar Team*`;
+      const points = script.split(/\d+\)/).filter(Boolean).map((q: string) => q.trim()).slice(0, 3).join(", ");
+      aiMessage = `Hi {rep_name}, quick follow-up on *${carInfo || "our inquiry"}* — please share ${points || "best price & availability"}.\n— GrabYourCar`;
     }
 
     let followupSent = 0;
@@ -121,11 +124,20 @@ Make it conversational and professional. Sign off as "GrabYourCar Team".`,
 
     for (const recipient of recipients) {
       const phone = normalizePhone(recipient.phone);
-      
-      // Personalize with dealer/rep name
-      let personalizedMsg = aiMessage;
-      if (recipient.rep_name) {
-        personalizedMsg = `Hi *${recipient.rep_name}*! 👋\n\n${aiMessage.replace(/^Hi!?\s*👋?\n?\n?/i, "")}`;
+
+      // Personalize with dealer/rep/brand variables
+      let personalizedMsg = aiMessage
+        .replace(/\{rep_name\}/gi, recipient.rep_name || "there")
+        .replace(/\{dealer(?:_name)?\}/gi, recipient.dealer_name || "Team")
+        .replace(/\{brand\}/gi, campaign.brand || "")
+        .replace(/\{model\}/gi, campaign.model || "")
+        .replace(/\{variant\}/gi, campaign.variant || "")
+        .replace(/\{color\}/gi, campaign.color || "")
+        .trim();
+
+      // If template doesn't already greet, prepend short greeting
+      if (recipient.rep_name && !/^hi\b|^hello\b|^hey\b/i.test(personalizedMsg)) {
+        personalizedMsg = `Hi ${recipient.rep_name}, ${personalizedMsg}`;
       }
 
       try {
