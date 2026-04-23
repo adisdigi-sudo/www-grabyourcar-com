@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,79 @@ interface Template {
 }
 
 const CATEGORIES = ["Marketing", "Utility", "Authentication"];
+
+// Available merge variables across all GYC verticals — click to insert into template body
+const AVAILABLE_VARIABLES: { group: string; vars: { key: string; label: string }[] }[] = [
+  {
+    group: "Customer",
+    vars: [
+      { key: "customer_name", label: "Customer name" },
+      { key: "first_name", label: "First name" },
+      { key: "phone", label: "Phone" },
+      { key: "email", label: "Email" },
+      { key: "city", label: "City" },
+    ],
+  },
+  {
+    group: "Vehicle",
+    vars: [
+      { key: "vehicle", label: "Vehicle" },
+      { key: "vehicle_number", label: "Vehicle number" },
+      { key: "vehicle_make", label: "Make" },
+      { key: "vehicle_model", label: "Model" },
+      { key: "service_type", label: "Service type" },
+    ],
+  },
+  {
+    group: "Insurance / Policy",
+    vars: [
+      { key: "policy_number", label: "Policy number" },
+      { key: "insurer", label: "Insurer" },
+      { key: "premium_amount", label: "Premium" },
+      { key: "expiry_date", label: "Expiry date" },
+      { key: "start_date", label: "Start date" },
+    ],
+  },
+  {
+    group: "Booking / Order",
+    vars: [
+      { key: "booking_id", label: "Booking ID" },
+      { key: "order_id", label: "Order ID" },
+      { key: "amount", label: "Amount" },
+      { key: "date", label: "Date" },
+      { key: "agent_name", label: "Agent name" },
+    ],
+  },
+  {
+    group: "Feedback / Links",
+    vars: [
+      { key: "rating_link", label: "Rating link" },
+      { key: "feedback_link", label: "Feedback link" },
+      { key: "review_link", label: "Google review link" },
+      { key: "support_phone", label: "Support phone" },
+    ],
+  },
+];
+
+const FEEDBACK_TEMPLATE_STARTER = `Hi {{customer_name}} 👋
+
+🎉 Hip Hip Hooray! Your {{service_type}} with Grabyourcar is successfully completed 🚗✨
+
+We truly appreciate you choosing us — and we're always here to make your car journey smooth and hassle-free.
+
+🙏 Could you please take 10 seconds to rate your experience?
+
+⭐ Rate us from 0 to 5
+(0 = Not satisfied, 5 = Excellent)
+
+Just reply with a number 😊
+
+💬 Share more feedback here: {{feedback_link}}
+🌟 Loved our service? Drop a Google review: {{review_link}}
+
+Thank you once again ❤️
+Team Grabyourcar
+📞 {{support_phone}}`;
 
 function hasMetaVariableRatioIssue(body: string) {
   const normalizedBody = body.replace(/\{\{([^}]+)\}\}/g, (_match, inner: string) => `{{${inner.trim()}}}`);
@@ -77,7 +150,29 @@ export function WATemplateManager() {
   const [form, setForm] = useState({
     name: "", category: "Utility", content: "", language: "en", footer: "",
   });
+  const createBodyRef = useRef<HTMLTextAreaElement | null>(null);
+  const editBodyRef = useRef<HTMLTextAreaElement | null>(null);
   const { toast } = useToast();
+
+  // Insert {{var}} at cursor in the target textarea (or append)
+  const insertVariable = (varKey: string, target: "create" | "edit") => {
+    const ref = target === "create" ? createBodyRef.current : editBodyRef.current;
+    const token = `{{${varKey}}}`;
+    if (!ref) {
+      setForm(f => ({ ...f, content: (f.content || "") + token }));
+      return;
+    }
+    const start = ref.selectionStart ?? ref.value.length;
+    const end = ref.selectionEnd ?? ref.value.length;
+    const next = ref.value.slice(0, start) + token + ref.value.slice(end);
+    setForm(f => ({ ...f, content: next }));
+    requestAnimationFrame(() => {
+      ref.focus();
+      const pos = start + token.length;
+      ref.setSelectionRange(pos, pos);
+    });
+  };
+
 
   useEffect(() => { fetchTemplates(); }, []);
 
@@ -483,16 +578,56 @@ export function WATemplateManager() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Message Body * <span className="text-muted-foreground text-[11px]">({form.content.length}/1024)</span></Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Message Body * <span className="text-muted-foreground text-[11px]">({form.content.length}/1024)</span></Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-[11px]"
+                  onClick={() => setForm(f => ({
+                    ...f,
+                    name: f.name || "feedback_post_service",
+                    category: "Utility",
+                    content: FEEDBACK_TEMPLATE_STARTER,
+                    footer: f.footer || "Reply STOP to opt out",
+                  }))}
+                >
+                  ⭐ Load feedback template
+                </Button>
+              </div>
               <Textarea
+                ref={createBodyRef}
                 placeholder={"Hello {{customer_name}}! 🚗\n\nYour policy for {{vehicle}} expires on {{expiry_date}}."}
                 value={form.content}
                 onChange={e => setForm({ ...form, content: e.target.value })}
-                rows={5}
+                rows={6}
                 className={form.content.length > 1024 ? "border-destructive" : ""}
               />
+              <div className="rounded-md border bg-muted/30 p-2 space-y-1.5 max-h-44 overflow-auto">
+                <p className="text-[11px] font-medium text-muted-foreground">Click a variable to insert at cursor</p>
+                {AVAILABLE_VARIABLES.map(group => (
+                  <div key={group.group} className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">{group.group}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {group.vars.map(v => (
+                        <button
+                          key={v.key}
+                          type="button"
+                          onClick={() => insertVariable(v.key, "create")}
+                          className="px-1.5 py-0.5 rounded border bg-background hover:bg-accent text-[10px] font-mono transition-colors"
+                          title={v.label}
+                        >
+                          {`{{${v.key}}}`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
               <p className="text-xs text-muted-foreground">Use {"{{variable_name}}"} — auto-converted to {"{{1}}, {{2}}"} for Meta. Max 1024 chars.</p>
             </div>
+
             <div className="space-y-2">
               <Label>Footer (optional)</Label>
               <Input placeholder="Reply STOP to opt out" value={form.footer} onChange={e => setForm({ ...form, footer: e.target.value })} />
@@ -543,13 +678,36 @@ export function WATemplateManager() {
             <div className="space-y-2">
               <Label>Message Body * <span className="text-muted-foreground text-[11px]">({form.content.length}/1024)</span></Label>
               <Textarea
+                ref={editBodyRef}
                 value={form.content}
                 onChange={e => setForm({ ...form, content: e.target.value })}
                 rows={6}
                 className={form.content.length > 1024 ? "border-destructive" : ""}
               />
+              <div className="rounded-md border bg-muted/30 p-2 space-y-1.5 max-h-40 overflow-auto">
+                <p className="text-[11px] font-medium text-muted-foreground">Click a variable to insert at cursor</p>
+                {AVAILABLE_VARIABLES.map(group => (
+                  <div key={group.group} className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">{group.group}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {group.vars.map(v => (
+                        <button
+                          key={v.key}
+                          type="button"
+                          onClick={() => insertVariable(v.key, "edit")}
+                          className="px-1.5 py-0.5 rounded border bg-background hover:bg-accent text-[10px] font-mono transition-colors"
+                          title={v.label}
+                        >
+                          {`{{${v.key}}}`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
               <p className="text-xs text-muted-foreground">Fix the issue mentioned in rejection reason above. Max 1024 chars.</p>
             </div>
+
             <div className="space-y-2">
               <Label>Footer</Label>
               <Input value={form.footer} onChange={e => setForm({ ...form, footer: e.target.value })} />
