@@ -24,6 +24,8 @@ import {
   Clock,
 } from "lucide-react";
 import { format } from "date-fns";
+import { Plug } from "lucide-react";
+import WhatsAppSetupWizard from "@/components/admin/whatsapp/WhatsAppSetupWizard";
 
 type ProviderId =
   | "meta_whatsapp"
@@ -142,6 +144,7 @@ export default function IntegrationControlCenter() {
   const [dryRun, setDryRun] = useState(true);
   const [logs, setLogs] = useState<HealthLog[]>([]);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [waWizardOpen, setWaWizardOpen] = useState(false);
 
   useEffect(() => {
     document.title = "Integration Control Center · GrabYourCar";
