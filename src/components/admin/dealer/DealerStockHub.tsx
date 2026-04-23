@@ -86,14 +86,14 @@ export default function DealerStockHub() {
 
   const filteredReps = useMemo(() => {
     return reps.filter((r: any) => {
-      if (filterBrand !== "all" && r.brand !== filterBrand) return false;
+      if (selectedBrands.length > 0 && !selectedBrands.includes(r.brand)) return false;
       if (filterCity.trim()) {
         const city = (r.city || r.dealer_companies?.city || "").toLowerCase();
         if (!city.includes(filterCity.toLowerCase())) return false;
       }
       return true;
     });
-  }, [reps, filterBrand, filterCity]);
+  }, [reps, selectedBrands, filterCity]);
 
   const brands = useMemo(() => Array.from(new Set(reps.map((r: any) => r.brand).filter(Boolean))).sort(), [reps]);
 
