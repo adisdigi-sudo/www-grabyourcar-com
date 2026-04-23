@@ -355,12 +355,14 @@ Deno.serve(async (req) => {
     if (!firecrawlKey) throw new Error('FIRECRAWL_API_KEY not configured');
 
     const oemSources = buildOemSources(body.brand, body.modelName);
+    // CarWale brochure is most reliable — try FIRST, then OEM, then CarDekho, then CarWale model page.
     const sources: string[] = body.sourceUrls && body.sourceUrls.length
       ? body.sourceUrls
       : [
+          buildCarwaleBrochureUrl(body.brand, body.modelName),
           ...oemSources,
           buildCardekhoBrochureUrl(body.brand, body.modelName),
-          buildCarwaleBrochureUrl(body.brand, body.modelName),
+          buildCarwaleModelUrl(body.brand, body.modelName),
         ];
 
     const candidates: { url: string; source: string; score: number }[] = [];
