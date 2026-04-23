@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Send, MessageSquare, Settings } from "lucide-react";
 import { OmniSendPanel } from "./OmniSendPanel";
 import { OmniChatPanel } from "./OmniChatPanel";
+import { ScopedWaInbox } from "./ScopedWaInbox";
 import { ChannelProvidersSettings } from "../settings/ChannelProvidersSettings";
 
 interface OmniRecipient {
@@ -59,12 +60,12 @@ export function OmniMessagingWorkspace({
         <TabsContent value="campaign">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <OmniSendPanel recipients={recipients} context={context} />
-            <OmniChatPanel phone={phone} email={email} context={context} allowedPhones={allowedPhones} scopeLabel={scopeLabel} />
+            <ScopedWaInbox context={context} allowedPhones={allowedPhones} scopeLabel={scopeLabel} />
           </div>
         </TabsContent>
 
         <TabsContent value="chat">
-          <OmniChatPanel phone={phone} email={email} context={context} allowedPhones={allowedPhones} scopeLabel={scopeLabel} />
+          <ScopedWaInbox context={context} allowedPhones={allowedPhones} scopeLabel={scopeLabel} />
         </TabsContent>
 
         {showSettings && (
