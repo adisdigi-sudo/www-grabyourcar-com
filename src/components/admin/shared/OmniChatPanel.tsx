@@ -23,7 +23,10 @@ import {
   FileText,
   Download,
   LayoutTemplate,
+  CheckCircle2,
+  Filter,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { type OmniChannel } from "@/lib/omniSend";
 import { AIPolishButtons } from "@/components/admin/shared/AIPolishButtons";
