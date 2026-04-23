@@ -164,6 +164,18 @@ export default function DealerInquiryHub() {
     enabled: selectedBrand !== "all",
   });
 
+  const { data: conversationReps = [] } = useQuery({
+    queryKey: ["dealer-reps-conversations"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("dealer_representatives")
+        .select("whatsapp_number, phone")
+        .eq("is_active", true);
+      return data || [];
+    },
+    staleTime: 60_000,
+  });
+
   const { data: campaigns = [] } = useQuery({
     queryKey: ["dealer-inquiry-campaigns"],
     queryFn: async () => {
@@ -263,6 +275,12 @@ export default function DealerInquiryHub() {
   }, [reps, stateFilter]);
 
   const whatsappReps = reps.filter((r: any) => r.whatsapp_number);
+  const dealerConversationPhones = useMemo(
+    () => Array.from(new Set(
+      (conversationReps || []).flatMap((r: any) => [r.whatsapp_number, r.phone]).filter(Boolean),
+    )),
+    [conversationReps],
+  );
 
   const brandLabel = selectedBrand !== "all" ? selectedBrand : "[Brand]";
   const modelLabel = selectedModel !== "all" ? selectedModel : "";
@@ -438,7 +456,7 @@ export default function DealerInquiryHub() {
         {activeTab === "conversations" ? (
           <OmniMessagingWorkspace
             scopeLabel="Dealer Network"
-            allowedPhones={Array.from(new Set((reps || []).map((r: any) => r.whatsapp_number).filter(Boolean)))}
+            allowedPhones={dealerConversationPhones}
           />
         ) : null}
       </TabsContent>
