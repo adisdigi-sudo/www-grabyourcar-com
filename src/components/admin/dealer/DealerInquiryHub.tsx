@@ -123,15 +123,19 @@ export default function DealerInquiryHub() {
   const { data: reps = [], isLoading } = useQuery({
     queryKey: ["dealer-reps-inquiry", selectedBrand, stateFilter, cityFilter],
     queryFn: async () => {
+      // Require brand selection — only show dealers of the chosen brand for inquiry
+      if (selectedBrand === "all") return [];
       let q = supabase.from("dealer_representatives")
         .select("*, dealer_companies(company_name, dealer_type, city, state)")
-        .eq("is_active", true).order("name");
-      if (selectedBrand !== "all") q = q.eq("brand", selectedBrand);
+        .eq("is_active", true)
+        .eq("brand", selectedBrand)
+        .order("name");
       if (stateFilter !== "all") q = q.eq("state", stateFilter);
       if (cityFilter !== "all") q = q.eq("city", cityFilter);
       const { data } = await q;
       return data || [];
     },
+    enabled: selectedBrand !== "all",
   });
 
   const { data: campaigns = [] } = useQuery({
