@@ -595,7 +595,7 @@ export default function DealerInquiryHub() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {approvedTemplates.length === 0 ? (
-                        <SelectItem value="booking_confirmation">booking_confirmation</SelectItem>
+                        <SelectItem value="welcome_new_lead">welcome_new_lead</SelectItem>
                       ) : approvedTemplates.map((tpl: any) => (
                         <SelectItem key={tpl.name} value={tpl.name}>
                           {tpl.display_name || tpl.name} ({tpl.category || "general"})
