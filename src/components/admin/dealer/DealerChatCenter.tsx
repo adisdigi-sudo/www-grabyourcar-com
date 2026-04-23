@@ -161,14 +161,21 @@ export default function DealerChatCenter() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    {selectedDealerData?.contact_phone && (
-                      <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => window.open(`tel:${selectedDealerData.contact_phone}`)}>
-                        <Phone className="h-3 w-3" /> Call
-                      </Button>
-                    )}
+                  <div className="flex gap-2 items-center">
+                    {(() => {
+                      const rep = selectedDealerData?.dealer_representatives?.[0];
+                      const phone = selectedDealerData?.contact_phone || rep?.whatsapp_number || rep?.phone;
+                      return phone ? (
+                        <>
+                          <span className="text-xs text-muted-foreground font-mono">{phone}</span>
+                          <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => window.open(`tel:${phone}`)}>
+                            <Phone className="h-3 w-3" /> Call
+                          </Button>
+                        </>
+                      ) : <span className="text-[10px] text-muted-foreground">No phone on record</span>;
+                    })()}
                     <Badge variant="secondary" className="text-[10px]">
-                      <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp (API: Later)
+                      <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp
                     </Badge>
                   </div>
                 </div>
