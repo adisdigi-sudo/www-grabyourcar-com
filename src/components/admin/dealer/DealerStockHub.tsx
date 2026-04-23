@@ -43,12 +43,14 @@ export default function DealerStockHub() {
   const qc = useQueryClient();
   const [tab, setTab] = useState("send");
 
-  const [filterBrand, setFilterBrand] = useState("all");
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]); // empty = all
   const [filterCity, setFilterCity] = useState("");
   const [selectedReps, setSelectedReps] = useState<string[]>([]);
   const [stockMessage, setStockMessage] = useState(STOCK_REQUEST_TEMPLATE);
   const [metaTemplate, setMetaTemplate] = useState<string>("");
+  const [customTemplate, setCustomTemplate] = useState<string>("");
   const [sending, setSending] = useState(false);
+  const [sendProgress, setSendProgress] = useState<{ phone: string; ok: boolean; error?: string }[]>([]);
 
   const { data: reps = [] } = useQuery<any[]>({
     queryKey: ["dealer-reps-stock"],
