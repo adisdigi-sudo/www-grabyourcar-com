@@ -201,6 +201,7 @@ export default function DealerStockHub() {
   });
 
   const [extractingId, setExtractingId] = useState<string | null>(null);
+  const [bulkExtracting, setBulkExtracting] = useState(false);
   const [previewCars, setPreviewCars] = useState<any[] | null>(null);
   const [previewMeta, setPreviewMeta] = useState<{ rep_id?: string; brand?: string; message: string } | null>(null);
 
@@ -231,6 +232,33 @@ export default function DealerStockHub() {
       toast.error(e.message || "Extract failed");
     } finally {
       setExtractingId(null);
+    }
+  };
+
+  const extractAllReplies = async () => {
+    if (replies.length === 0) return toast.error("No replies to extract");
+    setBulkExtracting(true);
+    let totalSaved = 0;
+    let processed = 0;
+    try {
+      for (const r of replies) {
+        try {
+          const { data } = await supabase.functions.invoke("dealer-stock-extractor", {
+            body: {
+              message: r.message,
+              dealer_rep_id: r.dealer_rep_id,
+              default_brand: r.dealer_representatives?.brand,
+              auto_save: true,
+            },
+          });
+          totalSaved += data?.saved || 0;
+        } catch {/* skip */}
+        processed++;
+      }
+      toast.success(`✅ Processed ${processed} replies → saved ${totalSaved} cars`);
+      qc.invalidateQueries({ queryKey: ["dealer-inventory-live"] });
+    } finally {
+      setBulkExtracting(false);
     }
   };
 
