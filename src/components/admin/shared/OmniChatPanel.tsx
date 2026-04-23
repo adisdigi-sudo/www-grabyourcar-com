@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -170,6 +170,21 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
 
   const isWindowOpen = !!(selectedThread?.window_expires_at && new Date(selectedThread.window_expires_at) > new Date());
 
+  const applyThreadUpdates = useCallback((conversationId: string, updater: (thread: ChatThread) => ChatThread) => {
+    setThreads((prev) => prev.map((thread) => (thread.id === conversationId ? updater(thread) : thread)));
+    setSelectedThread((current) => {
+      if (!current || current.id !== conversationId) return current;
+      return updater(current);
+    });
+  }, []);
+
+  const appendLocalMessage = useCallback((message: ChatMessage) => {
+    setMessages((prev) => {
+      if (prev.some((item) => item.id === message.id)) return prev;
+      return [...prev, message];
+    });
+  }, []);
+
   async function sendTemplateFromPicker(tpl: WaTemplateOption) {
     if (!selectedThread) return;
     setSending(true);
@@ -340,7 +355,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }
 
-  async function loadThreads() {
+  const loadThreads = useCallback(async () => {
     setLoading(true);
     try {
       const { data: inboxThreads, error: inboxError } = await supabase
@@ -404,7 +419,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   async function markAsResponded(thread: ChatThread) {
     if (!thread || thread.isDraft) return;
@@ -430,7 +445,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
     }
   }
 
-  async function loadMessages(thread: ChatThread) {
+  const loadMessages = useCallback(async (thread: ChatThread) => {
     if (thread.isDraft) {
       setMessages([]);
       return;
@@ -465,7 +480,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
       media_filename: msg.media_filename,
       media_mime_type: msg.media_mime_type,
     })));
-  }
+  }, []);
 
   async function handleAttachmentUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -512,6 +527,32 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
         throw new Error(data?.error || error?.message || "Send failed");
       }
 
+      const optimisticMessage: ChatMessage = {
+        id: `temp-media-${Date.now()}`,
+        message_content: replyMessage.trim() || null,
+        message_type: messageType,
+        status: "sent",
+        error_message: null,
+        sent_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        channel: "whatsapp",
+        provider: "meta",
+        customer_name: userData?.user?.email?.split("@")[0] || "Agent",
+        direction: "outbound",
+        media_url: publicUrl,
+        media_filename: file.name,
+        media_mime_type: file.type || null,
+      };
+      appendLocalMessage(optimisticMessage);
+      applyThreadUpdates(selectedThread.id, (thread) => ({
+        ...thread,
+        last_message: replyMessage.trim() || file.name,
+        last_at: optimisticMessage.created_at,
+        unread_count: 0,
+        has_pending_reply: false,
+        status: "resolved",
+      }));
+
       setReplyMessage("");
       toast({ title: `${isImage ? "📷" : isVideo ? "🎥" : "📄"} ${file.name} sent` });
       setTimeout(() => { loadMessages(selectedThread); loadThreads(); }, 600);
@@ -554,6 +595,32 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
           }
           throw new Error(data?.error || error?.message || "Failed to send WhatsApp reply");
         }
+
+        const optimisticMessage: ChatMessage = {
+          id: `temp-text-${Date.now()}`,
+          message_content: replyMessage,
+          message_type: "text",
+          status: "sent",
+          error_message: null,
+          sent_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          channel: "whatsapp",
+          provider: "meta",
+          customer_name: userData?.user?.email?.split("@")[0] || "Agent",
+          direction: "outbound",
+          media_url: null,
+          media_filename: null,
+          media_mime_type: null,
+        };
+        appendLocalMessage(optimisticMessage);
+        applyThreadUpdates(selectedThread.id, (thread) => ({
+          ...thread,
+          last_message: replyMessage,
+          last_at: optimisticMessage.created_at,
+          unread_count: 0,
+          has_pending_reply: false,
+          status: "resolved",
+        }));
       } else {
         throw new Error("Only active WhatsApp conversations are supported here");
       }
@@ -567,8 +634,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
           .update({ status: "resolved", unread_count: 0 })
           .eq("id", selectedThread.id)
           .then(() => {
-            setThreads((prev) => prev.map((t) => t.id === selectedThread.id ? { ...t, status: "resolved", unread_count: 0, has_pending_reply: false } : t));
-            setSelectedThread((cur) => cur && cur.id === selectedThread.id ? { ...cur, status: "resolved", unread_count: 0, has_pending_reply: false } : cur);
+            applyThreadUpdates(selectedThread.id, (thread) => ({ ...thread, status: "resolved", unread_count: 0, has_pending_reply: false }));
           });
       }
 
