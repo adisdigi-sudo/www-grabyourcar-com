@@ -207,11 +207,74 @@ function buildOemSources(brand: string, modelName: string): string[] {
   if (b === 'tesla')
     return [`https://www.tesla.com/${slug}`];
 
-  if (b === 'mg' || b === 'mg motor') {
-    return [`https://www.mgmotor.co.in/vehicles/${slug}`, 'https://www.mgmotor.co.in/brochures'];
-  }
+  if (b === 'ferrari')
+    return [
+      `https://www.ferrari.com/en-EN/auto/${slug}`,
+      `https://www.ferrari.com/en-EN/auto`,
+    ];
+
+  if (b === 'lamborghini')
+    return [
+      `https://www.lamborghini.com/en-en/models/${slug}`,
+      `https://www.lamborghini.com/en-en/models`,
+    ];
+
+  if (b === 'bentley')
+    return [
+      `https://www.bentleymotors.com/en/models/${slug}.html`,
+      `https://www.bentleymotors.com/en/models.html`,
+    ];
+
+  if (b === 'rolls-royce' || b === 'rolls royce')
+    return [
+      `https://www.rolls-roycemotorcars.com/en_GB/showroom/${slug}.html`,
+      `https://www.rolls-roycemotorcars.com/`,
+    ];
+
+  if (b === 'aston martin')
+    return [
+      `https://www.astonmartin.com/en/models/${slug}`,
+      `https://www.astonmartin.com/en/models`,
+    ];
+
+  if (b === 'maserati')
+    return [
+      `https://www.maserati.com/in/en/models/${slug}`,
+      `https://www.maserati.com/in/en/models`,
+    ];
+
+  if (b === 'bugatti')
+    return [
+      `https://www.bugatti.com/models/${slug}/`,
+      `https://www.bugatti.com/models/`,
+    ];
+
+  if (b === 'polestar')
+    return [
+      `https://www.polestar.com/in/${slug}/`,
+      `https://www.polestar.com/in/`,
+    ];
+
+  if (b === 'rivian')
+    return [
+      `https://rivian.com/${slug}`,
+      `https://rivian.com/vehicles`,
+    ];
+
+  if (b === 'lucid' || b === 'lucid motors')
+    return [
+      `https://www.lucidmotors.com/${slug}`,
+      `https://www.lucidmotors.com/`,
+    ];
 
   return [];
+}
+
+/** CarWale fallback brochure page */
+function buildCarwaleBrochureUrl(brand: string, modelName: string): string {
+  const b = brand.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  const m = modelName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  return `https://www.carwale.com/${b}-cars/${m}/`;
 }
 
 function extractPdfLinks(text: string): string[] {
@@ -255,6 +318,16 @@ function brandDomainHints(brand: string): string[] {
     porsche: ['porsche.com'],
     lexus: ['lexusindia.co.in'],
     tesla: ['tesla.com'],
+    ferrari: ['ferrari.com'],
+    lamborghini: ['lamborghini.com'],
+    bentley: ['bentleymotors.com'],
+    'rolls-royce': ['rolls-roycemotorcars.com'],
+    'aston martin': ['astonmartin.com'],
+    maserati: ['maserati.com'],
+    bugatti: ['bugatti.com'],
+    polestar: ['polestar.com'],
+    rivian: ['rivian.com'],
+    lucid: ['lucidmotors.com'],
   };
   return map[b] || [];
 }
@@ -277,7 +350,11 @@ Deno.serve(async (req) => {
     const oemSources = buildOemSources(body.brand, body.modelName);
     const sources: string[] = body.sourceUrls && body.sourceUrls.length
       ? body.sourceUrls
-      : [...oemSources, buildCardekhoBrochureUrl(body.brand, body.modelName)];
+      : [
+          ...oemSources,
+          buildCardekhoBrochureUrl(body.brand, body.modelName),
+          buildCarwaleBrochureUrl(body.brand, body.modelName),
+        ];
 
     const candidates: { url: string; source: string; score: number }[] = [];
     const modelTokens = body.modelName.toLowerCase().split(/\s+/).filter((t) => t.length > 2);
