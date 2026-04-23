@@ -596,10 +596,10 @@ export default function DealerInquiryHub() {
                     </SelectContent>
                   </Select>
                   {sendMode === "text_only" && (
-                    <p className="text-xs text-green-600 mt-1">✅ Pehle selected approved template use hoga; agar chat window open hai tab detailed text bhi jayega</p>
+                    <p className="text-xs text-green-600 mt-1">✅ Chat open ho to actual inquiry text jayega; closed chat me sirf safe intro template jayega, booking confirmation kabhi nahi</p>
                   )}
                   {sendMode === "template_then_text" && (
-                    <p className="text-xs text-muted-foreground mt-1">ℹ️ Closed chat me inquiry selected template ke andar hi bhejega; open chat me uske baad detailed text bhi jayega</p>
+                    <p className="text-xs text-muted-foreground mt-1">ℹ️ Closed chat me pehle safe opener jayega, aur open chat me uske baad actual inquiry text jayega</p>
                   )}
                 </div>
 
@@ -609,9 +609,9 @@ export default function DealerInquiryHub() {
                   <Select value={metaTemplate} onValueChange={setMetaTemplate}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {approvedTemplates.length === 0 ? (
-                        <SelectItem value="booking_confirmation">booking_confirmation</SelectItem>
-                      ) : approvedTemplates.map((tpl: any) => (
+                      {selectableTemplates.length === 0 ? (
+                        <SelectItem value="welcome_new_lead">welcome_new_lead</SelectItem>
+                      ) : selectableTemplates.map((tpl: any) => (
                         <SelectItem key={tpl.name} value={tpl.name}>
                           {tpl.display_name || tpl.name} ({tpl.category || "general"})
                         </SelectItem>
@@ -619,7 +619,7 @@ export default function DealerInquiryHub() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Har send mode me selected approved template use hoga. Closed dealer chat me isi template ke andar inquiry pack karke bheji jayegi.
+                    Sirf inquiry-safe templates dikh rahe hain. Booking, payment, policy ya confirmation template dealer inquiry me use nahi hoga.
                   </p>
                 </div>
 
