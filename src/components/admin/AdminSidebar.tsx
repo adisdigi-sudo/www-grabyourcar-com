@@ -192,6 +192,7 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin"],
     children: [
       { id: "cars-workspace", label: "📊 Manage All Cars", icon: Car },
+      { id: "cars-all-list", label: "📋 All Cars List", icon: Database },
       { id: "cars-brand-scrape", label: "🤖 Brand Scrape (Auto)", icon: Globe, externalPath: "/admin/brand-scrape" },
     ]
   },
