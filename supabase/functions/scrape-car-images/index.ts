@@ -1,637 +1,223 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+// Scrape car images with OEM → CarDekho → CarWale → Google Images fallback
+// Usage: POST { brand, modelName, carId? } → inserts into car_images, marks images_synced
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const FIRECRAWL_API_URL = 'https://api.firecrawl.dev/v1';
+const FIRECRAWL_URL = 'https://api.firecrawl.dev/v2/scrape';
 
-interface ImageResult {
-  url: string;
-  source: string;
+interface Req {
+  carId?: string;
+  brand: string;
+  modelName: string;
+  maxImages?: number;
 }
 
-// OEM website configurations - ONLY official manufacturer sources
-const OEM_SOURCES: Record<string, { baseUrl: string; patterns: string[]; referer: string }> = {
-  'Tata': {
-    baseUrl: 'https://cars.tatamotors.com',
-    patterns: ['tatamotors.com', 'tatamotorscdn.com', 'scene7.com'],
-    referer: 'https://cars.tatamotors.com/'
-  },
-  'Mahindra': {
-    baseUrl: 'https://auto.mahindra.com',
-    patterns: ['mahindra.com', 'mahindracdn.com'],
-    referer: 'https://auto.mahindra.com/'
-  },
-  'Kia': {
-    baseUrl: 'https://www.kia.com/in',
-    patterns: ['kia.com', 'kiacdn.com'],
-    referer: 'https://www.kia.com/in/'
-  },
-  'Hyundai': {
-    baseUrl: 'https://www.hyundai.com/in/en',
-    patterns: ['hyundai.com', 'hyundaicdn.com'],
-    referer: 'https://www.hyundai.com/in/en/'
-  },
-  'Toyota': {
-    baseUrl: 'https://www.toyotabharat.com',
-    patterns: ['toyotabharat.com', 'toyotacdn.com'],
-    referer: 'https://www.toyotabharat.com/'
-  },
-  'Honda': {
-    baseUrl: 'https://www.hondacarindia.com',
-    patterns: ['hondacarindia.com', 'hondacdn.com'],
-    referer: 'https://www.hondacarindia.com/'
-  },
-  'MG': {
-    baseUrl: 'https://www.mgmotor.co.in',
-    patterns: ['mgmotor.co.in', 'mgcdn.com'],
-    referer: 'https://www.mgmotor.co.in/'
-  },
-  'Skoda': {
-    baseUrl: 'https://www.skoda-auto.co.in',
-    patterns: ['skoda-auto.co.in', 'skodacdn.com'],
-    referer: 'https://www.skoda-auto.co.in/'
-  },
-  'Volkswagen': {
-    baseUrl: 'https://www.volkswagen.co.in',
-    patterns: ['volkswagen.co.in', 'vwcdn.com', 'scene7.com'],
-    referer: 'https://www.volkswagen.co.in/'
-  },
-  'BMW': {
-    baseUrl: 'https://www.bmw.in',
-    patterns: ['bmw.in', 'bmwcdn.com', 'scene7.com'],
-    referer: 'https://www.bmw.in/'
-  },
-  'Mercedes-Benz': {
-    baseUrl: 'https://www.mercedes-benz.co.in',
-    patterns: ['mercedes-benz.co.in', 'mercedescdn.com', 'scene7.com'],
-    referer: 'https://www.mercedes-benz.co.in/'
-  },
-  'Audi': {
-    baseUrl: 'https://www.audi.in',
-    patterns: ['audi.in', 'audicdn.com', 'scene7.com'],
-    referer: 'https://www.audi.in/'
-  },
-  'Volvo': {
-    baseUrl: 'https://www.volvocars.com/en-in',
-    patterns: ['volvocars.com', 'volvocdn.com'],
-    referer: 'https://www.volvocars.com/en-in/'
-  },
-  'BYD': {
-    baseUrl: 'https://www.byd.com/in',
-    patterns: ['byd.com', 'bydcdn.com'],
-    referer: 'https://www.byd.com/in/'
-  },
-  'Tesla': {
-    baseUrl: 'https://www.tesla.com',
-    patterns: ['tesla.com', 'teslacdn.com'],
-    referer: 'https://www.tesla.com/'
-  },
-  'Nissan': {
-    baseUrl: 'https://www.nissan.co.in',
-    patterns: ['nissan.co.in', 'nissancdn.com'],
-    referer: 'https://www.nissan.co.in/'
-  },
-  'Jeep': {
-    baseUrl: 'https://www.jeep-india.com',
-    patterns: ['jeep-india.com', 'jeepcdn.com'],
-    referer: 'https://www.jeep-india.com/'
-  },
-  'Renault': {
-    baseUrl: 'https://www.renault.co.in',
-    patterns: ['renault.co.in', 'renaultcdn.com'],
-    referer: 'https://www.renault.co.in/'
-  },
-};
+const slugify = (s: string) =>
+  s.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-// Build OEM-only search URL
-function buildOemUrl(brand: string, model: string): { url: string; source: OEM } | null {
-  const oemConfig = OEM_SOURCES[brand];
-  if (!oemConfig) {
-    console.log(`⚠ No OEM configuration for ${brand}`);
-    return null;
+function buildSourceUrls(brand: string, modelName: string): string[] {
+  const b = brand.toLowerCase().trim();
+  const slug = slugify(modelName);
+  const brandSlug = slugify(brand);
+  const cdBrand = brand.replace(/\s+/g, '_');
+  const cdModel = modelName.replace(/\s+/g, '-');
+
+  const sources: string[] = [];
+
+  // OEM-specific (best quality)
+  if (b === 'kia') sources.push(`https://www.kia.com/in/our-vehicles/${slug}/showroom.html`);
+  else if (b === 'hyundai') sources.push(`https://www.hyundai.com/in/en/find-a-car/${slug}/highlights`);
+  else if (b === 'tata' || b === 'tata motors') {
+    const isEv = /\bev\b/i.test(modelName);
+    const baseSlug = slug.replace(/-?ev$/i, '');
+    if (isEv) sources.push(`https://ev.tatamotors.com/${baseSlug}/`);
+    else sources.push(`https://cars.tatamotors.com/suv/${baseSlug}`, `https://cars.tatamotors.com/sedan/${baseSlug}`);
   }
+  else if (b === 'mahindra') sources.push(`https://auto.mahindra.com/suv/${slug}.html`);
+  else if (b === 'maruti suzuki' || b === 'maruti') sources.push(`https://www.marutisuzuki.com/${slug}`, `https://www.nexaexperience.com/${slug}.html`);
+  else if (b === 'toyota') sources.push(`https://www.toyotabharat.com/${slug}/`);
+  else if (b === 'honda') sources.push(`https://www.hondacarindia.com/${slug}`);
+  else if (b === 'mg' || b.includes('morris')) sources.push(`https://www.mgmotor.co.in/vehicles/${slug}`);
+  else if (b === 'skoda') sources.push(`https://www.skoda-auto.co.in/models/${slug}`);
+  else if (b === 'volkswagen') sources.push(`https://www.volkswagen.co.in/en/models/${slug}.html`);
+  else if (b === 'renault') sources.push(`https://www.renault.co.in/vehicles/${slug}.html`);
+  else if (b === 'nissan') sources.push(`https://www.nissan.in/vehicles/new-vehicles/${slug}.html`);
+  else if (b === 'jeep') sources.push(`https://www.jeep-india.com/${slug}.html`);
+  else if (b === 'citroen') sources.push(`https://www.citroen.in/range/${slug}.html`);
+  else if (b === 'byd') sources.push(`https://www.bydauto.co.in/${slug}`);
+  else if (b === 'vinfast') sources.push(`https://vinfastauto.in/${slug}`);
+  else if (b === 'volvo') sources.push(`https://www.volvocars.com/in/cars/${slug}/`);
+  else if (b === 'force motors' || b === 'force') sources.push(`https://www.forcemotors.com/${slug}.php`);
+  else if (b === 'isuzu') sources.push(`https://www.isuzu.in/${slug}/`);
+  else if (b === 'bmw') sources.push(`https://www.bmw.in/en/all-models/${slug.replace(/-/g, '')}.html`);
+  else if (b === 'mercedes-benz' || b === 'mercedes') sources.push(`https://www.mercedes-benz.co.in/passengercars/models/${slug.replace(/-/g, '')}/overview.html`);
+  else if (b === 'audi') sources.push(`https://www.audi.in/in/web/en/models/${slug}.html`);
+  else if (b === 'mini') sources.push(`https://www.mini.in/en_IN/home/range/${slug}.html`);
+  else if (b === 'land rover') sources.push(`https://www.landrover.in/vehicles/${slug}/index.html`);
+  else if (b === 'jaguar') sources.push(`https://www.jaguar.in/jaguar-range/${slug}/index.html`);
+  else if (b === 'porsche') sources.push(`https://www.porsche.com/india/models/${slug}/`);
+  else if (b === 'lexus') sources.push(`https://www.lexusindia.co.in/lexusone/${slug}.html`);
+  else if (b === 'tesla') sources.push(`https://www.tesla.com/${slug}`);
+  else if (b === 'ferrari') sources.push(`https://www.ferrari.com/en-EN/auto/${slug}`);
+  else if (b === 'lamborghini') sources.push(`https://www.lamborghini.com/en-en/models/${slug}`);
+  else if (b === 'bentley') sources.push(`https://www.bentleymotors.com/en/models/${slug}.html`);
+  else if (b === 'rolls-royce' || b === 'rolls royce') sources.push(`https://www.rolls-roycemotorcars.com/en_GB/showroom/${slug}.html`);
+  else if (b === 'aston martin') sources.push(`https://www.astonmartin.com/en/models/${slug}`);
+  else if (b === 'maserati') sources.push(`https://www.maserati.com/in/en/models/${slug}`);
+  else if (b === 'bugatti') sources.push(`https://www.bugatti.com/models/${slug}/`);
+  else if (b === 'polestar') sources.push(`https://www.polestar.com/in/${slug}/`);
+  else if (b === 'rivian') sources.push(`https://rivian.com/${slug}`);
+  else if (b === 'lucid') sources.push(`https://www.lucidmotors.com/${slug}`);
 
-  const modelSlug = model.toLowerCase().replace(/\s+/g, '-');
-  const url = `${oemConfig.baseUrl}/${modelSlug}`;
-  
-  return { 
-    url,
-    source: { name: brand, ...oemConfig }
-  };
+  // CarDekho fallback (always)
+  sources.push(`https://www.cardekho.com/${cdBrand}/${cdModel}/pictures`);
+  sources.push(`https://www.cardekho.com/cars/${cdBrand}/${cdModel}.htm`);
+
+  // CarWale fallback
+  sources.push(`https://www.carwale.com/${brandSlug}-cars/${slug}/images/`);
+  sources.push(`https://www.carwale.com/${brandSlug}-cars/${slug}/`);
+
+  return sources;
 }
 
-interface OEM {
-  name: string;
-  baseUrl: string;
-  patterns: string[];
-  referer: string;
+function buildGoogleImagesUrl(brand: string, modelName: string): string {
+  const q = encodeURIComponent(`${brand} ${modelName} car official`);
+  return `https://www.google.com/search?q=${q}&tbm=isch&safe=active`;
 }
 
-// Extract high-quality image URLs from HTML content
-function extractImagesFromHtml(html: string, patterns: string[]): string[] {
-  const images: string[] = [];
-  
-  // Match image URLs from various attributes
-  const imgRegex = /(?:src|data-src|data-original|data-lazy-src)=["']([^"']+)["']/gi;
-  const bgRegex = /background(?:-image)?:\s*url\(['"]?([^'")\s]+)['"]?\)/gi;
-  const jsonImgRegex = /"(?:image|url|src|original|large|medium|picture)":\s*"([^"]+)"/gi;
-  const srcsetRegex = /srcset=["']([^"']+)["']/gi;
-  
-  let match;
-  
-  // Extract from img tags
-  while ((match = imgRegex.exec(html)) !== null) {
-    const url = match[1];
-    if (isValidOemImage(url, patterns)) {
-      images.push(normalizeImageUrl(url));
-    }
+function extractImageUrls(text: string, links: string[]): string[] {
+  const urls = new Set<string>();
+  // From explicit links
+  for (const l of links) {
+    if (/\.(jpg|jpeg|png|webp)(\?|$)/i.test(l)) urls.add(l);
   }
-  
-  // Extract from srcset
-  while ((match = srcsetRegex.exec(html)) !== null) {
-    const urls = match[1].split(',').map(u => u.trim().split(' ')[0]);
-    for (const url of urls) {
-      if (isValidOemImage(url, patterns)) {
-        images.push(normalizeImageUrl(url));
-      }
-    }
-  }
-  
-  // Extract from background URLs
-  while ((match = bgRegex.exec(html)) !== null) {
-    const url = match[1];
-    if (isValidOemImage(url, patterns)) {
-      images.push(normalizeImageUrl(url));
-    }
-  }
-  
-  // Extract from JSON data
-  while ((match = jsonImgRegex.exec(html)) !== null) {
-    const url = match[1];
-    if (isValidOemImage(url, patterns)) {
-      images.push(normalizeImageUrl(url));
-    }
-  }
-  
-  // Deduplicate and filter
-  const uniqueImages = [...new Set(images)];
-  return uniqueImages.filter(url => {
-    // Ensure it's a car image, not thumbnail/icon
-    return !url.includes('thumb') && 
-           !url.includes('_s.') && 
-           !url.includes('_m.') &&
-           !url.includes('/50x') &&
-           !url.includes('/100x') &&
-           !url.includes('/150x') &&
-           !url.includes('/200x') &&
-           !url.includes('logo') &&
-           !url.includes('icon') &&
-           !url.includes('badge') &&
-           !url.includes('social');
-  });
+  // From markdown ![alt](url)
+  const mdRe = /!\[[^\]]*\]\((https?:\/\/[^)\s]+\.(?:jpg|jpeg|png|webp)(?:\?[^)\s]*)?)\)/gi;
+  let m;
+  while ((m = mdRe.exec(text)) !== null) urls.add(m[1]);
+  // From <img src="...">
+  const imgRe = /<img[^>]+src=["'](https?:\/\/[^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)["']/gi;
+  while ((m = imgRe.exec(text)) !== null) urls.add(m[1]);
+  return [...urls];
 }
 
-// Validate if URL is from official OEM source
-function isValidOemImage(url: string, patterns: string[]): boolean {
-  if (!url || typeof url !== 'string') return false;
-  
-  // Must be an image
-  if (!url.match(/\.(jpg|jpeg|png|webp|gif)(\?|$|#)/i)) return false;
-  
-  // Must match at least one OEM domain pattern
-  return patterns.some(p => url.toLowerCase().includes(p.toLowerCase()));
+function scoreImage(url: string, brand: string, modelName: string): number {
+  const lower = url.toLowerCase();
+  let score = 0;
+  const brandTokens = brand.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+  const modelTokens = modelName.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+  for (const t of brandTokens) if (lower.includes(t)) score += 2;
+  for (const t of modelTokens) if (lower.includes(t)) score += 4;
+  // Penalize tiny / icon images
+  if (/icon|logo|favicon|sprite|thumb-50|thumb-100/.test(lower)) score -= 10;
+  if (/1280|1920|large|hero|banner|exterior/.test(lower)) score += 3;
+  if (/cardekho|carwale/.test(lower)) score += 1;
+  // Heavy penalty for clearly junk
+  if (/placeholder|blank|spinner|loading/.test(lower)) score -= 20;
+  return score;
 }
 
-// Normalize URL (fix protocol, clean up)
-function normalizeImageUrl(url: string): string {
-  let normalized = url.trim();
-  
-  // Add protocol if missing
-  if (normalized.startsWith('//')) {
-    normalized = 'https:' + normalized;
-  }
-  
-  // Replace HTTP with HTTPS
-  if (normalized.startsWith('http://')) {
-    normalized = normalized.replace('http://', 'https://');
-  }
-  
-  return normalized;
-}
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
-// Scrape images from OEM website only
-async function scrapeOemImages(
-  brand: string,
-  model: string,
-  firecrawlKey: string
-): Promise<ImageResult[]> {
-  const oemUrl = buildOemUrl(brand, model);
-  if (!oemUrl) {
-    console.log(`⚠ OEM source not available for ${brand}`);
-    return [];
-  }
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
 
-  const allImages: ImageResult[] = [];
-  
   try {
-    console.log(`🔍 Scraping OEM: ${brand} from ${oemUrl.url}`);
-    
-    const response = await fetch(`${FIRECRAWL_API_URL}/scrape`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${firecrawlKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url: oemUrl.url,
-        formats: ['html', 'links'],
-        onlyMainContent: false,
-        waitFor: 3000,
-      }),
-    });
-
-    if (!response.ok) {
-      console.log(`⚠ OEM scrape failed: ${response.status}`);
-      return [];
+    const body = (await req.json()) as Req;
+    if (!body.brand || !body.modelName) {
+      return new Response(JSON.stringify({ success: false, error: 'brand and modelName required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
+    if (!firecrawlKey) throw new Error('FIRECRAWL_API_KEY not configured');
 
-    const data = await response.json();
-    
-    // Extract from HTML
-    const html = data.data?.html || '';
-    const htmlImages = extractImagesFromHtml(html, oemUrl.source.patterns);
-    console.log(`✓ Found ${htmlImages.length} images from HTML`);
-    
-    for (const url of htmlImages.slice(0, 10)) {
-      if (!allImages.find(i => i.url === url)) {
-        allImages.push({ url, source: brand });
+    const maxImages = Math.min(body.maxImages || 6, 12);
+
+    // Resolve carId
+    let carId = body.carId;
+    if (!carId) {
+      const { data: car } = await supabase
+        .from('cars').select('id').eq('brand', body.brand).eq('name', body.modelName).maybeSingle();
+      carId = car?.id;
+    }
+    if (!carId) throw new Error(`Car not found: ${body.brand} ${body.modelName}`);
+
+    const sources = [...buildSourceUrls(body.brand, body.modelName), buildGoogleImagesUrl(body.brand, body.modelName)];
+    const candidates: { url: string; score: number; source: string }[] = [];
+
+    for (const src of sources) {
+      // Stop early if we have plenty of high-score images
+      if (candidates.filter(c => c.score >= 6).length >= maxImages * 2) break;
+      try {
+        const fcRes = await fetch(FIRECRAWL_URL, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: src, formats: ['markdown', 'links'], onlyMainContent: false, waitFor: 2500 }),
+        });
+        if (!fcRes.ok) { console.log('fc fail', src, fcRes.status); continue; }
+        const fc = await fcRes.json();
+        const data = fc.data || fc;
+        const links: string[] = data.links || [];
+        const markdown: string = data.markdown || '';
+        const imgs = extractImageUrls(markdown, links);
+        for (const url of imgs) {
+          candidates.push({ url, score: scoreImage(url, body.brand, body.modelName), source: src });
+        }
+      } catch (e) {
+        console.log('src err', src, (e as Error).message);
       }
     }
-    
-    // Extract from links array
-    const links = data.data?.links || [];
-    const linkImages = links.filter((link: string) => isValidOemImage(link, oemUrl.source.patterns));
-    console.log(`✓ Found ${linkImages.length} images from links`);
-    
-    for (const url of linkImages.slice(0, 5)) {
-      if (!allImages.find(i => i.url === url)) {
-        allImages.push({ url: normalizeImageUrl(url), source: brand });
-      }
+
+    // Dedupe + rank
+    const seen = new Set<string>();
+    const ranked = candidates
+      .sort((a, b) => b.score - a.score)
+      .filter(c => (seen.has(c.url) ? false : (seen.add(c.url), true)))
+      .filter(c => c.score >= 0)
+      .slice(0, maxImages);
+
+    if (ranked.length === 0) {
+      return new Response(JSON.stringify({
+        success: false, error: 'No images found', sourcesTried: sources.length,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
-    
+
+    // Insert into car_images (skip duplicates)
+    const { data: existing } = await supabase
+      .from('car_images').select('url').eq('car_id', carId);
+    const existingUrls = new Set((existing || []).map(r => r.url));
+
+    const toInsert = ranked
+      .filter(r => !existingUrls.has(r.url))
+      .map((r, i) => ({
+        car_id: carId,
+        url: r.url,
+        is_primary: i === 0 && existingUrls.size === 0,
+        sort_order: existingUrls.size + i,
+        alt_text: `${body.brand} ${body.modelName}`,
+      }));
+
+    if (toInsert.length > 0) {
+      await supabase.from('car_images').insert(toInsert);
+    }
+
+    await supabase.from('cars')
+      .update({ images_synced: true, images_synced_at: new Date().toISOString() })
+      .eq('id', carId);
+
+    return new Response(JSON.stringify({
+      success: true,
+      carId,
+      inserted: toInsert.length,
+      totalRanked: ranked.length,
+      topImages: ranked.slice(0, 3),
+    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (e) {
-    console.error(`✗ OEM scrape error for ${brand}:`, e);
-  }
-
-  return allImages.slice(0, 10);
-}
-
-// Download image with proper headers
-async function downloadImage(imageUrl: string, referer: string): Promise<{ data: Uint8Array; contentType: string } | null> {
-  const headers: Record<string, string> = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-    'Accept': 'image/webp,image/png,image/jpeg,image/*;q=0.8',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Referer': referer,
-    'Origin': new URL(referer).origin,
-  };
-
-  try {
-    console.log(`  ⬇️ Downloading: ${imageUrl.substring(0, 70)}...`);
-    const response = await fetch(imageUrl, { headers });
-    
-    if (!response.ok) {
-      console.log(`  ✗ HTTP ${response.status}`);
-      return null;
-    }
-    
-    const contentType = response.headers.get('content-type') || '';
-    
-    if (contentType.includes('avif') || contentType.includes('heic')) {
-      console.log(`  ✗ Unsupported format: ${contentType}`);
-      return null;
-    }
-    
-    if (!contentType.includes('image')) {
-      console.log(`  ✗ Not an image: ${contentType}`);
-      return null;
-    }
-    
-    const buffer = await response.arrayBuffer();
-    const data = new Uint8Array(buffer);
-    
-    // Skip tiny images (likely placeholders)
-    if (data.length < 5000) {
-      console.log(`  ✗ Too small: ${data.length} bytes`);
-      return null;
-    }
-    
-    console.log(`  ✓ Downloaded: ${Math.round(data.length/1024)}KB`);
-    return { data, contentType };
-  } catch (e) {
-    console.error(`  ✗ Download error:`, e);
-    return null;
-  }
-}
-
-// Generate storage path
-function getStoragePath(brand: string, model: string, index: number, ext: string): string {
-  const brandSlug = brand.toLowerCase().replace(/\s+/g, '-');
-  let modelSlug = model.toLowerCase()
-    .replace(brand.toLowerCase(), '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  
-  if (!modelSlug || modelSlug.length < 2) {
-    modelSlug = model.toLowerCase().replace(/\s+/g, '-');
-  }
-  
-  return `${brandSlug}/${modelSlug}/img-${index + 1}-${Date.now()}.${ext}`;
-}
-
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    if (!firecrawlKey) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'FIRECRAWL_API_KEY not configured. Please connect Firecrawl in Settings → Connectors.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const { carId, limit = 10, mode = 'single' } = await req.json().catch(() => ({}));
-
-    if (mode === 'batch') {
-      // Batch mode: Process multiple cars missing images
-      console.log('=== BATCH MODE: Finding cars without images ===');
-      
-      // Get all active cars
-      const { data: allCars, error: fetchError } = await supabase
-        .from('cars')
-        .select('id, name, brand, slug')
-        .eq('is_discontinued', false)
-        .order('brand')
-        .order('name');
-
-      if (fetchError) throw new Error(`Fetch error: ${fetchError.message}`);
-
-      // Get car IDs that have Supabase-hosted images (real scraped images)
-      const { data: carsWithImages } = await supabase
-        .from('car_images')
-        .select('car_id')
-        .ilike('url', '%supabase.co%');
-
-      const carsWithImageIds = new Set((carsWithImages || []).map(c => c.car_id));
-      
-      // Filter to cars without any Supabase images
-      const carsToProcess = (allCars || [])
-        .filter(car => !carsWithImageIds.has(car.id))
-        .slice(0, limit);
-
-      console.log(`Found ${(allCars || []).length} total cars, ${carsWithImageIds.size} have images`);
-      console.log(`Processing ${carsToProcess.length} cars for image scraping`);
-
-      const results = {
-        total: carsToProcess.length,
-        processed: 0,
-        imagesAdded: 0,
-        failed: [] as string[],
-        details: [] as Array<{car: string; images: number}>
-      };
-
-      for (const car of carsToProcess) {
-        console.log(`\n=== Processing: ${car.brand} ${car.name} ===`);
-        
-        const scrapedImages = await scrapeOemImages(car.brand, car.name, firecrawlKey);
-        
-        if (scrapedImages.length === 0) {
-          console.log('❌ No images found from official OEM website');
-          results.failed.push(`${car.brand} ${car.name}`);
-          continue;
-        }
-
-        let carImagesAdded = 0;
-
-        for (let i = 0; i < scrapedImages.length; i++) {
-          const { url: imgUrl, source } = scrapedImages[i];
-          
-          // Use OEM referer from config
-          const oemConfig = OEM_SOURCES[source];
-          const referer = oemConfig?.referer || 'https://example.com/';
-          
-          const downloaded = await downloadImage(imgUrl, referer);
-          
-          if (!downloaded) continue;
-
-          const ext = downloaded.contentType.includes('png') ? 'png' : 
-                      downloaded.contentType.includes('webp') ? 'webp' : 'jpg';
-          
-          const storagePath = getStoragePath(car.brand, car.name, i, ext);
-
-          const { error: uploadError } = await supabase.storage
-            .from('car-images')
-            .upload(storagePath, downloaded.data, {
-              contentType: downloaded.contentType,
-              upsert: true,
-            });
-
-          if (uploadError) {
-            console.log(`  ✗ Upload failed: ${uploadError.message}`);
-            continue;
-          }
-
-          const { data: urlData } = supabase.storage
-            .from('car-images')
-            .getPublicUrl(storagePath);
-
-          // Insert new car_image record
-          const { error: insertError } = await supabase
-            .from('car_images')
-            .insert({
-              car_id: car.id,
-              url: urlData.publicUrl,
-              alt_text: `${car.brand} ${car.name} - Image ${i + 1}`,
-              is_primary: i === 0,
-              sort_order: i,
-            });
-
-          if (!insertError) {
-            console.log(`  ✓ Saved: ${storagePath}`);
-            results.imagesAdded++;
-            carImagesAdded++;
-          }
-        }
-        
-        results.processed++;
-        results.details.push({ car: `${car.brand} ${car.name}`, images: carImagesAdded });
-        
-        // Update car sync status
-        if (carImagesAdded > 0) {
-          await supabase
-            .from('cars')
-            .update({ 
-              images_synced: true, 
-              images_synced_at: new Date().toISOString() 
-            })
-            .eq('id', car.id);
-        }
-        
-        // Small delay between cars to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1500));
-      }
-
-      console.log('\n=== BATCH COMPLETE ===');
-      console.log(`Processed: ${results.processed}, Images: ${results.imagesAdded}, Failed: ${results.failed.length}`);
-
-      return new Response(
-        JSON.stringify({ success: true, mode: 'batch', results }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-
-    } else {
-      // Single car mode
-      if (!carId) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'carId is required for single mode' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const { data: car, error: carError } = await supabase
-        .from('cars')
-        .select('id, name, brand, slug')
-        .eq('id', carId)
-        .single();
-
-      if (carError || !car) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Car not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      console.log(`=== SINGLE MODE: ${car.brand} ${car.name} ===`);
-
-      // First, delete any existing AI-generated images for this car
-      const { data: existingImages } = await supabase
-        .from('car_images')
-        .select('id, url')
-        .eq('car_id', carId);
-      
-      const fakeImages = (existingImages || []).filter(img => 
-        img.url && img.url.match(/-\d{10,13}\.(webp|png|jpg)$/)
-      );
-      
-      if (fakeImages.length > 0) {
-        console.log(`Removing ${fakeImages.length} fake images first`);
-        await supabase
-          .from('car_images')
-          .delete()
-          .in('id', fakeImages.map(i => i.id));
-      }
-
-       const scrapedImages = await scrapeOemImages(car.brand, car.name, firecrawlKey);
-      
-      if (scrapedImages.length === 0) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'No images found from official manufacturer (OEM) website. Please ensure the model is listed on the manufacturer\'s official site.' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const addedImages: string[] = [];
-
-      for (let i = 0; i < scrapedImages.length; i++) {
-        const { url: imgUrl, source } = scrapedImages[i];
-        
-        // Use OEM referer from config
-        const oemConfig = OEM_SOURCES[source];
-        const referer = oemConfig?.referer || 'https://example.com/';
-        
-        const downloaded = await downloadImage(imgUrl, referer);
-        
-        if (!downloaded) continue;
-
-        const ext = downloaded.contentType.includes('png') ? 'png' : 
-                    downloaded.contentType.includes('webp') ? 'webp' : 'jpg';
-        
-        const storagePath = getStoragePath(car.brand, car.name, i, ext);
-
-        const { error: uploadError } = await supabase.storage
-          .from('car-images')
-          .upload(storagePath, downloaded.data, {
-            contentType: downloaded.contentType,
-            upsert: true,
-          });
-
-        if (uploadError) {
-          console.log(`Upload failed: ${uploadError.message}`);
-          continue;
-        }
-
-        const { data: urlData } = supabase.storage
-          .from('car-images')
-          .getPublicUrl(storagePath);
-
-        const { error: insertError } = await supabase
-          .from('car_images')
-          .insert({
-            car_id: car.id,
-            url: urlData.publicUrl,
-            alt_text: `${car.brand} ${car.name} - Image ${i + 1}`,
-            is_primary: i === 0,
-            sort_order: i,
-          });
-
-        if (!insertError) {
-          addedImages.push(urlData.publicUrl);
-        }
-      }
-
-      // Mark car as synced
-      if (addedImages.length > 0) {
-        await supabase
-          .from('cars')
-          .update({ 
-            images_synced: true, 
-            images_synced_at: new Date().toISOString() 
-          })
-          .eq('id', carId);
-      }
-
-      return new Response(
-        JSON.stringify({ 
-          success: addedImages.length > 0, 
-          mode: 'single', 
-          car: `${car.brand} ${car.name}`,
-          imagesAdded: addedImages.length,
-          urls: addedImages
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-  } catch (error) {
-    console.error('Scrape error:', error);
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ success: false, error: (e as Error).message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });

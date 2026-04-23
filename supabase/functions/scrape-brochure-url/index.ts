@@ -207,11 +207,81 @@ function buildOemSources(brand: string, modelName: string): string[] {
   if (b === 'tesla')
     return [`https://www.tesla.com/${slug}`];
 
-  if (b === 'mg' || b === 'mg motor') {
-    return [`https://www.mgmotor.co.in/vehicles/${slug}`, 'https://www.mgmotor.co.in/brochures'];
-  }
+  if (b === 'ferrari')
+    return [
+      `https://www.ferrari.com/en-EN/auto/${slug}`,
+      `https://www.ferrari.com/en-EN/auto`,
+    ];
+
+  if (b === 'lamborghini')
+    return [
+      `https://www.lamborghini.com/en-en/models/${slug}`,
+      `https://www.lamborghini.com/en-en/models`,
+    ];
+
+  if (b === 'bentley')
+    return [
+      `https://www.bentleymotors.com/en/models/${slug}.html`,
+      `https://www.bentleymotors.com/en/models.html`,
+    ];
+
+  if (b === 'rolls-royce' || b === 'rolls royce')
+    return [
+      `https://www.rolls-roycemotorcars.com/en_GB/showroom/${slug}.html`,
+      `https://www.rolls-roycemotorcars.com/`,
+    ];
+
+  if (b === 'aston martin')
+    return [
+      `https://www.astonmartin.com/en/models/${slug}`,
+      `https://www.astonmartin.com/en/models`,
+    ];
+
+  if (b === 'maserati')
+    return [
+      `https://www.maserati.com/in/en/models/${slug}`,
+      `https://www.maserati.com/in/en/models`,
+    ];
+
+  if (b === 'bugatti')
+    return [
+      `https://www.bugatti.com/models/${slug}/`,
+      `https://www.bugatti.com/models/`,
+    ];
+
+  if (b === 'polestar')
+    return [
+      `https://www.polestar.com/in/${slug}/`,
+      `https://www.polestar.com/in/`,
+    ];
+
+  if (b === 'rivian')
+    return [
+      `https://rivian.com/${slug}`,
+      `https://rivian.com/vehicles`,
+    ];
+
+  if (b === 'lucid' || b === 'lucid motors')
+    return [
+      `https://www.lucidmotors.com/${slug}`,
+      `https://www.lucidmotors.com/`,
+    ];
 
   return [];
+}
+
+/** CarWale brochure page (proven reliable — returns direct PDF link). */
+function buildCarwaleBrochureUrl(brand: string, modelName: string): string {
+  const b = brand.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  const m = modelName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  return `https://www.carwale.com/${b}-cars/${m}/brochure/`;
+}
+
+/** CarWale model overview (alternate fallback). */
+function buildCarwaleModelUrl(brand: string, modelName: string): string {
+  const b = brand.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  const m = modelName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  return `https://www.carwale.com/${b}-cars/${m}/`;
 }
 
 function extractPdfLinks(text: string): string[] {
@@ -255,6 +325,16 @@ function brandDomainHints(brand: string): string[] {
     porsche: ['porsche.com'],
     lexus: ['lexusindia.co.in'],
     tesla: ['tesla.com'],
+    ferrari: ['ferrari.com'],
+    lamborghini: ['lamborghini.com'],
+    bentley: ['bentleymotors.com'],
+    'rolls-royce': ['rolls-roycemotorcars.com'],
+    'aston martin': ['astonmartin.com'],
+    maserati: ['maserati.com'],
+    bugatti: ['bugatti.com'],
+    polestar: ['polestar.com'],
+    rivian: ['rivian.com'],
+    lucid: ['lucidmotors.com'],
   };
   return map[b] || [];
 }
@@ -275,9 +355,15 @@ Deno.serve(async (req) => {
     if (!firecrawlKey) throw new Error('FIRECRAWL_API_KEY not configured');
 
     const oemSources = buildOemSources(body.brand, body.modelName);
+    // CarWale brochure is most reliable — try FIRST, then OEM, then CarDekho, then CarWale model page.
     const sources: string[] = body.sourceUrls && body.sourceUrls.length
       ? body.sourceUrls
-      : [...oemSources, buildCardekhoBrochureUrl(body.brand, body.modelName)];
+      : [
+          buildCarwaleBrochureUrl(body.brand, body.modelName),
+          ...oemSources,
+          buildCardekhoBrochureUrl(body.brand, body.modelName),
+          buildCarwaleModelUrl(body.brand, body.modelName),
+        ];
 
     const candidates: { url: string; source: string; score: number }[] = [];
     const modelTokens = body.modelName.toLowerCase().split(/\s+/).filter((t) => t.length > 2);
@@ -304,14 +390,24 @@ Deno.serve(async (req) => {
         ]);
         for (const url of all) {
           const lower = url.toLowerCase();
+          // Hard-reject obvious non-brochure PDFs (policies, T&C, ombudsman, sitemap, etc.)
+          const blacklist = [
+            'policy', 'ombudsman', 'sitemap', 'terms', 'tnc', 't-and-c', 'privacy',
+            'tariff', 'guideline', 'circular', 'notice', 'csr', 'annual-report',
+            'annualreport', 'compliance', 'recall', 'warranty-card', 'investor',
+            'press-release', 'pressrelease', 'sustainability', 'esg', 'agm',
+          ];
+          if (blacklist.some((w) => lower.includes(w))) continue;
+
           let score = 0;
-          if (lower.includes('brochure')) score += 5;
-          if (lower.includes('e-brochure') || lower.includes('ebrochure')) score += 5;
-          if (lower.includes('catalog') || lower.includes('catalogue')) score += 3;
-          if (lower.includes('spec') || lower.includes('feature')) score += 1;
-          for (const t of modelTokens) if (lower.includes(t)) score += 3;
-          for (const d of domainHints) if (lower.includes(d)) score += 4;
-          if (lower.includes('cardekho')) score += 1;
+          if (lower.includes('brochure')) score += 10;
+          if (lower.includes('e-brochure') || lower.includes('ebrochure')) score += 10;
+          if (lower.includes('catalog') || lower.includes('catalogue')) score += 6;
+          if (lower.includes('/specs') || lower.includes('-specs') || lower.includes('specifications')) score += 3;
+          if (lower.includes('feature')) score += 2;
+          for (const t of modelTokens) if (lower.includes(t)) score += 4;
+          for (const d of domainHints) if (lower.includes(d)) score += 3;
+          if (lower.includes('cardekho') || lower.includes('carwale')) score += 2;
           candidates.push({ url, source: src, score });
         }
       } catch (e) {
@@ -324,7 +420,9 @@ Deno.serve(async (req) => {
       .sort((a, b) => b.score - a.score)
       .filter((c) => (seen.has(c.url) ? false : (seen.add(c.url), true)));
 
-    const chosen = ranked.find((c) => c.score >= 5) || ranked[0] || null;
+    // STRICT: only accept PDFs that look like a real brochure (score ≥ 8 means
+    // either has 'brochure'/'catalog' keyword OR matches model name + domain).
+    const chosen = ranked.find((c) => c.score >= 8) || null;
 
     if (!chosen) {
       return new Response(JSON.stringify({
