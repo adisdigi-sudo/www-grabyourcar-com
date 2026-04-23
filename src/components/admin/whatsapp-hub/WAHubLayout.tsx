@@ -7,7 +7,7 @@ import {
   MessageSquare, LayoutTemplate, Megaphone, Workflow, Users, BarChart3,
   UsersRound, ChevronLeft, ChevronRight, Wifi, WifiOff, Search,
   MessageSquareText, ClipboardList, MousePointer,
-  TrendingUp, Sparkles, Zap, Mail, Inbox as InboxIcon, Bot,
+  TrendingUp, Sparkles, Zap, Mail, Inbox as InboxIcon, Bot, Wallet,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -27,12 +27,13 @@ import { WAHubCampaignROI } from "./modules/WAHubCampaignROI";
 import { WAHubSalesEngines } from "./modules/WAHubSalesEngines";
 import { WAHubSmartTriggers } from "./modules/WAHubSmartTriggers";
 import { WAHubAutoPilotPreview } from "./modules/WAHubAutoPilotPreview";
+import { WAHubCostDashboard } from "./modules/WAHubCostDashboard";
 import { EmailMarketingHub } from "../marketing/email/EmailMarketingHub";
 
 type Module =
   | "inbox" | "templates" | "broadcasts" | "bulk-broadcaster" | "flows" | "contacts" | "analytics"
   | "team" | "crm-messages" | "surveys" | "interactive" | "campaign-roi"
-  | "sales-engines" | "smart-triggers" | "auto-pilot-preview" | "email-hub";
+  | "sales-engines" | "smart-triggers" | "auto-pilot-preview" | "email-hub" | "cost-dashboard";
 
 interface NavItem {
   id: Module;
@@ -66,6 +67,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "email-hub", label: "Email Hub", icon: Mail, badge: "All-in-One", section: "Email" },
 
   // Insights
+  { id: "cost-dashboard", label: "Cost & Spend", icon: Wallet, badge: "NEW", section: "Insights", description: "UTILITY vs MARKETING spend" },
   { id: "campaign-roi", label: "Campaign ROI", icon: TrendingUp, section: "Insights" },
   { id: "analytics", label: "Analytics", icon: BarChart3, section: "Insights" },
 
@@ -97,6 +99,7 @@ export function WAHubLayout() {
       case "smart-triggers": return <WAHubSmartTriggers />;
       case "auto-pilot-preview": return <div className="h-full overflow-auto p-4"><WAHubAutoPilotPreview /></div>;
       case "email-hub": return <EmailMarketingHub />;
+      case "cost-dashboard": return <WAHubCostDashboard />;
       default: return <WAHubInbox />;
     }
   };

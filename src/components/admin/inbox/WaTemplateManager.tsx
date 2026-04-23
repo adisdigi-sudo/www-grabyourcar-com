@@ -22,6 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { WAUtilityValidator } from "@/components/admin/whatsapp-hub/WAUtilityValidator";
 
 // --- Types & Constants ---
 const META_CATEGORIES = {
@@ -1547,6 +1548,18 @@ export function WaTemplateManager() {
                         </div>
                       ))}
                     </div>
+                    {/* UTILITY compliance validator — live score against Meta's classification rules */}
+                    {(editItem?.body || "").length > 0 && (
+                      <div className="mt-2">
+                        <WAUtilityValidator
+                          body={editItem?.body || ""}
+                          category={(editItem?.category as "utility" | "marketing" | "authentication") || "utility"}
+                          footer={editItem?.footer || undefined}
+                          buttonTexts={editButtons.map((b: { text?: string }) => b.text || "")}
+                          onApplyClean={(cleaned) => setEditItem({ ...editItem, body: cleaned })}
+                        />
+                      </div>
+                    )}
                   </div>
                   <div>
                     <Label className="text-xs">Footer <span className="text-muted-foreground">(max 60 chars, no variables)</span></Label>
