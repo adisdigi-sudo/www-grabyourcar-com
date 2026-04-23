@@ -55,6 +55,15 @@ interface ChatThread {
   channel: string;
   unread_count?: number;
   isDraft?: boolean;
+  window_expires_at?: string | null;
+}
+
+interface TemplateOption {
+  id: string;
+  name: string;
+  display_name: string | null;
+  body: string;
+  variables?: string[] | null;
 }
 
 interface ChatMessage {
