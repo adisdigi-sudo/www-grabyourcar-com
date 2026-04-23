@@ -16,7 +16,7 @@ import { differenceInDays, format, startOfMonth, endOfMonth, parse } from "date-
 import { fetchAllPages } from "@/lib/fetchAllPages";
 import {
   UserPlus, Clock, CheckCircle2, Shield, TrendingUp,
-  Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight, Rocket, ExternalLink, Settings2, AlertCircle, MessageSquare, PhoneCall
+  Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight, Rocket, ExternalLink, Settings2, AlertCircle, PhoneCall
 } from "lucide-react";
 import { CallingQueueWorkspace } from "../calling/CallingQueueWorkspace";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
