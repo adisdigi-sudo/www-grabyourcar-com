@@ -23,7 +23,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import {
   Banknote, Plus, Phone, Car, GripVertical, IndianRupee,
-  PhoneCall, MessageCircle, CheckCircle2, XCircle, Building2,
+  PhoneCall, MessageCircle, MessageSquare, CheckCircle2, XCircle, Building2,
   FileText, AlertTriangle, Clock, TrendingUp, Users, FileSpreadsheet,
   BookOpen, HeartHandshake, Wrench, BarChart3, Filter, X
 } from "lucide-react";
@@ -139,7 +139,8 @@ Warm regards,
 
 // ─── Main Workspace ───
 import { CallingQueueWorkspace } from "../calling/CallingQueueWorkspace";
-type LoanWorkspaceView = "pipeline" | "calling" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator" | "performance";
+import { OmniMessagingWorkspace } from "../shared/OmniMessagingWorkspace";
+type LoanWorkspaceView = "pipeline" | "calling" | "conversations" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator" | "performance";
 type DateFilter = DateFilterValue;
 type StageFilter = "all" | "in_pipeline" | "disbursed" | "lost";
 interface LoanWorkspaceProps {
@@ -492,6 +493,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
         {([
           { key: "pipeline", label: "Pipeline", icon: Banknote },
           { key: "calling", label: "Calling Queue", icon: PhoneCall },
+          { key: "conversations", label: "Conversations", icon: MessageSquare },
           { key: "disbursement", label: "Disbursement", icon: CheckCircle2 },
           { key: "after_sales", label: "After Sales", icon: HeartHandshake },
           { key: "performance", label: "Performance", icon: BarChart3 },
@@ -676,6 +678,13 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
             verticalSlug="loans"
             verticalLabel="Car Loans"
             accentClass="border-emerald-200 dark:border-emerald-900"
+          />
+        )}
+        {activeView === "conversations" && (
+          <OmniMessagingWorkspace
+            scopeLabel="Car Loans"
+            allowedPhones={Array.from(new Set(applications.map((a: any) => a.phone).filter(Boolean)))}
+            context="Car Loans"
           />
         )}
         {activeView === "disbursement" && <LoanDisbursementBook applications={dateFilteredApps} />}
