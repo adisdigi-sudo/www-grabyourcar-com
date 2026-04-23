@@ -381,14 +381,24 @@ Deno.serve(async (req) => {
         ]);
         for (const url of all) {
           const lower = url.toLowerCase();
+          // Hard-reject obvious non-brochure PDFs (policies, T&C, ombudsman, sitemap, etc.)
+          const blacklist = [
+            'policy', 'ombudsman', 'sitemap', 'terms', 'tnc', 't-and-c', 'privacy',
+            'tariff', 'guideline', 'circular', 'notice', 'csr', 'annual-report',
+            'annualreport', 'compliance', 'recall', 'warranty-card', 'investor',
+            'press-release', 'pressrelease', 'sustainability', 'esg', 'agm',
+          ];
+          if (blacklist.some((w) => lower.includes(w))) continue;
+
           let score = 0;
-          if (lower.includes('brochure')) score += 5;
-          if (lower.includes('e-brochure') || lower.includes('ebrochure')) score += 5;
-          if (lower.includes('catalog') || lower.includes('catalogue')) score += 3;
-          if (lower.includes('spec') || lower.includes('feature')) score += 1;
-          for (const t of modelTokens) if (lower.includes(t)) score += 3;
-          for (const d of domainHints) if (lower.includes(d)) score += 4;
-          if (lower.includes('cardekho')) score += 1;
+          if (lower.includes('brochure')) score += 10;
+          if (lower.includes('e-brochure') || lower.includes('ebrochure')) score += 10;
+          if (lower.includes('catalog') || lower.includes('catalogue')) score += 6;
+          if (lower.includes('/specs') || lower.includes('-specs') || lower.includes('specifications')) score += 3;
+          if (lower.includes('feature')) score += 2;
+          for (const t of modelTokens) if (lower.includes(t)) score += 4;
+          for (const d of domainHints) if (lower.includes(d)) score += 3;
+          if (lower.includes('cardekho') || lower.includes('carwale')) score += 2;
           candidates.push({ url, source: src, score });
         }
       } catch (e) {
@@ -401,7 +411,9 @@ Deno.serve(async (req) => {
       .sort((a, b) => b.score - a.score)
       .filter((c) => (seen.has(c.url) ? false : (seen.add(c.url), true)));
 
-    const chosen = ranked.find((c) => c.score >= 5) || ranked[0] || null;
+    // STRICT: only accept PDFs that look like a real brochure (score ≥ 8 means
+    // either has 'brochure'/'catalog' keyword OR matches model name + domain).
+    const chosen = ranked.find((c) => c.score >= 8) || null;
 
     if (!chosen) {
       return new Response(JSON.stringify({
