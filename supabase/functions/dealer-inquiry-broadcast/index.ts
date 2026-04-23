@@ -309,20 +309,8 @@ serve(async (req) => {
 
     // Determine send mode
     const mode = send_mode || (template_name ? "template_then_text" : "text_only");
-    const metaTemplate = template_name || "grabyourcarintroduction";
-    const approvedTemplate = await resolveApprovedTemplate(
-      supabase,
-      WHATSAPP_ACCESS_TOKEN,
-      WHATSAPP_WABA_ID,
-      [
-        ...(Array.isArray(template_variables) ? template_variables.filter((value: unknown): value is string => typeof value === "string" && value.trim().length > 0) : []),
-        brand || "GrabYourCar",
-        model || "car inquiry",
-        variant || "best offer",
-        color || "available color",
-      ],
-      metaTemplate,
-    );
+    // Prefer dealer_inquiry_v1 (UTILITY, 4 vars: dealer_name, brand, model, variant) when approved
+    const metaTemplate = template_name || "dealer_inquiry_v1";
 
     // Create campaign record
     const campaignName = `${brand || "All"} ${model || ""} ${variant || ""} — ${new Date().toLocaleDateString("en-IN")}`.trim();
