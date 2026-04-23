@@ -268,6 +268,27 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
 
     if (selectedThread.isDraft) return;
 
+    // 🔔 Auto-clear unread badge as soon as the chat is opened (Seen behavior)
+    if ((selectedThread.unread_count || 0) > 0) {
+      supabase
+        .from("wa_conversations")
+        .update({ unread_count: 0 })
+        .eq("id", selectedThread.id)
+        .then(() => {
+          setThreads((prev) => prev.map((t) => t.id === selectedThread.id ? { ...t, unread_count: 0 } : t));
+          setSelectedThread((cur) => cur && cur.id === selectedThread.id ? { ...cur, unread_count: 0 } : cur);
+        });
+    }
+
+    // 👁 Mark all inbound messages of this thread as read (Blue tick / Seen on customer side analogue)
+    supabase
+      .from("wa_inbox_messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("conversation_id", selectedThread.id)
+      .eq("direction", "inbound")
+      .is("read_at", null)
+      .then(() => {});
+
     const msgChannel = supabase
       .channel(`omni-chat-messages-${selectedThread.id}`)
       .on(
@@ -538,6 +559,19 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
       }
 
       setReplyMessage("");
+
+      // ✅ Auto-mark the thread as "Responded" — we just replied, so pending flag goes away.
+      if (selectedThread && !selectedThread.isDraft) {
+        supabase
+          .from("wa_conversations")
+          .update({ status: "resolved", unread_count: 0 })
+          .eq("id", selectedThread.id)
+          .then(() => {
+            setThreads((prev) => prev.map((t) => t.id === selectedThread.id ? { ...t, status: "resolved", unread_count: 0, has_pending_reply: false } : t));
+            setSelectedThread((cur) => cur && cur.id === selectedThread.id ? { ...cur, status: "resolved", unread_count: 0, has_pending_reply: false } : cur);
+          });
+      }
+
       setTimeout(() => {
         loadThreads();
         loadMessages(selectedThread);
@@ -900,8 +934,16 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                             </span>
                             {!isInbound && m.status === "queued" && <Clock className="h-3 w-3 text-muted-foreground" />}
                             {!isInbound && m.status === "failed" && <AlertTriangle className="h-3 w-3 text-destructive" />}
-                            {!isInbound && ["sent", "delivered", "read"].includes(m.status) && (
+                            {!isInbound && m.status === "sent" && (
                               <CheckCheck className="h-3 w-3 text-muted-foreground" />
+                            )}
+                            {!isInbound && m.status === "delivered" && (
+                              <CheckCheck className="h-3 w-3 text-muted-foreground" />
+                            )}
+                            {!isInbound && m.status === "read" && (
+                              <span title="Seen by customer" className="inline-flex items-center gap-0.5 text-[8px] text-sky-500 font-medium">
+                                <CheckCheck className="h-3 w-3" /> Seen
+                              </span>
                             )}
                           </div>
                           {!isInbound && m.status === "failed" && m.error_message && (
