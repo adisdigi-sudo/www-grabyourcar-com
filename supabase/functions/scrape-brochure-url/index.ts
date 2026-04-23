@@ -32,6 +32,23 @@ function buildHyundaiIndiaShowroomUrl(modelName: string) {
   return `https://www.hyundai.com/in/en/find-a-car/${slug}/highlights`;
 }
 
+function buildTataSourceUrls(modelName: string): string[] {
+  const isEv = /\bev\b/i.test(modelName);
+  const baseSlug = modelName.toLowerCase().replace(/\s*ev\b/i, '').trim().replace(/\s+/g, '-');
+  if (isEv) {
+    return [
+      'https://ev.tatamotors.com/support/brochures.html',
+      `https://ev.tatamotors.com/${baseSlug}/`,
+    ];
+  }
+  // ICE: try multiple body-type paths (Tata uses /suv/, /sedan/, /hatchback/)
+  return [
+    `https://cars.tatamotors.com/suv/${baseSlug}`,
+    `https://cars.tatamotors.com/sedan/${baseSlug}`,
+    `https://cars.tatamotors.com/hatchback/${baseSlug}`,
+  ];
+}
+
 function extractPdfLinks(text: string): string[] {
   const re = /(https?:\/\/[^\s"')\]]+\.pdf(?:\?[^\s"')\]]*)?)/gi;
   const out = new Set<string>();
