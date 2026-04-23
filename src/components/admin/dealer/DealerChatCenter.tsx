@@ -108,7 +108,10 @@ export default function DealerChatCenter() {
             <ScrollArea className="h-full">
               <div className="space-y-0.5 p-2">
                 {filteredDealers.map((d: any) => {
-                  const repCount = d.dealer_representatives?.length || 0;
+                  const reps = d.dealer_representatives || [];
+                  const repCount = reps.length;
+                  const rep = reps.find((r: any) => r.whatsapp_number || r.phone);
+                  const phone = d.contact_phone || rep?.whatsapp_number || rep?.phone;
                   const isSelected = d.id === selectedDealer;
                   return (
                     <button
@@ -122,10 +125,11 @@ export default function DealerChatCenter() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">{d.company_name}</p>
-                          <div className="flex gap-1 items-center">
+                          <div className="flex gap-1 items-center flex-wrap">
                             {d.brand_name && <Badge variant="outline" className="text-[8px] h-3.5 px-1">{d.brand_name}</Badge>}
                             <span className="text-[10px] text-muted-foreground">{d.city || ""}</span>
                           </div>
+                          {phone && <p className="text-[10px] text-muted-foreground font-mono mt-0.5">📞 {phone}</p>}
                         </div>
                         <Badge variant="secondary" className="text-[8px] h-4">{repCount} rep{repCount !== 1 ? "s" : ""}</Badge>
                       </div>
@@ -161,14 +165,21 @@ export default function DealerChatCenter() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    {selectedDealerData?.contact_phone && (
-                      <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => window.open(`tel:${selectedDealerData.contact_phone}`)}>
-                        <Phone className="h-3 w-3" /> Call
-                      </Button>
-                    )}
+                  <div className="flex gap-2 items-center">
+                    {(() => {
+                      const rep = selectedDealerData?.dealer_representatives?.[0];
+                      const phone = selectedDealerData?.contact_phone || rep?.whatsapp_number || rep?.phone;
+                      return phone ? (
+                        <>
+                          <span className="text-xs text-muted-foreground font-mono">{phone}</span>
+                          <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => window.open(`tel:${phone}`)}>
+                            <Phone className="h-3 w-3" /> Call
+                          </Button>
+                        </>
+                      ) : <span className="text-[10px] text-muted-foreground">No phone on record</span>;
+                    })()}
                     <Badge variant="secondary" className="text-[10px]">
-                      <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp (API: Later)
+                      <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp
                     </Badge>
                   </div>
                 </div>

@@ -16,12 +16,13 @@ export default function DealerSearchHub() {
   const { data: dealers = [] } = useQuery({
     queryKey: ["dealer-search", keyword, "dealers"],
     queryFn: async () => {
+      const sel = "*, dealer_representatives(name, phone, whatsapp_number)";
       if (!keyword.trim()) {
-        const { data } = await supabase.from("dealer_companies").select("*").order("priority_level", { ascending: false }).limit(50);
+        const { data } = await supabase.from("dealer_companies").select(sel).order("priority_level", { ascending: false }).limit(50);
         return data || [];
       }
       const q = `%${keyword.trim()}%`;
-      const { data } = await supabase.from("dealer_companies").select("*")
+      const { data } = await supabase.from("dealer_companies").select(sel)
         .or(`company_name.ilike.${q},brand_name.ilike.${q},city.ilike.${q},state.ilike.${q},region.ilike.${q},notes.ilike.${q}`)
         .order("priority_level", { ascending: false }).limit(50);
       return data || [];
@@ -147,7 +148,16 @@ export default function DealerSearchHub() {
                       <TableCell><Badge variant="outline" className="text-[10px]">{d.brand_name || "—"}</Badge></TableCell>
                       <TableCell className="text-sm">{d.city || "—"}</TableCell>
                       <TableCell><Badge variant="secondary" className="text-[10px]">{d.region || "—"}</Badge></TableCell>
-                      <TableCell className="text-xs">{d.contact_phone || "—"}</TableCell>
+                      <TableCell className="text-xs">
+                        {(() => {
+                          const reps = d.dealer_representatives || [];
+                          const rep = reps.find((r: any) => r.whatsapp_number || r.phone);
+                          const phone = d.contact_phone || rep?.whatsapp_number || rep?.phone;
+                          return phone
+                            ? <a href={`tel:${phone}`} className="hover:underline">{phone}{!d.contact_phone && rep?.name ? ` (${rep.name})` : ""}</a>
+                            : "—";
+                        })()}
+                      </TableCell>
                       <TableCell><Badge variant={d.is_active ? "default" : "secondary"} className="text-[10px]">{d.is_active ? "Active" : "Inactive"}</Badge></TableCell>
                     </TableRow>
                   ))}
