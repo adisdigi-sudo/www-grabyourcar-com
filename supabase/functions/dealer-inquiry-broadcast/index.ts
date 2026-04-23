@@ -281,6 +281,7 @@ serve(async (req) => {
   try {
     const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
     const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+    const WHATSAPP_WABA_ID = Deno.env.get("WHATSAPP_WABA_ID");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -309,7 +310,19 @@ serve(async (req) => {
     // Determine send mode
     const mode = send_mode || (template_name ? "template_then_text" : "text_only");
     const metaTemplate = template_name || "grabyourcarintroduction";
-    const approvedTemplate = await resolveApprovedTemplateName(supabase, metaTemplate);
+    const approvedTemplate = await resolveApprovedTemplate(
+      supabase,
+      WHATSAPP_ACCESS_TOKEN,
+      WHATSAPP_WABA_ID,
+      [
+        ...(Array.isArray(template_variables) ? template_variables.filter((value: unknown): value is string => typeof value === "string" && value.trim().length > 0) : []),
+        brand || "GrabYourCar",
+        model || "car inquiry",
+        variant || "best offer",
+        color || "available color",
+      ],
+      metaTemplate,
+    );
 
     // Create campaign record
     const campaignName = `${brand || "All"} ${model || ""} ${variant || ""} — ${new Date().toLocaleDateString("en-IN")}`.trim();
@@ -356,9 +369,9 @@ serve(async (req) => {
         const shouldSendTemplate = mode === "template_only" || mode === "template_then_text" || shouldAutoOpenWindow;
         const requiresTextMessage = (mode === "text_only" || mode === "template_then_text") && Boolean(message && message.trim());
         const actualMode = shouldAutoOpenWindow ? "template_then_text" : mode;
-        const activeTemplateName = shouldSendTemplate ? approvedTemplate : null;
+        const activeTemplate = shouldSendTemplate ? approvedTemplate : null;
 
-        if (shouldSendTemplate && !activeTemplateName) {
+        if (shouldSendTemplate && !activeTemplate) {
           failed++;
           errors.push(`${rawPhone}: No approved Meta template is available to open the chat window`);
           recipientRows.push({
@@ -383,10 +396,10 @@ serve(async (req) => {
         let textResult = { success: !requiresTextMessage, provider_message_id: undefined as string | undefined, error: undefined as string | undefined };
 
         // Step 1: Send approved template (opens 24-hour window when needed)
-        if (shouldSendTemplate && activeTemplateName) {
+        if (shouldSendTemplate && activeTemplate) {
           templateResult = await sendTemplate(
             WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID,
-            phone.full, activeTemplateName, template_variables || []
+            phone.full, activeTemplate
           );
           
           if (!templateResult.success) {
@@ -403,7 +416,7 @@ serve(async (req) => {
                 requested_mode: mode,
                 actual_mode: actualMode,
                 conversation_window_open: windowOpen,
-                opener_template_name: activeTemplateName,
+                opener_template_name: activeTemplate.name,
                 provider_message_id: templateResult.provider_message_id || null,
                 template_provider_message_id: templateResult.provider_message_id || null,
                 text_provider_message_id: null,
@@ -442,7 +455,7 @@ serve(async (req) => {
               requested_mode: mode,
               actual_mode: actualMode,
               conversation_window_open: windowOpen,
-              opener_template_name: activeTemplateName,
+              opener_template_name: activeTemplate?.name || null,
               provider_message_id: textResult.provider_message_id || templateResult.provider_message_id || null,
               template_provider_message_id: templateResult.provider_message_id || null,
               text_provider_message_id: textResult.provider_message_id || null,
@@ -462,7 +475,7 @@ serve(async (req) => {
               requested_mode: mode,
               actual_mode: actualMode,
               conversation_window_open: windowOpen,
-              opener_template_name: activeTemplateName,
+              opener_template_name: activeTemplate?.name || null,
               provider_message_id: textResult.provider_message_id || templateResult.provider_message_id || null,
               template_provider_message_id: templateResult.provider_message_id || null,
               text_provider_message_id: textResult.provider_message_id || null,
