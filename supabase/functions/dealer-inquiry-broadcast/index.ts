@@ -312,6 +312,31 @@ serve(async (req) => {
     // Prefer dealer_inquiry_v1 (UTILITY, 4 vars: dealer_name, brand, model, variant) when approved
     const metaTemplate = template_name || "dealer_inquiry_v1";
 
+    // Pre-resolve template definition ONCE (we'll rebuild components per dealer with their name)
+    const baseFallback = [
+      brand || "GrabYourCar",
+      model || "car inquiry",
+      variant || "best offer",
+      color || "available color",
+    ];
+    const templateDefinition = await resolveApprovedTemplate(
+      supabase,
+      WHATSAPP_ACCESS_TOKEN,
+      WHATSAPP_WABA_ID,
+      [
+        ...(Array.isArray(template_variables) ? template_variables.filter((v: unknown): v is string => typeof v === "string" && v.trim().length > 0) : []),
+        ...baseFallback,
+      ],
+      metaTemplate,
+    );
+
+    // Also fetch raw Meta definition so we can rebuild per-dealer
+    const rawMetaDefinition = await fetchApprovedMetaTemplateDefinition(
+      WHATSAPP_ACCESS_TOKEN,
+      WHATSAPP_WABA_ID,
+      templateDefinition?.name || metaTemplate,
+    );
+
     // Create campaign record
     const campaignName = `${brand || "All"} ${model || ""} ${variant || ""} — ${new Date().toLocaleDateString("en-IN")}`.trim();
     const { data: campaign } = await supabase.from("dealer_inquiry_campaigns").insert({
