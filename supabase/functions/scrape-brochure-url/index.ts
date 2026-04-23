@@ -270,8 +270,15 @@ function buildOemSources(brand: string, modelName: string): string[] {
   return [];
 }
 
-/** CarWale fallback brochure page */
+/** CarWale brochure page (proven reliable — returns direct PDF link). */
 function buildCarwaleBrochureUrl(brand: string, modelName: string): string {
+  const b = brand.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  const m = modelName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  return `https://www.carwale.com/${b}-cars/${m}/brochure/`;
+}
+
+/** CarWale model overview (alternate fallback). */
+function buildCarwaleModelUrl(brand: string, modelName: string): string {
   const b = brand.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   const m = modelName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   return `https://www.carwale.com/${b}-cars/${m}/`;
