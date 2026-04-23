@@ -14,6 +14,7 @@ import AdminForgotPassword from "@/components/admin/AdminForgotPassword";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { VerticalPasswordDialog, getVerifiedVerticals, markVerticalVerified } from "@/components/admin/VerticalPasswordDialog";
+import { AuthInteractionDebugOverlay } from "@/components/admin/AuthInteractionDebugOverlay";
 import { withPreviewParams } from "@/lib/previewRouting";
 import { ResponsiveLogo } from "@/components/ResponsiveLogo";
 
@@ -393,39 +394,47 @@ const AdminAuth = () => {
             {step === "choose-type" && (
               <motion.div key="choose" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <div className="space-y-4">
-                  <Card
-                    className="cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all group"
+                  <button
+                    type="button"
                     onClick={() => setStep("team-login")}
+                    className="group block w-full text-left"
+                    data-click-target="team-login-card"
                   >
-                    <CardContent className="p-6 flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Building2 className="h-7 w-7 text-foreground" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg text-foreground">Team Login</h3>
-                        <p className="text-sm text-muted-foreground">
-                          User ID & Password → Your workspace
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    <Card className="cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all">
+                      <CardContent className="p-6 flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Building2 className="h-7 w-7 text-foreground" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg text-foreground">Team Login</h3>
+                          <p className="text-sm text-muted-foreground">
+                            User ID & Password → Your workspace
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </button>
 
-                  <Card
-                    className="cursor-pointer hover:shadow-lg hover:border-amber-500/30 transition-all group"
+                  <button
+                    type="button"
                     onClick={() => setStep("team-login")}
+                    className="group block w-full text-left"
+                    data-click-target="super-admin-card"
                   >
-                    <CardContent className="p-6 flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Crown className="h-7 w-7 text-amber-500" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg text-foreground">Super Admin</h3>
-                        <p className="text-sm text-muted-foreground">
-                          User ID & Password — full access
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    <Card className="cursor-pointer hover:shadow-lg hover:border-amber-500/30 transition-all">
+                      <CardContent className="p-6 flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Crown className="h-7 w-7 text-amber-500" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg text-foreground">Super Admin</h3>
+                          <p className="text-sm text-muted-foreground">
+                            User ID & Password — full access
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </button>
                 </div>
               </motion.div>
             )}
@@ -701,6 +710,7 @@ const AdminAuth = () => {
         onClose={() => setPasswordTarget(null)}
         onSuccess={handlePasswordSuccess}
       />
+      <AuthInteractionDebugOverlay />
     </div>
   );
 };
