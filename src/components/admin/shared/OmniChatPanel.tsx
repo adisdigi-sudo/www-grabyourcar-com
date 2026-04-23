@@ -22,6 +22,7 @@ import {
   Paperclip,
   FileText,
   Download,
+  LayoutTemplate,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type OmniChannel } from "@/lib/omniSend";
@@ -293,6 +294,14 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
 
       if (inboxError) throw inboxError;
 
+      const { data: inboxThreads, error: inboxError } = await supabase
+        .from("wa_conversations")
+        .select("id, phone, customer_name, last_message, last_message_at, unread_count, window_expires_at")
+        .order("last_message_at", { ascending: false })
+        .limit(200);
+
+      if (inboxError) throw inboxError;
+
       const mappedThreads: ChatThread[] = (inboxThreads || []).map((thread) => ({
         id: thread.id,
         phone: thread.phone,
@@ -301,6 +310,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
         last_at: thread.last_message_at || new Date().toISOString(),
         channel: "whatsapp",
         unread_count: thread.unread_count || 0,
+        window_expires_at: thread.window_expires_at,
       }));
 
       setThreads(mappedThreads);
