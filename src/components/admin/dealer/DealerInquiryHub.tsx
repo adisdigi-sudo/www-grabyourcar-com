@@ -445,76 +445,84 @@ export default function DealerInquiryHub() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-wrap gap-3 items-end">
-              <div className="min-w-[160px]">
+              <div className="min-w-[170px]">
                 <Label className="text-xs mb-1 block">Brand *</Label>
-                <Select value={selectedBrand} onValueChange={v => { setSelectedBrand(v); setSelectedModel("all"); setSelectedVariant("all"); setSelectedColor("all"); setSelectedIds([]); applyTemplate(templateType); }}>
-                  <SelectTrigger><SelectValue placeholder="Select Brand" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Brands</SelectItem>
-                    {brands.map((b: any) => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <ComboBoxWithCustom
+                  value={selectedBrand}
+                  onChange={(v) => { setSelectedBrand(v); setSelectedModel("all"); setSelectedVariant("all"); setSelectedColor("all"); setSelectedIds([]); applyTemplate(templateType); }}
+                  options={brands.map((b: any) => ({ value: b.name, label: b.name }))}
+                  placeholder="Select Brand"
+                  allOptionLabel="All Brands"
+                  customLabel="Add custom brand"
+                />
               </div>
-              <div className="min-w-[160px]">
+              <div className="min-w-[170px]">
                 <Label className="text-xs mb-1 block flex items-center gap-1"><Car className="h-3 w-3" /> Model</Label>
-                <Select value={selectedModel} onValueChange={v => { updateCarAndTemplate(setSelectedModel, v); setSelectedVariant("all"); setSelectedColor("all"); }} disabled={selectedBrand === "all"}>
-                  <SelectTrigger><SelectValue placeholder="Select Model" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Models</SelectItem>
-                    {models.map((m: any) => <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <ComboBoxWithCustom
+                  value={selectedModel}
+                  onChange={(v) => { updateCarAndTemplate(setSelectedModel, v); setSelectedVariant("all"); setSelectedColor("all"); }}
+                  options={models.map((m: any) => ({ value: m.name, label: m.name }))}
+                  placeholder="Select Model"
+                  allOptionLabel="All Models"
+                  customLabel="Add custom model"
+                  disabled={selectedBrand === "all"}
+                />
               </div>
               <div className="min-w-[180px]">
                 <Label className="text-xs mb-1 block">Variant</Label>
-                <Select value={selectedVariant} onValueChange={v => updateCarAndTemplate(setSelectedVariant, v)} disabled={selectedModel === "all"}>
-                  <SelectTrigger><SelectValue placeholder="Select Variant" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Variants</SelectItem>
-                    {variants.map((v: any) => <SelectItem key={v.id} value={v.name}>{v.name} ({v.fuel_type}/{v.transmission})</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <ComboBoxWithCustom
+                  value={selectedVariant}
+                  onChange={(v) => updateCarAndTemplate(setSelectedVariant, v)}
+                  options={[
+                    ...variants.map((v: any) => ({ value: v.name, label: `${v.name} (${v.fuel_type}/${v.transmission})` })),
+                    ...COMMON_VARIANTS.map((v) => ({ value: v, label: v })),
+                  ]}
+                  placeholder="Select Variant"
+                  allOptionLabel="All Variants"
+                  customLabel="Add custom variant"
+                  disabled={selectedModel === "all"}
+                />
               </div>
-              <div className="min-w-[140px]">
+              <div className="min-w-[160px]">
                 <Label className="text-xs mb-1 block flex items-center gap-1"><Palette className="h-3 w-3" /> Color</Label>
-                <Select value={selectedColor} onValueChange={v => updateCarAndTemplate(setSelectedColor, v)} disabled={selectedModel === "all"}>
-                  <SelectTrigger><SelectValue placeholder="Color" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Any Color</SelectItem>
-                    {colors.map((c: any) => (
-                      <SelectItem key={c.id} value={c.name}>
-                        <div className="flex items-center gap-2">
-                          {c.hex_code && <span className="w-3 h-3 rounded-full border" style={{ backgroundColor: c.hex_code }} />}
-                          {c.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ComboBoxWithCustom
+                  value={selectedColor}
+                  onChange={(v) => updateCarAndTemplate(setSelectedColor, v)}
+                  options={[
+                    ...colors.map((c: any) => ({ value: c.name, label: c.name })),
+                    ...CAR_COLORS.map((c) => ({ value: c, label: c })),
+                  ]}
+                  placeholder="Color"
+                  allOptionLabel="Any Color"
+                  customLabel="Add custom color"
+                  disabled={selectedModel === "all"}
+                />
               </div>
             </div>
 
             {/* Location filters */}
             <div className="flex flex-wrap gap-3 items-end mt-3">
-              <div className="min-w-[140px]">
+              <div className="min-w-[170px]">
                 <Label className="text-xs mb-1 block">State</Label>
-                <Select value={stateFilter} onValueChange={setStateFilter}>
-                  <SelectTrigger><SelectValue placeholder="State" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All States</SelectItem>
-                    {states.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <ComboBoxWithCustom
+                  value={stateFilter}
+                  onChange={(v) => { setStateFilter(v); setCityFilter("all"); }}
+                  options={stateOptions}
+                  placeholder="State"
+                  allOptionLabel="All States"
+                  customLabel="Add custom state"
+                />
               </div>
-              <div className="min-w-[140px]">
+              <div className="min-w-[170px]">
                 <Label className="text-xs mb-1 block">City</Label>
-                <Select value={cityFilter} onValueChange={setCityFilter}>
-                  <SelectTrigger><SelectValue placeholder="City" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Cities</SelectItem>
-                    {cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <ComboBoxWithCustom
+                  value={cityFilter}
+                  onChange={setCityFilter}
+                  options={cityOptions}
+                  placeholder="City"
+                  allOptionLabel="All Cities"
+                  customLabel="Add custom city"
+                />
               </div>
               <div className="flex gap-2 ml-auto">
                 <Dialog open={addOpen} onOpenChange={setAddOpen}>
