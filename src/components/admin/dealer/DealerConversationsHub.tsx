@@ -71,6 +71,9 @@ export default function DealerConversationsHub() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reply, setReply] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const liveUpdateBufferRef = useRef<Map<string, Recipient | null>>(new Map());
+  const flushTimerRef = useRef<number | null>(null);
+  const replyToastRef = useRef<Set<string>>(new Set());
 
   // ── Recipients (one row per dealer per campaign)
   const { data: recipients = [], isLoading } = useQuery({
@@ -78,11 +81,13 @@ export default function DealerConversationsHub() {
     queryFn: async () => {
       const { data } = await supabase
         .from("dealer_inquiry_recipients")
-        .select("*")
+        .select("id, campaign_id, dealer_rep_id, dealer_name, rep_name, phone, send_status, sent_at, delivered_at, replied_at, reply_message, ai_followup_sent, ai_followup_sent_at, ai_followup_reply, created_at")
         .order("created_at", { ascending: false })
         .limit(500);
       return (data as Recipient[]) || [];
     },
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: campaigns = [] } = useQuery({
@@ -95,6 +100,8 @@ export default function DealerConversationsHub() {
         .limit(200);
       return (data as Campaign[]) || [];
     },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const campaignMap = useMemo(() => {
@@ -105,23 +112,63 @@ export default function DealerConversationsHub() {
 
   // ── Realtime: replies + delivery/read updates
   useEffect(() => {
+    const flushRecipientUpdates = () => {
+      flushTimerRef.current = null;
+      const updates = Array.from(liveUpdateBufferRef.current.entries());
+      if (!updates.length) return;
+
+      liveUpdateBufferRef.current.clear();
+      qc.setQueryData<Recipient[]>(["dealer-conversations-recipients"], (current = []) => {
+        const next = [...current];
+
+        for (const [id, row] of updates) {
+          const index = next.findIndex((item) => item.id === id);
+
+          if (!row) {
+            if (index >= 0) next.splice(index, 1);
+            continue;
+          }
+
+          if (index >= 0) next[index] = { ...next[index], ...row };
+          else next.unshift(row);
+        }
+
+        next.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        return next.slice(0, 500);
+      });
+    };
+
     const channel = supabase
       .channel("dealer-conversations-live")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "dealer_inquiry_recipients" },
         (payload) => {
-          qc.invalidateQueries({ queryKey: ["dealer-conversations-recipients"] });
-          // Toast on new replies
+          const row = (payload.new || payload.old) as Recipient | undefined;
+          if (row?.id) {
+            liveUpdateBufferRef.current.set(row.id, payload.eventType === "DELETE" ? null : row);
+            if (flushTimerRef.current === null) {
+              flushTimerRef.current = window.setTimeout(flushRecipientUpdates, 180);
+            }
+          }
+
           const newRow = payload.new as Recipient | undefined;
           const oldRow = payload.old as Recipient | undefined;
           if (newRow?.replied_at && newRow.replied_at !== oldRow?.replied_at) {
-            toast.success(`💬 ${newRow.rep_name || newRow.dealer_name || newRow.phone} replied`);
+            const toastKey = `${newRow.id}:${newRow.replied_at}`;
+            if (!replyToastRef.current.has(toastKey)) {
+              replyToastRef.current.add(toastKey);
+              toast.success(`💬 ${newRow.rep_name || newRow.dealer_name || newRow.phone} replied`);
+            }
           }
         }
       )
       .subscribe();
     return () => {
+      if (flushTimerRef.current !== null) {
+        window.clearTimeout(flushTimerRef.current);
+      }
+      liveUpdateBufferRef.current.clear();
       void supabase.removeChannel(channel);
     };
   }, [qc]);
