@@ -313,13 +313,135 @@ export default function DealerStockHub() {
     toast.success("📋 Copied! Paste in customer chat");
   };
 
+  // ════════════════════════════════════════════════════════════════
+  // 📤 BROADCAST STOCK TO CUSTOMERS — pick stock cars + pick leads
+  // ════════════════════════════════════════════════════════════════
+  const [bcastSearch, setBcastSearch] = useState("");
+  const [bcastSelectedStockIds, setBcastSelectedStockIds] = useState<string[]>([]);
+  const [bcastLeadSearch, setBcastLeadSearch] = useState("");
+  const [bcastSelectedLeadIds, setBcastSelectedLeadIds] = useState<string[]>([]);
+  const [bcastTemplate, setBcastTemplate] = useState<string>("");
+  const [bcastSending, setBcastSending] = useState(false);
+  const [bcastOnlyMatching, setBcastOnlyMatching] = useState(true);
+
+  const bcastFilteredStock = useMemo(() => {
+    return stock.filter((s: any) => {
+      if (s.stock_status && s.stock_status !== "available" && s.stock_status !== "limited") return false;
+      if (!bcastSearch.trim()) return true;
+      const q = bcastSearch.toLowerCase();
+      const hay = `${s.brand} ${s.model} ${s.variant} ${s.color}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [stock, bcastSearch]);
+
+  // Pull leads — if "Only matching" is on, narrow to leads whose car_brand/car_model
+  // matches at least one selected stock car.
+  const { data: allLeads = [] } = useQuery<any[]>({
+    queryKey: ["leads-for-stock-broadcast"],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("leads")
+        .select("id, customer_name, name, phone, car_brand, car_model, status, created_at")
+        .not("phone", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      return (data as any[]) || [];
+    },
+  });
+
+  const bcastFilteredLeads = useMemo(() => {
+    let list = allLeads as any[];
+    if (bcastOnlyMatching && bcastSelectedStockIds.length > 0) {
+      const selectedCars = stock.filter((s: any) => bcastSelectedStockIds.includes(s.id));
+      const targetBrands = new Set(selectedCars.map((s: any) => (s.brand || "").toLowerCase()).filter(Boolean));
+      const targetModels = new Set(selectedCars.map((s: any) => (s.model || "").toLowerCase()).filter(Boolean));
+      list = list.filter((l: any) => {
+        const lb = (l.car_brand || "").toLowerCase();
+        const lm = (l.car_model || "").toLowerCase();
+        if (lb && targetBrands.has(lb)) return true;
+        if (lm && targetModels.size && Array.from(targetModels).some((m) => lm.includes(m as string) || (m as string).includes(lm))) return true;
+        return false;
+      });
+    }
+    if (bcastLeadSearch.trim()) {
+      const q = bcastLeadSearch.toLowerCase();
+      list = list.filter((l: any) =>
+        `${l.customer_name || l.name || ""} ${l.phone} ${l.car_brand || ""} ${l.car_model || ""}`.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [allLeads, bcastOnlyMatching, bcastSelectedStockIds, stock, bcastLeadSearch]);
+
+  const buildStockBroadcastBody = () => {
+    const cars = stock.filter((s: any) => bcastSelectedStockIds.includes(s.id));
+    if (cars.length === 0) return "";
+    const cards = cars.map((s: any) => {
+      const dealer = s.dealer_representatives?.dealer_companies?.company_name || "Authorised Dealer";
+      const city = s.dealer_representatives?.dealer_companies?.city || "";
+      return [
+        `🚗 *${s.brand} ${s.model || ""}*${s.variant ? ` ${s.variant}` : ""}`,
+        s.color && `🎨 ${s.color}`,
+        s.manufacturing_year && `📅 ${s.manufacturing_year}`,
+        s.fuel_type && `⛽ ${s.fuel_type}${s.transmission ? ` / ${s.transmission}` : ""}`,
+        s.on_road_price && `💰 On-road: ₹${Number(s.on_road_price).toLocaleString("en-IN")}`,
+        s.discount && `🎁 ${s.discount}`,
+        s.quantity && `📦 Qty: ${s.quantity}`,
+        `📍 ${dealer}${city ? `, ${city}` : ""}`,
+      ].filter(Boolean).join("\n");
+    }).join("\n\n———\n\n");
+    return `Hi 👋\n\n*Ready Stock Available* 🚘\n\n${cards}\n\nReply *YES* to book a test drive or get the best price.\n\n— *GrabYourCar*`;
+  };
+
+  const sendStockToCustomers = async () => {
+    if (bcastSelectedStockIds.length === 0) return toast.error("Pick at least one car from stock");
+    if (bcastSelectedLeadIds.length === 0) return toast.error("Select customers to send to");
+    if (!bcastTemplate) return toast.error("Pick an approved Meta template");
+    setBcastSending(true);
+    try {
+      const chosen = (allLeads as any[]).filter((l: any) => bcastSelectedLeadIds.includes(l.id));
+      const body = buildStockBroadcastBody();
+      const { data, error } = await supabase.functions.invoke("dealer-inquiry-broadcast", {
+        body: {
+          phones: chosen.map((l: any) => l.phone),
+          message: body,
+          brand: "Stock Update",
+          model: null, variant: null, color: null,
+          template_name: bcastTemplate,
+          template_variables: [],
+          send_mode: "template_then_text",
+          ai_followup_enabled: false,
+          recipients: chosen.map((l: any) => ({
+            dealer_rep_id: null,
+            rep_name: l.customer_name || l.name || "Customer",
+            dealer_name: "Customer",
+            phone: l.phone,
+          })),
+        },
+      });
+      if (error) throw error;
+      const sent = data?.summary?.sent || 0;
+      toast.success(`✅ Stock sent to ${sent} / ${chosen.length} customers`);
+      setBcastSelectedLeadIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Send failed");
+    } finally {
+      setBcastSending(false);
+    }
+  };
+
+  const toggleAllBcastLeads = () => {
+    if (bcastSelectedLeadIds.length === bcastFilteredLeads.length) setBcastSelectedLeadIds([]);
+    else setBcastSelectedLeadIds(bcastFilteredLeads.map((l: any) => l.id));
+  };
+
   return (
     <div className="space-y-4">
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="send" className="gap-1"><Send className="h-4 w-4" /> Send Stock Request</TabsTrigger>
+          <TabsTrigger value="send" className="gap-1"><Send className="h-4 w-4" /> Ask Dealers</TabsTrigger>
           <TabsTrigger value="extract" className="gap-1"><Sparkles className="h-4 w-4" /> Auto-Extract Replies</TabsTrigger>
           <TabsTrigger value="live" className="gap-1"><Package className="h-4 w-4" /> Live Stock ({stock.length})</TabsTrigger>
+          <TabsTrigger value="broadcast" className="gap-1"><Megaphone className="h-4 w-4" /> Send to Customers</TabsTrigger>
         </TabsList>
 
         <TabsContent value="send" className="space-y-4">
