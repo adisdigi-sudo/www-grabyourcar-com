@@ -23,7 +23,10 @@ import {
   FileText,
   Download,
   LayoutTemplate,
+  CheckCircle2,
+  Filter,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { type OmniChannel } from "@/lib/omniSend";
 import { AIPolishButtons } from "@/components/admin/shared/AIPolishButtons";
@@ -58,6 +61,12 @@ interface ChatThread {
   unread_count?: number;
   isDraft?: boolean;
   window_expires_at?: string | null;
+  /** True when the most recent inbound (customer) message is newer than the most recent outbound (agent) reply. */
+  has_pending_reply?: boolean;
+  /** Conversation status (e.g. open / resolved). Used by the "Responded" filter. */
+  status?: string | null;
+  /** Total inbound messages from the customer in this thread (used for the reply-count badge). */
+  reply_count?: number;
 }
 
 interface ChatMessage {
@@ -149,6 +158,8 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "unread" | "pending" | "responded" | "open">("all");
+  const [markingResponded, setMarkingResponded] = useState(false);
   const [prefs, setPrefs] = useState<ChatPrefs>(() => loadPrefs());
   const [uploading, setUploading] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -313,22 +324,57 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
     try {
       const { data: inboxThreads, error: inboxError } = await supabase
         .from("wa_conversations")
-        .select("id, phone, customer_name, last_message, last_message_at, unread_count, window_expires_at")
+        .select("id, phone, customer_name, last_message, last_message_at, last_customer_message_at, unread_count, window_expires_at, status")
         .order("last_message_at", { ascending: false })
         .limit(200);
 
       if (inboxError) throw inboxError;
 
-      const mappedThreads: ChatThread[] = (inboxThreads || []).map((thread) => ({
-        id: thread.id,
-        phone: thread.phone,
-        customer_name: thread.customer_name,
-        last_message: thread.last_message || "",
-        last_at: thread.last_message_at || new Date().toISOString(),
-        channel: "whatsapp",
-        unread_count: thread.unread_count || 0,
-        window_expires_at: thread.window_expires_at,
-      }));
+      // Pull recent messages for the same threads to derive reply_count + has_pending_reply.
+      // (One bounded query is much cheaper than N per-thread counts.)
+      const threadIds = (inboxThreads || []).map((t) => t.id);
+      const inboundCount: Record<string, number> = {};
+      const lastInboundAt: Record<string, number> = {};
+      const lastOutboundAt: Record<string, number> = {};
+      if (threadIds.length) {
+        const { data: msgs } = await supabase
+          .from("wa_inbox_messages")
+          .select("conversation_id, direction, created_at")
+          .in("conversation_id", threadIds)
+          .order("created_at", { ascending: false })
+          .limit(2000);
+        for (const m of (msgs || []) as Array<{ conversation_id: string; direction: string; created_at: string }>) {
+          const ts = new Date(m.created_at).getTime();
+          if (m.direction === "inbound") {
+            inboundCount[m.conversation_id] = (inboundCount[m.conversation_id] || 0) + 1;
+            if (!lastInboundAt[m.conversation_id] || ts > lastInboundAt[m.conversation_id]) {
+              lastInboundAt[m.conversation_id] = ts;
+            }
+          } else {
+            if (!lastOutboundAt[m.conversation_id] || ts > lastOutboundAt[m.conversation_id]) {
+              lastOutboundAt[m.conversation_id] = ts;
+            }
+          }
+        }
+      }
+
+      const mappedThreads: ChatThread[] = (inboxThreads || []).map((thread) => {
+        const lastIn = lastInboundAt[thread.id] || (thread.last_customer_message_at ? new Date(thread.last_customer_message_at).getTime() : 0);
+        const lastOut = lastOutboundAt[thread.id] || 0;
+        return {
+          id: thread.id,
+          phone: thread.phone,
+          customer_name: thread.customer_name,
+          last_message: thread.last_message || "",
+          last_at: thread.last_message_at || new Date().toISOString(),
+          channel: "whatsapp",
+          unread_count: thread.unread_count || 0,
+          window_expires_at: thread.window_expires_at,
+          status: thread.status || null,
+          reply_count: inboundCount[thread.id] || 0,
+          has_pending_reply: lastIn > 0 && lastIn > lastOut,
+        };
+      });
 
       setThreads(mappedThreads);
     } catch (err) {
@@ -336,6 +382,30 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
       setThreads([]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function markAsResponded(thread: ChatThread) {
+    if (!thread || thread.isDraft) return;
+    setMarkingResponded(true);
+    try {
+      const { error } = await supabase
+        .from("wa_conversations")
+        .update({ status: "resolved", unread_count: 0 })
+        .eq("id", thread.id);
+      if (error) throw error;
+      toast({ title: "✅ Marked as responded" });
+      // Optimistic local update + reload
+      setThreads((prev) => prev.map((t) => t.id === thread.id ? { ...t, status: "resolved", unread_count: 0, has_pending_reply: false } : t));
+      setSelectedThread((cur) => cur && cur.id === thread.id ? { ...cur, status: "resolved", unread_count: 0, has_pending_reply: false } : cur);
+    } catch (err) {
+      toast({
+        title: "Could not update status",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setMarkingResponded(false);
     }
   }
 
@@ -491,6 +561,13 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
 
   const filteredThreads = threads.filter((t) => {
     if (allowedKeys && !allowedKeys.has(normalizePhone(t.phone).slice(-10))) return false;
+
+    // Status filter chips
+    if (statusFilter === "unread" && !(t.unread_count && t.unread_count > 0)) return false;
+    if (statusFilter === "pending" && !t.has_pending_reply) return false;
+    if (statusFilter === "responded" && t.status !== "resolved") return false;
+    if (statusFilter === "open" && t.status === "resolved") return false;
+
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -499,6 +576,9 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
       t.last_message?.toLowerCase().includes(q)
     );
   });
+
+  const totalReplies = threads.reduce((sum, t) => sum + (t.reply_count || 0), 0);
+  const pendingCount = threads.filter((t) => t.has_pending_reply).length;
 
   const channelIcon = (ch: string) => {
     if (ch === "email") return <Mail className="h-3 w-3 text-primary" />;
@@ -627,6 +707,30 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
             />
           </div>
 
+          {/* Status filter + counts */}
+          <div className="flex items-center gap-1">
+            <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+              <SelectTrigger className="h-7 text-[11px] flex-1">
+                <Filter className="h-3 w-3 mr-1 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All chats</SelectItem>
+                <SelectItem value="unread">🔵 Unread</SelectItem>
+                <SelectItem value="pending">⏳ Pending reply</SelectItem>
+                <SelectItem value="open">📬 Open</SelectItem>
+                <SelectItem value="responded">✅ Responded</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2 px-1 text-[9px] text-muted-foreground">
+            <span title="Total inbound replies">💬 {totalReplies}</span>
+            <span title="Conversations awaiting your reply" className={pendingCount > 0 ? "text-amber-600 font-medium" : ""}>⏳ {pendingCount}</span>
+            <span className="ml-auto inline-flex items-center gap-1 text-green-600">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" /> Live
+            </span>
+          </div>
+
           <ScrollArea className="flex-1">
             {loading ? (
               <div className="flex items-center justify-center py-8">
@@ -651,6 +755,11 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                       <span className="flex-1 truncate font-medium">
                         {highlight(t.customer_name || t.phone, searchQuery)}
                       </span>
+                      {(t.reply_count || 0) > 0 && (
+                        <Badge variant="outline" className="h-4 min-w-4 px-1 text-[9px] gap-0.5" title={`${t.reply_count} customer replies`}>
+                          💬 {t.reply_count}
+                        </Badge>
+                      )}
                       {(t.unread_count || 0) > 0 && (
                         <Badge variant="default" className="h-4 min-w-4 px-1 text-[9px]">
                           {t.unread_count}
@@ -660,14 +769,21 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                     <p className="truncate text-[10px] text-muted-foreground">
                       {t.last_message ? highlight(t.last_message, searchQuery) : "New message"}
                     </p>
-                    <p className="mt-0.5 text-[9px] text-muted-foreground">
-                      {new Date(t.last_at).toLocaleDateString("en-IN", {
-                        day: "2-digit",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                    <div className="mt-0.5 flex items-center justify-between gap-1">
+                      <p className="text-[9px] text-muted-foreground">
+                        {new Date(t.last_at).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                      {t.has_pending_reply ? (
+                        <Badge variant="outline" className="h-3.5 px-1 text-[8px] border-amber-300 text-amber-700">⏳ Pending</Badge>
+                      ) : t.status === "resolved" ? (
+                        <Badge variant="outline" className="h-3.5 px-1 text-[8px] border-emerald-300 text-emerald-700">✓ Done</Badge>
+                      ) : null}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -691,6 +807,25 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                   <p className="truncate text-sm font-medium">{selectedThread.customer_name || selectedThread.phone}</p>
                   <p className="text-[10px] text-muted-foreground">{selectedThread.phone}</p>
                 </div>
+                {!selectedThread.isDraft && (
+                  selectedThread.status === "resolved" ? (
+                    <Badge variant="outline" className="text-[9px] gap-1 border-emerald-300 text-emerald-700">
+                      <CheckCircle2 className="h-2.5 w-2.5" /> Responded
+                    </Badge>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 px-2 text-[10px] gap-1"
+                      onClick={() => markAsResponded(selectedThread)}
+                      disabled={markingResponded}
+                      title="Mark this conversation as responded / handled"
+                    >
+                      {markingResponded ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <CheckCircle2 className="h-2.5 w-2.5" />}
+                      Mark responded
+                    </Button>
+                  )
+                )}
                 {selectedThread.window_expires_at && (
                   isWindowOpen ? (
                     <Badge className="bg-green-100 text-green-700 border-green-200 text-[9px] gap-1">
