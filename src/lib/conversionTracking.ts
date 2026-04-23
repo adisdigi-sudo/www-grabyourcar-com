@@ -71,7 +71,7 @@ export const trackConversion = async (event: ConversionEvent): Promise<void> => 
 
   // 2. Persist to DB (fire-and-forget; never block UI on tracking)
   try {
-    await supabase.from("marketing_conversion_events").insert({
+    await supabase.from("marketing_conversion_events").insert([{
       event_type: event.event_type,
       page_path: path,
       cta_label: event.cta_label || null,
@@ -82,7 +82,7 @@ export const trackConversion = async (event: ConversionEvent): Promise<void> => 
       user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
       referrer: typeof document !== "undefined" ? document.referrer : null,
       metadata: (event.metadata as Record<string, unknown>) || {},
-    });
+    }]);
   } catch (e) {
     // Tracking should never break the app
     console.warn("[conversionTracking] db insert failed", e);
