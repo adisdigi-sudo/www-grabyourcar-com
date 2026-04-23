@@ -16,7 +16,7 @@ import { differenceInDays, format, startOfMonth, endOfMonth, parse } from "date-
 import { fetchAllPages } from "@/lib/fetchAllPages";
 import {
   UserPlus, Clock, CheckCircle2, Shield, TrendingUp,
-  Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight, Rocket, ExternalLink, Settings2, AlertCircle, PhoneCall
+  Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight, Rocket, ExternalLink, Settings2, AlertCircle, PhoneCall, MessageSquare
 } from "lucide-react";
 import { CallingQueueWorkspace } from "../calling/CallingQueueWorkspace";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
@@ -32,8 +32,9 @@ import { InsuranceKpiDetailDialog } from "./InsuranceKpiDetailDialog";
 import { InsuranceRenewalCampaign } from "./InsuranceRenewalCampaign";
 import { InsurancePerformance } from "./InsurancePerformance";
 import { OmniChatPanel } from "../shared/OmniChatPanel";
+import { OmniMessagingWorkspace } from "../shared/OmniMessagingWorkspace";
 
-type ActiveView = "pipeline" | "calling" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "renewal_campaign" | "performance";
+type ActiveView = "pipeline" | "calling" | "conversations" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "renewal_campaign" | "performance";
 type KpiType = "total_leads" | "in_pipeline" | "won" | "active_policies" | "conversion" | null;
 
 type LegacyInsuranceLead = {
@@ -489,6 +490,7 @@ export function InsuranceWorkspace() {
   const TABS = [
     { key: "pipeline" as const, label: "Lead Pipeline", icon: Shield, count: totalLeads, urgent: false },
     { key: "calling" as const, label: "Calling Queue", icon: PhoneCall, count: 0, urgent: false },
+    { key: "conversations" as const, label: "Conversations", icon: MessageSquare, count: 0, urgent: false },
     { key: "policy_book" as const, label: "Policy Book", icon: BookOpen, count: totalRunningPolicies, urgent: false },
     { key: "renewals" as const, label: "Coming Renewals", icon: CalendarClock, count: renewalsDue, urgent: urgentRenewals > 0 },
     { key: "overdue" as const, label: "Overdue", icon: AlertTriangle, count: overdueCount, urgent: overdueCount > 0 },
@@ -999,6 +1001,15 @@ export function InsuranceWorkspace() {
       {activeView === "calling" && (
         <AdminRenderBoundary contextLabel="Insurance calling queue">
           <CallingQueueWorkspace verticalSlug="insurance" verticalLabel="Insurance" accentClass="border-emerald-200 dark:border-emerald-900" />
+        </AdminRenderBoundary>
+      )}
+      {activeView === "conversations" && (
+        <AdminRenderBoundary contextLabel="Insurance conversations">
+          <OmniMessagingWorkspace
+            scopeLabel="Insurance"
+            allowedPhones={Array.from(new Set(dedupedClients.map((c) => c.phone).filter(Boolean) as string[]))}
+            context="Car Insurance"
+          />
         </AdminRenderBoundary>
       )}
       {activeView === "policy_book" && (
