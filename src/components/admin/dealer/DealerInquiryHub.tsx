@@ -19,6 +19,12 @@ import { format } from "date-fns";
 import DealerCampaignTracker from "./DealerCampaignTracker";
 
 const TEMPLATES: Record<string, { label: string; icon: string; build: (b: string, m: string, v: string, c: string) => string }> = {
+  urgent_ready_buyer: {
+    label: "🔥 Urgent — Ready Buyer",
+    icon: "🔥",
+    build: (b, m, v, c) =>
+      `Hello 👋\n\n*URGENT REQUIREMENT*\n\nI need *${b}${m ? ` ${m}` : ""}*${v ? ` (${v})` : ""}${c ? ` — ${c} color` : ""}.\n\n✅ Ready client with payment\n✅ Immediate booking\n\nDo you have this car available?\nPlease reply ASAP with availability & on-road price.\n\nThanks 🙏\n— *GrabYourCar*`,
+  },
   simple_inquiry: {
     label: "🧾 Simple Inquiry",
     icon: "🧾",
