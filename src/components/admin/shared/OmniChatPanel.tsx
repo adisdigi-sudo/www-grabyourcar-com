@@ -161,18 +161,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   const [uploading, setUploading] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
-  const [templates, setTemplates] = useState<TemplateOption[]>([]);
-  const [showTemplates, setShowTemplates] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-
-  // Load approved templates for fallback when 24hr window closed
-  useEffect(() => {
-    supabase.from("wa_templates").select("id, name, display_name, body, variables").eq("status", "approved").then(({ data }) => {
-      setTemplates((data || []) as TemplateOption[]);
-    });
-  }, []);
 
   const isWindowOpen = !!(selectedThread?.window_expires_at && new Date(selectedThread.window_expires_at) > new Date());
 
