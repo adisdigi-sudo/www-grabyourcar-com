@@ -19,6 +19,8 @@ import { format } from "date-fns";
 import DealerCampaignTracker from "./DealerCampaignTracker";
 import DealerConversationsHub from "./DealerConversationsHub";
 import DealerReplyFlowBuilder from "./DealerReplyFlowBuilder";
+import { ComboBoxWithCustom } from "@/components/ui/combo-box-with-custom";
+import { INDIAN_STATES, INDIAN_CITIES_BY_STATE, ALL_INDIAN_CITIES, CAR_COLORS, COMMON_VARIANTS } from "@/lib/indiaMasterData";
 
 const TEMPLATES: Record<string, { label: string; icon: string; build: (b: string, m: string, v: string, c: string) => string }> = {
   urgent_ready_buyer: {
