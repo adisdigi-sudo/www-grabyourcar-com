@@ -14,9 +14,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Send, Users, MessageCircle, Plus, Upload, Phone, Zap, Bot, Car, Palette, History, Loader2, Activity } from "lucide-react";
+import { Send, Users, MessageCircle, Plus, Upload, Phone, Zap, Bot, Car, Palette, History, Loader2, Activity, MessagesSquare } from "lucide-react";
 import { format } from "date-fns";
 import DealerCampaignTracker from "./DealerCampaignTracker";
+import DealerConversationsHub from "./DealerConversationsHub";
 
 const TEMPLATES: Record<string, { label: string; icon: string; build: (b: string, m: string, v: string, c: string) => string }> = {
   urgent_ready_buyer: {
@@ -399,9 +400,14 @@ export default function DealerInquiryHub() {
     <Tabs defaultValue="inquiry" className="space-y-4">
       <TabsList>
         <TabsTrigger value="inquiry" className="gap-1"><Car className="h-4 w-4" /> Smart Inquiry</TabsTrigger>
+        <TabsTrigger value="conversations" className="gap-1"><MessagesSquare className="h-4 w-4" /> Conversations</TabsTrigger>
         <TabsTrigger value="tracker" className="gap-1"><Activity className="h-4 w-4" /> Live Tracker</TabsTrigger>
         <TabsTrigger value="history" className="gap-1"><History className="h-4 w-4" /> Campaign History</TabsTrigger>
       </TabsList>
+
+      <TabsContent value="conversations" className="space-y-4">
+        <DealerConversationsHub />
+      </TabsContent>
 
       <TabsContent value="tracker" className="space-y-4">
         <DealerCampaignTracker />
