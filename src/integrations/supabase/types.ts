@@ -3714,6 +3714,80 @@ export type Database = {
         }
         Relationships: []
       }
+      car_scrape_jobs: {
+        Row: {
+          brand: string
+          brochure_found: boolean | null
+          car_id: string | null
+          city_pricing_count: number | null
+          colors_found: number | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          ex_showroom_delhi: number | null
+          firecrawl_credits_used: number | null
+          id: string
+          model_name: string
+          raw_data: Json | null
+          source_url: string | null
+          specs_found: number | null
+          started_at: string | null
+          status: string
+          updated_at: string
+          variants_found: number | null
+        }
+        Insert: {
+          brand: string
+          brochure_found?: boolean | null
+          car_id?: string | null
+          city_pricing_count?: number | null
+          colors_found?: number | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          ex_showroom_delhi?: number | null
+          firecrawl_credits_used?: number | null
+          id?: string
+          model_name: string
+          raw_data?: Json | null
+          source_url?: string | null
+          specs_found?: number | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          variants_found?: number | null
+        }
+        Update: {
+          brand?: string
+          brochure_found?: boolean | null
+          car_id?: string | null
+          city_pricing_count?: number | null
+          colors_found?: number | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          ex_showroom_delhi?: number | null
+          firecrawl_credits_used?: number | null
+          id?: string
+          model_name?: string
+          raw_data?: Json | null
+          source_url?: string | null
+          specs_found?: number | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          variants_found?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_scrape_jobs_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       car_specifications: {
         Row: {
           car_id: string
