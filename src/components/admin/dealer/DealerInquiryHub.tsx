@@ -92,7 +92,7 @@ export default function DealerInquiryHub() {
   const [bulkText, setBulkText] = useState("");
   const [bulkBrand, setBulkBrand] = useState("");
   const [addOpen, setAddOpen] = useState(false);
-  const [sendMode, setSendMode] = useState<"template_then_text" | "template_only" | "text_only">("text_only");
+  const [sendMode, setSendMode] = useState<"template_then_text" | "template_only" | "text_only">("template_then_text");
   const [metaTemplate, setMetaTemplate] = useState("welcome_new_lead");
   const [addForm, setAddForm] = useState({ name: "", whatsapp_number: "", dealer_name: "", brand: "", city: "", state: "" });
 
@@ -274,7 +274,7 @@ export default function DealerInquiryHub() {
   const shootAll = async () => {
     if (selectedIds.length === 0) { toast.error("Select at least one dealer"); return; }
     if (sendMode !== "template_only" && !message.trim()) { toast.error("Write a message first"); return; }
-    if (!metaTemplate && sendMode !== "text_only") { toast.error("Select a Meta template"); return; }
+    if (!metaTemplate) { toast.error("Select a Meta template"); return; }
     setSending(true);
     try {
       const selectedReps = reps.filter((r: any) => selectedIds.includes(r.id) && r.whatsapp_number);
@@ -324,7 +324,7 @@ export default function DealerInquiryHub() {
       }
 
       if (failedCount > 0) toast.warning(`⚠️ ${failedCount} failed`);
-      if (blockedCount > 0) toast.warning(`⛔ ${blockedCount} blocked — open chat window required or provider blocked this number`);
+      if (blockedCount > 0) toast.warning(`⛔ ${blockedCount} blocked by provider or recent delivery restriction`);
       qc.invalidateQueries({ queryKey: ["dealer-inquiry-campaigns"] });
     } catch (e: any) {
       toast.error(e.message || "Failed to send");
@@ -610,16 +610,16 @@ export default function DealerInquiryHub() {
                   <Select value={sendMode} onValueChange={(v: any) => setSendMode(v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="text_only">⚡ Direct Inquiry Text</SelectItem>
+                        <SelectItem value="text_only">⚡ Auto Inquiry Text</SelectItem>
                       <SelectItem value="template_then_text">📋 Template + Text</SelectItem>
                       <SelectItem value="template_only">📋 Template Only</SelectItem>
                     </SelectContent>
                   </Select>
                   {sendMode === "text_only" && (
-                    <p className="text-xs text-green-600 mt-1">✅ Is mode me sirf actual inquiry text jayega. Agar dealer chat window open nahi hai to send block hoga, koi galat template nahi jayega.</p>
+                    <p className="mt-1 text-xs text-green-600">✅ Is mode me actual inquiry text hi jayega. Agar dealer ka chat window closed hai to system pehle safe opener bhej kar same inquiry text automatically send karega.</p>
                   )}
                   {sendMode === "template_then_text" && (
-                    <p className="text-xs text-muted-foreground mt-1">ℹ️ Closed chat me pehle safe opener jayega, aur open chat me uske baad actual inquiry text jayega</p>
+                    <p className="mt-1 text-xs text-muted-foreground">ℹ️ Ye recommended mode hai — closed chat me pehle safe opener jayega, phir actual inquiry text.</p>
                   )}
                 </div>
 
