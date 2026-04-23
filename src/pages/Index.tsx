@@ -3,6 +3,7 @@ import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Header } from "@/components/Header";
 import { RivianHero } from "@/components/RivianHero";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
+import { PromoBanner } from "@/components/marketing/PromoBanner";
 const HomeDeferredSections = lazy(() => import("@/components/home/HomeDeferredSections"));
 
 const SectionSkeleton = ({ label }: { label: string }) => (
@@ -44,6 +45,11 @@ const Index = () => {
         </SectionErrorBoundary>
 
         <main>
+          <SectionErrorBoundary sectionName="promo-banner" fallback={null}>
+            <div className="container mx-auto px-4 pt-3">
+              <PromoBanner scope="home" />
+            </div>
+          </SectionErrorBoundary>
           <SectionErrorBoundary sectionName="hero">
             <RivianHero />
           </SectionErrorBoundary>
