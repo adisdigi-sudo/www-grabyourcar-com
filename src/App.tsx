@@ -234,6 +234,7 @@ const AppRouterShell = () => {
             />
             <Route path="/admin-auth" element={<AdminAuth />} />
             <Route path="/admin-reset-password" element={<AdminResetPassword />} />
+            <Route path="/admin/maruti-scrape" element={<MarutiScrape />} />
             <Route
               path="/workspace"
               element={
