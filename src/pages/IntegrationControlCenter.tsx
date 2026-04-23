@@ -378,6 +378,16 @@ export default function IntegrationControlCenter() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <WhatsAppSetupWizard
+        open={waWizardOpen}
+        onOpenChange={setWaWizardOpen}
+        onConnected={() => {
+          loadLogs();
+          loadLatestResults();
+          runTest("meta_whatsapp");
+        }}
+      />
     </div>
   );
 }
