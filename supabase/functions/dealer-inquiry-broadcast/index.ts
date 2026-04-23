@@ -214,6 +214,7 @@ async function resolveApprovedTemplate(
   businessAccountId: string | null,
   fallbackValues: string[],
   preferredTemplate?: string | null,
+  requireVariableCapacity = false,
 ): Promise<ApprovedTemplate | null> {
   const { data: approvedTemplates } = await supabase
     .from("wa_templates")
@@ -239,9 +240,11 @@ async function resolveApprovedTemplate(
     const liveTemplate = await fetchApprovedMetaTemplateDefinition(token, businessAccountId, candidate);
     if (liveTemplate) {
       if (hasMediaHeader(liveTemplate.components || [])) continue;
+      const builtComponents = buildTemplateComponents(liveTemplate.components || [], fallbackValues);
+      if (requireVariableCapacity && countResolvedTemplateParams(builtComponents) === 0) continue;
       return {
         ...liveTemplate,
-        components: buildTemplateComponents(liveTemplate.components || [], fallbackValues),
+        components: builtComponents,
       };
     }
 
@@ -252,6 +255,7 @@ async function resolveApprovedTemplate(
     if (["image", "video", "document"].includes(headerType)) continue;
 
     const variableCount = Array.isArray(cached.variables) ? cached.variables.length : 0;
+    if (requireVariableCapacity && variableCount === 0) continue;
     return {
       name: candidate,
       language: "en",
