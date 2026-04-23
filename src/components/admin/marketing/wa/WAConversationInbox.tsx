@@ -10,6 +10,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { WaTemplatePickerButton, type WaTemplateOption } from "@/components/admin/shared/WaTemplatePickerButton";
 
 interface Conversation {
   id: string;
@@ -182,6 +183,38 @@ export function WAConversationInbox() {
     }
   };
 
+  const handleSendTemplate = async (tpl: WaTemplateOption) => {
+    if (!selected) return;
+    setIsSending(true);
+    try {
+      const vars: Record<string, string> = {};
+      (Array.isArray(tpl.variables) ? tpl.variables : []).forEach((k) => {
+        const key = String(k);
+        if (/name/i.test(key) || key === "1" || key === "var_1") {
+          vars[key] = selected.customer_name || "Customer";
+        } else {
+          vars[key] = "";
+        }
+      });
+      const { data, error } = await supabase.functions.invoke("whatsapp-send", {
+        body: {
+          to: selected.phone,
+          messageType: "template",
+          template_name: tpl.name,
+          template_variables: vars,
+          message_context: `inbox_template_${tpl.name}`,
+          name: selected.customer_name || "Customer",
+        },
+      });
+      if (error || !data?.success) throw new Error(data?.error || error?.message || "Template send failed");
+      toast({ title: "✅ Template sent", description: tpl.display_name || tpl.name });
+    } catch (err: any) {
+      toast({ title: "Template failed", description: err.message, variant: "destructive" });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const filtered = conversations.filter(c =>
     !search || c.customer_name?.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search)
   );
@@ -307,7 +340,18 @@ export function WAConversationInbox() {
             </ScrollArea>
 
             {/* Reply Input */}
-            <div className="p-3 border-t">
+            <div className="p-3 border-t space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] text-muted-foreground">
+                  💡 Use a template to bypass the 24h window or send a structured message
+                </p>
+                <WaTemplatePickerButton
+                  onPick={handleSendTemplate}
+                  disabled={isSending}
+                  withLabel
+                  align="end"
+                />
+              </div>
               <div className="flex gap-2">
                 <Input
                   placeholder="Type a reply..."

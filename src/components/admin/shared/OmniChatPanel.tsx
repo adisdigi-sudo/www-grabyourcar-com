@@ -33,6 +33,7 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { resolveWaMediaUrl, isImageMime } from "@/components/admin/inbox/waMedia";
+import { WaTemplatePickerButton, type WaTemplateOption } from "@/components/admin/shared/WaTemplatePickerButton";
 
 interface OmniChatPanelProps {
   phone?: string;
@@ -57,14 +58,6 @@ interface ChatThread {
   unread_count?: number;
   isDraft?: boolean;
   window_expires_at?: string | null;
-}
-
-interface TemplateOption {
-  id: string;
-  name: string;
-  display_name: string | null;
-  body: string;
-  variables?: string[] | null;
 }
 
 interface ChatMessage {
@@ -160,24 +153,14 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   const [uploading, setUploading] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
-  const [templates, setTemplates] = useState<TemplateOption[]>([]);
-  const [showTemplates, setShowTemplates] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Load approved templates for fallback when 24hr window closed
-  useEffect(() => {
-    supabase.from("wa_templates").select("id, name, display_name, body, variables").eq("status", "approved").then(({ data }) => {
-      setTemplates((data || []) as TemplateOption[]);
-    });
-  }, []);
-
   const isWindowOpen = !!(selectedThread?.window_expires_at && new Date(selectedThread.window_expires_at) > new Date());
 
-  async function sendTemplateFromPicker(tpl: TemplateOption) {
+  async function sendTemplateFromPicker(tpl: WaTemplateOption) {
     if (!selectedThread) return;
-    setShowTemplates(false);
     setSending(true);
     try {
       const vars: Record<string, string> = {};
@@ -829,32 +812,14 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                 {selectedThread.window_expires_at && !isWindowOpen && (
                   <div className="flex items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-2 py-1">
                     <p className="text-[10px] text-amber-700 dark:text-amber-300">
-                      ⏰ 24hr window closed — use approved template
+                      ⏰ 24hr window closed — only approved templates can be sent
                     </p>
-                    <Popover open={showTemplates} onOpenChange={setShowTemplates}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 border-amber-400">
-                          <LayoutTemplate className="h-3 w-3" /> Pick template
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-72 p-2" align="end">
-                        <p className="text-xs font-semibold mb-2">📋 Approved Templates</p>
-                        <div className="space-y-1 max-h-56 overflow-auto">
-                          {templates.length === 0 ? (
-                            <p className="text-xs text-muted-foreground p-2">No approved templates</p>
-                          ) : templates.map(tpl => (
-                            <button
-                              key={tpl.id}
-                              onClick={() => sendTemplateFromPicker(tpl)}
-                              className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors"
-                            >
-                              <span className="font-medium">{tpl.display_name || tpl.name}</span>
-                              <p className="text-muted-foreground truncate">{tpl.body}</p>
-                            </button>
-                          ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                    <WaTemplatePickerButton
+                      onPick={sendTemplateFromPicker}
+                      highlight
+                      withLabel
+                      align="end"
+                    />
                   </div>
                 )}
                 <div className="flex gap-1.5">
@@ -876,6 +841,12 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                   >
                     {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Paperclip className="h-3.5 w-3.5" />}
                   </Button>
+                  <WaTemplatePickerButton
+                    onPick={sendTemplateFromPicker}
+                    disabled={sending || selectedThread.isDraft}
+                    highlight={!isWindowOpen}
+                    align="start"
+                  />
                   <Input
                     placeholder={`Reply via ${replyChannel}...`}
                     value={replyMessage}
