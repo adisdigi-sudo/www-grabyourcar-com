@@ -15,12 +15,13 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// vertical -> template name mapping (must match wa_templates.name)
-const TEMPLATE_MAP: Record<string, string> = {
-  insurance: "feedback_insurance_won",
-  loans: "feedback_loan_disbursed",
-  hsrp: "feedback_hsrp_completed",
-  sales: "feedback_sales_delivered",
+// vertical -> ordered list of template candidates (must match wa_templates.name)
+// Order matters: v2 (UTILITY ~₹0.12) is tried first, v1 (MARKETING ~₹0.78) is fallback.
+const TEMPLATE_CANDIDATES: Record<string, string[]> = {
+  insurance: ["feedback_insurance_won_v2", "feedback_insurance_won"],
+  loans: ["feedback_loan_disbursed_v2", "feedback_loan_disbursed"],
+  hsrp: ["feedback_hsrp_completed_v2", "feedback_hsrp_completed"],
+  sales: ["feedback_sales_delivered_v2", "feedback_sales_delivered"],
 };
 
 const FEEDBACK_BASE = "https://www.grabyourcar.com/feedback";
