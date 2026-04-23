@@ -307,22 +307,33 @@ export default function IntegrationControlCenter() {
                         ))}
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant={result?.status === "failure" ? "destructive" : "outline"}
-                      onClick={() => runTest(p.id)}
-                      disabled={isThisLoading || (testingAll && !isThisLoading)}
-                      className="flex-shrink-0"
-                    >
-                      {isThisLoading ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : result ? (
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                      ) : (
-                        <PlayCircle className="h-4 w-4 mr-2" />
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      {p.id === "meta_whatsapp" && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => setWaWizardOpen(true)}
+                        >
+                          <Plug className="h-4 w-4 mr-2" />
+                          Connect & Save
+                        </Button>
                       )}
-                      {result ? "Re-test" : "Test"}
-                    </Button>
+                      <Button
+                        size="sm"
+                        variant={result?.status === "failure" ? "destructive" : "outline"}
+                        onClick={() => runTest(p.id)}
+                        disabled={isThisLoading || (testingAll && !isThisLoading)}
+                      >
+                        {isThisLoading ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : result ? (
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                        ) : (
+                          <PlayCircle className="h-4 w-4 mr-2" />
+                        )}
+                        {result ? "Re-test" : "Test"}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
