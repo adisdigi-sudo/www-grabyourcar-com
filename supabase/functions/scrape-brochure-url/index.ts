@@ -13,7 +13,7 @@ interface Req {
   carId?: string;
   brand: string;
   modelName: string;
-  cardekhoBrochureUrl?: string; // optional override
+  sourceUrls?: string[]; // optional override list of pages to scrape
 }
 
 function buildCardekhoBrochureUrl(brand: string, modelName: string) {
@@ -22,11 +22,9 @@ function buildCardekhoBrochureUrl(brand: string, modelName: string) {
   return `https://www.cardekho.com/brochures/${b}/${m}`;
 }
 
-// OEM fallback patterns (Kia uses a deterministic dam URL)
-function buildKiaOemBrochureUrl(modelName: string) {
+function buildKiaIndiaShowroomUrl(modelName: string) {
   const slug = modelName.toLowerCase().replace(/\s+/g, '-');
-  const titleCase = modelName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
-  return `https://www.kia.com/content/dam/kia2/in/en/our-vehicles/${slug}/${titleCase}_Brochure.pdf`;
+  return `https://www.kia.com/in/our-vehicles/${slug}/showroom.html`;
 }
 
 function extractPdfLinks(text: string): string[] {
