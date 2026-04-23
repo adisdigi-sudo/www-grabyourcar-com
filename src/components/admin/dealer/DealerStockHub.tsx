@@ -882,8 +882,8 @@ export default function DealerStockHub() {
                     <Label className="text-xs">Or Custom Template Name</Label>
                     <Input
                       placeholder="e.g. ready_stock_alert"
-                      value={bcastTemplate.startsWith("__custom__") ? bcastTemplate.slice(10) : ""}
-                      onChange={(e) => setBcastTemplate(e.target.value ? e.target.value : "")}
+                      value={bcastTemplate}
+                      onChange={(e) => setBcastTemplate(e.target.value)}
                     />
                   </div>
                 </div>
