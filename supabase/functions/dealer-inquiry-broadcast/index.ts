@@ -50,6 +50,13 @@ type SendOutcome = {
   error?: string;
 };
 
+const DEALER_INQUIRY_TEMPLATE_BLOCKLIST = /(booking|confirm(?:ed|ation)?|insurance|policy|renewal|loan|payment|receipt|invoice|feedback|deliver(?:y|ed)?|appointment|otp)/i;
+
+function isDealerInquirySafeTemplate(template?: { name?: string | null; body?: string | null; category?: string | null }) {
+  const haystack = [template?.name, template?.body, template?.category].filter(Boolean).join(" ");
+  return !DEALER_INQUIRY_TEMPLATE_BLOCKLIST.test(haystack);
+}
+
 function countTemplateParams(text?: string | null): number {
   return (text?.match(/\{\{\d+\}\}/g) || []).length;
 }
@@ -145,30 +152,44 @@ function buildDealerTemplateValues(params: {
   color?: string | null;
   message?: string | null;
 }): string[] {
-  // IMPORTANT: We never pack inquiry text into "booking_confirmation" variables — that
-  // template literally tells the dealer their booking is confirmed which is misleading.
-  // We just fill variables with neutral, dealer-friendly values so the template renders.
+  const inquiryMessage = normalizeTemplateText(params.message);
   const vehicleContext = normalizeTemplateText(
     [params.inquiryLabel, params.color].filter(Boolean).join(" "),
     140,
-  ) || params.inquiryLabel || "vehicle inquiry";
+  );
+  const shortInquiry = inquiryMessage || vehicleContext || "Need quick confirmation";
 
   if (params.variableCount <= 0) return [];
 
+  if (params.templateName === "booking_confirmation") {
+    return [
+      inquiryMessage
+        ? `${params.dealerName} — ${normalizeTemplateText(params.message, 180)}`
+        : params.dealerName,
+      params.bookingRef,
+      vehicleContext,
+      shortInquiry,
+    ];
+  }
+
+  if (params.templateName === "welcome_new_lead") {
+    return [inquiryMessage || vehicleContext || `${params.dealerName} - New inquiry from GrabYourCar`];
+  }
+
   if (params.variableCount === 1) {
-    return [params.dealerName];
+    return [inquiryMessage ? `${params.dealerName} — ${shortInquiry}` : `${params.dealerName}`];
   }
 
   if (params.variableCount === 2) {
-    return [params.dealerName, vehicleContext];
+    return [params.dealerName, shortInquiry];
   }
 
   return [
     params.dealerName,
-    vehicleContext,
+    vehicleContext || params.inquiryLabel,
+    shortInquiry,
     params.bookingRef,
     params.color || "available",
-    "GrabYourCar",
     "GrabYourCar",
   ];
 }
@@ -214,29 +235,28 @@ async function resolveApprovedTemplate(
 ): Promise<ApprovedTemplate | null> {
   const { data: approvedTemplates } = await supabase
     .from("wa_templates")
-    .select("name, header_type, variables, category")
+    .select("name, header_type, variables, category, body")
     .eq("status", "approved");
 
-  // NOTE: Do NOT auto-fallback to "booking_confirmation" — that template tells dealers
-  // their booking is confirmed, which is wrong for an inquiry. Prefer neutral templates.
+  const safeTemplates = (approvedTemplates || []).filter((row: any) => isDealerInquirySafeTemplate(row));
+
   const candidates = [
     preferredTemplate,
     "welcome_new_lead",
     "grabyourcarintroduction",
-    "insurancefollowup",
-    ...(approvedTemplates || [])
-      .filter((row: any) => row.name !== "booking_confirmation")
+    ...safeTemplates
       .sort((a: any, b: any) => {
         const aUtility = String(a.category || "").toLowerCase() === "utility" ? 0 : 1;
         const bUtility = String(b.category || "").toLowerCase() === "utility" ? 0 : 1;
         return aUtility - bUtility;
       })
       .map((row: any) => row.name),
-  ].filter((value, index, array): value is string => Boolean(value) && array.indexOf(value) === index);
+  ].filter((value, index, array): value is string => Boolean(value) && array.indexOf(value) === index && isDealerInquirySafeTemplate({ name: value }));
 
   for (const candidate of candidates) {
     const liveTemplate = await fetchApprovedMetaTemplateDefinition(token, businessAccountId, candidate);
     if (liveTemplate) {
+      if (!isDealerInquirySafeTemplate({ name: liveTemplate.name })) continue;
       if (hasMediaHeader(liveTemplate.components || [])) continue;
       const builtComponents = buildTemplateComponents(liveTemplate.components || [], fallbackValues);
       if (requireVariableCapacity && countResolvedTemplateParams(builtComponents) === 0) continue;
@@ -246,7 +266,7 @@ async function resolveApprovedTemplate(
       };
     }
 
-    const cached = (approvedTemplates || []).find((row: any) => row.name === candidate);
+    const cached = safeTemplates.find((row: any) => row.name === candidate);
     if (!cached) continue;
 
     const headerType = String(cached.header_type || "").toLowerCase();
@@ -386,7 +406,6 @@ serve(async (req) => {
 
     // Determine send mode
     const mode = send_mode || (template_name ? "template_then_text" : "text_only");
-    // Default to a neutral intro template — NEVER booking_confirmation (that says "booking confirmed")
     const metaTemplate = template_name || "welcome_new_lead";
 
     // Pre-resolve template definition ONCE (we'll rebuild components per dealer with their name)
@@ -394,10 +413,11 @@ serve(async (req) => {
     const bookingRef = `INQ-${Date.now().toString().slice(-6)}`;
     const baseFallback = [
       "Partner",
-      inquiryLabel,
       bookingRef,
+      inquiryLabel,
       color || "available",
     ];
+    const requiresMessagePacking = Boolean(message?.trim()) && mode !== "template_only";
     const wabaId = WHATSAPP_WABA_ID ?? null;
     const templateDefinition = await resolveApprovedTemplate(
       supabase,
@@ -408,7 +428,7 @@ serve(async (req) => {
         ...baseFallback,
       ],
       metaTemplate,
-      false, // Don't require variable capacity — inquiry text is sent as separate free-text, not packed
+      requiresMessagePacking,
     );
 
     // Also fetch raw Meta definition so we can rebuild per-dealer

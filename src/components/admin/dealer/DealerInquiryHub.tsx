@@ -59,6 +59,13 @@ const AI_SCRIPTS = [
   { id: "custom", label: "Custom Script", script: "" },
 ];
 
+const DEALER_INQUIRY_TEMPLATE_BLOCKLIST = /(booking|confirm(?:ed|ation)?|insurance|policy|renewal|loan|payment|receipt|invoice|feedback|deliver(?:y|ed)?|appointment|otp)/i;
+
+function isDealerInquirySafeTemplate(template?: { name?: string | null; display_name?: string | null; body?: string | null }) {
+  const haystack = [template?.name, template?.display_name, template?.body].filter(Boolean).join(" ");
+  return !DEALER_INQUIRY_TEMPLATE_BLOCKLIST.test(haystack);
+}
+
 export default function DealerInquiryHub() {
   const qc = useQueryClient();
   const [selectedBrand, setSelectedBrand] = useState("all");
@@ -159,7 +166,7 @@ export default function DealerInquiryHub() {
     queryFn: async () => {
       const { data } = await supabase
         .from("wa_templates")
-        .select("name, display_name, category, language, header_type, status")
+        .select("name, display_name, category, language, header_type, status, body, variables")
         .eq("status", "approved")
         .order("category")
         .order("name");
@@ -187,20 +194,28 @@ export default function DealerInquiryHub() {
     };
   }, [qc]);
 
+  const inquirySafeTemplates = useMemo(
+    () => approvedTemplates.filter((tpl: any) => isDealerInquirySafeTemplate(tpl)),
+    [approvedTemplates],
+  );
+
+  const selectableTemplates = useMemo(
+    () => (inquirySafeTemplates.length ? inquirySafeTemplates : approvedTemplates.filter((tpl: any) => tpl.name !== "booking_confirmation")),
+    [approvedTemplates, inquirySafeTemplates],
+  );
+
   useEffect(() => {
-    if (!approvedTemplates.length) return;
-    const templateExists = approvedTemplates.some((tpl: any) => tpl.name === metaTemplate);
+    if (!selectableTemplates.length) return;
+    const templateExists = selectableTemplates.some((tpl: any) => tpl.name === metaTemplate);
     if (templateExists) return;
 
-    // Prefer neutral inquiry-style templates; never auto-pick booking_confirmation
-    // (it tells the dealer their booking is confirmed, which is wrong for an inquiry).
-    const preferredOrder = ["welcome_new_lead", "grabyourcarintroduction", "insurancefollowup"];
-    const preferred = preferredOrder
-      .map((name) => approvedTemplates.find((tpl: any) => tpl.name === name))
+    const preferredNames = ["welcome_new_lead", "grabyourcarintroduction"];
+    const preferred = preferredNames
+      .map((name) => selectableTemplates.find((tpl: any) => tpl.name === name))
       .find(Boolean);
-    const safeFallback = approvedTemplates.find((tpl: any) => tpl.name !== "booking_confirmation");
-    setMetaTemplate((preferred || safeFallback || approvedTemplates[0]).name);
-  }, [approvedTemplates, metaTemplate]);
+
+    setMetaTemplate((preferred || selectableTemplates[0]).name);
+  }, [selectableTemplates, metaTemplate]);
 
   const states = useMemo(() => [...new Set(reps.map((r: any) => r.state).filter(Boolean))].sort(), [reps]);
   const cities = useMemo(() => [...new Set(reps.map((r: any) => r.city).filter(Boolean))].sort(), [reps]);
@@ -581,10 +596,10 @@ export default function DealerInquiryHub() {
                     </SelectContent>
                   </Select>
                   {sendMode === "text_only" && (
-                    <p className="text-xs text-green-600 mt-1">✅ Pehle selected approved template use hoga; agar chat window open hai tab detailed text bhi jayega</p>
+                    <p className="text-xs text-green-600 mt-1">✅ Chat open ho to actual inquiry text jayega; closed chat me sirf safe intro template jayega, booking confirmation kabhi nahi</p>
                   )}
                   {sendMode === "template_then_text" && (
-                    <p className="text-xs text-muted-foreground mt-1">ℹ️ Closed chat me inquiry selected template ke andar hi bhejega; open chat me uske baad detailed text bhi jayega</p>
+                    <p className="text-xs text-muted-foreground mt-1">ℹ️ Closed chat me pehle safe opener jayega, aur open chat me uske baad actual inquiry text jayega</p>
                   )}
                 </div>
 
@@ -594,9 +609,9 @@ export default function DealerInquiryHub() {
                   <Select value={metaTemplate} onValueChange={setMetaTemplate}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {approvedTemplates.length === 0 ? (
+                      {selectableTemplates.length === 0 ? (
                         <SelectItem value="welcome_new_lead">welcome_new_lead</SelectItem>
-                      ) : approvedTemplates.map((tpl: any) => (
+                      ) : selectableTemplates.map((tpl: any) => (
                         <SelectItem key={tpl.name} value={tpl.name}>
                           {tpl.display_name || tpl.name} ({tpl.category || "general"})
                         </SelectItem>
@@ -604,7 +619,7 @@ export default function DealerInquiryHub() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Har send mode me selected approved template use hoga. Closed dealer chat me isi template ke andar inquiry pack karke bheji jayegi.
+                    Sirf inquiry-safe templates dikh rahe hain. Booking, payment, policy ya confirmation template dealer inquiry me use nahi hoga.
                   </p>
                 </div>
 
