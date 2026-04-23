@@ -19,11 +19,15 @@ import { AdminLivePreview, PreviewToggleButton } from "../shared/AdminLivePrevie
 
 type CarDbTab = 'upload' | 'bulk' | 'manage' | 'scraper';
 
+const CITY_OPTIONS = ['Ahmedabad', 'Bangalore', 'Chennai', 'Delhi', 'Hyderabad', 'Kolkata', 'Mumbai', 'Pune'];
+
 export const CarDatabaseWorkspace = ({ initialTab = 'upload' }: { initialTab?: CarDbTab } = {}) => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<CarDbTab>(initialTab);
   const [searchFilter, setSearchFilter] = useState("");
   const [brandFilter, setBrandFilter] = useState("All");
+  const [modelFilter, setModelFilter] = useState("");
+  const [cityFilter, setCityFilter] = useState("All");
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const { data: dbBrands } = useQuery({
@@ -46,6 +50,22 @@ export const CarDatabaseWorkspace = ({ initialTab = 'upload' }: { initialTab?: C
     }
   });
 
+  // Cars that have pricing for the selected city
+  const { data: cityCarIds } = useQuery({
+    queryKey: ['cars-by-city', cityFilter],
+    enabled: cityFilter !== 'All',
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('car_city_pricing')
+        .select('car_id')
+        .eq('city', cityFilter)
+        .eq('is_active', true);
+      if (error) throw error;
+      return new Set((data || []).map(r => r.car_id));
+    },
+    staleTime: 60 * 1000,
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('cars').delete().eq('id', id);
@@ -59,9 +79,24 @@ export const CarDatabaseWorkspace = ({ initialTab = 'upload' }: { initialTab?: C
     onError: (e: Error) => toast.error(e.message)
   });
 
-  const filteredExisting = existingCars?.filter(c =>
-    !searchFilter || c.name.toLowerCase().includes(searchFilter.toLowerCase()) || c.slug.toLowerCase().includes(searchFilter.toLowerCase()) || c.brand.toLowerCase().includes(searchFilter.toLowerCase())
-  ) || [];
+  const filteredExisting = (existingCars || []).filter(c => {
+    if (searchFilter) {
+      const s = searchFilter.toLowerCase();
+      if (!c.name.toLowerCase().includes(s) && !c.slug.toLowerCase().includes(s) && !c.brand.toLowerCase().includes(s)) return false;
+    }
+    if (modelFilter && !c.name.toLowerCase().includes(modelFilter.toLowerCase())) return false;
+    if (cityFilter !== 'All' && cityCarIds && !cityCarIds.has(c.id)) return false;
+    return true;
+  });
+
+  const clearFilters = () => {
+    setSearchFilter('');
+    setBrandFilter('All');
+    setModelFilter('');
+    setCityFilter('All');
+  };
+
+  const hasActiveFilters = searchFilter || brandFilter !== 'All' || modelFilter || cityFilter !== 'All';
 
   return (
     <div className="flex h-full min-h-[calc(100vh-4rem)]">
@@ -100,19 +135,31 @@ export const CarDatabaseWorkspace = ({ initialTab = 'upload' }: { initialTab?: C
 
       {activeTab === 'manage' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex items-center gap-3 px-4 py-3 border-b bg-muted/20">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/20 flex-wrap">
+            <div className="relative flex-1 min-w-[220px] max-w-xs">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={searchFilter} onChange={e => setSearchFilter(e.target.value)} placeholder="Search by name, brand, or slug..." className="pl-9 h-9" />
+              <Input value={searchFilter} onChange={e => setSearchFilter(e.target.value)} placeholder="Search name, brand, slug..." className="pl-9 h-9" />
             </div>
             <Select value={brandFilter} onValueChange={setBrandFilter}>
-              <SelectTrigger className="h-9 w-44"><SelectValue placeholder="All Brands" /></SelectTrigger>
+              <SelectTrigger className="h-9 w-40"><SelectValue placeholder="All Brands" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All Brands</SelectItem>
                 {(dbBrands || []).map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" className="h-9" onClick={() => refetchCars()}><RefreshCw className="h-4 w-4" /></Button>
+            <Input value={modelFilter} onChange={e => setModelFilter(e.target.value)} placeholder="Filter by model..." className="h-9 w-44" />
+            <Select value={cityFilter} onValueChange={setCityFilter}>
+              <SelectTrigger className="h-9 w-36"><SelectValue placeholder="All Cities" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Cities</SelectItem>
+                {CITY_OPTIONS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={clearFilters}>Clear</Button>
+            )}
+            <Button variant="outline" size="sm" className="h-9 ml-auto" onClick={() => refetchCars()}><RefreshCw className="h-4 w-4" /></Button>
+            <Badge variant="secondary" className="text-xs">{filteredExisting.length} of {existingCars?.length || 0}</Badge>
           </div>
           <ScrollArea className="flex-1">
             <table className="w-full text-sm">
