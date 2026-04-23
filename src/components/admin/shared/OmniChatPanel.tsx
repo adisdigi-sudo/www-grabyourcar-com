@@ -708,6 +708,17 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                   <p className="truncate text-sm font-medium">{selectedThread.customer_name || selectedThread.phone}</p>
                   <p className="text-[10px] text-muted-foreground">{selectedThread.phone}</p>
                 </div>
+                {selectedThread.window_expires_at && (
+                  isWindowOpen ? (
+                    <Badge className="bg-green-100 text-green-700 border-green-200 text-[9px] gap-1">
+                      <Clock className="h-2.5 w-2.5" /> Free window open
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-[9px] gap-1 text-amber-600">
+                      <AlertTriangle className="h-2.5 w-2.5" /> Use template
+                    </Badge>
+                  )
+                )}
                 {channelIcon(selectedThread.channel)}
               </div>
 
