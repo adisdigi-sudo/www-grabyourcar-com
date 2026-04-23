@@ -75,6 +75,25 @@ export default function BrandScrape() {
           if (carId) {
             setCurrentStep(`(${i + 1}/${models.length}) Computing city pricing for ${m.modelName}...`);
             await supabase.functions.invoke("compute-city-pricing", { body: { carId } });
+
+            setCurrentStep(`(${i + 1}/${models.length}) Fetching brochure for ${m.modelName}...`);
+            const broc = await supabase.functions.invoke("scrape-brochure-url", {
+              body: { brand, modelName: m.modelName, carId },
+            });
+            const brocOk = !broc.error && (broc.data as { success?: boolean })?.success;
+            if (brocOk) {
+              // mark brochure_found on latest job row for this model
+              const { data: latest } = await supabase
+                .from("car_scrape_jobs")
+                .select("id")
+                .eq("car_id", carId)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              if (latest?.id) {
+                await supabase.from("car_scrape_jobs").update({ brochure_found: true }).eq("id", latest.id);
+              }
+            }
           }
         }
         setDoneCount(i + 1);
