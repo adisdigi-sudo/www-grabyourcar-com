@@ -19,11 +19,15 @@ import { AdminLivePreview, PreviewToggleButton } from "../shared/AdminLivePrevie
 
 type CarDbTab = 'upload' | 'bulk' | 'manage' | 'scraper';
 
+const CITY_OPTIONS = ['Ahmedabad', 'Bangalore', 'Chennai', 'Delhi', 'Hyderabad', 'Kolkata', 'Mumbai', 'Pune'];
+
 export const CarDatabaseWorkspace = ({ initialTab = 'upload' }: { initialTab?: CarDbTab } = {}) => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<CarDbTab>(initialTab);
   const [searchFilter, setSearchFilter] = useState("");
   const [brandFilter, setBrandFilter] = useState("All");
+  const [modelFilter, setModelFilter] = useState("");
+  const [cityFilter, setCityFilter] = useState("All");
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const { data: dbBrands } = useQuery({
@@ -46,6 +50,22 @@ export const CarDatabaseWorkspace = ({ initialTab = 'upload' }: { initialTab?: C
     }
   });
 
+  // Cars that have pricing for the selected city
+  const { data: cityCarIds } = useQuery({
+    queryKey: ['cars-by-city', cityFilter],
+    enabled: cityFilter !== 'All',
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('car_city_pricing')
+        .select('car_id')
+        .eq('city', cityFilter)
+        .eq('is_active', true);
+      if (error) throw error;
+      return new Set((data || []).map(r => r.car_id));
+    },
+    staleTime: 60 * 1000,
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('cars').delete().eq('id', id);
@@ -59,9 +79,24 @@ export const CarDatabaseWorkspace = ({ initialTab = 'upload' }: { initialTab?: C
     onError: (e: Error) => toast.error(e.message)
   });
 
-  const filteredExisting = existingCars?.filter(c =>
-    !searchFilter || c.name.toLowerCase().includes(searchFilter.toLowerCase()) || c.slug.toLowerCase().includes(searchFilter.toLowerCase()) || c.brand.toLowerCase().includes(searchFilter.toLowerCase())
-  ) || [];
+  const filteredExisting = (existingCars || []).filter(c => {
+    if (searchFilter) {
+      const s = searchFilter.toLowerCase();
+      if (!c.name.toLowerCase().includes(s) && !c.slug.toLowerCase().includes(s) && !c.brand.toLowerCase().includes(s)) return false;
+    }
+    if (modelFilter && !c.name.toLowerCase().includes(modelFilter.toLowerCase())) return false;
+    if (cityFilter !== 'All' && cityCarIds && !cityCarIds.has(c.id)) return false;
+    return true;
+  });
+
+  const clearFilters = () => {
+    setSearchFilter('');
+    setBrandFilter('All');
+    setModelFilter('');
+    setCityFilter('All');
+  };
+
+  const hasActiveFilters = searchFilter || brandFilter !== 'All' || modelFilter || cityFilter !== 'All';
 
   return (
     <div className="flex h-full min-h-[calc(100vh-4rem)]">
