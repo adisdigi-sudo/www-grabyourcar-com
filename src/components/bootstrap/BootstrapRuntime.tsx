@@ -663,6 +663,16 @@ const SafeTelemetry = () => {
       return;
     }
 
+    // Vercel Analytics + Speed Insights only work when hosted on Vercel.
+    // The app is currently served from Lovable (*.lovable.app) and a custom domain
+    // that does NOT proxy /_vercel/* — loading these scripts produces 404 + MIME
+    // errors in the console. Only enable when actually on a Vercel host.
+    const host = typeof window !== "undefined" ? window.location.hostname : "";
+    const isVercelHost = host.endsWith(".vercel.app") || host.endsWith(".vercel.sh");
+    if (!isVercelHost) {
+      return;
+    }
+
     let cancelled = false;
 
     Promise.all([import("@vercel/analytics/react"), import("@vercel/speed-insights/react")])
