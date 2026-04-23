@@ -309,19 +309,32 @@ serve(async (req) => {
 
     // Determine send mode
     const mode = send_mode || (template_name ? "template_then_text" : "text_only");
-    const metaTemplate = template_name || "grabyourcarintroduction";
-    const approvedTemplate = await resolveApprovedTemplate(
+    // Prefer dealer_inquiry_v1 (UTILITY, 4 vars: dealer_name, brand, model, variant) when approved
+    const metaTemplate = template_name || "dealer_inquiry_v1";
+
+    // Pre-resolve template definition ONCE (we'll rebuild components per dealer with their name)
+    const baseFallback = [
+      brand || "GrabYourCar",
+      model || "car inquiry",
+      variant || "best offer",
+      color || "available color",
+    ];
+    const templateDefinition = await resolveApprovedTemplate(
       supabase,
       WHATSAPP_ACCESS_TOKEN,
       WHATSAPP_WABA_ID,
       [
-        ...(Array.isArray(template_variables) ? template_variables.filter((value: unknown): value is string => typeof value === "string" && value.trim().length > 0) : []),
-        brand || "GrabYourCar",
-        model || "car inquiry",
-        variant || "best offer",
-        color || "available color",
+        ...(Array.isArray(template_variables) ? template_variables.filter((v: unknown): v is string => typeof v === "string" && v.trim().length > 0) : []),
+        ...baseFallback,
       ],
       metaTemplate,
+    );
+
+    // Also fetch raw Meta definition so we can rebuild per-dealer
+    const rawMetaDefinition = await fetchApprovedMetaTemplateDefinition(
+      WHATSAPP_ACCESS_TOKEN,
+      WHATSAPP_WABA_ID,
+      templateDefinition?.name || metaTemplate,
     );
 
     // Create campaign record
@@ -369,7 +382,25 @@ serve(async (req) => {
         const shouldSendTemplate = mode === "template_only" || mode === "template_then_text" || shouldAutoOpenWindow;
         const requiresTextMessage = (mode === "text_only" || mode === "template_then_text") && Boolean(message && message.trim());
         const actualMode = shouldAutoOpenWindow ? "template_then_text" : mode;
-        const activeTemplate = shouldSendTemplate ? approvedTemplate : null;
+
+        // Build per-dealer template with their name as first variable
+        const dealerName = recipientInfo.rep_name || recipientInfo.dealer_name || "Partner";
+        const perDealerValues = [
+          dealerName,
+          ...baseFallback,
+        ];
+        let activeTemplate: ApprovedTemplate | null = null;
+        if (shouldSendTemplate && templateDefinition) {
+          if (rawMetaDefinition?.components) {
+            activeTemplate = {
+              name: templateDefinition.name,
+              language: templateDefinition.language,
+              components: buildTemplateComponents(rawMetaDefinition.components, perDealerValues),
+            };
+          } else {
+            activeTemplate = templateDefinition;
+          }
+        }
 
         if (shouldSendTemplate && !activeTemplate) {
           failed++;
