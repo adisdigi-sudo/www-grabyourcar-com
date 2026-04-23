@@ -74,7 +74,7 @@ export default function DealerInquiryHub() {
   const [bulkBrand, setBulkBrand] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [sendMode, setSendMode] = useState<"template_then_text" | "template_only" | "text_only">("text_only");
-  const [metaTemplate, setMetaTemplate] = useState("grabyourcarintroduction");
+  const [metaTemplate, setMetaTemplate] = useState("insurancefollowup");
   const [addForm, setAddForm] = useState({ name: "", whatsapp_number: "", dealer_name: "", brand: "", city: "", state: "" });
 
   // Data queries
@@ -123,15 +123,19 @@ export default function DealerInquiryHub() {
   const { data: reps = [], isLoading } = useQuery({
     queryKey: ["dealer-reps-inquiry", selectedBrand, stateFilter, cityFilter],
     queryFn: async () => {
+      // Require brand selection — only show dealers of the chosen brand for inquiry
+      if (selectedBrand === "all") return [];
       let q = supabase.from("dealer_representatives")
         .select("*, dealer_companies(company_name, dealer_type, city, state)")
-        .eq("is_active", true).order("name");
-      if (selectedBrand !== "all") q = q.eq("brand", selectedBrand);
+        .eq("is_active", true)
+        .eq("brand", selectedBrand)
+        .order("name");
       if (stateFilter !== "all") q = q.eq("state", stateFilter);
       if (cityFilter !== "all") q = q.eq("city", cityFilter);
       const { data } = await q;
       return data || [];
     },
+    enabled: selectedBrand !== "all",
   });
 
   const { data: campaigns = [] } = useQuery({
@@ -485,7 +489,9 @@ export default function DealerInquiryHub() {
                       <TableRow><TableCell colSpan={5} className="text-center py-8"><Loader2 className="h-4 w-4 animate-spin mx-auto" /></TableCell></TableRow>
                     ) : reps.length === 0 ? (
                       <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        No dealers found. {selectedBrand !== "all" ? `Add dealers for ${selectedBrand}` : "Select a brand first."}
+                        {selectedBrand === "all"
+                          ? "👆 Pehle Brand select karo — sirf us brand ke dealers yahan dikhenge"
+                          : `No active dealers found for ${selectedBrand}. "Add Dealer" se add karo.`}
                       </TableCell></TableRow>
                     ) : reps.map((r: any) => (
                       <TableRow key={r.id} className={`cursor-pointer ${selectedIds.includes(r.id) ? "bg-primary/5" : ""}`}
