@@ -14,11 +14,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Send, Users, MessageCircle, Plus, Upload, Phone, Zap, Bot, Car, Palette, History, Loader2, Activity, MessagesSquare, Workflow } from "lucide-react";
+import { Send, Users, MessageCircle, Plus, Upload, Phone, Zap, Bot, Car, Palette, History, Loader2, Activity, MessagesSquare, Workflow, Package } from "lucide-react";
 import { format } from "date-fns";
 import DealerCampaignTracker from "./DealerCampaignTracker";
 import DealerConversationsHub from "./DealerConversationsHub";
 import DealerReplyFlowBuilder from "./DealerReplyFlowBuilder";
+import DealerStockHub from "./DealerStockHub";
 import { ComboBoxWithCustom } from "@/components/ui/combo-box-with-custom";
 import { INDIAN_STATES, INDIAN_CITIES_BY_STATE, ALL_INDIAN_CITIES, CAR_COLORS, COMMON_VARIANTS } from "@/lib/indiaMasterData";
 
