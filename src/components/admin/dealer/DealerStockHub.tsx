@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Send, Package, Sparkles, Loader2, Search, Share2, Trash2, Car, IndianRupee, Inbox } from "lucide-react";
+import { Send, Package, Sparkles, Loader2, Search, Share2, Trash2, Car, IndianRupee, Inbox, Users, Megaphone } from "lucide-react";
 import { format } from "date-fns";
 
 const STOCK_REQUEST_TEMPLATE = `Hi {rep_name} 👋
@@ -132,17 +132,56 @@ export default function DealerStockHub() {
     }
   };
 
+  // 📥 Pull recent INBOUND messages from any phone that matches a dealer rep.
+  // (Previously this read from dealer_chat_history which is unused — bug.)
   const { data: replies = [], isLoading: repliesLoading } = useQuery<any[]>({
-    queryKey: ["dealer-stock-replies"],
+    queryKey: ["dealer-stock-replies", reps.length],
+    enabled: reps.length > 0,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("dealer_chat_history")
-        .select("id, dealer_rep_id, dealer_company_id, message, sender_name, sender_phone, created_at, dealer_representatives(id, name, brand)")
+      // Build a phone → rep map (last 10 digits is the canonical key)
+      const phoneToRep = new Map<string, any>();
+      for (const r of reps as any[]) {
+        const k = String(r.whatsapp_number || "").replace(/\D/g, "").slice(-10);
+        if (k) phoneToRep.set(k, r);
+      }
+      if (phoneToRep.size === 0) return [];
+
+      // 1) Get all conversations whose phone matches a dealer rep
+      const { data: convos } = await (supabase as any)
+        .from("wa_conversations")
+        .select("id, phone, customer_name")
+        .order("last_message_at", { ascending: false })
+        .limit(500);
+      const dealerConvos = (convos || []).filter((c: any) => phoneToRep.has(String(c.phone || "").slice(-10)));
+      if (dealerConvos.length === 0) return [];
+
+      const convoIds = dealerConvos.map((c: any) => c.id);
+      const convoById = new Map(dealerConvos.map((c: any) => [c.id, c]));
+
+      // 2) Get latest 80 inbound text messages from those conversations
+      const { data: msgs } = await (supabase as any)
+        .from("wa_inbox_messages")
+        .select("id, conversation_id, content, created_at, message_type")
+        .in("conversation_id", convoIds)
         .eq("direction", "inbound")
         .order("created_at", { ascending: false })
         .limit(80);
-      if (error) throw error;
-      return (data as any[]) || [];
+
+      return ((msgs || []) as any[])
+        .filter((m: any) => (m.content || "").trim().length > 0)
+        .map((m: any) => {
+          const convo = convoById.get(m.conversation_id) as any;
+          const rep = phoneToRep.get(String(convo?.phone || "").slice(-10));
+          return {
+            id: m.id,
+            message: m.content,
+            sender_name: rep?.name || convo?.customer_name || convo?.phone,
+            sender_phone: convo?.phone,
+            created_at: m.created_at,
+            dealer_rep_id: rep?.id || null,
+            dealer_representatives: rep ? { id: rep.id, name: rep.name, brand: rep.brand } : null,
+          };
+        });
     },
   });
 
@@ -274,13 +313,135 @@ export default function DealerStockHub() {
     toast.success("📋 Copied! Paste in customer chat");
   };
 
+  // ════════════════════════════════════════════════════════════════
+  // 📤 BROADCAST STOCK TO CUSTOMERS — pick stock cars + pick leads
+  // ════════════════════════════════════════════════════════════════
+  const [bcastSearch, setBcastSearch] = useState("");
+  const [bcastSelectedStockIds, setBcastSelectedStockIds] = useState<string[]>([]);
+  const [bcastLeadSearch, setBcastLeadSearch] = useState("");
+  const [bcastSelectedLeadIds, setBcastSelectedLeadIds] = useState<string[]>([]);
+  const [bcastTemplate, setBcastTemplate] = useState<string>("");
+  const [bcastSending, setBcastSending] = useState(false);
+  const [bcastOnlyMatching, setBcastOnlyMatching] = useState(true);
+
+  const bcastFilteredStock = useMemo(() => {
+    return stock.filter((s: any) => {
+      if (s.stock_status && s.stock_status !== "available" && s.stock_status !== "limited") return false;
+      if (!bcastSearch.trim()) return true;
+      const q = bcastSearch.toLowerCase();
+      const hay = `${s.brand} ${s.model} ${s.variant} ${s.color}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [stock, bcastSearch]);
+
+  // Pull leads — if "Only matching" is on, narrow to leads whose car_brand/car_model
+  // matches at least one selected stock car.
+  const { data: allLeads = [] } = useQuery<any[]>({
+    queryKey: ["leads-for-stock-broadcast"],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("leads")
+        .select("id, customer_name, name, phone, car_brand, car_model, status, created_at")
+        .not("phone", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      return (data as any[]) || [];
+    },
+  });
+
+  const bcastFilteredLeads = useMemo(() => {
+    let list = allLeads as any[];
+    if (bcastOnlyMatching && bcastSelectedStockIds.length > 0) {
+      const selectedCars = stock.filter((s: any) => bcastSelectedStockIds.includes(s.id));
+      const targetBrands = new Set(selectedCars.map((s: any) => (s.brand || "").toLowerCase()).filter(Boolean));
+      const targetModels = new Set(selectedCars.map((s: any) => (s.model || "").toLowerCase()).filter(Boolean));
+      list = list.filter((l: any) => {
+        const lb = (l.car_brand || "").toLowerCase();
+        const lm = (l.car_model || "").toLowerCase();
+        if (lb && targetBrands.has(lb)) return true;
+        if (lm && targetModels.size && Array.from(targetModels).some((m) => lm.includes(m as string) || (m as string).includes(lm))) return true;
+        return false;
+      });
+    }
+    if (bcastLeadSearch.trim()) {
+      const q = bcastLeadSearch.toLowerCase();
+      list = list.filter((l: any) =>
+        `${l.customer_name || l.name || ""} ${l.phone} ${l.car_brand || ""} ${l.car_model || ""}`.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [allLeads, bcastOnlyMatching, bcastSelectedStockIds, stock, bcastLeadSearch]);
+
+  const buildStockBroadcastBody = () => {
+    const cars = stock.filter((s: any) => bcastSelectedStockIds.includes(s.id));
+    if (cars.length === 0) return "";
+    const cards = cars.map((s: any) => {
+      const dealer = s.dealer_representatives?.dealer_companies?.company_name || "Authorised Dealer";
+      const city = s.dealer_representatives?.dealer_companies?.city || "";
+      return [
+        `🚗 *${s.brand} ${s.model || ""}*${s.variant ? ` ${s.variant}` : ""}`,
+        s.color && `🎨 ${s.color}`,
+        s.manufacturing_year && `📅 ${s.manufacturing_year}`,
+        s.fuel_type && `⛽ ${s.fuel_type}${s.transmission ? ` / ${s.transmission}` : ""}`,
+        s.on_road_price && `💰 On-road: ₹${Number(s.on_road_price).toLocaleString("en-IN")}`,
+        s.discount && `🎁 ${s.discount}`,
+        s.quantity && `📦 Qty: ${s.quantity}`,
+        `📍 ${dealer}${city ? `, ${city}` : ""}`,
+      ].filter(Boolean).join("\n");
+    }).join("\n\n———\n\n");
+    return `Hi 👋\n\n*Ready Stock Available* 🚘\n\n${cards}\n\nReply *YES* to book a test drive or get the best price.\n\n— *GrabYourCar*`;
+  };
+
+  const sendStockToCustomers = async () => {
+    if (bcastSelectedStockIds.length === 0) return toast.error("Pick at least one car from stock");
+    if (bcastSelectedLeadIds.length === 0) return toast.error("Select customers to send to");
+    if (!bcastTemplate) return toast.error("Pick an approved Meta template");
+    setBcastSending(true);
+    try {
+      const chosen = (allLeads as any[]).filter((l: any) => bcastSelectedLeadIds.includes(l.id));
+      const body = buildStockBroadcastBody();
+      const { data, error } = await supabase.functions.invoke("dealer-inquiry-broadcast", {
+        body: {
+          phones: chosen.map((l: any) => l.phone),
+          message: body,
+          brand: "Stock Update",
+          model: null, variant: null, color: null,
+          template_name: bcastTemplate,
+          template_variables: [],
+          send_mode: "template_then_text",
+          ai_followup_enabled: false,
+          recipients: chosen.map((l: any) => ({
+            dealer_rep_id: null,
+            rep_name: l.customer_name || l.name || "Customer",
+            dealer_name: "Customer",
+            phone: l.phone,
+          })),
+        },
+      });
+      if (error) throw error;
+      const sent = data?.summary?.sent || 0;
+      toast.success(`✅ Stock sent to ${sent} / ${chosen.length} customers`);
+      setBcastSelectedLeadIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Send failed");
+    } finally {
+      setBcastSending(false);
+    }
+  };
+
+  const toggleAllBcastLeads = () => {
+    if (bcastSelectedLeadIds.length === bcastFilteredLeads.length) setBcastSelectedLeadIds([]);
+    else setBcastSelectedLeadIds(bcastFilteredLeads.map((l: any) => l.id));
+  };
+
   return (
     <div className="space-y-4">
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="send" className="gap-1"><Send className="h-4 w-4" /> Send Stock Request</TabsTrigger>
+          <TabsTrigger value="send" className="gap-1"><Send className="h-4 w-4" /> Ask Dealers</TabsTrigger>
           <TabsTrigger value="extract" className="gap-1"><Sparkles className="h-4 w-4" /> Auto-Extract Replies</TabsTrigger>
           <TabsTrigger value="live" className="gap-1"><Package className="h-4 w-4" /> Live Stock ({stock.length})</TabsTrigger>
+          <TabsTrigger value="broadcast" className="gap-1"><Megaphone className="h-4 w-4" /> Send to Customers</TabsTrigger>
         </TabsList>
 
         <TabsContent value="send" className="space-y-4">
@@ -479,6 +640,136 @@ export default function DealerStockHub() {
                   </Table>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="broadcast" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg"><Megaphone className="h-5 w-5" /> Send Available Stock to Customers</CardTitle>
+              <p className="text-xs text-muted-foreground">Pick cars from your live stock, pick customers from your leads, one click → WhatsApp.</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* LEFT: pick stock cars */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-semibold">1️⃣ Pick cars to send</Label>
+                    <Badge variant="outline">{bcastSelectedStockIds.length} selected</Badge>
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search e.g. Audi A6" className="pl-8" value={bcastSearch} onChange={(e) => setBcastSearch(e.target.value)} />
+                  </div>
+                  <div className="border rounded-md max-h-[320px] overflow-auto">
+                    {bcastFilteredStock.length === 0 ? (
+                      <p className="text-center text-muted-foreground text-xs py-6">No matching available stock</p>
+                    ) : (
+                      <div className="divide-y">
+                        {bcastFilteredStock.map((s: any) => (
+                          <label key={s.id} className="flex items-center gap-2 p-2 text-xs hover:bg-muted/40 cursor-pointer">
+                            <Checkbox
+                              checked={bcastSelectedStockIds.includes(s.id)}
+                              onCheckedChange={(v) => {
+                                if (v) setBcastSelectedStockIds([...bcastSelectedStockIds, s.id]);
+                                else setBcastSelectedStockIds(bcastSelectedStockIds.filter((x) => x !== s.id));
+                              }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">{s.brand} {s.model} {s.variant || ""}</div>
+                              <div className="text-muted-foreground text-[10px] truncate">
+                                {s.color || "—"} • {s.manufacturing_year || "—"} • {s.on_road_price ? `₹${Number(s.on_road_price).toLocaleString("en-IN")}` : "Price NA"} • {s.dealer_representatives?.dealer_companies?.company_name || "Dealer"}
+                              </div>
+                            </div>
+                            <Badge variant="secondary" className="text-[9px]">Qty {s.quantity || 1}</Badge>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* RIGHT: pick customers */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-semibold">2️⃣ Pick customers</Label>
+                    <Badge variant="outline">{bcastSelectedLeadIds.length} / {bcastFilteredLeads.length}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input placeholder="Search name / phone / car..." className="pl-8" value={bcastLeadSearch} onChange={(e) => setBcastLeadSearch(e.target.value)} />
+                    </div>
+                    <label className="flex items-center gap-1.5 text-[11px] whitespace-nowrap">
+                      <Checkbox checked={bcastOnlyMatching} onCheckedChange={(v) => setBcastOnlyMatching(!!v)} />
+                      Only matching car
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <Checkbox
+                      checked={bcastFilteredLeads.length > 0 && bcastSelectedLeadIds.length === bcastFilteredLeads.length}
+                      onCheckedChange={toggleAllBcastLeads}
+                    />
+                    <span>Select all visible</span>
+                  </div>
+                  <div className="border rounded-md max-h-[280px] overflow-auto">
+                    {bcastFilteredLeads.length === 0 ? (
+                      <p className="text-center text-muted-foreground text-xs py-6">
+                        {bcastOnlyMatching && bcastSelectedStockIds.length > 0
+                          ? "No leads match the selected cars. Uncheck 'Only matching car' to broaden."
+                          : "No leads"}
+                      </p>
+                    ) : (
+                      <div className="divide-y">
+                        {bcastFilteredLeads.map((l: any) => (
+                          <label key={l.id} className="flex items-center gap-2 p-2 text-xs hover:bg-muted/40 cursor-pointer">
+                            <Checkbox
+                              checked={bcastSelectedLeadIds.includes(l.id)}
+                              onCheckedChange={(v) => {
+                                if (v) setBcastSelectedLeadIds([...bcastSelectedLeadIds, l.id]);
+                                else setBcastSelectedLeadIds(bcastSelectedLeadIds.filter((x) => x !== l.id));
+                              }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">{l.customer_name || l.name || "Customer"}</div>
+                              <div className="text-muted-foreground text-[10px] truncate">
+                                {l.phone} {l.car_brand && `• Wants ${l.car_brand} ${l.car_model || ""}`}
+                              </div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview + send */}
+              <div className="border-t pt-3 space-y-3">
+                <div>
+                  <Label className="text-xs">Meta Template (utility/marketing)</Label>
+                  <Select value={bcastTemplate} onValueChange={setBcastTemplate}>
+                    <SelectTrigger><SelectValue placeholder="Select approved template" /></SelectTrigger>
+                    <SelectContent>
+                      {templates.map((t: any) => (
+                        <SelectItem key={t.name} value={t.name}>{t.display_name || t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {bcastSelectedStockIds.length > 0 && (
+                  <div>
+                    <Label className="text-xs">Message Preview</Label>
+                    <pre className="whitespace-pre-wrap text-[11px] font-mono bg-muted p-2 rounded border max-h-40 overflow-auto">
+                      {buildStockBroadcastBody()}
+                    </pre>
+                  </div>
+                )}
+                <Button onClick={sendStockToCustomers} disabled={bcastSending || bcastSelectedStockIds.length === 0 || bcastSelectedLeadIds.length === 0} size="lg" className="w-full gap-2">
+                  {bcastSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Send {bcastSelectedStockIds.length} car{bcastSelectedStockIds.length !== 1 ? "s" : ""} to {bcastSelectedLeadIds.length} customer{bcastSelectedLeadIds.length !== 1 ? "s" : ""}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
