@@ -210,13 +210,13 @@ async function syncDealerReply(supabase: any, phone: string, messageText: string
     .limit(1)
     .maybeSingle();
 
-  // 🚗 Auto-ingest stock from this reply if the message contains anything that
-  // looks like car details (price, model, qty, etc.). Fire-and-forget; never blocks the webhook.
-  if (rep && /(\d{5,}|lakh|lac|qty|quantity|on[- ]?road|ex[- ]?showroom|₹|rs\.?|inr|petrol|diesel|cng|automatic|manual|amt|cvt|model|variant|year|color|colour)/i.test(messageText)) {
+  // 🚗 Auto-ingest stock from EVERY dealer reply (the AI extractor will return zero cars
+  // if the text doesn't actually describe stock, so it's safe to always fire).
+  // Fire-and-forget so the webhook stays fast.
+  if (rep && messageText.trim().length >= 8) {
     try {
       const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
       const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      // Don't await — fire & forget so webhook stays fast
       fetch(`${SUPABASE_URL}/functions/v1/dealer-stock-extractor`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_KEY}` },
