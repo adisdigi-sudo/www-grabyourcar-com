@@ -32,6 +32,23 @@ function buildHyundaiIndiaShowroomUrl(modelName: string) {
   return `https://www.hyundai.com/in/en/find-a-car/${slug}/highlights`;
 }
 
+function buildTataSourceUrls(modelName: string): string[] {
+  const isEv = /\bev\b/i.test(modelName);
+  const baseSlug = modelName.toLowerCase().replace(/\s*ev\b/i, '').trim().replace(/\s+/g, '-');
+  if (isEv) {
+    return [
+      'https://ev.tatamotors.com/support/brochures.html',
+      `https://ev.tatamotors.com/${baseSlug}/`,
+    ];
+  }
+  // ICE: try multiple body-type paths (Tata uses /suv/, /sedan/, /hatchback/)
+  return [
+    `https://cars.tatamotors.com/suv/${baseSlug}`,
+    `https://cars.tatamotors.com/sedan/${baseSlug}`,
+    `https://cars.tatamotors.com/hatchback/${baseSlug}`,
+  ];
+}
+
 function extractPdfLinks(text: string): string[] {
   const re = /(https?:\/\/[^\s"')\]]+\.pdf(?:\?[^\s"')\]]*)?)/gi;
   const out = new Set<string>();
@@ -78,6 +95,7 @@ Deno.serve(async (req) => {
     const oemSources: string[] = [];
     if (brandLower === 'kia') oemSources.push(buildKiaIndiaShowroomUrl(body.modelName));
     if (brandLower === 'hyundai') oemSources.push(buildHyundaiIndiaShowroomUrl(body.modelName));
+    if (brandLower === 'tata' || brandLower === 'tata motors') oemSources.push(...buildTataSourceUrls(body.modelName));
 
     const sources: string[] = body.sourceUrls && body.sourceUrls.length
       ? body.sourceUrls
@@ -110,7 +128,7 @@ Deno.serve(async (req) => {
           let score = 0;
           if (lower.includes('brochure')) score += 5;
           for (const t of modelTokens) if (t.length > 2 && lower.includes(t)) score += 3;
-          if (lower.includes('kia.com') || lower.includes('hyundai.com')) score += 2;
+          if (lower.includes('kia.com') || lower.includes('hyundai.com') || lower.includes('tatamotors.com')) score += 2;
           candidates.push({ url, source: src, score });
         }
       } catch (e) {
