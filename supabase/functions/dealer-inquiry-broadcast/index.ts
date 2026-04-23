@@ -386,18 +386,18 @@ serve(async (req) => {
 
     // Determine send mode
     const mode = send_mode || (template_name ? "template_then_text" : "text_only");
-    const metaTemplate = template_name || "booking_confirmation";
+    // Default to a neutral intro template — NEVER booking_confirmation (that says "booking confirmed")
+    const metaTemplate = template_name || "welcome_new_lead";
 
     // Pre-resolve template definition ONCE (we'll rebuild components per dealer with their name)
     const inquiryLabel = [brand, model, variant].filter(Boolean).join(" ") || "vehicle inquiry";
     const bookingRef = `INQ-${Date.now().toString().slice(-6)}`;
     const baseFallback = [
       "Partner",
-      bookingRef,
       inquiryLabel,
+      bookingRef,
       color || "available",
     ];
-    const requiresMessagePacking = Boolean(message?.trim()) && mode !== "template_only";
     const wabaId = WHATSAPP_WABA_ID ?? null;
     const templateDefinition = await resolveApprovedTemplate(
       supabase,
@@ -408,7 +408,7 @@ serve(async (req) => {
         ...baseFallback,
       ],
       metaTemplate,
-      requiresMessagePacking,
+      false, // Don't require variable capacity — inquiry text is sent as separate free-text, not packed
     );
 
     // Also fetch raw Meta definition so we can rebuild per-dealer
