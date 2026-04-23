@@ -260,6 +260,26 @@ export function MarketingTechHub() {
               Google + Meta
             </Badge>
           </TabsTrigger>
+          <TabsTrigger value="automation" className="gap-2">
+            <Bot className="h-4 w-4" />
+            <span>Automation</span>
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-2">
+            <Brain className="h-4 w-4" />
+            <span>AI Hub</span>
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="gap-2">
+            <FileText className="h-4 w-4" />
+            <span>Templates</span>
+          </TabsTrigger>
+          <TabsTrigger value="customers" className="gap-2">
+            <Users className="h-4 w-4" />
+            <span>Customers</span>
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            <span>Analytics</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="whatsapp">
@@ -289,6 +309,39 @@ export function MarketingTechHub() {
         <TabsContent value="ads">
           <Suspense fallback={<SectionFallback />}>
             <AdsTab />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="automation">
+          <Suspense fallback={<SectionFallback />}>
+            <div className="space-y-4">
+              <AutomationCommandCenter />
+              <JourneyAutomationPanel />
+            </div>
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="ai">
+          <Suspense fallback={<SectionFallback />}>
+            <AIAutomationHub />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="templates">
+          <Suspense fallback={<SectionFallback />}>
+            <TemplatesHub />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="customers">
+          <Suspense fallback={<SectionFallback />}>
+            <UnifiedCustomerProfile />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <Suspense fallback={<SectionFallback />}>
+            <RevenueIntelligenceDashboard />
           </Suspense>
         </TabsContent>
       </Tabs>
