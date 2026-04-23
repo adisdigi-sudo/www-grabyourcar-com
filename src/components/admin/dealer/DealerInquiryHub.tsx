@@ -82,7 +82,7 @@ export default function DealerInquiryHub() {
   const [cityFilter, setCityFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [message, setMessage] = useState("");
-  const [templateType, setTemplateType] = useState("simple_inquiry");
+  const [templateType, setTemplateType] = useState("urgent_ready_buyer");
   const [sending, setSending] = useState(false);
   const [aiFollowup, setAiFollowup] = useState(true);
   const [aiScript, setAiScript] = useState("discount_qualify");
