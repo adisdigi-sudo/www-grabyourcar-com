@@ -805,6 +805,8 @@ const AdminLayout = () => {
         const verticalCat = activeVertical?.slug ? verticalSlugMap[activeVertical.slug] : undefined;
         return <LeadManagement verticalCategory={verticalCat} />;
       }
+      case "cars-all-list":
+        return <CarDatabaseWorkspace initialTab="manage" />;
       case "cars-workspace":
       case "cars-list":
       case "cars-variants":
