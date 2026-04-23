@@ -306,6 +306,7 @@ export default function DealerInquiryHub() {
 
       const sentCount = data?.summary?.sent || 0;
       const failedCount = data?.summary?.failed || 0;
+      const blockedCount = data?.summary?.blocked || 0;
       const modeLabel = sendMode === "template_only"
         ? "Template"
         : sendMode === "text_only"
@@ -313,7 +314,7 @@ export default function DealerInquiryHub() {
           : "Template + Text";
 
       if (sentCount > 0) {
-        toast.success(`✅ Submitted to Meta for ${sentCount} / ${phones.length} dealers via ${modeLabel}`);
+        toast.success(`✅ Accepted for ${sentCount} / ${phones.length} dealers via ${modeLabel}`);
         if (data?.followup_scheduled) {
           toast.info(`🤖 AI follow-up will wait for delivery confirmation`);
         }
@@ -323,6 +324,7 @@ export default function DealerInquiryHub() {
       }
 
       if (failedCount > 0) toast.warning(`⚠️ ${failedCount} failed`);
+      if (blockedCount > 0) toast.warning(`⛔ ${blockedCount} blocked — open chat window required or provider blocked this number`);
       qc.invalidateQueries({ queryKey: ["dealer-inquiry-campaigns"] });
     } catch (e: any) {
       toast.error(e.message || "Failed to send");
@@ -608,13 +610,13 @@ export default function DealerInquiryHub() {
                   <Select value={sendMode} onValueChange={(v: any) => setSendMode(v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="text_only">⚡ Auto Send (template if needed)</SelectItem>
+                        <SelectItem value="text_only">⚡ Direct Inquiry Text</SelectItem>
                       <SelectItem value="template_then_text">📋 Template + Text</SelectItem>
                       <SelectItem value="template_only">📋 Template Only</SelectItem>
                     </SelectContent>
                   </Select>
                   {sendMode === "text_only" && (
-                    <p className="text-xs text-green-600 mt-1">✅ Chat open ho to actual inquiry text jayega; closed chat me sirf safe intro template jayega, booking confirmation kabhi nahi</p>
+                    <p className="text-xs text-green-600 mt-1">✅ Is mode me sirf actual inquiry text jayega. Agar dealer chat window open nahi hai to send block hoga, koi galat template nahi jayega.</p>
                   )}
                   {sendMode === "template_then_text" && (
                     <p className="text-xs text-muted-foreground mt-1">ℹ️ Closed chat me pehle safe opener jayega, aur open chat me uske baad actual inquiry text jayega</p>
@@ -754,7 +756,7 @@ export default function DealerInquiryHub() {
                       {[c.brand, c.model, c.variant].filter(Boolean).join(" › ") || "All"}
                       {c.color && <span className="text-muted-foreground"> ({c.color})</span>}
                     </TableCell>
-                    <TableCell><Badge variant="secondary">{c.sent_count}/{c.total_dealers}</Badge></TableCell>
+                    <TableCell><Badge variant="secondary">{c.sent_count}/{c.total_dealers} accepted</Badge></TableCell>
                     <TableCell><Badge variant={c.replied_count > 0 ? "default" : "outline"}>{c.replied_count}</Badge></TableCell>
                     <TableCell>
                       {c.ai_followup_enabled ? (

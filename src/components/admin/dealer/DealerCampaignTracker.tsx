@@ -191,7 +191,7 @@ export default function DealerCampaignTracker() {
                       {format(new Date(c.created_at), "dd MMM, hh:mm a")} · {[c.brand, c.model].filter(Boolean).join(" › ") || "All"}
                     </div>
                     <div className="flex gap-1 mt-1.5">
-                      <Badge variant="secondary" className="text-[9px] h-4 px-1">{c.sent_count || 0}/{c.total_dealers || 0} sent</Badge>
+                      <Badge variant="secondary" className="text-[9px] h-4 px-1">{c.sent_count || 0}/{c.total_dealers || 0} accepted</Badge>
                       {c.replied_count > 0 && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[9px] h-4 px-1">{c.replied_count} reply</Badge>}
                     </div>
                   </button>
@@ -207,7 +207,7 @@ export default function DealerCampaignTracker() {
           {/* Sticky stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 sticky top-0 z-10 bg-background/95 backdrop-blur py-2 -mx-1 px-1 border-b">
             <StatPill label="Total" value={stats.total} icon={MessageCircle} tone="bg-slate-50 border-slate-200 text-slate-800" />
-            <StatPill label="Sent" value={stats.sent} icon={Send} tone="bg-blue-50 border-blue-200 text-blue-800" />
+            <StatPill label="Accepted" value={stats.sent} icon={Send} tone="bg-blue-50 border-blue-200 text-blue-800" />
             <StatPill label="Delivered" value={stats.delivered} icon={CheckCircle2} tone="bg-emerald-50 border-emerald-200 text-emerald-800" />
             <StatPill label="Read" value={stats.read} icon={CheckCheck} tone="bg-violet-50 border-violet-200 text-violet-800" />
             <StatPill label="Replied" value={stats.replied} icon={MessageCircle} tone="bg-green-50 border-green-200 text-green-800" />
