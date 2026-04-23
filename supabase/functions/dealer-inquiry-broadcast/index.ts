@@ -154,15 +154,22 @@ async function resolveApprovedTemplate(
 ): Promise<ApprovedTemplate | null> {
   const { data: approvedTemplates } = await supabase
     .from("wa_templates")
-    .select("name, header_type, variables")
+    .select("name, header_type, variables, category")
     .eq("status", "approved");
 
   const candidates = [
     preferredTemplate,
+    "booking_confirmation",
     "welcome_new_lead",
     "insurancefollowup",
     "grabyourcarintroduction",
-    ...(approvedTemplates || []).map((row: any) => row.name),
+    ...(approvedTemplates || [])
+      .sort((a: any, b: any) => {
+        const aUtility = String(a.category || "").toLowerCase() === "utility" ? 0 : 1;
+        const bUtility = String(b.category || "").toLowerCase() === "utility" ? 0 : 1;
+        return aUtility - bUtility;
+      })
+      .map((row: any) => row.name),
   ].filter((value, index, array): value is string => Boolean(value) && array.indexOf(value) === index);
 
   for (const candidate of candidates) {
