@@ -1771,7 +1771,31 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
                       }
                       setSavingEdit(true);
                       try {
-                        const normalizedStage = normalizeStage(selectedClient.pipeline_stage, selectedClient.lead_status);
+                        // Re-fetch latest server state to avoid stale overwrites
+                        // (e.g. user marked Won via WonPolicyDialog, then saved this form
+                        // with stale "new_lead" still loaded into editFields).
+                        const { data: liveClient } = await supabase
+                          .from("insurance_clients")
+                          .select("pipeline_stage, lead_status, current_policy_number, booking_date, journey_last_event, journey_last_event_at")
+                          .eq("id", selectedClient.id)
+                          .maybeSingle();
+                        const liveStage = normalizeStage(
+                          liveClient?.pipeline_stage ?? selectedClient.pipeline_stage,
+                          liveClient?.lead_status ?? selectedClient.lead_status,
+                        );
+                        const userExplicitlyChoseStage =
+                          editFields.pipeline_stage &&
+                          editFields.pipeline_stage !== normalizeStage(selectedClient.pipeline_stage, selectedClient.lead_status, selectedClient);
+                        const isLiveTerminal = liveStage === "policy_issued" || liveStage === "won" || liveStage === "lost";
+                        const formStage = editFields.pipeline_stage || liveStage;
+                        const formIsTerminal = formStage === "policy_issued" || formStage === "won" || formStage === "lost";
+
+                        // If the live record is already terminal and the user did NOT
+                        // explicitly pick a different terminal stage, lock pipeline_stage
+                        // to the live terminal value.
+                        const lockTerminal = isLiveTerminal && !(userExplicitlyChoseStage && formIsTerminal);
+
+                        const normalizedStage = lockTerminal ? liveStage : normalizeStage(selectedClient.pipeline_stage, selectedClient.lead_status);
                         const fallbackBookingDate =
                           selectedClient.booking_date ||
                           selectedClient.policy_start_date ||
