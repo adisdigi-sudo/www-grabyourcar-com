@@ -43,6 +43,8 @@ interface SendMessageRequest {
   fallback_template_name?: string;
   fallback_template_variables?: Record<string, string>;
   fallback_template_components?: unknown[];
+  intent?: string;
+  intent_meta?: Record<string, unknown>;
 }
 
 interface SendResult {
