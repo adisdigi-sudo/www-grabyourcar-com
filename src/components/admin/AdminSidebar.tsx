@@ -68,7 +68,9 @@ interface NavItem {
   allowedRoles?: AppRole[];
   /** Which vertical slugs this item belongs to. undefined = show in all verticals */
   verticals?: string[];
-  children?: { id: string; label: string; icon: React.ElementType; badge?: string; allowedRoles?: AppRole[]; verticals?: string[] }[];
+  /** If set, clicking this child navigates to this route instead of switching admin tab */
+  externalPath?: string;
+  children?: { id: string; label: string; icon: React.ElementType; badge?: string; allowedRoles?: AppRole[]; verticals?: string[]; externalPath?: string }[];
 }
 
 const navItems: NavItem[] = [
