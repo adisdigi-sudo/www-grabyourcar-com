@@ -202,6 +202,36 @@ async function syncDealerReply(supabase: any, phone: string, messageText: string
   const shortPhone = normalizeDealerPhone(phone);
   if (!shortPhone || !messageText) return;
 
+  // Look up the dealer rep that owns this phone (used for stock auto-extract).
+  const { data: rep } = await supabase
+    .from("dealer_representatives")
+    .select("id, name, brand")
+    .or(`whatsapp_number.eq.${shortPhone},phone.eq.${shortPhone}`)
+    .limit(1)
+    .maybeSingle();
+
+  // 🚗 Auto-ingest stock from this reply if the message contains anything that
+  // looks like car details (price, model, qty, etc.). Fire-and-forget; never blocks the webhook.
+  if (rep && /(\d{5,}|lakh|lac|qty|quantity|on[- ]?road|ex[- ]?showroom|₹|rs\.?|inr|petrol|diesel|cng|automatic|manual|amt|cvt|model|variant|year|color|colour)/i.test(messageText)) {
+    try {
+      const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+      const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      // Don't await — fire & forget so webhook stays fast
+      fetch(`${SUPABASE_URL}/functions/v1/dealer-stock-extractor`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_KEY}` },
+        body: JSON.stringify({
+          message: messageText,
+          dealer_rep_id: rep.id,
+          default_brand: rep.brand,
+          auto_save: true,
+        }),
+      }).catch((e) => console.error("dealer-stock-extractor fire-and-forget failed:", e));
+    } catch (e) {
+      console.error("Failed to fire dealer stock extractor:", e);
+    }
+  }
+
   const { data: recentRecipients } = await supabase
     .from("dealer_inquiry_recipients")
     .select("id, campaign_id, replied_at, dealer_name, rep_name, phone")
