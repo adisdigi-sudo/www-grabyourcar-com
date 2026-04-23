@@ -395,7 +395,9 @@ serve(async (req) => {
         const dealerName = recipientInfo.rep_name || recipientInfo.dealer_name || "Partner";
         const perDealerValues = [
           dealerName,
-          ...baseFallback,
+          bookingRef,
+          inquiryLabel,
+          color || "available",
         ];
         let activeTemplate: ApprovedTemplate | null = null;
         if (shouldSendTemplate && templateDefinition) {
