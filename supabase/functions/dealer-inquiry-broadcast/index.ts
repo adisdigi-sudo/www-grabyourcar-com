@@ -39,27 +39,44 @@ async function hasOpenConversationWindow(supabase: any, phone: string): Promise<
 }
 
 async function resolveApprovedTemplateName(supabase: any, preferredTemplate?: string | null): Promise<string | null> {
-  const candidates = [preferredTemplate, "grabyourcarintroduction", "insurancefollowup", "welcome_new_lead"]
+  const candidates = [preferredTemplate, "insurancefollowup", "welcome_new_lead", "grabyourcarintroduction"]
     .filter((value): value is string => Boolean(value));
 
   for (const candidate of candidates) {
     const { data } = await supabase
       .from("wa_templates")
-      .select("name")
+      .select("name, header_type, variables")
       .eq("name", candidate)
       .eq("status", "approved")
       .limit(1);
 
-    if (data?.[0]?.name) return data[0].name;
+    const tpl = data?.[0];
+    if (!tpl) continue;
+
+    // Skip templates with media headers (image/video/document) — they need a header URL we don't have
+    const headerType = (tpl.header_type || "").toString().toLowerCase();
+    if (["image", "video", "document"].includes(headerType)) continue;
+
+    // Skip templates that require body variables we don't have wired up
+    const varCount = Array.isArray(tpl.variables) ? tpl.variables.length : 0;
+    if (varCount > 0) continue;
+
+    return tpl.name;
   }
 
+  // Last-resort: any approved template with no media header and no body variables
   const { data: fallback } = await supabase
     .from("wa_templates")
-    .select("name")
-    .eq("status", "approved")
-    .limit(1);
+    .select("name, header_type, variables")
+    .eq("status", "approved");
 
-  return fallback?.[0]?.name || null;
+  const safe = (fallback || []).find((t: any) => {
+    const ht = (t.header_type || "").toString().toLowerCase();
+    const vc = Array.isArray(t.variables) ? t.variables.length : 0;
+    return !["image", "video", "document"].includes(ht) && vc === 0;
+  });
+
+  return safe?.name || null;
 }
 
 function mergeTrackingData(existing: Record<string, unknown> | null, updates: Record<string, unknown>) {
