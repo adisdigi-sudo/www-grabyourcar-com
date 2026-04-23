@@ -126,7 +126,7 @@ export default function DealerInquiryHub() {
       // Require brand selection — only show dealers of the chosen brand for inquiry
       if (selectedBrand === "all") return [];
       let q = supabase.from("dealer_representatives")
-        .select("*, dealer_companies(company_name, dealer_type, city, state)")
+        .select("*, dealer_companies(company_name, dealer_type, city, state, address, pincode)")
         .eq("is_active", true)
         .eq("brand", selectedBrand)
         .order("name");
@@ -479,36 +479,49 @@ export default function DealerInquiryHub() {
                     <TableRow>
                       <TableHead className="w-10">☐</TableHead>
                       <TableHead>Name</TableHead>
-                      <TableHead>Dealer</TableHead>
-                      <TableHead>WhatsApp</TableHead>
+                      <TableHead>WhatsApp / Number</TableHead>
+                      <TableHead>Dealership</TableHead>
+                      <TableHead>Address</TableHead>
                       <TableHead>City</TableHead>
+                      <TableHead>State</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-8"><Loader2 className="h-4 w-4 animate-spin mx-auto" /></TableCell></TableRow>
+                      <TableRow><TableCell colSpan={7} className="text-center py-8"><Loader2 className="h-4 w-4 animate-spin mx-auto" /></TableCell></TableRow>
                     ) : reps.length === 0 ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         {selectedBrand === "all"
                           ? "👆 Pehle Brand select karo — sirf us brand ke dealers yahan dikhenge"
                           : `No active dealers found for ${selectedBrand}. "Add Dealer" se add karo.`}
                       </TableCell></TableRow>
-                    ) : reps.map((r: any) => (
+                    ) : reps.map((r: any) => {
+                      const dc = (r.dealer_companies as any) || {};
+                      const city = r.city || dc.city || "—";
+                      const state = r.state || dc.state || "—";
+                      const address = dc.address || "—";
+                      const pincode = dc.pincode ? ` - ${dc.pincode}` : "";
+                      return (
                       <TableRow key={r.id} className={`cursor-pointer ${selectedIds.includes(r.id) ? "bg-primary/5" : ""}`}
                         onClick={() => r.whatsapp_number && setSelectedIds(prev => prev.includes(r.id) ? prev.filter(x => x !== r.id) : [...prev, r.id])}>
                         <TableCell>
                           {r.whatsapp_number ? <Checkbox checked={selectedIds.includes(r.id)} /> : <span className="text-xs text-muted-foreground">—</span>}
                         </TableCell>
-                        <TableCell className="font-medium text-sm">{r.name}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{(r.dealer_companies as any)?.company_name || "—"}</TableCell>
+                        <TableCell className="font-medium text-sm whitespace-nowrap">{r.name}</TableCell>
                         <TableCell>
                           {r.whatsapp_number ? (
-                            <span className="flex items-center gap-1 text-sm"><MessageCircle className="h-3 w-3 text-green-500" />{r.whatsapp_number}</span>
+                            <span className="flex items-center gap-1 text-sm whitespace-nowrap"><MessageCircle className="h-3 w-3 text-green-500" />{r.whatsapp_number}</span>
                           ) : <span className="text-xs text-muted-foreground">N/A</span>}
                         </TableCell>
-                        <TableCell className="text-sm">{r.city || "—"}</TableCell>
+                        <TableCell className="text-sm font-medium">{dc.company_name || "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground max-w-[260px]">
+                          <span className="line-clamp-2" title={`${address}${pincode}`}>{address}{pincode}</span>
+                        </TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">{city}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">{state}</TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
