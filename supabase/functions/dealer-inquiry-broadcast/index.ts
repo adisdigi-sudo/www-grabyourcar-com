@@ -46,8 +46,8 @@ type ApprovedTemplate = {
 
 type SendOutcome = {
   success: boolean;
-  provider_message_id: string | undefined;
-  error: string | undefined;
+  provider_message_id?: string;
+  error?: string;
 };
 
 function countTemplateParams(text?: string | null): number {
