@@ -160,9 +160,51 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   const [uploading, setUploading] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const [templates, setTemplates] = useState<TemplateOption[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Load approved templates for fallback when 24hr window closed
+  useEffect(() => {
+    supabase.from("wa_templates").select("id, name, display_name, body, variables").eq("status", "approved").then(({ data }) => {
+      setTemplates((data || []) as TemplateOption[]);
+    });
+  }, []);
+
+  const isWindowOpen = !!(selectedThread?.window_expires_at && new Date(selectedThread.window_expires_at) > new Date());
+
+  async function sendTemplateFromPicker(tpl: TemplateOption) {
+    if (!selectedThread) return;
+    setShowTemplates(false);
+    setSending(true);
+    try {
+      const vars: Record<string, string> = {};
+      (Array.isArray(tpl.variables) ? tpl.variables : []).forEach((k) => {
+        const key = String(k);
+        if (/name/i.test(key) || key === "1" || key === "var_1") vars[key] = selectedThread.customer_name || "Customer";
+        else vars[key] = "";
+      });
+      const { data, error } = await supabase.functions.invoke("whatsapp-send", {
+        body: {
+          to: selectedThread.phone,
+          messageType: "template",
+          template_name: tpl.name,
+          template_variables: vars,
+          message_context: `inbox_template_${tpl.name}`,
+          name: selectedThread.customer_name || "Customer",
+        },
+      });
+      if (error || !data?.success) throw new Error(data?.error || error?.message || "Template send failed");
+      toast({ title: "✅ Template sent", description: tpl.display_name || tpl.name });
+      setTimeout(() => { loadThreads(); if (selectedThread) loadMessages(selectedThread); }, 800);
+    } catch (err) {
+      toast({ title: "Template send failed", description: err instanceof Error ? err.message : "Unknown", variant: "destructive" });
+    } finally {
+      setSending(false);
+    }
+  }
 
   useEffect(() => {
     try {
