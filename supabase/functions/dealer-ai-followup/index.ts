@@ -119,6 +119,39 @@ serve(async (req) => {
       aiMessage = `Hi {rep_name}, quick follow-up on *${carInfo || "our inquiry"}* — please share ${points || "best price & availability"}.\n— GrabYourCar`;
     }
 
+    // ─── HARD ENFORCE SHORT FORMAT ───
+    // Strip numbered/bulleted lists → flatten into one comma-joined line
+    function enforceShort(text: string): string {
+      let t = text.trim();
+
+      // Detect numbered list (1. ... 2. ... or 1) ...) — flatten to one line
+      const hasList = /(^|\n)\s*\d+[\.\)]\s+/.test(t) || /(^|\n)\s*[\-•*]\s+/.test(t);
+      if (hasList) {
+        // Pull greeting (first line if it has a comma/name)
+        const lines = t.split(/\n+/).map(l => l.trim()).filter(Boolean);
+        const greet = /^(hi|hello|hey)\b/i.test(lines[0]) ? lines.shift()! : "";
+        // Extract bullet/numbered items
+        const items = lines
+          .filter(l => /^(\d+[\.\)]|[\-•*])\s+/.test(l))
+          .map(l => l.replace(/^(\d+[\.\)]|[\-•*])\s+/, "").replace(/\*+/g, "").trim())
+          // remove sub-questions/parentheticals
+          .map(l => l.split("?")[0].split(":")[0].trim())
+          .slice(0, 3);
+        const ask = items.length
+          ? `quick check — please share ${items.join(", ")}.`
+          : `quick follow-up please.`;
+        t = [greet, ask, "— GrabYourCar"].filter(Boolean).join("\n");
+      }
+
+      // Hard char cap
+      if (t.length > 320) {
+        t = t.slice(0, 300).replace(/\s+\S*$/, "") + "…\n— GrabYourCar";
+      }
+      return t.trim();
+    }
+
+    aiMessage = enforceShort(aiMessage);
+
     let followupSent = 0;
     let followupFailed = 0;
 

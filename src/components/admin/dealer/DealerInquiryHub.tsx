@@ -88,7 +88,7 @@ export default function DealerInquiryHub() {
   const [templateType, setTemplateType] = useState("urgent_ready_buyer");
   const [sending, setSending] = useState(false);
   const [aiFollowup, setAiFollowup] = useState(true);
-  const [aiScript, setAiScript] = useState("discount_qualify");
+  const [aiScript, setAiScript] = useState("short_template");
   const [customScript, setCustomScript] = useState("");
   const [followupDelay, setFollowupDelay] = useState(3);
   const [bulkOpen, setBulkOpen] = useState(false);
