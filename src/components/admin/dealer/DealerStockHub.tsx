@@ -465,31 +465,76 @@ export default function DealerStockHub() {
               <CardTitle className="flex items-center gap-2 text-lg"><Send className="h-5 w-5" /> Bulk Stock Request to Dealers</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <Label>Filter by Brand</Label>
-                  <Select value={filterBrand} onValueChange={setFilterBrand}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Brands ({reps.length})</SelectItem>
-                      {brands.map((b: any) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center justify-between">
+                    <Label>Filter by Brand (multi-select)</Label>
+                    <div className="flex gap-2 text-[11px]">
+                      <button type="button" className="text-primary hover:underline" onClick={() => setSelectedBrands(brands as string[])}>
+                        Select all ({brands.length})
+                      </button>
+                      <button type="button" className="text-muted-foreground hover:underline" onClick={() => setSelectedBrands([])}>
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <div className="border rounded-md p-2 max-h-32 overflow-auto flex flex-wrap gap-1.5 bg-background">
+                    {brands.length === 0 && <span className="text-xs text-muted-foreground">No brands</span>}
+                    {brands.map((b: any) => {
+                      const active = selectedBrands.includes(b);
+                      return (
+                        <button
+                          key={b}
+                          type="button"
+                          onClick={() =>
+                            setSelectedBrands((prev) => (prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b]))
+                          }
+                          className={`text-[11px] px-2 py-0.5 rounded-full border transition ${
+                            active
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-muted/40 hover:bg-muted border-border"
+                          }`}
+                        >
+                          {b}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {selectedBrands.length === 0 ? `Showing all ${reps.length} reps` : `${selectedBrands.length} brand(s) selected`}
+                  </p>
                 </div>
                 <div>
                   <Label>Filter by City</Label>
                   <Input placeholder="e.g. Mumbai" value={filterCity} onChange={(e) => setFilterCity(e.target.value)} />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <Label>Meta Template</Label>
-                  <Select value={metaTemplate} onValueChange={setMetaTemplate}>
-                    <SelectTrigger><SelectValue placeholder="Select approved template" /></SelectTrigger>
+                  <Label>Meta Template (approved)</Label>
+                  <Select value={metaTemplate} onValueChange={(v) => { setMetaTemplate(v); setCustomTemplate(""); }}>
+                    <SelectTrigger><SelectValue placeholder={templates.length ? `Select approved template (${templates.length})` : "Loading templates..."} /></SelectTrigger>
                     <SelectContent>
+                      {templates.length === 0 && (
+                        <div className="px-2 py-1.5 text-xs text-muted-foreground">No approved templates found</div>
+                      )}
                       {templates.map((t: any) => (
-                        <SelectItem key={t.name} value={t.name}>{t.display_name || t.name}</SelectItem>
+                        <SelectItem key={t.name} value={t.name}>
+                          {t.name} {t.category ? <span className="text-muted-foreground text-[10px] ml-1">· {t.category}</span> : null}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label>Or Custom Template Name</Label>
+                  <Input
+                    placeholder="e.g. dealer_stock_request_v2"
+                    value={customTemplate}
+                    onChange={(e) => { setCustomTemplate(e.target.value); if (e.target.value) setMetaTemplate(""); }}
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">Use this if your template isn't in the dropdown yet (must already be approved on Meta).</p>
                 </div>
               </div>
 
@@ -505,9 +550,26 @@ export default function DealerStockHub() {
                 </div>
                 <Button onClick={sendStockRequest} disabled={sending || selectedReps.length === 0} size="lg" className="gap-2">
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Send to {selectedReps.length} Dealers
+                  {sending ? "Sending..." : `Send to ${selectedReps.length} Dealers`}
                 </Button>
               </div>
+
+              {sendProgress.length > 0 && (
+                <div className="border rounded-md bg-muted/30 p-2 max-h-40 overflow-auto">
+                  <div className="text-xs font-semibold mb-1">
+                    Send Result · ✅ {sendProgress.filter((x) => x.ok).length} sent · ❌ {sendProgress.filter((x) => !x.ok).length} failed
+                  </div>
+                  <div className="space-y-0.5">
+                    {sendProgress.map((p, i) => (
+                      <div key={i} className="text-[11px] font-mono flex items-center gap-2">
+                        <span className={p.ok ? "text-green-600" : "text-red-600"}>{p.ok ? "✓" : "✗"}</span>
+                        <span>{p.phone}</span>
+                        {!p.ok && p.error && <span className="text-muted-foreground truncate">— {p.error}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="border rounded-md max-h-[400px] overflow-auto">
                 <Table>
