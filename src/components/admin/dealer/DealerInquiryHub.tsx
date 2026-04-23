@@ -19,6 +19,12 @@ import { format } from "date-fns";
 import DealerCampaignTracker from "./DealerCampaignTracker";
 
 const TEMPLATES: Record<string, { label: string; icon: string; build: (b: string, m: string, v: string, c: string) => string }> = {
+  urgent_ready_buyer: {
+    label: "🔥 Urgent — Ready Buyer",
+    icon: "🔥",
+    build: (b, m, v, c) =>
+      `Hello 👋\n\n*URGENT REQUIREMENT*\n\nI need *${b}${m ? ` ${m}` : ""}*${v ? ` (${v})` : ""}${c ? ` — ${c} color` : ""}.\n\n✅ Ready client with payment\n✅ Immediate booking\n\nDo you have this car available?\nPlease reply ASAP with availability & on-road price.\n\nThanks 🙏\n— *GrabYourCar*`,
+  },
   simple_inquiry: {
     label: "🧾 Simple Inquiry",
     icon: "🧾",
@@ -76,7 +82,7 @@ export default function DealerInquiryHub() {
   const [cityFilter, setCityFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [message, setMessage] = useState("");
-  const [templateType, setTemplateType] = useState("simple_inquiry");
+  const [templateType, setTemplateType] = useState("urgent_ready_buyer");
   const [sending, setSending] = useState(false);
   const [aiFollowup, setAiFollowup] = useState(true);
   const [aiScript, setAiScript] = useState("discount_qualify");
@@ -216,6 +222,18 @@ export default function DealerInquiryHub() {
 
     setMetaTemplate((preferred || selectableTemplates[0]).name);
   }, [selectableTemplates, metaTemplate]);
+
+  // Auto-fill message when brand/model/variant/color changes for non-custom templates
+  useEffect(() => {
+    if (templateType === "custom") return;
+    const tpl = TEMPLATES[templateType];
+    if (!tpl) return;
+    const b = selectedBrand !== "all" ? selectedBrand : "[Brand]";
+    const m = selectedModel !== "all" ? selectedModel : "";
+    const v = selectedVariant !== "all" ? selectedVariant : "";
+    const c = selectedColor !== "all" ? selectedColor : "";
+    setMessage(tpl.build(b, m, v, c));
+  }, [templateType, selectedBrand, selectedModel, selectedVariant, selectedColor]);
 
   const states = useMemo(() => [...new Set(reps.map((r: any) => r.state).filter(Boolean))].sort(), [reps]);
   const cities = useMemo(() => [...new Set(reps.map((r: any) => r.city).filter(Boolean))].sort(), [reps]);
