@@ -104,17 +104,20 @@ export default function DealerStockHub() {
 
   const sendStockRequest = async () => {
     if (selectedReps.length === 0) return toast.error("Select at least one dealer");
-    if (!metaTemplate) return toast.error("Select an approved Meta template");
+    const tmpl = (customTemplate || metaTemplate || "").trim();
+    if (!tmpl) return toast.error("Select an approved Meta template (or type a custom template name)");
     setSending(true);
+    setSendProgress([]);
     try {
       const chosen = reps.filter((r: any) => selectedReps.includes(r.id));
+      const brandLabel = selectedBrands.length > 0 ? selectedBrands.join(", ") : "All";
       const { data, error } = await supabase.functions.invoke("dealer-inquiry-broadcast", {
         body: {
           phones: chosen.map((r: any) => r.whatsapp_number),
           message: stockMessage,
-          brand: filterBrand !== "all" ? filterBrand : "All",
+          brand: brandLabel,
           model: null, variant: null, color: null,
-          template_name: metaTemplate,
+          template_name: tmpl,
           template_variables: [],
           send_mode: "template_then_text",
           ai_followup_enabled: false,
@@ -128,7 +131,13 @@ export default function DealerStockHub() {
       });
       if (error) throw error;
       const sent = data?.summary?.sent || 0;
-      toast.success(`✅ Stock request sent to ${sent} / ${chosen.length} dealers`);
+      const failed = data?.summary?.failed || 0;
+      const results: any[] = data?.results || [];
+      setSendProgress(
+        results.map((x: any) => ({ phone: x.phone || x.to || "—", ok: !!x.success || x.status === "sent", error: x.error || x.message }))
+      );
+      if (sent > 0) toast.success(`✅ Sent to ${sent} / ${chosen.length} dealers${failed ? ` • ${failed} failed` : ""}`);
+      else toast.error(`❌ All ${chosen.length} sends failed — check template name & dealer numbers`);
       setSelectedReps([]);
       qc.invalidateQueries({ queryKey: ["dealer-stock-replies"] });
     } catch (e: any) {
