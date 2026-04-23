@@ -204,7 +204,7 @@ async function syncDealerReply(supabase: any, phone: string, messageText: string
 
   const { data: recentRecipients } = await supabase
     .from("dealer_inquiry_recipients")
-    .select("id, campaign_id, replied_at")
+    .select("id, campaign_id, replied_at, dealer_name, rep_name, phone")
     .eq("phone", shortPhone)
     .order("created_at", { ascending: false })
     .limit(5);
@@ -218,6 +218,128 @@ async function syncDealerReply(supabase: any, phone: string, messageText: string
   }).eq("id", matchedRecipient.id);
 
   await syncDealerInquiryCampaignCounts(supabase, matchedRecipient.campaign_id);
+
+  // ── Auto-reply via flow rules ──
+  try {
+    await sendDealerAutoReply(supabase, matchedRecipient, messageText);
+  } catch (e) {
+    console.error("Dealer auto-reply failed:", e);
+  }
+}
+
+async function sendDealerAutoReply(supabase: any, recipient: any, dealerMessage: string) {
+  const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+  const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+  if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) return;
+
+  // Load active rules
+  const { data: rules } = await supabase
+    .from("dealer_reply_flows")
+    .select("*")
+    .eq("is_active", true)
+    .order("priority", { ascending: true });
+
+  if (!rules || rules.length === 0) return;
+
+  const lowerMsg = dealerMessage.toLowerCase();
+  let matched: any = null;
+
+  for (const rule of rules) {
+    if (rule.match_type === "ai") { matched = rule; break; }
+    if (rule.match_type === "keyword") {
+      const hit = (rule.keywords || []).some((k: string) => k && lowerMsg.includes(k.toLowerCase()));
+      if (hit) { matched = rule; break; }
+    } else if (rule.match_type === "regex") {
+      try {
+        if (new RegExp(rule.keywords?.[0] || "", "i").test(dealerMessage)) { matched = rule; break; }
+      } catch { /* invalid regex */ }
+    }
+  }
+
+  if (!matched) return;
+
+  // Get campaign for variable replacement
+  let campaign: any = {};
+  if (recipient.campaign_id) {
+    const { data } = await supabase
+      .from("dealer_inquiry_campaigns")
+      .select("brand, model, variant, color")
+      .eq("id", recipient.campaign_id)
+      .single();
+    campaign = data || {};
+  }
+
+  let replyBody = "";
+
+  if (matched.match_type === "ai" || matched.ai_fallback) {
+    // AI-generated reply
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (LOVABLE_API_KEY) {
+      try {
+        const sys = `You are GrabYourCar's dealer relationship agent. Reply to dealer in 1-2 short WhatsApp lines (under 200 chars). Hindi-English mix. Goal: keep deal moving — push for price/availability/delivery. NEVER long paragraphs. NO emojis spam (max 1).`;
+        const ctx = `Car: ${[campaign.brand, campaign.model, campaign.variant].filter(Boolean).join(" ") || "vehicle"}\nDealer (${recipient.rep_name || recipient.dealer_name || "rep"}) replied: "${dealerMessage}"\n${matched.reply_template ? `Suggested angle: ${matched.reply_template}` : ""}`;
+        const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [{ role: "system", content: sys }, { role: "user", content: ctx }],
+          }),
+        });
+        if (aiResp.ok) {
+          const aiData = await aiResp.json();
+          replyBody = (aiData.choices?.[0]?.message?.content || "").trim();
+        }
+      } catch (e) { console.error("AI reply gen failed:", e); }
+    }
+  }
+
+  if (!replyBody && matched.reply_template) {
+    replyBody = matched.reply_template;
+  }
+
+  if (!replyBody) return;
+
+  // Variable replacement
+  replyBody = replyBody
+    .replace(/\{rep_name\}/gi, recipient.rep_name || "bhai")
+    .replace(/\{dealer(?:_name)?\}/gi, recipient.dealer_name || "Team")
+    .replace(/\{brand\}/gi, campaign.brand || "")
+    .replace(/\{model\}/gi, campaign.model || "")
+    .replace(/\{variant\}/gi, campaign.variant || "")
+    .replace(/\{color\}/gi, campaign.color || "")
+    .trim();
+
+  if (replyBody.length > 320) replyBody = replyBody.slice(0, 300).replace(/\s+\S*$/, "") + "…";
+
+  // Send via WA Cloud API
+  const waPhone = recipient.phone.startsWith("91") ? recipient.phone : `91${recipient.phone.replace(/^0+/, "")}`;
+  const url = `https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to: waPhone,
+      type: "text",
+      text: { preview_url: false, body: replyBody },
+    }),
+  });
+
+  if (resp.ok) {
+    console.log(`Dealer auto-reply sent (rule: ${matched.rule_name}) → ${waPhone}: ${replyBody.slice(0, 80)}`);
+    // Increment trigger stats
+    await supabase
+      .from("dealer_reply_flows")
+      .update({
+        trigger_count: (matched.trigger_count || 0) + 1,
+        last_triggered_at: new Date().toISOString(),
+      })
+      .eq("id", matched.id);
+  } else {
+    const err = await resp.text();
+    console.error("Auto-reply send failed:", err);
+  }
 }
 
 Deno.serve(async (req) => {
