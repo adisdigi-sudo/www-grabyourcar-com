@@ -61,6 +61,7 @@ const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const IntegrationControlCenter = lazy(() => import("./pages/IntegrationControlCenter"));
 const MarutiScrape = lazy(() => import("./pages/admin/MarutiScrape"));
+const BrandScrape = lazy(() => import("./pages/admin/BrandScrape"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -235,6 +236,7 @@ const AppRouterShell = () => {
             <Route path="/admin-auth" element={<AdminAuth />} />
             <Route path="/admin-reset-password" element={<AdminResetPassword />} />
             <Route path="/admin/maruti-scrape" element={<MarutiScrape />} />
+            <Route path="/admin/brand-scrape" element={<BrandScrape />} />
             <Route
               path="/workspace"
               element={
