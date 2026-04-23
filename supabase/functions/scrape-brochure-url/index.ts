@@ -27,6 +27,11 @@ function buildKiaIndiaShowroomUrl(modelName: string) {
   return `https://www.kia.com/in/our-vehicles/${slug}/showroom.html`;
 }
 
+function buildHyundaiIndiaShowroomUrl(modelName: string) {
+  const slug = modelName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  return `https://www.hyundai.com/in/en/find-a-car/${slug}/highlights`;
+}
+
 function extractPdfLinks(text: string): string[] {
   const re = /(https?:\/\/[^\s"')\]]+\.pdf(?:\?[^\s"')\]]*)?)/gi;
   const out = new Set<string>();
@@ -69,11 +74,14 @@ Deno.serve(async (req) => {
     if (!firecrawlKey) throw new Error('FIRECRAWL_API_KEY not configured');
 
     // Build list of source pages to scrape: caller override > OEM showroom > CarDekho
+    const brandLower = body.brand.toLowerCase();
+    const oemSources: string[] = [];
+    if (brandLower === 'kia') oemSources.push(buildKiaIndiaShowroomUrl(body.modelName));
+    if (brandLower === 'hyundai') oemSources.push(buildHyundaiIndiaShowroomUrl(body.modelName));
+
     const sources: string[] = body.sourceUrls && body.sourceUrls.length
       ? body.sourceUrls
-      : (body.brand.toLowerCase() === 'kia'
-          ? [buildKiaIndiaShowroomUrl(body.modelName), buildCardekhoBrochureUrl(body.brand, body.modelName)]
-          : [buildCardekhoBrochureUrl(body.brand, body.modelName)]);
+      : [...oemSources, buildCardekhoBrochureUrl(body.brand, body.modelName)];
 
     const candidates: { url: string; source: string; score: number }[] = [];
     const modelTokens = body.modelName.toLowerCase().split(/\s+/);
@@ -102,7 +110,7 @@ Deno.serve(async (req) => {
           let score = 0;
           if (lower.includes('brochure')) score += 5;
           for (const t of modelTokens) if (t.length > 2 && lower.includes(t)) score += 3;
-          if (lower.includes('kia.com')) score += 2;
+          if (lower.includes('kia.com') || lower.includes('hyundai.com')) score += 2;
           candidates.push({ url, source: src, score });
         }
       } catch (e) {
