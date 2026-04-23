@@ -66,58 +66,64 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const cardekhoUrl = body.cardekhoBrochureUrl || buildCardekhoBrochureUrl(body.brand, body.modelName);
-    const candidates: { url: string; source: string }[] = [];
+    if (!firecrawlKey) throw new Error('FIRECRAWL_API_KEY not configured');
 
-    // 1) Firecrawl the CarDekho brochure page
-    if (firecrawlKey) {
+    // Build list of source pages to scrape: caller override > OEM showroom > CarDekho
+    const sources: string[] = body.sourceUrls && body.sourceUrls.length
+      ? body.sourceUrls
+      : (body.brand.toLowerCase() === 'kia'
+          ? [buildKiaIndiaShowroomUrl(body.modelName), buildCardekhoBrochureUrl(body.brand, body.modelName)]
+          : [buildCardekhoBrochureUrl(body.brand, body.modelName)]);
+
+    const candidates: { url: string; source: string; score: number }[] = [];
+    const modelTokens = body.modelName.toLowerCase().split(/\s+/);
+
+    for (const src of sources) {
       try {
         const fcRes = await fetch(FIRECRAWL_URL, {
           method: 'POST',
           headers: { Authorization: `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: cardekhoUrl,
-            formats: ['markdown', 'links'],
-            onlyMainContent: false,
-            waitFor: 3000,
-          }),
+          body: JSON.stringify({ url: src, formats: ['markdown', 'links'], onlyMainContent: false, waitFor: 3000 }),
         });
-        if (fcRes.ok) {
-          const fc = await fcRes.json();
-          const data = fc.data || fc;
-          const links: string[] = data.links || [];
-          const markdown: string = data.markdown || '';
-          const fromLinks = links.filter((l) => /\.pdf(\?|$)/i.test(l));
-          const fromMd = extractPdfLinks(markdown);
-          [...new Set([...fromLinks, ...fromMd])].forEach((u) =>
-            candidates.push({ url: u, source: 'cardekho_firecrawl' })
-          );
-        } else {
-          console.log('firecrawl failed', fcRes.status, await fcRes.text());
+        if (!fcRes.ok) {
+          console.log('firecrawl failed', src, fcRes.status);
+          continue;
+        }
+        const fc = await fcRes.json();
+        const data = fc.data || fc;
+        const links: string[] = data.links || [];
+        const markdown: string = data.markdown || '';
+        const all = new Set<string>([
+          ...links.filter((l) => /\.pdf(\?|$)/i.test(l)),
+          ...extractPdfLinks(markdown),
+        ]);
+        for (const url of all) {
+          const lower = url.toLowerCase();
+          let score = 0;
+          if (lower.includes('brochure')) score += 5;
+          for (const t of modelTokens) if (t.length > 2 && lower.includes(t)) score += 3;
+          if (lower.includes('kia.com')) score += 2;
+          candidates.push({ url, source: src, score });
         }
       } catch (e) {
-        console.log('firecrawl error', (e as Error).message);
+        console.log('source error', src, (e as Error).message);
       }
     }
 
-    // 2) OEM fallback for Kia
-    if (body.brand.toLowerCase() === 'kia') {
-      candidates.push({ url: buildKiaOemBrochureUrl(body.modelName), source: 'kia_oem_pattern' });
-    }
+    // Sort by score desc, dedupe
+    const seen = new Set<string>();
+    const ranked = candidates
+      .sort((a, b) => b.score - a.score)
+      .filter((c) => (seen.has(c.url) ? false : (seen.add(c.url), true)));
 
-    // Validate candidates in order, pick first working PDF
-    let chosen: { url: string; source: string } | null = null;
-    for (const c of candidates) {
-      const ok = await checkPdf(c.url);
-      if (ok) { chosen = c; break; }
-    }
+    // Pick highest-scoring brochure-looking PDF (skip sandbox validation – CF blocks edge IPs)
+    const chosen = ranked.find((c) => c.score >= 5) || ranked[0] || null;
 
     if (!chosen) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'No working brochure PDF found',
-        candidates,
-        cardekhoUrl,
+        error: 'No PDF links found on source pages',
+        sources,
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
