@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Fuel, Cog, Clock, TrendingDown, Phone, Heart, GitCompare, Check, Eye, Loader2 } from "lucide-react";
+import { Fuel, Cog, Clock, TrendingDown, Phone, Heart, GitCompare, Check, Eye, Loader2, FileDown } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompare } from "@/hooks/useCompare";
