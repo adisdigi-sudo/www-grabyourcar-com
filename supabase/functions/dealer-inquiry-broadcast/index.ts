@@ -50,6 +50,13 @@ type SendOutcome = {
   error?: string;
 };
 
+const DEALER_INQUIRY_TEMPLATE_BLOCKLIST = /(booking|confirm(?:ed|ation)?|insurance|policy|renewal|loan|payment|receipt|invoice|feedback|deliver(?:y|ed)?|appointment|otp)/i;
+
+function isDealerInquirySafeTemplate(template?: { name?: string | null; body?: string | null; category?: string | null }) {
+  const haystack = [template?.name, template?.body, template?.category].filter(Boolean).join(" ");
+  return !DEALER_INQUIRY_TEMPLATE_BLOCKLIST.test(haystack);
+}
+
 function countTemplateParams(text?: string | null): number {
   return (text?.match(/\{\{\d+\}\}/g) || []).length;
 }
@@ -224,16 +231,16 @@ async function resolveApprovedTemplate(
 ): Promise<ApprovedTemplate | null> {
   const { data: approvedTemplates } = await supabase
     .from("wa_templates")
-    .select("name, header_type, variables, category")
+    .select("name, header_type, variables, category, body")
     .eq("status", "approved");
+
+  const safeTemplates = (approvedTemplates || []).filter((row: any) => isDealerInquirySafeTemplate(row));
 
   const candidates = [
     preferredTemplate,
-    "booking_confirmation",
     "welcome_new_lead",
-    "insurancefollowup",
     "grabyourcarintroduction",
-    ...(approvedTemplates || [])
+    ...safeTemplates
       .sort((a: any, b: any) => {
         const aUtility = String(a.category || "").toLowerCase() === "utility" ? 0 : 1;
         const bUtility = String(b.category || "").toLowerCase() === "utility" ? 0 : 1;
@@ -254,7 +261,7 @@ async function resolveApprovedTemplate(
       };
     }
 
-    const cached = (approvedTemplates || []).find((row: any) => row.name === candidate);
+    const cached = safeTemplates.find((row: any) => row.name === candidate);
     if (!cached) continue;
 
     const headerType = String(cached.header_type || "").toLowerCase();
