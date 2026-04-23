@@ -578,16 +578,56 @@ export function WATemplateManager() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Message Body * <span className="text-muted-foreground text-[11px]">({form.content.length}/1024)</span></Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Message Body * <span className="text-muted-foreground text-[11px]">({form.content.length}/1024)</span></Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-[11px]"
+                  onClick={() => setForm(f => ({
+                    ...f,
+                    name: f.name || "feedback_post_service",
+                    category: "Utility",
+                    content: FEEDBACK_TEMPLATE_STARTER,
+                    footer: f.footer || "Reply STOP to opt out",
+                  }))}
+                >
+                  ⭐ Load feedback template
+                </Button>
+              </div>
               <Textarea
+                ref={createBodyRef}
                 placeholder={"Hello {{customer_name}}! 🚗\n\nYour policy for {{vehicle}} expires on {{expiry_date}}."}
                 value={form.content}
                 onChange={e => setForm({ ...form, content: e.target.value })}
-                rows={5}
+                rows={6}
                 className={form.content.length > 1024 ? "border-destructive" : ""}
               />
+              <div className="rounded-md border bg-muted/30 p-2 space-y-1.5 max-h-44 overflow-auto">
+                <p className="text-[11px] font-medium text-muted-foreground">Click a variable to insert at cursor</p>
+                {AVAILABLE_VARIABLES.map(group => (
+                  <div key={group.group} className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">{group.group}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {group.vars.map(v => (
+                        <button
+                          key={v.key}
+                          type="button"
+                          onClick={() => insertVariable(v.key, "create")}
+                          className="px-1.5 py-0.5 rounded border bg-background hover:bg-accent text-[10px] font-mono transition-colors"
+                          title={v.label}
+                        >
+                          {`{{${v.key}}}`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
               <p className="text-xs text-muted-foreground">Use {"{{variable_name}}"} — auto-converted to {"{{1}}, {{2}}"} for Meta. Max 1024 chars.</p>
             </div>
+
             <div className="space-y-2">
               <Label>Footer (optional)</Label>
               <Input placeholder="Reply STOP to opt out" value={form.footer} onChange={e => setForm({ ...form, footer: e.target.value })} />
@@ -638,13 +678,36 @@ export function WATemplateManager() {
             <div className="space-y-2">
               <Label>Message Body * <span className="text-muted-foreground text-[11px]">({form.content.length}/1024)</span></Label>
               <Textarea
+                ref={editBodyRef}
                 value={form.content}
                 onChange={e => setForm({ ...form, content: e.target.value })}
                 rows={6}
                 className={form.content.length > 1024 ? "border-destructive" : ""}
               />
+              <div className="rounded-md border bg-muted/30 p-2 space-y-1.5 max-h-40 overflow-auto">
+                <p className="text-[11px] font-medium text-muted-foreground">Click a variable to insert at cursor</p>
+                {AVAILABLE_VARIABLES.map(group => (
+                  <div key={group.group} className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">{group.group}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {group.vars.map(v => (
+                        <button
+                          key={v.key}
+                          type="button"
+                          onClick={() => insertVariable(v.key, "edit")}
+                          className="px-1.5 py-0.5 rounded border bg-background hover:bg-accent text-[10px] font-mono transition-colors"
+                          title={v.label}
+                        >
+                          {`{{${v.key}}}`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
               <p className="text-xs text-muted-foreground">Fix the issue mentioned in rejection reason above. Max 1024 chars.</p>
             </div>
+
             <div className="space-y-2">
               <Label>Footer</Label>
               <Input value={form.footer} onChange={e => setForm({ ...form, footer: e.target.value })} />
