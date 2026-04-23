@@ -1,0 +1,529 @@
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import {
+  Send, Package, Sparkles, Loader2, Search, Share2, Trash2, Car, IndianRupee, Inbox,
+} from "lucide-react";
+import { format } from "date-fns";
+
+const STOCK_REQUEST_TEMPLATE = `Hi {rep_name} 👋
+
+*GrabYourCar* — Daily Ready Stock Update Request 📦
+
+Please share your *currently available* car stock with:
+• Brand, Model, Variant, Color
+• Year & Fuel/Transmission
+• On-road price + best discount
+• Quantity available
+• Any special offers
+
+Reply in this format (multiple cars OK):
+\`\`\`
+Brand Model Variant
+Color | Year | Fuel | ₹On-road
+Discount: ₹...
+Qty: ...
+\`\`\`
+
+We'll match it instantly with our ready buyers 🚗💨
+
+— *GrabYourCar Team*`;
+
+export default function DealerStockHub() {
+  const qc = useQueryClient();
+  const [tab, setTab] = useState("send");
+
+  // ---------- Send Stock Request ----------
+  const [filterBrand, setFilterBrand] = useState("all");
+  const [filterCity, setFilterCity] = useState("");
+  const [selectedReps, setSelectedReps] = useState<string[]>([]);
+  const [stockMessage, setStockMessage] = useState(STOCK_REQUEST_TEMPLATE);
+  const [metaTemplate, setMetaTemplate] = useState<string>("");
+  const [sending, setSending] = useState(false);
+
+  const { data: reps = [] } = useQuery({
+    queryKey: ["dealer-reps-stock"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("dealer_representatives")
+        .select("id, name, brand, city, state, whatsapp_number, dealer_companies(company_name, city)")
+        .eq("is_active", true)
+        .not("whatsapp_number", "is", null)
+        .order("brand");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: templates = [] } = useQuery({
+    queryKey: ["wa-templates-stock"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("whatsapp_templates")
+        .select("name, display_name, body, status, category")
+        .eq("status", "APPROVED")
+        .order("name");
+      return (data || []).filter(
+        (t: any) => !/booking|policy|loan|invoice|otp|payment|feedback/i.test([t.name, t.display_name, t.body].join(" "))
+      );
+    },
+  });
+
+  const filteredReps = useMemo(() => {
+    return reps.filter((r: any) => {
+      if (filterBrand !== "all" && r.brand !== filterBrand) return false;
+      if (filterCity.trim()) {
+        const city = (r.city || r.dealer_companies?.city || "").toLowerCase();
+        if (!city.includes(filterCity.toLowerCase())) return false;
+      }
+      return true;
+    });
+  }, [reps, filterBrand, filterCity]);
+
+  const brands = useMemo(() => Array.from(new Set(reps.map((r: any) => r.brand).filter(Boolean))).sort(), [reps]);
+
+  const toggleAll = () => {
+    if (selectedReps.length === filteredReps.length) setSelectedReps([]);
+    else setSelectedReps(filteredReps.map((r: any) => r.id));
+  };
+
+  const sendStockRequest = async () => {
+    if (selectedReps.length === 0) return toast.error("Select at least one dealer");
+    if (!metaTemplate) return toast.error("Select an approved Meta template");
+    setSending(true);
+    try {
+      const chosen = reps.filter((r: any) => selectedReps.includes(r.id));
+      const { data, error } = await supabase.functions.invoke("dealer-inquiry-broadcast", {
+        body: {
+          phones: chosen.map((r: any) => r.whatsapp_number),
+          message: stockMessage,
+          brand: filterBrand !== "all" ? filterBrand : "All",
+          model: null, variant: null, color: null,
+          template_name: metaTemplate,
+          template_variables: [],
+          send_mode: "template_then_text",
+          ai_followup_enabled: false,
+          recipients: chosen.map((r: any) => ({
+            dealer_rep_id: r.id,
+            rep_name: r.name,
+            dealer_name: r.dealer_companies?.company_name || "",
+            phone: r.whatsapp_number,
+          })),
+        },
+      });
+      if (error) throw error;
+      const sent = data?.summary?.sent || 0;
+      toast.success(`✅ Stock request sent to ${sent} / ${chosen.length} dealers`);
+      setSelectedReps([]);
+      qc.invalidateQueries({ queryKey: ["dealer-stock-replies"] });
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // ---------- Auto-Extract Replies ----------
+  const { data: replies = [], isLoading: repliesLoading } = useQuery({
+    queryKey: ["dealer-stock-replies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("dealer_chat_history")
+        .select("id, dealer_rep_id, dealer_company_id, message, sender_name, sender_phone, created_at, dealer_representatives(id, name, brand)")
+        .eq("direction", "inbound")
+        .order("created_at", { ascending: false })
+        .limit(80);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const [extractingId, setExtractingId] = useState<string | null>(null);
+  const [previewCars, setPreviewCars] = useState<any[] | null>(null);
+  const [previewMeta, setPreviewMeta] = useState<{ rep_id?: string; brand?: string; message: string } | null>(null);
+
+  const extractReply = async (reply: any, autoSave: boolean) => {
+    setExtractingId(reply.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("dealer-stock-extractor", {
+        body: {
+          message: reply.message,
+          dealer_rep_id: reply.dealer_rep_id,
+          default_brand: reply.dealer_representatives?.brand,
+          auto_save: autoSave,
+        },
+      });
+      if (error) throw error;
+      if (autoSave) {
+        toast.success(`✅ Saved ${data?.saved || 0} cars to stock`);
+        qc.invalidateQueries({ queryKey: ["dealer-inventory-live"] });
+      } else {
+        setPreviewCars(data?.cars || []);
+        setPreviewMeta({
+          rep_id: reply.dealer_rep_id,
+          brand: reply.dealer_representatives?.brand,
+          message: reply.message,
+        });
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Extract failed");
+    } finally {
+      setExtractingId(null);
+    }
+  };
+
+  const savePreview = async () => {
+    if (!previewCars || !previewMeta) return;
+    try {
+      const rows = previewCars.map((c: any) => ({
+        dealer_rep_id: previewMeta.rep_id || null,
+        brand: c.brand || previewMeta.brand || "Unknown",
+        model: c.model || null,
+        car_name: `${c.brand || previewMeta.brand || ""} ${c.model || ""}`.trim() || "Unknown Car",
+        variant: c.variant || null,
+        color: c.color || null,
+        fuel_type: c.fuel_type || null,
+        transmission: c.transmission || null,
+        manufacturing_year: c.manufacturing_year || null,
+        year: c.manufacturing_year || null,
+        ex_showroom_price: c.ex_showroom_price || null,
+        on_road_price: c.on_road_price || null,
+        discount: c.discount || null,
+        quantity: c.quantity || 1,
+        stock_status: c.stock_status || "available",
+        notes: c.notes || null,
+        source_message: previewMeta.message,
+        source_date: new Date().toISOString(),
+        is_active: true,
+      }));
+      const { error } = await supabase.from("dealer_inventory").insert(rows);
+      if (error) throw error;
+      toast.success(`✅ Saved ${rows.length} cars to stock`);
+      setPreviewCars(null);
+      setPreviewMeta(null);
+      qc.invalidateQueries({ queryKey: ["dealer-inventory-live"] });
+    } catch (e: any) {
+      toast.error(e.message || "Save failed");
+    }
+  };
+
+  // ---------- Live Stock List ----------
+  const [stockSearch, setStockSearch] = useState("");
+  const [stockBrand, setStockBrand] = useState("all");
+
+  const { data: stock = [], isLoading: stockLoading } = useQuery({
+    queryKey: ["dealer-inventory-live"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("dealer_inventory")
+        .select("*, dealer_representatives(name, phone, whatsapp_number, dealer_companies(company_name, city))")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const stockBrands = useMemo(() => Array.from(new Set(stock.map((s: any) => s.brand).filter(Boolean))).sort(), [stock]);
+  const filteredStock = useMemo(() => {
+    return stock.filter((s: any) => {
+      if (stockBrand !== "all" && s.brand !== stockBrand) return false;
+      if (stockSearch.trim()) {
+        const q = stockSearch.toLowerCase();
+        const hay = `${s.brand} ${s.model} ${s.variant} ${s.color} ${s.dealer_representatives?.dealer_companies?.company_name || ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [stock, stockSearch, stockBrand]);
+
+  const deleteStock = async (id: string) => {
+    if (!confirm("Delete this stock entry?")) return;
+    const { error } = await supabase.from("dealer_inventory").update({ is_active: false }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Removed");
+    qc.invalidateQueries({ queryKey: ["dealer-inventory-live"] });
+  };
+
+  const shareToCustomer = (s: any) => {
+    const dealer = s.dealer_representatives?.dealer_companies?.company_name || "Dealer";
+    const city = s.dealer_representatives?.dealer_companies?.city || "";
+    const lines = [
+      `🚗 *${s.brand} ${s.model || ""}*${s.variant ? ` ${s.variant}` : ""}`,
+      s.color && `🎨 Color: ${s.color}`,
+      s.manufacturing_year && `📅 Year: ${s.manufacturing_year}`,
+      s.fuel_type && `⛽ Fuel: ${s.fuel_type}`,
+      s.transmission && `⚙️ Transmission: ${s.transmission}`,
+      s.on_road_price && `💰 On-road: ₹${Number(s.on_road_price).toLocaleString("en-IN")}`,
+      s.ex_showroom_price && `🏷️ Ex-showroom: ₹${Number(s.ex_showroom_price).toLocaleString("en-IN")}`,
+      s.discount && `🎁 Discount: ${s.discount}`,
+      s.quantity && `📦 Qty: ${s.quantity}`,
+      ``,
+      `📍 ${dealer}${city ? `, ${city}` : ""}`,
+      ``,
+      `— GrabYourCar`,
+    ].filter(Boolean).join("\n");
+    navigator.clipboard.writeText(lines);
+    toast.success("📋 Copied! Paste in customer chat");
+  };
+
+  return (
+    <div className="space-y-4">
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="send" className="gap-1"><Send className="h-4 w-4" /> Send Stock Request</TabsTrigger>
+          <TabsTrigger value="extract" className="gap-1"><Sparkles className="h-4 w-4" /> Auto-Extract Replies</TabsTrigger>
+          <TabsTrigger value="live" className="gap-1"><Package className="h-4 w-4" /> Live Stock ({stock.length})</TabsTrigger>
+        </TabsList>
+
+        {/* ============ SEND ============ */}
+        <TabsContent value="send" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg"><Send className="h-5 w-5" /> Bulk Stock Request to Dealers</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label>Filter by Brand</Label>
+                  <Select value={filterBrand} onValueChange={setFilterBrand}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Brands ({reps.length})</SelectItem>
+                      {brands.map((b: any) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Filter by City</Label>
+                  <Input placeholder="e.g. Mumbai" value={filterCity} onChange={(e) => setFilterCity(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Meta Template (UTILITY/MARKETING)</Label>
+                  <Select value={metaTemplate} onValueChange={setMetaTemplate}>
+                    <SelectTrigger><SelectValue placeholder="Select approved template" /></SelectTrigger>
+                    <SelectContent>
+                      {templates.map((t: any) => (
+                        <SelectItem key={t.name} value={t.name}>{t.display_name || t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label>Stock Request Message</Label>
+                <Textarea rows={10} value={stockMessage} onChange={(e) => setStockMessage(e.target.value)} className="font-mono text-xs" />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Variables: <code>{"{rep_name}"}</code>, <code>{"{brand}"}</code> auto-replaced.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between border-t pt-3">
+                <div className="flex items-center gap-3">
+                  <Checkbox checked={selectedReps.length === filteredReps.length && filteredReps.length > 0} onCheckedChange={toggleAll} />
+                  <span className="text-sm">
+                    <strong>{selectedReps.length}</strong> / {filteredReps.length} dealers selected
+                  </span>
+                </div>
+                <Button onClick={sendStockRequest} disabled={sending || selectedReps.length === 0} size="lg" className="gap-2">
+                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Send to {selectedReps.length} Dealers
+                </Button>
+              </div>
+
+              <div className="border rounded-md max-h-[400px] overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10"></TableHead>
+                      <TableHead>Rep</TableHead>
+                      <TableHead>Brand</TableHead>
+                      <TableHead>Dealer</TableHead>
+                      <TableHead>City</TableHead>
+                      <TableHead>WhatsApp</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredReps.map((r: any) => (
+                      <TableRow key={r.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedReps.includes(r.id)}
+                            onCheckedChange={(v) => {
+                              if (v) setSelectedReps([...selectedReps, r.id]);
+                              else setSelectedReps(selectedReps.filter((x) => x !== r.id));
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">{r.name}</TableCell>
+                        <TableCell><Badge variant="outline">{r.brand}</Badge></TableCell>
+                        <TableCell className="text-xs">{r.dealer_companies?.company_name || "—"}</TableCell>
+                        <TableCell className="text-xs">{r.city || r.dealer_companies?.city || "—"}</TableCell>
+                        <TableCell className="text-xs font-mono">{r.whatsapp_number}</TableCell>
+                      </TableRow>
+                    ))}
+                    {filteredReps.length === 0 && (
+                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">No dealers match filters</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ============ EXTRACT ============ */}
+        <TabsContent value="extract" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg"><Sparkles className="h-5 w-5" /> AI Auto-Extract from Dealer Replies</CardTitle>
+              <p className="text-xs text-muted-foreground">Recent inbound dealer messages — click <strong>Save Stock</strong> to instantly parse cars into your inventory.</p>
+            </CardHeader>
+            <CardContent>
+              {repliesLoading ? <div className="text-center py-6"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div> : (
+                <div className="space-y-3 max-h-[600px] overflow-auto">
+                  {replies.map((r: any) => (
+                    <div key={r.id} className="border rounded-md p-3 bg-muted/30">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="text-xs">
+                          <strong>{r.dealer_representatives?.name || r.sender_name || r.sender_phone}</strong>
+                          {r.dealer_representatives?.brand && <Badge variant="outline" className="ml-2 text-[10px]">{r.dealer_representatives.brand}</Badge>}
+                          <span className="text-muted-foreground ml-2">{format(new Date(r.created_at), "dd MMM HH:mm")}</span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="outline" disabled={extractingId === r.id} onClick={() => extractReply(r, false)}>
+                            {extractingId === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Preview"}
+                          </Button>
+                          <Button size="sm" disabled={extractingId === r.id} onClick={() => extractReply(r, true)} className="gap-1">
+                            <Sparkles className="h-3 w-3" /> Save Stock
+                          </Button>
+                        </div>
+                      </div>
+                      <pre className="whitespace-pre-wrap text-xs font-mono bg-background p-2 rounded border max-h-32 overflow-auto">{r.message}</pre>
+                    </div>
+                  ))}
+                  {replies.length === 0 && <div className="text-center py-8 text-muted-foreground"><Inbox className="h-8 w-8 mx-auto mb-2 opacity-50" />No replies yet</div>}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ============ LIVE STOCK ============ */}
+        <TabsContent value="live" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg"><Package className="h-5 w-5" /> Live Dealer Stock</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div className="md:col-span-2">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search brand, model, variant, dealer..." className="pl-8" value={stockSearch} onChange={(e) => setStockSearch(e.target.value)} />
+                  </div>
+                </div>
+                <Select value={stockBrand} onValueChange={setStockBrand}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Brands</SelectItem>
+                    {stockBrands.map((b: any) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {stockLoading ? <div className="text-center py-6"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div> : (
+                <div className="border rounded-md overflow-auto max-h-[600px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Car</TableHead>
+                        <TableHead>Variant / Color</TableHead>
+                        <TableHead>Year / Fuel</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Discount</TableHead>
+                        <TableHead>Dealer</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredStock.map((s: any) => (
+                        <TableRow key={s.id}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2"><Car className="h-4 w-4 text-muted-foreground" />{s.brand} {s.model}</div>
+                          </TableCell>
+                          <TableCell className="text-xs">{s.variant || "—"}<br /><span className="text-muted-foreground">{s.color || ""}</span></TableCell>
+                          <TableCell className="text-xs">{s.manufacturing_year || s.year || "—"}<br /><span className="text-muted-foreground">{s.fuel_type || ""}</span></TableCell>
+                          <TableCell className="text-xs">
+                            {s.on_road_price ? <div className="flex items-center"><IndianRupee className="h-3 w-3" />{Number(s.on_road_price).toLocaleString("en-IN")}</div> : "—"}
+                          </TableCell>
+                          <TableCell className="text-xs max-w-[150px] truncate">{s.discount || "—"}</TableCell>
+                          <TableCell className="text-xs">
+                            {s.dealer_representatives?.dealer_companies?.company_name || "—"}
+                            <br /><span className="text-muted-foreground">{s.dealer_representatives?.name}</span>
+                          </TableCell>
+                          <TableCell><Badge variant={s.stock_status === "available" ? "default" : "outline"} className="text-[10px]">{s.stock_status}</Badge></TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button size="sm" variant="outline" onClick={() => shareToCustomer(s)} className="gap-1 h-7"><Share2 className="h-3 w-3" /></Button>
+                              <Button size="sm" variant="ghost" onClick={() => deleteStock(s.id)} className="h-7"><Trash2 className="h-3 w-3 text-red-500" /></Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {filteredStock.length === 0 && (
+                        <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-6">No stock yet — extract from dealer replies</TableCell></TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Preview Dialog */}
+      <Dialog open={!!previewCars} onOpenChange={(o) => !o && setPreviewCars(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
+          <DialogHeader><DialogTitle>AI Extracted {previewCars?.length || 0} Cars</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            {(previewCars || []).map((c, i) => (
+              <div key={i} className="border rounded p-2 text-xs grid grid-cols-2 md:grid-cols-4 gap-1">
+                <div><strong>Brand:</strong> {c.brand}</div>
+                <div><strong>Model:</strong> {c.model}</div>
+                <div><strong>Variant:</strong> {c.variant || "—"}</div>
+                <div><strong>Color:</strong> {c.color || "—"}</div>
+                <div><strong>Year:</strong> {c.manufacturing_year || "—"}</div>
+                <div><strong>Fuel:</strong> {c.fuel_type || "—"}</div>
+                <div><strong>On-road:</strong> {c.on_road_price ? `₹${Number(c.on_road_price).toLocaleString("en-IN")}` : "—"}</div>
+                <div><strong>Qty:</strong> {c.quantity || 1}</div>
+                {c.discount && <div className="col-span-full text-amber-600"><strong>Discount:</strong> {c.discount}</div>}
+              </div>
+            ))}
+            {previewCars?.length === 0 && <p className="text-center text-muted-foreground py-4">AI couldn't detect any car details in this message.</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewCars(null)}>Cancel</Button>
+            <Button onClick={savePreview} disabled={!previewCars?.length} className="gap-1"><Sparkles className="h-4 w-4" />Save All to Stock</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
