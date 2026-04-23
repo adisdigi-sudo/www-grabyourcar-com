@@ -1049,6 +1049,19 @@ serve(async (req) => {
             wa_message_id: result.messageId || null,
             status: "sent",
             sent_by_name: "System",
+            intent: (body as any)?.intent || (() => {
+              const tn = String(effectiveTemplateName || "").toLowerCase();
+              if (tn.includes("feedback")) return "feedback";
+              if (tn.includes("renewal") || tn.includes("expir")) return "renewal_reminder";
+              if (tn.includes("quote") || tn.includes("offer")) return "quote_share";
+              if (tn.includes("policy") || tn.includes("pdf") || tn.includes("document")) return "policy_document";
+              if (tn.includes("followup") || tn.includes("follow_up") || tn.includes("nurture")) return "followup";
+              if (effectiveTemplateName) return "template_other";
+              return "manual_chat";
+            })(),
+            intent_meta: (body as any)?.intent_meta || null,
+            lead_id: (body as any)?.lead_id || null,
+            vertical: (body as any)?.vertical || null,
           });
         }
 
