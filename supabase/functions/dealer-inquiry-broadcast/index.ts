@@ -154,15 +154,22 @@ async function resolveApprovedTemplate(
 ): Promise<ApprovedTemplate | null> {
   const { data: approvedTemplates } = await supabase
     .from("wa_templates")
-    .select("name, header_type, variables")
+    .select("name, header_type, variables, category")
     .eq("status", "approved");
 
   const candidates = [
     preferredTemplate,
+    "booking_confirmation",
     "welcome_new_lead",
     "insurancefollowup",
     "grabyourcarintroduction",
-    ...(approvedTemplates || []).map((row: any) => row.name),
+    ...(approvedTemplates || [])
+      .sort((a: any, b: any) => {
+        const aUtility = String(a.category || "").toLowerCase() === "utility" ? 0 : 1;
+        const bUtility = String(b.category || "").toLowerCase() === "utility" ? 0 : 1;
+        return aUtility - bUtility;
+      })
+      .map((row: any) => row.name),
   ].filter((value, index, array): value is string => Boolean(value) && array.indexOf(value) === index);
 
   for (const candidate of candidates) {
@@ -309,15 +316,16 @@ serve(async (req) => {
 
     // Determine send mode
     const mode = send_mode || (template_name ? "template_then_text" : "text_only");
-    // Prefer dealer_inquiry_v1 (UTILITY, 4 vars: dealer_name, brand, model, variant) when approved
-    const metaTemplate = template_name || "dealer_inquiry_v1";
+    const metaTemplate = template_name || "booking_confirmation";
 
     // Pre-resolve template definition ONCE (we'll rebuild components per dealer with their name)
+    const inquiryLabel = [brand, model, variant].filter(Boolean).join(" ") || "vehicle inquiry";
+    const bookingRef = `INQ-${Date.now().toString().slice(-6)}`;
     const baseFallback = [
-      brand || "GrabYourCar",
-      model || "car inquiry",
-      variant || "best offer",
-      color || "available color",
+      "Partner",
+      bookingRef,
+      inquiryLabel,
+      color || "available",
     ];
     const templateDefinition = await resolveApprovedTemplate(
       supabase,
@@ -387,7 +395,9 @@ serve(async (req) => {
         const dealerName = recipientInfo.rep_name || recipientInfo.dealer_name || "Partner";
         const perDealerValues = [
           dealerName,
-          ...baseFallback,
+          bookingRef,
+          inquiryLabel,
+          color || "available",
         ];
         let activeTemplate: ApprovedTemplate | null = null;
         if (shouldSendTemplate && templateDefinition) {

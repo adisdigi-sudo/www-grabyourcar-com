@@ -19,6 +19,12 @@ import { format } from "date-fns";
 import DealerCampaignTracker from "./DealerCampaignTracker";
 
 const TEMPLATES: Record<string, { label: string; icon: string; build: (b: string, m: string, v: string, c: string) => string }> = {
+  simple_inquiry: {
+    label: "🧾 Simple Inquiry",
+    icon: "🧾",
+    build: (b, m, v, c) =>
+      `Hello.\n\nWe need a quick confirmation for ${b}${m ? ` ${m}` : ""}${v ? ` — ${v}` : ""}${c ? ` (${c})` : ""}.\n\nPlease reply with:\n• Availability\n• On-road price\n• Delivery timeline\n\nThank you.`,
+  },
   discount_inquiry: {
     label: "💰 Discount Inquiry",
     icon: "💰",
@@ -63,7 +69,7 @@ export default function DealerInquiryHub() {
   const [cityFilter, setCityFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [message, setMessage] = useState("");
-  const [templateType, setTemplateType] = useState("discount_inquiry");
+  const [templateType, setTemplateType] = useState("simple_inquiry");
   const [sending, setSending] = useState(false);
   const [aiFollowup, setAiFollowup] = useState(true);
   const [aiScript, setAiScript] = useState("discount_qualify");
@@ -74,7 +80,7 @@ export default function DealerInquiryHub() {
   const [bulkBrand, setBulkBrand] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [sendMode, setSendMode] = useState<"template_then_text" | "template_only" | "text_only">("text_only");
-  const [metaTemplate, setMetaTemplate] = useState("welcome_new_lead");
+  const [metaTemplate, setMetaTemplate] = useState("booking_confirmation");
   const [addForm, setAddForm] = useState({ name: "", whatsapp_number: "", dealer_name: "", brand: "", city: "", state: "" });
 
   // Data queries
@@ -561,10 +567,10 @@ export default function DealerInquiryHub() {
                     <Select value={metaTemplate} onValueChange={setMetaTemplate}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="welcome_new_lead">👋 Welcome New Lead</SelectItem>
-                        <SelectItem value="insurancefollowup">🛡️ Insurance Follow-up</SelectItem>
+                        <SelectItem value="booking_confirmation">🧾 Utility Opener (approved)</SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1">Yeh approved utility template hai jo pehle chat window safely open karta hai.</p>
                   </div>
                 )}
 
