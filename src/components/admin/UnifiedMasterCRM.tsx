@@ -50,7 +50,7 @@ import { AccessoriesVerticalWorkspace } from "./verticals/AccessoriesVerticalWor
 import { HSRPVerticalWorkspace } from "./verticals/HSRPVerticalWorkspace";
 import { RentalVerticalWorkspace } from "./verticals/RentalVerticalWorkspace";
 import { FleetVerticalWorkspace } from "./verticals/FleetVerticalWorkspace";
-import { OmniMessagingWorkspace } from "./shared/OmniMessagingWorkspace";
+// OmniMessagingWorkspace removed — central WhatsApp Hub Inbox is the only conversation surface
 import { VerticalReplyAgentsCard } from "./automation/VerticalReplyAgentsCard";
 type Vertical = "overview" | "insurance" | "car-sales" | "loans" | "accessories" | "hsrp" | "rentals" | "fleet";
 
