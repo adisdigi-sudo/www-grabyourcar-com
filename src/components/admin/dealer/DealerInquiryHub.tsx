@@ -14,11 +14,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Send, Users, MessageCircle, Plus, Upload, Phone, Zap, Bot, Car, Palette, History, Loader2, Activity, MessagesSquare, Workflow } from "lucide-react";
+import { Send, Users, MessageCircle, Plus, Upload, Phone, Zap, Bot, Car, Palette, History, Loader2, Activity, MessagesSquare, Workflow, Package } from "lucide-react";
 import { format } from "date-fns";
 import DealerCampaignTracker from "./DealerCampaignTracker";
 import DealerConversationsHub from "./DealerConversationsHub";
 import DealerReplyFlowBuilder from "./DealerReplyFlowBuilder";
+import DealerStockHub from "./DealerStockHub";
 import { ComboBoxWithCustom } from "@/components/ui/combo-box-with-custom";
 import { INDIAN_STATES, INDIAN_CITIES_BY_STATE, ALL_INDIAN_CITIES, CAR_COLORS, COMMON_VARIANTS } from "@/lib/indiaMasterData";
 
@@ -422,11 +423,16 @@ export default function DealerInquiryHub() {
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4" activationMode="manual">
       <TabsList>
         <TabsTrigger value="inquiry" className="gap-1"><Car className="h-4 w-4" /> Smart Inquiry</TabsTrigger>
+        <TabsTrigger value="stock" className="gap-1"><Package className="h-4 w-4" /> Stock Hub</TabsTrigger>
         <TabsTrigger value="conversations" className="gap-1"><MessagesSquare className="h-4 w-4" /> Conversations</TabsTrigger>
         <TabsTrigger value="flow" className="gap-1"><Workflow className="h-4 w-4" /> Reply Flow</TabsTrigger>
         <TabsTrigger value="tracker" className="gap-1"><Activity className="h-4 w-4" /> Live Tracker</TabsTrigger>
         <TabsTrigger value="history" className="gap-1"><History className="h-4 w-4" /> Campaign History</TabsTrigger>
       </TabsList>
+
+      <TabsContent value="stock" className="space-y-4">
+        {activeTab === "stock" ? <DealerStockHub /> : null}
+      </TabsContent>
 
       <TabsContent value="conversations" className="space-y-4">
         {activeTab === "conversations" ? <DealerConversationsHub /> : null}
