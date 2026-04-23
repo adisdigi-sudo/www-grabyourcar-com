@@ -158,6 +158,8 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "unread" | "pending" | "responded" | "open">("all");
+  const [markingResponded, setMarkingResponded] = useState(false);
   const [prefs, setPrefs] = useState<ChatPrefs>(() => loadPrefs());
   const [uploading, setUploading] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
