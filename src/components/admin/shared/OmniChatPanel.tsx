@@ -33,6 +33,7 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { resolveWaMediaUrl, isImageMime } from "@/components/admin/inbox/waMedia";
+import { WaTemplatePickerButton, type WaTemplateOption } from "@/components/admin/shared/WaTemplatePickerButton";
 
 interface OmniChatPanelProps {
   phone?: string;
