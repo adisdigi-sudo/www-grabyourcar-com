@@ -251,11 +251,12 @@ async function resolveApprovedTemplate(
         return aUtility - bUtility;
       })
       .map((row: any) => row.name),
-  ].filter((value, index, array): value is string => Boolean(value) && array.indexOf(value) === index);
+  ].filter((value, index, array): value is string => Boolean(value) && array.indexOf(value) === index && isDealerInquirySafeTemplate({ name: value }));
 
   for (const candidate of candidates) {
     const liveTemplate = await fetchApprovedMetaTemplateDefinition(token, businessAccountId, candidate);
     if (liveTemplate) {
+      if (!isDealerInquirySafeTemplate({ name: liveTemplate.name })) continue;
       if (hasMediaHeader(liveTemplate.components || [])) continue;
       const builtComponents = buildTemplateComponents(liveTemplate.components || [], fallbackValues);
       if (requireVariableCapacity && countResolvedTemplateParams(builtComponents) === 0) continue;
