@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Fuel, Cog, Clock, TrendingDown, Phone, Heart, GitCompare, Check, Eye, Loader2 } from "lucide-react";
+import { Fuel, Cog, Clock, TrendingDown, Phone, Heart, GitCompare, Check, Eye, Loader2, FileDown } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompare } from "@/hooks/useCompare";
@@ -26,6 +26,7 @@ interface CarWithImage {
   is_bestseller: boolean | null;
   tagline: string | null;
   discount: string | null;
+  brochure_url: string | null;
   image_url: string | null;
 }
 
@@ -49,7 +50,8 @@ const useFeaturedCars = () => {
           is_upcoming,
           is_bestseller,
           tagline,
-          discount
+          discount,
+          brochure_url
         `)
         .eq('is_discontinued', false)
         .order('updated_at', { ascending: false })
@@ -281,6 +283,27 @@ export const CarListings = () => {
                       </Button>
                     </a>
                   </div>
+
+                  {/* Brochure Download — direct, no gate */}
+                  {car.brochure_url && (
+                    <a
+                      href={car.brochure_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download={`${car.slug}-brochure.pdf`}
+                      className="w-full"
+                      aria-label={`Download ${car.name} brochure`}
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full gap-1 text-[10px] sm:text-xs h-7 sm:h-8 font-semibold px-2 border-primary/30 hover:bg-primary/5"
+                      >
+                        <FileDown className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                        <span className="truncate">Brochure</span>
+                      </Button>
+                    </a>
+                  )}
                 </CardFooter>
               </Card>
             );

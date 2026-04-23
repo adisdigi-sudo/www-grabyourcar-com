@@ -839,6 +839,22 @@ const Cars = () => {
                               </Button>
                             </a>
                           </div>
+                          {/* Brochure Download — direct, no gate */}
+                          {car.brochureUrl && (
+                            <a
+                              href={car.brochureUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download={`${car.slug}-brochure.pdf`}
+                              className="w-full"
+                              aria-label={`Download ${car.name} brochure`}
+                            >
+                              <Button variant="outline" size="sm" className="w-full gap-1.5 h-9 border-primary/30 hover:bg-primary/5 font-semibold">
+                                <FileText className="h-4 w-4" />
+                                Download Brochure
+                              </Button>
+                            </a>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -910,6 +926,21 @@ const Cars = () => {
                                 Call
                               </Button>
                             </a>
+                            {car.brochureUrl && (
+                              <a
+                                href={car.brochureUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download={`${car.slug}-brochure.pdf`}
+                                className="flex-1 min-w-[140px]"
+                                aria-label={`Download ${car.name} brochure`}
+                              >
+                                <Button variant="outline" size="sm" className="w-full gap-1.5 h-9 border-primary/30 hover:bg-primary/5 font-semibold">
+                                  <FileText className="h-4 w-4" />
+                                  Brochure
+                                </Button>
+                              </a>
+                            )}
                             {user && (
                               <Button
                                 variant="outline"
