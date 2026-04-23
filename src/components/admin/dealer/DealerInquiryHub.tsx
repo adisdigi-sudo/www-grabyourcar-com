@@ -533,15 +533,37 @@ export default function DealerInquiryHub() {
                       <div><Label>Name *</Label><Input value={addForm.name} onChange={e => setAddForm(p => ({ ...p, name: e.target.value }))} /></div>
                       <div><Label>WhatsApp Number *</Label><Input value={addForm.whatsapp_number} onChange={e => setAddForm(p => ({ ...p, whatsapp_number: e.target.value }))} placeholder="9876543210" /></div>
                       <div><Label>Brand *</Label>
-                        <Select value={addForm.brand} onValueChange={v => setAddForm(p => ({ ...p, brand: v }))}>
-                          <SelectTrigger><SelectValue placeholder="Select Brand" /></SelectTrigger>
-                          <SelectContent>{brands.map((b: any) => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}</SelectContent>
-                        </Select>
+                        <ComboBoxWithCustom
+                          value={addForm.brand}
+                          onChange={(v) => setAddForm(p => ({ ...p, brand: v }))}
+                          options={brands.map((b: any) => ({ value: b.name, label: b.name }))}
+                          placeholder="Select Brand"
+                          showAllOption={false}
+                          customLabel="Add custom brand"
+                        />
                       </div>
                       <div><Label>Dealer Name</Label><Input value={addForm.dealer_name} onChange={e => setAddForm(p => ({ ...p, dealer_name: e.target.value }))} /></div>
                       <div className="grid grid-cols-2 gap-2">
-                        <div><Label>City</Label><Input value={addForm.city} onChange={e => setAddForm(p => ({ ...p, city: e.target.value }))} /></div>
-                        <div><Label>State</Label><Input value={addForm.state} onChange={e => setAddForm(p => ({ ...p, state: e.target.value }))} /></div>
+                        <div><Label>State</Label>
+                          <ComboBoxWithCustom
+                            value={addForm.state || ""}
+                            onChange={(v) => setAddForm(p => ({ ...p, state: v, city: "" }))}
+                            options={INDIAN_STATES.map((s) => ({ value: s, label: s }))}
+                            placeholder="State"
+                            showAllOption={false}
+                            customLabel="Add custom state"
+                          />
+                        </div>
+                        <div><Label>City</Label>
+                          <ComboBoxWithCustom
+                            value={addForm.city || ""}
+                            onChange={(v) => setAddForm(p => ({ ...p, city: v }))}
+                            options={(addForm.state && INDIAN_CITIES_BY_STATE[addForm.state] ? INDIAN_CITIES_BY_STATE[addForm.state] : ALL_INDIAN_CITIES).map((c) => ({ value: c, label: c }))}
+                            placeholder="City"
+                            showAllOption={false}
+                            customLabel="Add custom city"
+                          />
+                        </div>
                       </div>
                       <Button onClick={handleAddDealer}>Add Dealer</Button>
                     </div>
