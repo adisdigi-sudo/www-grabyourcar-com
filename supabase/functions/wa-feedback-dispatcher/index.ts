@@ -201,6 +201,10 @@ Deno.serve(async (req) => {
           message_context: `feedback_${vertical}`,
           name,
           logEvent: `feedback_${vertical}_won`,
+          intent: "feedback",
+          intent_meta: { vertical, recordId: body.recordId, method: "free_text" },
+          lead_id: body.recordId || null,
+          vertical,
         },
       });
       return new Response(JSON.stringify({
@@ -224,6 +228,10 @@ Deno.serve(async (req) => {
         message_context: `feedback_${vertical}`,
         name,
         logEvent: `feedback_${vertical}_won`,
+        intent: "feedback",
+        intent_meta: { vertical, recordId: body.recordId, tier: isV2(approved.name) ? "utility_v2" : "marketing_v1" },
+        lead_id: body.recordId || null,
+        vertical,
       },
     });
 
