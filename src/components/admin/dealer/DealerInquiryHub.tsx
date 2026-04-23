@@ -80,7 +80,7 @@ export default function DealerInquiryHub() {
   const [bulkBrand, setBulkBrand] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [sendMode, setSendMode] = useState<"template_then_text" | "template_only" | "text_only">("text_only");
-  const [metaTemplate, setMetaTemplate] = useState("booking_confirmation");
+  const [metaTemplate, setMetaTemplate] = useState("welcome_new_lead");
   const [addForm, setAddForm] = useState({ name: "", whatsapp_number: "", dealer_name: "", brand: "", city: "", state: "" });
 
   // Data queries
