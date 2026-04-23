@@ -423,11 +423,16 @@ export default function DealerInquiryHub() {
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4" activationMode="manual">
       <TabsList>
         <TabsTrigger value="inquiry" className="gap-1"><Car className="h-4 w-4" /> Smart Inquiry</TabsTrigger>
+        <TabsTrigger value="stock" className="gap-1"><Package className="h-4 w-4" /> Stock Hub</TabsTrigger>
         <TabsTrigger value="conversations" className="gap-1"><MessagesSquare className="h-4 w-4" /> Conversations</TabsTrigger>
         <TabsTrigger value="flow" className="gap-1"><Workflow className="h-4 w-4" /> Reply Flow</TabsTrigger>
         <TabsTrigger value="tracker" className="gap-1"><Activity className="h-4 w-4" /> Live Tracker</TabsTrigger>
         <TabsTrigger value="history" className="gap-1"><History className="h-4 w-4" /> Campaign History</TabsTrigger>
       </TabsList>
+
+      <TabsContent value="stock" className="space-y-4">
+        {activeTab === "stock" ? <DealerStockHub /> : null}
+      </TabsContent>
 
       <TabsContent value="conversations" className="space-y-4">
         {activeTab === "conversations" ? <DealerConversationsHub /> : null}
