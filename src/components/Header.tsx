@@ -381,13 +381,23 @@ export const Header = () => {
 
             {/* Contact Buttons */}
             <div className="mt-auto flex gap-2 pb-4">
-              <a href="https://wa.me/1155578093" target="_blank" rel="noopener noreferrer" className="flex-1">
+              <a
+                href="https://wa.me/1155578093"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1"
+                onClick={() => trackWhatsAppClick("header-mobile:whatsapp")}
+              >
                 <Button variant="whatsapp" className="w-full h-10 text-sm">
                   <MessageCircle className="h-4 w-4 mr-1.5" />
                   WhatsApp
                 </Button>
               </a>
-              <a href="tel:+1155578093" className="flex-1">
+              <a
+                href="tel:+1155578093"
+                className="flex-1"
+                onClick={() => trackCallClick("header-mobile:call")}
+              >
                 <Button variant="call" className="w-full h-10 text-sm">
                   <Phone className="h-4 w-4 mr-1.5" />
                   Call Now
