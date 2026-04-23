@@ -95,6 +95,7 @@ Deno.serve(async (req) => {
     const oemSources: string[] = [];
     if (brandLower === 'kia') oemSources.push(buildKiaIndiaShowroomUrl(body.modelName));
     if (brandLower === 'hyundai') oemSources.push(buildHyundaiIndiaShowroomUrl(body.modelName));
+    if (brandLower === 'tata' || brandLower === 'tata motors') oemSources.push(...buildTataSourceUrls(body.modelName));
 
     const sources: string[] = body.sourceUrls && body.sourceUrls.length
       ? body.sourceUrls
