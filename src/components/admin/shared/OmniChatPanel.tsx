@@ -288,14 +288,6 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
     try {
       const { data: inboxThreads, error: inboxError } = await supabase
         .from("wa_conversations")
-        .select("id, phone, customer_name, last_message, last_message_at, unread_count")
-        .order("last_message_at", { ascending: false })
-        .limit(200);
-
-      if (inboxError) throw inboxError;
-
-      const { data: inboxThreads, error: inboxError } = await supabase
-        .from("wa_conversations")
         .select("id, phone, customer_name, last_message, last_message_at, unread_count, window_expires_at")
         .order("last_message_at", { ascending: false })
         .limit(200);
