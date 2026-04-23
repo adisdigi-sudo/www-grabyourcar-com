@@ -36,7 +36,39 @@ function normalizePhone(raw: string | null | undefined): string | null {
   return null;
 }
 
-function buildVariables(vertical: string, payload: Record<string, unknown>) {
+// V2 (UTILITY) templates use FEWER variables — strict transactional, no feedback links/buttons rely on quick replies
+function buildVariablesV2(vertical: string, payload: Record<string, unknown>) {
+  const name = String(payload.name || payload.customer_name || "Customer");
+  switch (vertical) {
+    case "insurance":
+      return {
+        "1": name,
+        "2": String(payload.policy_number || payload.policy || "N/A"),
+        "3": String(payload.insurer || "your insurer"),
+      };
+    case "loans":
+      return {
+        "1": name,
+        "2": String(payload.bank_name || payload.lender_name || "your lender"),
+        "3": String(payload.loan_amount || payload.disbursement_amount || "N/A"),
+      };
+    case "hsrp":
+      return {
+        "1": name,
+        "2": String(payload.vehicle_number || payload.registration_number || "N/A"),
+      };
+    case "sales":
+      return {
+        "1": name,
+        "2": String(payload.deal_number || payload.car_model || payload.vehicle || "your order"),
+      };
+    default:
+      return { "1": name };
+  }
+}
+
+// V1 (MARKETING) — original variable mapping with feedback links
+function buildVariablesV1(vertical: string, payload: Record<string, unknown>) {
   const name = String(payload.name || payload.customer_name || "Customer");
   const feedbackLink = `${FEEDBACK_BASE}?v=${vertical}${payload.recordId ? `&id=${payload.recordId}` : ""}`;
 
@@ -77,6 +109,10 @@ function buildVariables(vertical: string, payload: Record<string, unknown>) {
   }
 }
 
+function isV2(name: string) {
+  return name.endsWith("_v2");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -92,8 +128,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const templateName = TEMPLATE_MAP[vertical];
-    if (!templateName) {
+    const candidates = TEMPLATE_CANDIDATES[vertical];
+    if (!candidates || candidates.length === 0) {
       return new Response(JSON.stringify({ ok: false, error: `Unknown vertical: ${vertical}` }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -117,23 +153,20 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Verify template is approved
-    const { data: tpl } = await supabase
+    // Find the first APPROVED template from candidates (v2 first, v1 fallback)
+    const { data: rows } = await supabase
       .from("wa_templates")
       .select("name, status, body, variables")
-      .eq("name", templateName)
-      .maybeSingle();
+      .in("name", candidates);
 
-    if (!tpl) {
-      return new Response(JSON.stringify({ ok: false, error: `Template ${templateName} not found` }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const approved = (candidates
+      .map((cn) => (rows || []).find((r: any) => r.name === cn))
+      .filter(Boolean) as any[])
+      .find((r) => String(r.status || "").toLowerCase() === "approved");
 
-    const variables = buildVariables(vertical, { ...body, ...(body.variables || {}) });
-
-    // If template not approved yet — fall back to plain text only if 24hr window is open
-    if (tpl.status !== "approved") {
+    // If NONE approved — try free plain text from preferred candidate if 24h window open
+    if (!approved) {
+      const preferred = (rows || []).find((r: any) => r.name === candidates[0]) || (rows || [])[0];
       const { data: convo } = await supabase
         .from("wa_conversations")
         .select("window_expires_at")
@@ -142,17 +175,20 @@ Deno.serve(async (req) => {
 
       const windowOpen = convo?.window_expires_at && new Date(convo.window_expires_at) > new Date();
 
-      if (!windowOpen) {
+      if (!windowOpen || !preferred?.body) {
         return new Response(JSON.stringify({
           ok: false,
-          skipped: "template_not_approved_and_window_closed",
-          template_status: tpl.status,
-          message: `Template "${templateName}" is in "${tpl.status}" — submit to Meta for approval.`,
+          skipped: "no_approved_template_and_window_closed",
+          candidates,
+          message: `None of ${candidates.join(", ")} are approved. Submit/await Meta approval.`,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Window open — render preview as plain text and send free
-      let rendered = String(tpl.body || "");
+      const variables = isV2(preferred.name)
+        ? buildVariablesV2(vertical, { ...body, ...(body.variables || {}) })
+        : buildVariablesV1(vertical, { ...body, ...(body.variables || {}) });
+
+      let rendered = String(preferred.body || "");
       Object.entries(variables).forEach(([k, v]) => {
         rendered = rendered.replace(new RegExp(`\\{\\{${k}\\}\\}`, "g"), String(v));
       });
@@ -174,12 +210,16 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Template approved — send via template (UTILITY = ₹0.12)
+    // Approved template found — send via template
+    const variables = isV2(approved.name)
+      ? buildVariablesV2(vertical, { ...body, ...(body.variables || {}) })
+      : buildVariablesV1(vertical, { ...body, ...(body.variables || {}) });
+
     const { data, error } = await supabase.functions.invoke("whatsapp-send", {
       body: {
         to: phone,
         messageType: "template",
-        template_name: templateName,
+        template_name: approved.name,
         template_variables: variables,
         message_context: `feedback_${vertical}`,
         name,
@@ -190,7 +230,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       ok: !error && (data?.success ?? true),
       method: "template",
-      template: templateName,
+      template: approved.name,
+      tier: isV2(approved.name) ? "utility_v2" : "marketing_v1",
       error: error?.message || data?.error,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
