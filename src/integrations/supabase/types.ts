@@ -6419,6 +6419,54 @@ export type Database = {
           },
         ]
       }
+      dealer_reply_flows: {
+        Row: {
+          ai_fallback: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          keywords: string[]
+          last_triggered_at: string | null
+          match_type: string
+          priority: number
+          reply_template: string | null
+          rule_name: string
+          trigger_count: number
+          updated_at: string
+        }
+        Insert: {
+          ai_fallback?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          last_triggered_at?: string | null
+          match_type?: string
+          priority?: number
+          reply_template?: string | null
+          rule_name: string
+          trigger_count?: number
+          updated_at?: string
+        }
+        Update: {
+          ai_fallback?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          last_triggered_at?: string | null
+          match_type?: string
+          priority?: number
+          reply_template?: string | null
+          rule_name?: string
+          trigger_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       dealer_representatives: {
         Row: {
           brand: string
