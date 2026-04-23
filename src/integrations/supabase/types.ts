@@ -14671,6 +14671,65 @@ export type Database = {
           },
         ]
       }
+      message_templates: {
+        Row: {
+          category: string | null
+          components: Json
+          created_at: string
+          id: string
+          language: string
+          meta_template_id: string | null
+          name: string
+          quality_score: Json | null
+          rejection_reason: string | null
+          status: string | null
+          synced_at: string
+          updated_at: string
+          user_id: string
+          whatsapp_account_id: string
+        }
+        Insert: {
+          category?: string | null
+          components?: Json
+          created_at?: string
+          id?: string
+          language?: string
+          meta_template_id?: string | null
+          name: string
+          quality_score?: Json | null
+          rejection_reason?: string | null
+          status?: string | null
+          synced_at?: string
+          updated_at?: string
+          user_id: string
+          whatsapp_account_id: string
+        }
+        Update: {
+          category?: string | null
+          components?: Json
+          created_at?: string
+          id?: string
+          language?: string
+          meta_template_id?: string | null
+          name?: string
+          quality_score?: Json | null
+          rejection_reason?: string | null
+          status?: string | null
+          synced_at?: string
+          updated_at?: string
+          user_id?: string
+          whatsapp_account_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_whatsapp_account_id_fkey"
+            columns: ["whatsapp_account_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           attachments: Json | null
@@ -21383,6 +21442,84 @@ export type Database = {
           },
         ]
       }
+      whatsapp_accounts: {
+        Row: {
+          business_name: string | null
+          code_verification_status: string | null
+          created_at: string
+          display_phone_number: string | null
+          encrypted_access_token: string
+          encrypted_pin: string | null
+          id: string
+          last_sync_error: string | null
+          last_synced_at: string | null
+          messaging_limit: string | null
+          phone_number_id: string
+          phone_registered: boolean
+          platform_type: string | null
+          quality_rating: string | null
+          setup_completed_at: string | null
+          status: string
+          throughput_level: string | null
+          updated_at: string
+          user_id: string
+          verified_name: string | null
+          waba_id: string
+          webhook_subscribed: boolean
+          webhook_verify_token: string | null
+        }
+        Insert: {
+          business_name?: string | null
+          code_verification_status?: string | null
+          created_at?: string
+          display_phone_number?: string | null
+          encrypted_access_token: string
+          encrypted_pin?: string | null
+          id?: string
+          last_sync_error?: string | null
+          last_synced_at?: string | null
+          messaging_limit?: string | null
+          phone_number_id: string
+          phone_registered?: boolean
+          platform_type?: string | null
+          quality_rating?: string | null
+          setup_completed_at?: string | null
+          status?: string
+          throughput_level?: string | null
+          updated_at?: string
+          user_id: string
+          verified_name?: string | null
+          waba_id: string
+          webhook_subscribed?: boolean
+          webhook_verify_token?: string | null
+        }
+        Update: {
+          business_name?: string | null
+          code_verification_status?: string | null
+          created_at?: string
+          display_phone_number?: string | null
+          encrypted_access_token?: string
+          encrypted_pin?: string | null
+          id?: string
+          last_sync_error?: string | null
+          last_synced_at?: string | null
+          messaging_limit?: string | null
+          phone_number_id?: string
+          phone_registered?: boolean
+          platform_type?: string | null
+          quality_rating?: string | null
+          setup_completed_at?: string | null
+          status?: string
+          throughput_level?: string | null
+          updated_at?: string
+          user_id?: string
+          verified_name?: string | null
+          waba_id?: string
+          webhook_subscribed?: boolean
+          webhook_verify_token?: string | null
+        }
+        Relationships: []
+      }
       whatsapp_broadcasts: {
         Row: {
           completed_at: string | null
@@ -21895,6 +22032,7 @@ export type Database = {
         Returns: string
       }
       cleanup_expired_quotes: { Args: never; Returns: undefined }
+      decrypt_token: { Args: { encrypted_token: string }; Returns: string }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -21909,6 +22047,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      encrypt_token: { Args: { plain_token: string }; Returns: string }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number

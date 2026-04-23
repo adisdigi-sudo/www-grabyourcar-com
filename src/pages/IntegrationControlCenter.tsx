@@ -24,6 +24,8 @@ import {
   Clock,
 } from "lucide-react";
 import { format } from "date-fns";
+import { Plug } from "lucide-react";
+import WhatsAppSetupWizard from "@/components/admin/whatsapp/WhatsAppSetupWizard";
 
 type ProviderId =
   | "meta_whatsapp"
@@ -142,6 +144,7 @@ export default function IntegrationControlCenter() {
   const [dryRun, setDryRun] = useState(true);
   const [logs, setLogs] = useState<HealthLog[]>([]);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [waWizardOpen, setWaWizardOpen] = useState(false);
 
   useEffect(() => {
     document.title = "Integration Control Center · GrabYourCar";
@@ -304,22 +307,33 @@ export default function IntegrationControlCenter() {
                         ))}
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant={result?.status === "failure" ? "destructive" : "outline"}
-                      onClick={() => runTest(p.id)}
-                      disabled={isThisLoading || (testingAll && !isThisLoading)}
-                      className="flex-shrink-0"
-                    >
-                      {isThisLoading ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : result ? (
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                      ) : (
-                        <PlayCircle className="h-4 w-4 mr-2" />
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      {p.id === "meta_whatsapp" && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => setWaWizardOpen(true)}
+                        >
+                          <Plug className="h-4 w-4 mr-2" />
+                          Connect & Save
+                        </Button>
                       )}
-                      {result ? "Re-test" : "Test"}
-                    </Button>
+                      <Button
+                        size="sm"
+                        variant={result?.status === "failure" ? "destructive" : "outline"}
+                        onClick={() => runTest(p.id)}
+                        disabled={isThisLoading || (testingAll && !isThisLoading)}
+                      >
+                        {isThisLoading ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : result ? (
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                        ) : (
+                          <PlayCircle className="h-4 w-4 mr-2" />
+                        )}
+                        {result ? "Re-test" : "Test"}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -364,6 +378,16 @@ export default function IntegrationControlCenter() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <WhatsAppSetupWizard
+        open={waWizardOpen}
+        onOpenChange={setWaWizardOpen}
+        onConnected={() => {
+          loadLogs();
+          loadLatestResults();
+          runTest("meta_whatsapp");
+        }}
+      />
     </div>
   );
 }
