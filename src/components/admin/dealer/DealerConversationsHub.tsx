@@ -449,7 +449,13 @@ export default function DealerConversationsHub() {
                       </div>
                       <div>
                         <p className="font-semibold text-sm">{selectedThread.rep_name || selectedThread.dealer_name || selectedThread.phone}</p>
-                        <div className="flex gap-2 items-center">
+                        <div className="flex gap-2 items-center flex-wrap mt-0.5">
+                          <StatusBadge status={selectedThread.lastStatus} />
+                          {selectedThread.unreadReplies > 0 && (
+                            <Badge className="bg-green-500 text-white text-[9px] h-4 px-1.5">
+                              {selectedThread.unreadReplies} {selectedThread.unreadReplies === 1 ? "reply" : "replies"}
+                            </Badge>
+                          )}
                           {selectedThread.brand && <Badge variant="outline" className="text-[9px]">{selectedThread.brand}</Badge>}
                           {selectedThread.dealer_name && <span className="text-xs text-muted-foreground">{selectedThread.dealer_name}</span>}
                           <span className="text-xs text-muted-foreground font-mono">📞 {selectedThread.phone}</span>
