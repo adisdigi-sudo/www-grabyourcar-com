@@ -321,12 +321,14 @@ const WorkspaceSelector = () => {
         </div>
       </div>
 
-      <VerticalPasswordDialog
-        vertical={passwordTarget}
-        open={!!passwordTarget}
-        onClose={() => setPasswordTarget(null)}
-        onSuccess={handlePasswordSuccess}
-      />
+      {passwordTarget && (
+        <VerticalPasswordDialog
+          vertical={passwordTarget}
+          open={!!passwordTarget}
+          onClose={() => setPasswordTarget(null)}
+          onSuccess={handlePasswordSuccess}
+        />
+      )}
 
       {healthOpen && <WorkspaceHealthDialog open={healthOpen} onOpenChange={setHealthOpen} />}
     </main>
