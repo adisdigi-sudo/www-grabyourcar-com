@@ -15,6 +15,10 @@ import {
   IndianRupee,
   ArrowUpRight,
   RefreshCw,
+  Bot,
+  BarChart3,
+  FileText,
+  Brain,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +38,24 @@ const MarketingCommandCenter = lazy(() =>
 );
 const AdSpendAnalytics = lazy(() =>
   import("./AdSpendAnalytics").then((m) => ({ default: m.AdSpendAnalytics })),
+);
+const AutomationCommandCenter = lazy(() =>
+  import("@/components/admin/AutomationCommandCenter"),
+);
+const AIAutomationHub = lazy(() =>
+  import("@/components/admin/automation/AIAutomationHub").then((m) => ({ default: m.AIAutomationHub })),
+);
+const TemplatesHub = lazy(() =>
+  import("@/components/admin/templates-hub/TemplatesHub").then((m) => ({ default: m.TemplatesHub })),
+);
+const UnifiedCustomerProfile = lazy(() =>
+  import("@/components/admin/unified/UnifiedCustomerProfile").then((m) => ({ default: m.UnifiedCustomerProfile })),
+);
+const RevenueIntelligenceDashboard = lazy(() =>
+  import("@/components/admin/RevenueIntelligenceDashboard").then((m) => ({ default: m.RevenueIntelligenceDashboard })),
+);
+const JourneyAutomationPanel = lazy(() =>
+  import("@/components/admin/JourneyAutomationPanel").then((m) => ({ default: m.JourneyAutomationPanel })),
 );
 
 const SectionFallback = () => (
@@ -238,6 +260,26 @@ export function MarketingTechHub() {
               Google + Meta
             </Badge>
           </TabsTrigger>
+          <TabsTrigger value="automation" className="gap-2">
+            <Bot className="h-4 w-4" />
+            <span>Automation</span>
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-2">
+            <Brain className="h-4 w-4" />
+            <span>AI Hub</span>
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="gap-2">
+            <FileText className="h-4 w-4" />
+            <span>Templates</span>
+          </TabsTrigger>
+          <TabsTrigger value="customers" className="gap-2">
+            <Users className="h-4 w-4" />
+            <span>Customers</span>
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            <span>Analytics</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="whatsapp">
@@ -267,6 +309,39 @@ export function MarketingTechHub() {
         <TabsContent value="ads">
           <Suspense fallback={<SectionFallback />}>
             <AdsTab />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="automation">
+          <Suspense fallback={<SectionFallback />}>
+            <div className="space-y-4">
+              <AutomationCommandCenter />
+              <JourneyAutomationPanel />
+            </div>
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="ai">
+          <Suspense fallback={<SectionFallback />}>
+            <AIAutomationHub />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="templates">
+          <Suspense fallback={<SectionFallback />}>
+            <TemplatesHub />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="customers">
+          <Suspense fallback={<SectionFallback />}>
+            <UnifiedCustomerProfile />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <Suspense fallback={<SectionFallback />}>
+            <RevenueIntelligenceDashboard />
           </Suspense>
         </TabsContent>
       </Tabs>

@@ -171,54 +171,17 @@ const navItems: NavItem[] = [
   },
 
   // ══════════════════════════════════════════════════
-  // MARKETING & TECH WORKSPACE — comprehensive hub
+  // MARKETING & TECH WORKSPACE — clean unified structure
+  // (All campaigns/email/whatsapp/automation/templates/analytics live inside Marketing Hub as tabs)
   // ══════════════════════════════════════════════════
 
-  // ── Manager Tools ──
-  { id: "manager-dashboard", label: "📊 Manager Dashboard", icon: BarChart3, badge: "New",
+  // ── Single entry point ──
+  { id: "marketing-tech-hub", label: "🚀 Marketing Hub", icon: Rocket, badge: "All-in-1",
     verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "team-engagement", label: "🏆 Team Engagement", icon: BarChart3, badge: "New",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "error-prevention", label: "⚠️ Error Prevention", icon: BarChart3,
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "workflow-engine", label: "⚙️ Workflow Engine", icon: BarChart3,
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
+    allowedRoles: ["super_admin", "admin", "marketing"] },
 
-  // ── Cross-Vertical Intelligence ──
-  { id: "unified-crm", label: "🧠 Unified Customers", icon: Users, badge: "New",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "unified-intelligence", label: "🔗 Cross-Vertical Intel", icon: Sparkles, badge: "AI",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "journey-automation", label: "⚡ Journey Automation", icon: Sparkles, badge: "New",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "automation-center", label: "🤖 Automation Center", icon: Sparkles, badge: "🔥",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "auto-pilot", label: "🚀 Auto-Pilot", icon: Sparkles, badge: "AI",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "templates-hub", label: "📝 Templates Hub", icon: MessageCircle, badge: "🔥",
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "lead-routing", label: "🔀 Lead Routing", icon: Users, badge: "New",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin", "finance"] },
-  { id: "ad-spend-analytics", label: "📈 Ad Spend & CAC", icon: BarChart3, badge: "New",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "employee-performance", label: "🏆 Employee Performance", icon: BarChart3, badge: "New",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "ai-automation-hub", label: "🤖 AI Automation Hub", icon: Brain, badge: "🔥",
+  // ── Manager Dashboard ──
+  { id: "manager-dashboard", label: "📊 Manager Dashboard", icon: BarChart3,
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin"] },
 
@@ -255,19 +218,6 @@ const navItems: NavItem[] = [
     ]
   },
 
-  // ── Social Proof — marketing only ──
-  { 
-    id: "socialproof", 
-    label: "⭐ Social Proof", 
-    icon: Users,
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin", "marketing"],
-    children: [
-      { id: "socialproof-reviews", label: "Google Reviews", icon: MessageSquare },
-      { id: "socialproof-stories", label: "Delivery Stories", icon: Image },
-    ]
-  },
-
   // ── Content — marketing only ──
   { 
     id: "content", 
@@ -284,57 +234,55 @@ const navItems: NavItem[] = [
     ]
   },
 
-  // ── Marketing & Tech (unified hub) ──
-  {
-    id: "marketing",
-    label: "📢 Marketing & Tech",
+  // ── Social Proof — marketing only ──
+  { 
+    id: "socialproof", 
+    label: "⭐ Social Proof", 
     icon: Users,
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
-      { id: "marketing-tech-hub", label: "🚀 Hub (WhatsApp · Web · Brand · Email · Ads)", icon: Rocket, badge: "New" },
-      { id: "wa-pdf-automation", label: "📄 WA PDF Auto-Send", icon: FileText },
-      { id: "smart-excel", label: "📊 Smart Excel Upload", icon: Database },
-      { id: "marketing-bulk", label: "Bulk Data Manager", icon: Database },
+      { id: "socialproof-reviews", label: "Google Reviews", icon: MessageSquare },
+      { id: "socialproof-stories", label: "Delivery Stories", icon: Image },
     ]
   },
 
-  // ── Integrations — super admin only ──
-  { 
-    id: "integrations", 
-    label: "🔌 Integrations", 
-    icon: Settings,
+  // ── Bulk data ops ──
+  { id: "marketing-bulk", label: "📦 Bulk Data Manager", icon: Database,
     verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"],
-    children: [
-      { id: "integrations-api", label: "API Portal", icon: Database },
-      { id: "open-api-portal", label: "Open API Keys", icon: KeyRound },
-      { id: "integrations-shipping", label: "Shipping Partners", icon: Package },
-      { id: "integrations-payments", label: "Payment Gateway", icon: CreditCard },
-      { id: "integrations-ad-tracking", label: "Ad Tracking", icon: BarChart3 },
-    ]
-  },
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "smart-excel", label: "📊 Smart Excel Upload", icon: Database,
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"] },
 
-  // ── Profile & Settings — super admin only ──
+  // ── Settings & Integrations (consolidated) ──
   { 
     id: "profile", 
-    label: "⚙️ Profile & Settings", 
-    icon: UserCog,
+    label: "⚙️ Settings & Integrations", 
+    icon: Settings,
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin"],
     children: [
       { id: "profile-business", label: "Business Profile", icon: Settings },
       { id: "profile-logo", label: "Logo & Branding", icon: Palette },
-      { id: "profile-users", label: "User Management", icon: Users },
       { id: "profile-contact", label: "Contact Config", icon: MessageSquare },
       { id: "profile-otp", label: "OTP & Verification", icon: Shield },
+      { id: "integrations-api", label: "API Portal", icon: Database },
+      { id: "open-api-portal", label: "Open API Keys", icon: KeyRound },
+      { id: "integrations-shipping", label: "Shipping Partners", icon: Package },
+      { id: "integrations-payments", label: "Payment Gateway", icon: CreditCard },
+      { id: "integrations-ad-tracking", label: "Ad Tracking", icon: BarChart3 },
+      { id: "wa-pdf-automation", label: "WA PDF Auto-Send", icon: FileText },
     ]
   },
-  { id: "roles", label: "👥 User Roles", icon: UserCog, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
+
+  // ── Team management ──
+  { id: "profile-users", label: "👥 User Management", icon: Users, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
+  { id: "roles", label: "🔑 User Roles", icon: UserCog, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
   { id: "team-hierarchy", label: "🏛️ Team Hierarchy", icon: Users, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
   { id: "my-team", label: "👥 My Team", icon: Users, allowedRoles: ["super_admin", "admin", "team_leader", "manager"] },
   { id: "data-room", label: "📊 Data Room", icon: BarChart3, verticals: ["marketing"], allowedRoles: ["super_admin"] },
-  { id: "settings", label: "⚙️ Site Settings", icon: Settings, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
+  { id: "settings", label: "🔧 Site Settings", icon: Settings, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
 
   // ── Accounts & Finance (Zoho Books style) ──
   { 
