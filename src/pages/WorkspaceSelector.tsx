@@ -328,7 +328,7 @@ const WorkspaceSelector = () => {
         onSuccess={handlePasswordSuccess}
       />
 
-      <WorkspaceHealthDialog open={healthOpen} onOpenChange={setHealthOpen} />
+      {healthOpen && <WorkspaceHealthDialog open={healthOpen} onOpenChange={setHealthOpen} />}
     </main>
   );
 };
