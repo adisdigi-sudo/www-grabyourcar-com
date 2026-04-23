@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,79 @@ interface Template {
 }
 
 const CATEGORIES = ["Marketing", "Utility", "Authentication"];
+
+// Available merge variables across all GYC verticals — click to insert into template body
+const AVAILABLE_VARIABLES: { group: string; vars: { key: string; label: string }[] }[] = [
+  {
+    group: "Customer",
+    vars: [
+      { key: "customer_name", label: "Customer name" },
+      { key: "first_name", label: "First name" },
+      { key: "phone", label: "Phone" },
+      { key: "email", label: "Email" },
+      { key: "city", label: "City" },
+    ],
+  },
+  {
+    group: "Vehicle",
+    vars: [
+      { key: "vehicle", label: "Vehicle" },
+      { key: "vehicle_number", label: "Vehicle number" },
+      { key: "vehicle_make", label: "Make" },
+      { key: "vehicle_model", label: "Model" },
+      { key: "service_type", label: "Service type" },
+    ],
+  },
+  {
+    group: "Insurance / Policy",
+    vars: [
+      { key: "policy_number", label: "Policy number" },
+      { key: "insurer", label: "Insurer" },
+      { key: "premium_amount", label: "Premium" },
+      { key: "expiry_date", label: "Expiry date" },
+      { key: "start_date", label: "Start date" },
+    ],
+  },
+  {
+    group: "Booking / Order",
+    vars: [
+      { key: "booking_id", label: "Booking ID" },
+      { key: "order_id", label: "Order ID" },
+      { key: "amount", label: "Amount" },
+      { key: "date", label: "Date" },
+      { key: "agent_name", label: "Agent name" },
+    ],
+  },
+  {
+    group: "Feedback / Links",
+    vars: [
+      { key: "rating_link", label: "Rating link" },
+      { key: "feedback_link", label: "Feedback link" },
+      { key: "review_link", label: "Google review link" },
+      { key: "support_phone", label: "Support phone" },
+    ],
+  },
+];
+
+const FEEDBACK_TEMPLATE_STARTER = `Hi {{customer_name}} 👋
+
+🎉 Hip Hip Hooray! Your {{service_type}} with Grabyourcar is successfully completed 🚗✨
+
+We truly appreciate you choosing us — and we're always here to make your car journey smooth and hassle-free.
+
+🙏 Could you please take 10 seconds to rate your experience?
+
+⭐ Rate us from 0 to 5
+(0 = Not satisfied, 5 = Excellent)
+
+Just reply with a number 😊
+
+💬 Share more feedback here: {{feedback_link}}
+🌟 Loved our service? Drop a Google review: {{review_link}}
+
+Thank you once again ❤️
+Team Grabyourcar
+📞 {{support_phone}}`;
 
 function hasMetaVariableRatioIssue(body: string) {
   const normalizedBody = body.replace(/\{\{([^}]+)\}\}/g, (_match, inner: string) => `{{${inner.trim()}}}`);
