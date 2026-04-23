@@ -62,6 +62,7 @@ const AI_SCRIPTS = [
   { id: "discount_qualify", label: "Discount Qualification", script: "Ask about: 1) Best discount amount (cash + exchange + corporate) 2) Is this discount negotiable? 3) Any additional accessories free? 4) Delivery timeline 5) Valid till when?" },
   { id: "stock_qualify", label: "Stock & Availability", script: "Ask about: 1) Exact variant and color in stock 2) Manufacturing year of available unit 3) Demo car or fresh stock? 4) Can book and hold for 48 hrs? 5) Any similar alternatives?" },
   { id: "full_qualify", label: "Full Qualification", script: "Ask about: 1) Best on-road price after all discounts 2) Exchange bonus for old car 3) Finance options and rates 4) Free accessories or insurance 5) Delivery timeline 6) Test drive availability" },
+  { id: "short_template", label: "✏️ Short Custom Template", script: "Hi {rep_name}, quick check on *{brand} {model}* — best on-road price & delivery date please?\n— GrabYourCar" },
   { id: "custom", label: "Custom Script", script: "" },
 ];
 
@@ -711,9 +712,22 @@ export default function DealerInquiryHub() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {aiScript === "custom" ? (
-                    <Textarea value={customScript} onChange={e => setCustomScript(e.target.value)} rows={4}
-                      placeholder="Write your AI follow-up questions..." className="text-xs" />
+                  {aiScript === "custom" || aiScript === "short_template" ? (
+                    <div className="space-y-1">
+                      <Textarea
+                        value={aiScript === "short_template" ? (customScript || AI_SCRIPTS.find(s => s.id === "short_template")?.script || "") : customScript}
+                        onChange={e => setCustomScript(e.target.value)}
+                        rows={4}
+                        placeholder="Hi {rep_name}, quick check on *{brand} {model}* — best on-road price & delivery date?"
+                        className="text-xs font-mono"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Variables: <code>{`{rep_name}`}</code> <code>{`{dealer_name}`}</code> <code>{`{brand}`}</code> <code>{`{model}`}</code> <code>{`{variant}`}</code> <code>{`{color}`}</code> — keep it short (under 280 chars).
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Current length: <span className={(customScript || "").length > 280 ? "text-destructive font-semibold" : "text-green-600"}>{(customScript || "").length} chars</span>
+                      </p>
+                    </div>
                   ) : (
                     <p className="text-xs text-muted-foreground bg-white p-2 rounded border">
                       {AI_SCRIPTS.find(s => s.id === aiScript)?.script}
