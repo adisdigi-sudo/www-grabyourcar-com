@@ -471,11 +471,7 @@ serve(async (req) => {
             : mode === "text_only"
               ? windowOpen
               : false);
-        const actualMode = shouldAutoOpenWindow
-          ? templateCanCarryInquiry
-            ? "template_only"
-            : "template_then_text"
-          : mode;
+        const actualMode = shouldAutoOpenWindow ? "template_only" : mode;
 
         // Build per-dealer template with their name as first variable
         const dealerName = recipientInfo.rep_name || recipientInfo.dealer_name || "Partner";
