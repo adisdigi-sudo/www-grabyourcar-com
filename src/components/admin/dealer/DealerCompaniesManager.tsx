@@ -52,9 +52,11 @@ export default function DealerCompaniesManager() {
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ["dealer-companies"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("dealer_companies").select("*").order("priority_level", { ascending: false });
+      const { data, error } = await supabase.from("dealer_companies")
+        .select("*, dealer_representatives(name, phone, whatsapp_number)")
+        .order("priority_level", { ascending: false });
       if (error) throw error;
-      return data as DealerCompany[];
+      return data as any[];
     },
   });
 
@@ -252,7 +254,18 @@ export default function DealerCompaniesManager() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-0.5 text-xs">
-                          {c.contact_phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{c.contact_phone}</span>}
+                          {(() => {
+                            const reps = (c as any).dealer_representatives || [];
+                            const repPhone = reps.find((r: any) => r.whatsapp_number || r.phone);
+                            const phone = c.contact_phone || repPhone?.whatsapp_number || repPhone?.phone;
+                            return phone ? (
+                              <span className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                <a href={`tel:${phone}`} className="hover:underline">{phone}</a>
+                                {!c.contact_phone && repPhone?.name && <span className="text-muted-foreground">({repPhone.name})</span>}
+                              </span>
+                            ) : <span className="text-muted-foreground">—</span>;
+                          })()}
                           {c.contact_email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{c.contact_email}</span>}
                         </div>
                       </TableCell>
