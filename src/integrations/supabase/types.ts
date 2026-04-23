@@ -21839,6 +21839,16 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      dispatch_wa_feedback: {
+        Args: {
+          p_name: string
+          p_phone: string
+          p_record_id: string
+          p_variables?: Json
+          p_vertical: string
+        }
+        Returns: undefined
+      }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number

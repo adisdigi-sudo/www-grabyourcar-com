@@ -22,6 +22,7 @@ import {
   Paperclip,
   FileText,
   Download,
+  LayoutTemplate,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type OmniChannel } from "@/lib/omniSend";
@@ -55,6 +56,15 @@ interface ChatThread {
   channel: string;
   unread_count?: number;
   isDraft?: boolean;
+  window_expires_at?: string | null;
+}
+
+interface TemplateOption {
+  id: string;
+  name: string;
+  display_name: string | null;
+  body: string;
+  variables?: string[] | null;
 }
 
 interface ChatMessage {
@@ -150,9 +160,51 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   const [uploading, setUploading] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const [templates, setTemplates] = useState<TemplateOption[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Load approved templates for fallback when 24hr window closed
+  useEffect(() => {
+    supabase.from("wa_templates").select("id, name, display_name, body, variables").eq("status", "approved").then(({ data }) => {
+      setTemplates((data || []) as TemplateOption[]);
+    });
+  }, []);
+
+  const isWindowOpen = !!(selectedThread?.window_expires_at && new Date(selectedThread.window_expires_at) > new Date());
+
+  async function sendTemplateFromPicker(tpl: TemplateOption) {
+    if (!selectedThread) return;
+    setShowTemplates(false);
+    setSending(true);
+    try {
+      const vars: Record<string, string> = {};
+      (Array.isArray(tpl.variables) ? tpl.variables : []).forEach((k) => {
+        const key = String(k);
+        if (/name/i.test(key) || key === "1" || key === "var_1") vars[key] = selectedThread.customer_name || "Customer";
+        else vars[key] = "";
+      });
+      const { data, error } = await supabase.functions.invoke("whatsapp-send", {
+        body: {
+          to: selectedThread.phone,
+          messageType: "template",
+          template_name: tpl.name,
+          template_variables: vars,
+          message_context: `inbox_template_${tpl.name}`,
+          name: selectedThread.customer_name || "Customer",
+        },
+      });
+      if (error || !data?.success) throw new Error(data?.error || error?.message || "Template send failed");
+      toast({ title: "✅ Template sent", description: tpl.display_name || tpl.name });
+      setTimeout(() => { loadThreads(); if (selectedThread) loadMessages(selectedThread); }, 800);
+    } catch (err) {
+      toast({ title: "Template send failed", description: err instanceof Error ? err.message : "Unknown", variant: "destructive" });
+    } finally {
+      setSending(false);
+    }
+  }
 
   useEffect(() => {
     try {
@@ -278,7 +330,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
     try {
       const { data: inboxThreads, error: inboxError } = await supabase
         .from("wa_conversations")
-        .select("id, phone, customer_name, last_message, last_message_at, unread_count")
+        .select("id, phone, customer_name, last_message, last_message_at, unread_count, window_expires_at")
         .order("last_message_at", { ascending: false })
         .limit(200);
 
@@ -292,6 +344,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
         last_at: thread.last_message_at || new Date().toISOString(),
         channel: "whatsapp",
         unread_count: thread.unread_count || 0,
+        window_expires_at: thread.window_expires_at,
       }));
 
       setThreads(mappedThreads);
@@ -655,6 +708,17 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                   <p className="truncate text-sm font-medium">{selectedThread.customer_name || selectedThread.phone}</p>
                   <p className="text-[10px] text-muted-foreground">{selectedThread.phone}</p>
                 </div>
+                {selectedThread.window_expires_at && (
+                  isWindowOpen ? (
+                    <Badge className="bg-green-100 text-green-700 border-green-200 text-[9px] gap-1">
+                      <Clock className="h-2.5 w-2.5" /> Free window open
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-[9px] gap-1 text-amber-600">
+                      <AlertTriangle className="h-2.5 w-2.5" /> Use template
+                    </Badge>
+                  )
+                )}
                 {channelIcon(selectedThread.channel)}
               </div>
 
@@ -762,6 +826,37 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                     </Button>
                   ))}
                 </div>
+                {selectedThread.window_expires_at && !isWindowOpen && (
+                  <div className="flex items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-2 py-1">
+                    <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                      ⏰ 24hr window closed — use approved template
+                    </p>
+                    <Popover open={showTemplates} onOpenChange={setShowTemplates}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 border-amber-400">
+                          <LayoutTemplate className="h-3 w-3" /> Pick template
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-2" align="end">
+                        <p className="text-xs font-semibold mb-2">📋 Approved Templates</p>
+                        <div className="space-y-1 max-h-56 overflow-auto">
+                          {templates.length === 0 ? (
+                            <p className="text-xs text-muted-foreground p-2">No approved templates</p>
+                          ) : templates.map(tpl => (
+                            <button
+                              key={tpl.id}
+                              onClick={() => sendTemplateFromPicker(tpl)}
+                              className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors"
+                            >
+                              <span className="font-medium">{tpl.display_name || tpl.name}</span>
+                              <p className="text-muted-foreground truncate">{tpl.body}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
                 <div className="flex gap-1.5">
                   <input
                     ref={fileInputRef}
