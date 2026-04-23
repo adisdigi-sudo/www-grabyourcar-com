@@ -19,10 +19,47 @@ export default function DealerBroadcastManager() {
   const qc = useQueryClient();
   const [selectedReps, setSelectedReps] = useState<string[]>([]);
   const [brandFilter, setBrandFilter] = useState("all");
+  const [modelFilter, setModelFilter] = useState("all");
+  const [variantFilter, setVariantFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [message, setMessage] = useState("");
   const [broadcastType, setBroadcastType] = useState("inventory_update");
   const [search, setSearch] = useState("");
+
+  // Load ALL brands from car DB (not just brands that already have dealers)
+  const { data: allCarBrands = [] } = useQuery({
+    queryKey: ["car-brands-broadcast"],
+    queryFn: async () => {
+      const { data } = await supabase.from("car_brands").select("id, name").eq("is_active", true).order("name");
+      return data || [];
+    },
+  });
+
+  // Load models for selected brand from car DB
+  const { data: carModels = [] } = useQuery({
+    queryKey: ["car-models-broadcast", brandFilter],
+    enabled: brandFilter !== "all",
+    queryFn: async () => {
+      const { data: brandRow } = await supabase.from("car_brands").select("id").eq("name", brandFilter).maybeSingle();
+      if (!brandRow) return [];
+      const { data } = await supabase.from("car_models").select("id, name").eq("brand_id", brandRow.id).eq("is_active", true).order("name");
+      return data || [];
+    },
+  });
+
+  // Load variants for selected model
+  const { data: carVariants = [] } = useQuery({
+    queryKey: ["car-variants-broadcast", brandFilter, modelFilter],
+    enabled: brandFilter !== "all" && modelFilter !== "all",
+    queryFn: async () => {
+      const { data: brandRow } = await supabase.from("car_brands").select("id").eq("name", brandFilter).maybeSingle();
+      if (!brandRow) return [];
+      const { data: modelRow } = await supabase.from("car_models").select("id").eq("brand_id", brandRow.id).eq("name", modelFilter).maybeSingle();
+      if (!modelRow) return [];
+      const { data } = await supabase.from("car_variants").select("id, name").eq("model_id", modelRow.id).order("name");
+      return data || [];
+    },
+  });
 
   // Fetch reps with company info
   const { data: reps = [] } = useQuery({
