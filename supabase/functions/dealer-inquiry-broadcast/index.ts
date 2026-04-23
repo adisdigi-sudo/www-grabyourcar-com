@@ -382,7 +382,25 @@ serve(async (req) => {
         const shouldSendTemplate = mode === "template_only" || mode === "template_then_text" || shouldAutoOpenWindow;
         const requiresTextMessage = (mode === "text_only" || mode === "template_then_text") && Boolean(message && message.trim());
         const actualMode = shouldAutoOpenWindow ? "template_then_text" : mode;
-        const activeTemplate = shouldSendTemplate ? approvedTemplate : null;
+
+        // Build per-dealer template with their name as first variable
+        const dealerName = recipientInfo.rep_name || recipientInfo.dealer_name || "Partner";
+        const perDealerValues = [
+          dealerName,
+          ...baseFallback,
+        ];
+        let activeTemplate: ApprovedTemplate | null = null;
+        if (shouldSendTemplate && templateDefinition) {
+          if (rawMetaDefinition?.components) {
+            activeTemplate = {
+              name: templateDefinition.name,
+              language: templateDefinition.language,
+              components: buildTemplateComponents(rawMetaDefinition.components, perDealerValues),
+            };
+          } else {
+            activeTemplate = templateDefinition;
+          }
+        }
 
         if (shouldSendTemplate && !activeTemplate) {
           failed++;
