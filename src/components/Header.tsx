@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/navigation-menu";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ResponsiveLogo } from "@/components/ResponsiveLogo";
+import { trackCallClick, trackWhatsAppClick } from "@/lib/conversionTracking";
 
 const services = [
   {
@@ -232,7 +233,12 @@ export const Header = () => {
                 </Link>
               )}
               
-               <a href="https://wa.me/1155578093?text=Hi%20Grabyourcar!%20I%27m%20interested%20in%20buying%20a%20new%20car%20and%20would%20like%20to%20speak%20with%20an%20expert." target="_blank" rel="noopener noreferrer">
+               <a
+                 href="https://wa.me/1155578093?text=Hi%20Grabyourcar!%20I%27m%20interested%20in%20buying%20a%20new%20car%20and%20would%20like%20to%20speak%20with%20an%20expert."
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 onClick={() => trackWhatsAppClick("header:talk-to-expert")}
+               >
                  <Button variant="whatsapp" size="sm" className="hidden md:flex gap-1.5 font-semibold hover:scale-105 transition-transform px-5">
                    <MessageCircle className="h-4 w-4" />
                    Talk to Expert
