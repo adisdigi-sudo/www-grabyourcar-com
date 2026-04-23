@@ -38,45 +38,166 @@ async function hasOpenConversationWindow(supabase: any, phone: string): Promise<
   );
 }
 
-async function resolveApprovedTemplateName(supabase: any, preferredTemplate?: string | null): Promise<string | null> {
-  const candidates = [preferredTemplate, "insurancefollowup", "welcome_new_lead", "grabyourcarintroduction"]
-    .filter((value): value is string => Boolean(value));
+type ApprovedTemplate = {
+  name: string;
+  language: string;
+  components?: Array<Record<string, unknown>>;
+};
 
-  for (const candidate of candidates) {
-    const { data } = await supabase
-      .from("wa_templates")
-      .select("name, header_type, variables")
-      .eq("name", candidate)
-      .eq("status", "approved")
-      .limit(1);
+function countTemplateParams(text?: string | null): number {
+  return (text?.match(/\{\{\d+\}\}/g) || []).length;
+}
 
-    const tpl = data?.[0];
-    if (!tpl) continue;
+function createTemplateValuePicker(values: string[]) {
+  let cursor = 0;
+  return () => {
+    const picked = values[cursor] || values[values.length - 1] || "GrabYourCar";
+    cursor += 1;
+    return picked;
+  };
+}
 
-    // Skip templates with media headers (image/video/document) — they need a header URL we don't have
-    const headerType = (tpl.header_type || "").toString().toLowerCase();
-    if (["image", "video", "document"].includes(headerType)) continue;
+function hasMediaHeader(components: Array<Record<string, unknown>>): boolean {
+  return components.some((component) => {
+    if (String(component.type || "").toUpperCase() !== "HEADER") return false;
+    const format = String(component.format || "").toUpperCase();
+    return ["IMAGE", "VIDEO", "DOCUMENT"].includes(format);
+  });
+}
 
-    // Skip templates that require body variables we don't have wired up
-    const varCount = Array.isArray(tpl.variables) ? tpl.variables.length : 0;
-    if (varCount > 0) continue;
+function buildTemplateComponents(
+  metaComponents: Array<Record<string, unknown>>,
+  fallbackValues: string[],
+): Array<Record<string, unknown>> {
+  const pickValue = createTemplateValuePicker(fallbackValues);
+  const components: Array<Record<string, unknown>> = [];
 
-    return tpl.name;
+  for (const component of metaComponents) {
+    const type = String(component.type || "").toUpperCase();
+
+    if (type === "BODY" || type === "HEADER") {
+      const headerFormat = String(component.format || "").toUpperCase();
+      if (type === "HEADER" && headerFormat && headerFormat !== "TEXT") continue;
+
+      const paramCount = countTemplateParams(String(component.text || ""));
+      if (paramCount > 0) {
+        components.push({
+          type: type.toLowerCase(),
+          parameters: Array.from({ length: paramCount }, () => ({
+            type: "text",
+            text: pickValue(),
+          })),
+        });
+      }
+    }
+
+    if (type === "BUTTONS" && Array.isArray(component.buttons)) {
+      (component.buttons as Array<Record<string, unknown>>).forEach((button, index) => {
+        const buttonType = String(button.type || "").toUpperCase();
+        const paramCount = countTemplateParams(String(button.url || button.text || ""));
+
+        if (buttonType === "URL" && paramCount > 0) {
+          components.push({
+            type: "button",
+            sub_type: "url",
+            index,
+            parameters: Array.from({ length: paramCount }, () => ({
+              type: "text",
+              text: pickValue(),
+            })),
+          });
+        }
+      });
+    }
   }
 
-  // Last-resort: any approved template with no media header and no body variables
-  const { data: fallback } = await supabase
+  return components;
+}
+
+async function fetchApprovedMetaTemplateDefinition(
+  token: string,
+  businessAccountId: string | null,
+  templateName: string,
+): Promise<ApprovedTemplate | null> {
+  if (!businessAccountId) return null;
+
+  const resp = await fetch(
+    `https://graph.facebook.com/v25.0/${businessAccountId}/message_templates?name=${encodeURIComponent(templateName)}&fields=name,language,status,components&limit=50`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+
+  const json = await resp.json();
+  if (!resp.ok) return null;
+
+  const approved = (json?.data || []).find(
+    (template: Record<string, unknown>) =>
+      String(template.name) === templateName && String(template.status || "").toUpperCase() === "APPROVED",
+  );
+
+  if (!approved) return null;
+
+  return {
+    name: String(approved.name || templateName),
+    language: String(approved.language || "en"),
+    components: Array.isArray(approved.components)
+      ? (approved.components as Array<Record<string, unknown>>)
+      : [],
+  };
+}
+
+async function resolveApprovedTemplate(
+  supabase: any,
+  token: string,
+  businessAccountId: string | null,
+  fallbackValues: string[],
+  preferredTemplate?: string | null,
+): Promise<ApprovedTemplate | null> {
+  const { data: approvedTemplates } = await supabase
     .from("wa_templates")
     .select("name, header_type, variables")
     .eq("status", "approved");
 
-  const safe = (fallback || []).find((t: any) => {
-    const ht = (t.header_type || "").toString().toLowerCase();
-    const vc = Array.isArray(t.variables) ? t.variables.length : 0;
-    return !["image", "video", "document"].includes(ht) && vc === 0;
-  });
+  const candidates = [
+    preferredTemplate,
+    "insurancefollowup",
+    "welcome_new_lead",
+    "grabyourcarintroduction",
+    ...(approvedTemplates || []).map((row: any) => row.name),
+  ].filter((value, index, array): value is string => Boolean(value) && array.indexOf(value) === index);
 
-  return safe?.name || null;
+  for (const candidate of candidates) {
+    const liveTemplate = await fetchApprovedMetaTemplateDefinition(token, businessAccountId, candidate);
+    if (liveTemplate) {
+      if (hasMediaHeader(liveTemplate.components || [])) continue;
+      return {
+        ...liveTemplate,
+        components: buildTemplateComponents(liveTemplate.components || [], fallbackValues),
+      };
+    }
+
+    const cached = (approvedTemplates || []).find((row: any) => row.name === candidate);
+    if (!cached) continue;
+
+    const headerType = String(cached.header_type || "").toLowerCase();
+    if (["image", "video", "document"].includes(headerType)) continue;
+
+    const variableCount = Array.isArray(cached.variables) ? cached.variables.length : 0;
+    return {
+      name: candidate,
+      language: "en",
+      components: variableCount > 0
+        ? [{
+            type: "body",
+            parameters: Array.from({ length: variableCount }, (_, index) => ({
+              type: "text",
+              text: fallbackValues[index] || fallbackValues[fallbackValues.length - 1] || "GrabYourCar",
+            })),
+          }]
+        : [],
+    };
+  }
+
+  return null;
 }
 
 function mergeTrackingData(existing: Record<string, unknown> | null, updates: Record<string, unknown>) {
@@ -93,25 +214,15 @@ async function sendTemplate(
   token: string,
   phoneNumberId: string,
   to: string,
-  templateName: string,
-  variables?: string[]
+  template: ApprovedTemplate,
 ): Promise<{ success: boolean; provider_message_id?: string; error?: string }> {
   const url = `https://graph.facebook.com/v25.0/${phoneNumberId}/messages`;
 
-  // Only add components if there are actual variables
-  const hasVars = variables && variables.length > 0 && variables.some(v => v && v.trim() !== "");
-  
   const templateObj: Record<string, unknown> = {
-    name: templateName,
-    language: { code: "en" },
+    name: template.name,
+    language: { code: template.language || "en" },
+    ...(template.components && template.components.length > 0 ? { components: template.components } : {}),
   };
-
-  if (hasVars) {
-    templateObj.components = [{
-      type: "body",
-      parameters: variables!.filter(v => v && v.trim()).map((val) => ({ type: "text", text: val })),
-    }];
-  }
 
   const body: Record<string, unknown> = {
     messaging_product: "whatsapp",
