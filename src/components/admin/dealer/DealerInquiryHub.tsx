@@ -74,7 +74,7 @@ export default function DealerInquiryHub() {
   const [bulkBrand, setBulkBrand] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [sendMode, setSendMode] = useState<"template_then_text" | "template_only" | "text_only">("text_only");
-  const [metaTemplate, setMetaTemplate] = useState("insurancefollowup");
+  const [metaTemplate, setMetaTemplate] = useState("welcome_new_lead");
   const [addForm, setAddForm] = useState({ name: "", whatsapp_number: "", dealer_name: "", brand: "", city: "", state: "" });
 
   // Data queries
@@ -547,10 +547,10 @@ export default function DealerInquiryHub() {
                     </SelectContent>
                   </Select>
                   {sendMode === "text_only" && (
-                    <p className="text-xs text-green-600 mt-1">✅ Sends direct text inside active chat, otherwise auto-opens with an approved template first</p>
+                    <p className="text-xs text-green-600 mt-1">✅ Direct text bhejega; agar 24-hour chat closed hai to safe approved opener template se window khol dega</p>
                   )}
                   {sendMode === "template_then_text" && (
-                    <p className="text-xs text-muted-foreground mt-1">⚠️ Template requires exact Meta format match (video header etc.)</p>
+                    <p className="text-xs text-muted-foreground mt-1">ℹ️ Pehle approved opener template, uske baad detailed text message jayega</p>
                   )}
                 </div>
 
@@ -561,7 +561,7 @@ export default function DealerInquiryHub() {
                     <Select value={metaTemplate} onValueChange={setMetaTemplate}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="grabyourcarintroduction">🤝 GrabYourCar Introduction</SelectItem>
+                        <SelectItem value="welcome_new_lead">👋 Welcome New Lead</SelectItem>
                         <SelectItem value="insurancefollowup">🛡️ Insurance Follow-up</SelectItem>
                       </SelectContent>
                     </Select>
