@@ -489,7 +489,9 @@ export default function DealerInquiryHub() {
                       <TableRow><TableCell colSpan={5} className="text-center py-8"><Loader2 className="h-4 w-4 animate-spin mx-auto" /></TableCell></TableRow>
                     ) : reps.length === 0 ? (
                       <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        No dealers found. {selectedBrand !== "all" ? `Add dealers for ${selectedBrand}` : "Select a brand first."}
+                        {selectedBrand === "all"
+                          ? "👆 Pehle Brand select karo — sirf us brand ke dealers yahan dikhenge"
+                          : `No active dealers found for ${selectedBrand}. "Add Dealer" se add karo.`}
                       </TableCell></TableRow>
                     ) : reps.map((r: any) => (
                       <TableRow key={r.id} className={`cursor-pointer ${selectedIds.includes(r.id) ? "bg-primary/5" : ""}`}
