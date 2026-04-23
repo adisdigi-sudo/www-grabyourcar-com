@@ -13,9 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import {
-  Send, Package, Sparkles, Loader2, Search, Share2, Trash2, Car, IndianRupee, Inbox,
-} from "lucide-react";
+import { Send, Package, Sparkles, Loader2, Search, Share2, Trash2, Car, IndianRupee, Inbox } from "lucide-react";
 import { format } from "date-fns";
 
 const STOCK_REQUEST_TEMPLATE = `Hi {rep_name} 👋
@@ -45,7 +43,6 @@ export default function DealerStockHub() {
   const qc = useQueryClient();
   const [tab, setTab] = useState("send");
 
-  // ---------- Send Stock Request ----------
   const [filterBrand, setFilterBrand] = useState("all");
   const [filterCity, setFilterCity] = useState("");
   const [selectedReps, setSelectedReps] = useState<string[]>([]);
@@ -53,17 +50,17 @@ export default function DealerStockHub() {
   const [metaTemplate, setMetaTemplate] = useState<string>("");
   const [sending, setSending] = useState(false);
 
-  const { data: reps = [] } = useQuery({
+  const { data: reps = [] } = useQuery<any[]>({
     queryKey: ["dealer-reps-stock"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("dealer_representatives")
         .select("id, name, brand, city, state, whatsapp_number, dealer_companies(company_name, city)")
         .eq("is_active", true)
         .not("whatsapp_number", "is", null)
         .order("brand");
       if (error) throw error;
-      return data || [];
+      return (data as any[]) || [];
     },
   });
 
@@ -135,18 +132,17 @@ export default function DealerStockHub() {
     }
   };
 
-  // ---------- Auto-Extract Replies ----------
-  const { data: replies = [], isLoading: repliesLoading } = useQuery({
+  const { data: replies = [], isLoading: repliesLoading } = useQuery<any[]>({
     queryKey: ["dealer-stock-replies"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("dealer_chat_history")
         .select("id, dealer_rep_id, dealer_company_id, message, sender_name, sender_phone, created_at, dealer_representatives(id, name, brand)")
         .eq("direction", "inbound")
         .order("created_at", { ascending: false })
         .limit(80);
       if (error) throw error;
-      return data || [];
+      return (data as any[]) || [];
     },
   });
 
@@ -208,32 +204,30 @@ export default function DealerStockHub() {
         source_date: new Date().toISOString(),
         is_active: true,
       }));
-      const { error } = await supabase.from("dealer_inventory").insert(rows);
+      const { error } = await (supabase as any).from("dealer_inventory").insert(rows);
       if (error) throw error;
-      toast.success(`✅ Saved ${rows.length} cars to stock`);
-      setPreviewCars(null);
-      setPreviewMeta(null);
+      toast.success(`✅ Saved ${rows.length} cars`);
+      setPreviewCars(null); setPreviewMeta(null);
       qc.invalidateQueries({ queryKey: ["dealer-inventory-live"] });
     } catch (e: any) {
       toast.error(e.message || "Save failed");
     }
   };
 
-  // ---------- Live Stock List ----------
   const [stockSearch, setStockSearch] = useState("");
   const [stockBrand, setStockBrand] = useState("all");
 
-  const { data: stock = [], isLoading: stockLoading } = useQuery({
+  const { data: stock = [], isLoading: stockLoading } = useQuery<any[]>({
     queryKey: ["dealer-inventory-live"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("dealer_inventory")
         .select("*, dealer_representatives(name, phone, whatsapp_number, dealer_companies(company_name, city))")
         .eq("is_active", true)
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw error;
-      return data || [];
+      return (data as any[]) || [];
     },
   });
 
@@ -252,7 +246,7 @@ export default function DealerStockHub() {
 
   const deleteStock = async (id: string) => {
     if (!confirm("Delete this stock entry?")) return;
-    const { error } = await supabase.from("dealer_inventory").update({ is_active: false }).eq("id", id);
+    const { error } = await (supabase as any).from("dealer_inventory").update({ is_active: false }).eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Removed");
     qc.invalidateQueries({ queryKey: ["dealer-inventory-live"] });
@@ -289,7 +283,6 @@ export default function DealerStockHub() {
           <TabsTrigger value="live" className="gap-1"><Package className="h-4 w-4" /> Live Stock ({stock.length})</TabsTrigger>
         </TabsList>
 
-        {/* ============ SEND ============ */}
         <TabsContent value="send" className="space-y-4">
           <Card>
             <CardHeader>
@@ -312,7 +305,7 @@ export default function DealerStockHub() {
                   <Input placeholder="e.g. Mumbai" value={filterCity} onChange={(e) => setFilterCity(e.target.value)} />
                 </div>
                 <div>
-                  <Label>Meta Template (UTILITY/MARKETING)</Label>
+                  <Label>Meta Template</Label>
                   <Select value={metaTemplate} onValueChange={setMetaTemplate}>
                     <SelectTrigger><SelectValue placeholder="Select approved template" /></SelectTrigger>
                     <SelectContent>
@@ -327,17 +320,12 @@ export default function DealerStockHub() {
               <div>
                 <Label>Stock Request Message</Label>
                 <Textarea rows={10} value={stockMessage} onChange={(e) => setStockMessage(e.target.value)} className="font-mono text-xs" />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Variables: <code>{"{rep_name}"}</code>, <code>{"{brand}"}</code> auto-replaced.
-                </p>
               </div>
 
               <div className="flex items-center justify-between border-t pt-3">
                 <div className="flex items-center gap-3">
                   <Checkbox checked={selectedReps.length === filteredReps.length && filteredReps.length > 0} onCheckedChange={toggleAll} />
-                  <span className="text-sm">
-                    <strong>{selectedReps.length}</strong> / {filteredReps.length} dealers selected
-                  </span>
+                  <span className="text-sm"><strong>{selectedReps.length}</strong> / {filteredReps.length} selected</span>
                 </div>
                 <Button onClick={sendStockRequest} disabled={sending || selectedReps.length === 0} size="lg" className="gap-2">
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -386,12 +374,11 @@ export default function DealerStockHub() {
           </Card>
         </TabsContent>
 
-        {/* ============ EXTRACT ============ */}
         <TabsContent value="extract" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg"><Sparkles className="h-5 w-5" /> AI Auto-Extract from Dealer Replies</CardTitle>
-              <p className="text-xs text-muted-foreground">Recent inbound dealer messages — click <strong>Save Stock</strong> to instantly parse cars into your inventory.</p>
+              <p className="text-xs text-muted-foreground">Click <strong>Save Stock</strong> to instantly parse cars into your inventory.</p>
             </CardHeader>
             <CardContent>
               {repliesLoading ? <div className="text-center py-6"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div> : (
@@ -423,7 +410,6 @@ export default function DealerStockHub() {
           </Card>
         </TabsContent>
 
-        {/* ============ LIVE STOCK ============ */}
         <TabsContent value="live" className="space-y-4">
           <Card>
             <CardHeader>
@@ -498,7 +484,6 @@ export default function DealerStockHub() {
         </TabsContent>
       </Tabs>
 
-      {/* Preview Dialog */}
       <Dialog open={!!previewCars} onOpenChange={(o) => !o && setPreviewCars(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
           <DialogHeader><DialogTitle>AI Extracted {previewCars?.length || 0} Cars</DialogTitle></DialogHeader>
@@ -516,11 +501,11 @@ export default function DealerStockHub() {
                 {c.discount && <div className="col-span-full text-amber-600"><strong>Discount:</strong> {c.discount}</div>}
               </div>
             ))}
-            {previewCars?.length === 0 && <p className="text-center text-muted-foreground py-4">AI couldn't detect any car details in this message.</p>}
+            {previewCars?.length === 0 && <p className="text-center text-muted-foreground py-4">No car details detected.</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPreviewCars(null)}>Cancel</Button>
-            <Button onClick={savePreview} disabled={!previewCars?.length} className="gap-1"><Sparkles className="h-4 w-4" />Save All to Stock</Button>
+            <Button onClick={savePreview} disabled={!previewCars?.length} className="gap-1"><Sparkles className="h-4 w-4" />Save All</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
