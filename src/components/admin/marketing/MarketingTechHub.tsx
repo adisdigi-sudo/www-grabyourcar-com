@@ -39,23 +39,23 @@ const MarketingCommandCenter = lazy(() =>
 const AdSpendAnalytics = lazy(() =>
   import("./AdSpendAnalytics").then((m) => ({ default: m.AdSpendAnalytics })),
 );
-const AutomationCenter = lazy(() =>
-  import("@/components/admin/automation/AutomationCenter").then((m) => ({ default: m.AutomationCenter })).catch(() => ({ default: () => <SectionFallback /> })),
+const AutomationCommandCenter = lazy(() =>
+  import("@/components/admin/AutomationCommandCenter"),
 );
 const AIAutomationHub = lazy(() =>
-  import("@/components/admin/ai-automation/AIAutomationHub").then((m) => ({ default: m.AIAutomationHub })).catch(() => ({ default: () => <SectionFallback /> })),
+  import("@/components/admin/automation/AIAutomationHub").then((m) => ({ default: m.AIAutomationHub })),
 );
 const TemplatesHub = lazy(() =>
-  import("@/components/admin/templates-hub/TemplatesHub").then((m) => ({ default: m.TemplatesHub })).catch(() => ({ default: () => <SectionFallback /> })),
+  import("@/components/admin/templates-hub/TemplatesHub").then((m) => ({ default: m.TemplatesHub })),
 );
 const UnifiedCustomerProfile = lazy(() =>
-  import("@/components/admin/UnifiedCustomerProfile").then((m) => ({ default: m.UnifiedCustomerProfile })).catch(() => ({ default: () => <SectionFallback /> })),
+  import("@/components/admin/unified/UnifiedCustomerProfile").then((m) => ({ default: m.UnifiedCustomerProfile })),
 );
 const RevenueIntelligenceDashboard = lazy(() =>
-  import("@/components/admin/RevenueIntelligenceDashboard").then((m) => ({ default: m.RevenueIntelligenceDashboard })).catch(() => ({ default: () => <SectionFallback /> })),
+  import("@/components/admin/RevenueIntelligenceDashboard").then((m) => ({ default: m.RevenueIntelligenceDashboard })),
 );
 const JourneyAutomationPanel = lazy(() =>
-  import("@/components/admin/JourneyAutomationPanel").then((m) => ({ default: m.JourneyAutomationPanel })).catch(() => ({ default: () => <SectionFallback /> })),
+  import("@/components/admin/JourneyAutomationPanel").then((m) => ({ default: m.JourneyAutomationPanel })),
 );
 
 const SectionFallback = () => (
