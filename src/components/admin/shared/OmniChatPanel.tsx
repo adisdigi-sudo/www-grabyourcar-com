@@ -858,6 +858,12 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                   >
                     {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Paperclip className="h-3.5 w-3.5" />}
                   </Button>
+                  <WaTemplatePickerButton
+                    onPick={sendTemplateFromPicker}
+                    disabled={sending || selectedThread.isDraft}
+                    highlight={!isWindowOpen}
+                    align="start"
+                  />
                   <Input
                     placeholder={`Reply via ${replyChannel}...`}
                     value={replyMessage}
