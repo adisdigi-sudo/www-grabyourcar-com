@@ -67,15 +67,15 @@ export default function DealerStockHub() {
     },
   });
 
-  const { data: templates = [] } = useQuery({
+  const { data: templates = [] } = useQuery<any[]>({
     queryKey: ["wa-templates-stock"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("whatsapp_templates")
         .select("name, display_name, body, status, category")
         .eq("status", "APPROVED")
         .order("name");
-      return (data || []).filter(
+      return ((data as any[]) || []).filter(
         (t: any) => !/booking|policy|loan|invoice|otp|payment|feedback/i.test([t.name, t.display_name, t.body].join(" "))
       );
     },
