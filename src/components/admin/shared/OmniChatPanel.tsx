@@ -707,6 +707,30 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
             />
           </div>
 
+          {/* Status filter + counts */}
+          <div className="flex items-center gap-1">
+            <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+              <SelectTrigger className="h-7 text-[11px] flex-1">
+                <Filter className="h-3 w-3 mr-1 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All chats</SelectItem>
+                <SelectItem value="unread">🔵 Unread</SelectItem>
+                <SelectItem value="pending">⏳ Pending reply</SelectItem>
+                <SelectItem value="open">📬 Open</SelectItem>
+                <SelectItem value="responded">✅ Responded</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2 px-1 text-[9px] text-muted-foreground">
+            <span title="Total inbound replies">💬 {totalReplies}</span>
+            <span title="Conversations awaiting your reply" className={pendingCount > 0 ? "text-amber-600 font-medium" : ""}>⏳ {pendingCount}</span>
+            <span className="ml-auto inline-flex items-center gap-1 text-green-600">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" /> Live
+            </span>
+          </div>
+
           <ScrollArea className="flex-1">
             {loading ? (
               <div className="flex items-center justify-center py-8">
@@ -731,6 +755,11 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                       <span className="flex-1 truncate font-medium">
                         {highlight(t.customer_name || t.phone, searchQuery)}
                       </span>
+                      {(t.reply_count || 0) > 0 && (
+                        <Badge variant="outline" className="h-4 min-w-4 px-1 text-[9px] gap-0.5" title={`${t.reply_count} customer replies`}>
+                          💬 {t.reply_count}
+                        </Badge>
+                      )}
                       {(t.unread_count || 0) > 0 && (
                         <Badge variant="default" className="h-4 min-w-4 px-1 text-[9px]">
                           {t.unread_count}
@@ -740,14 +769,21 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                     <p className="truncate text-[10px] text-muted-foreground">
                       {t.last_message ? highlight(t.last_message, searchQuery) : "New message"}
                     </p>
-                    <p className="mt-0.5 text-[9px] text-muted-foreground">
-                      {new Date(t.last_at).toLocaleDateString("en-IN", {
-                        day: "2-digit",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                    <div className="mt-0.5 flex items-center justify-between gap-1">
+                      <p className="text-[9px] text-muted-foreground">
+                        {new Date(t.last_at).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                      {t.has_pending_reply ? (
+                        <Badge variant="outline" className="h-3.5 px-1 text-[8px] border-amber-300 text-amber-700">⏳ Pending</Badge>
+                      ) : t.status === "resolved" ? (
+                        <Badge variant="outline" className="h-3.5 px-1 text-[8px] border-emerald-300 text-emerald-700">✓ Done</Badge>
+                      ) : null}
+                    </div>
                   </button>
                 ))}
               </div>
