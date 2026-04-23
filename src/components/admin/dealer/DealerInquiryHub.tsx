@@ -223,6 +223,18 @@ export default function DealerInquiryHub() {
     setMetaTemplate((preferred || selectableTemplates[0]).name);
   }, [selectableTemplates, metaTemplate]);
 
+  // Auto-fill message when brand/model/variant/color changes for non-custom templates
+  useEffect(() => {
+    if (templateType === "custom") return;
+    const tpl = TEMPLATES[templateType];
+    if (!tpl) return;
+    const b = selectedBrand !== "all" ? selectedBrand : "[Brand]";
+    const m = selectedModel !== "all" ? selectedModel : "";
+    const v = selectedVariant !== "all" ? selectedVariant : "";
+    const c = selectedColor !== "all" ? selectedColor : "";
+    setMessage(tpl.build(b, m, v, c));
+  }, [templateType, selectedBrand, selectedModel, selectedVariant, selectedColor]);
+
   const states = useMemo(() => [...new Set(reps.map((r: any) => r.state).filter(Boolean))].sort(), [reps]);
   const cities = useMemo(() => [...new Set(reps.map((r: any) => r.city).filter(Boolean))].sort(), [reps]);
   const whatsappReps = reps.filter((r: any) => r.whatsapp_number);
