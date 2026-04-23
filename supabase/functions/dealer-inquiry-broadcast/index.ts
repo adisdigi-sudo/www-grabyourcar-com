@@ -217,13 +217,15 @@ async function resolveApprovedTemplate(
     .select("name, header_type, variables, category")
     .eq("status", "approved");
 
+  // NOTE: Do NOT auto-fallback to "booking_confirmation" — that template tells dealers
+  // their booking is confirmed, which is wrong for an inquiry. Prefer neutral templates.
   const candidates = [
     preferredTemplate,
-    "booking_confirmation",
     "welcome_new_lead",
-    "insurancefollowup",
     "grabyourcarintroduction",
+    "insurancefollowup",
     ...(approvedTemplates || [])
+      .filter((row: any) => row.name !== "booking_confirmation")
       .sort((a: any, b: any) => {
         const aUtility = String(a.category || "").toLowerCase() === "utility" ? 0 : 1;
         const bUtility = String(b.category || "").toLowerCase() === "utility" ? 0 : 1;
