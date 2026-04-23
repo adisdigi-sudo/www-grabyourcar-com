@@ -17,9 +17,11 @@ import { CarUploadWizard } from "./CarUploadWizard";
 import { BulkCSVUpload } from "./BulkCSVUpload";
 import { AdminLivePreview, PreviewToggleButton } from "../shared/AdminLivePreview";
 
-export const CarDatabaseWorkspace = () => {
+type CarDbTab = 'upload' | 'bulk' | 'manage' | 'scraper';
+
+export const CarDatabaseWorkspace = ({ initialTab = 'upload' }: { initialTab?: CarDbTab } = {}) => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'upload' | 'bulk' | 'manage' | 'scraper'>('upload');
+  const [activeTab, setActiveTab] = useState<CarDbTab>(initialTab);
   const [searchFilter, setSearchFilter] = useState("");
   const [brandFilter, setBrandFilter] = useState("All");
   const [previewOpen, setPreviewOpen] = useState(false);
