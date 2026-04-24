@@ -222,7 +222,8 @@ serve(async (req) => {
               image_source: 'gemini',
             }));
           if (rows.length) {
-            await supabase.from('car_colors').insert(rows);
+            const { error: cErr } = await supabase.from('car_colors').insert(rows);
+            if (cErr) throw new Error(`colors insert: ${cErr.message}`);
             colorsCount = rows.length;
           }
         }
