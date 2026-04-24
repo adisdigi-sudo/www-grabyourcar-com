@@ -88,6 +88,10 @@ project_id = "ynoiwioypxpurwdbjvyt"
     verify_jwt = false
   [functions.cardekho-smart-merge]
     verify_jwt = false
+  [functions.enqueue-bulk-enrichment]
+    verify_jwt = false
+  [functions.bulk-car-enrichment-worker]
+    verify_jwt = false
   [functions.migrate-car-data]
     verify_jwt = false
   [functions.migrate-images-to-storage]

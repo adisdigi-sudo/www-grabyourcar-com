@@ -62,6 +62,7 @@ const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const IntegrationControlCenter = lazy(() => import("./pages/IntegrationControlCenter"));
 const MarutiScrape = lazy(() => import("./pages/admin/MarutiScrape"));
 const BrandScrape = lazy(() => import("./pages/admin/BrandScrape"));
+const BulkEnrichment = lazy(() => import("./pages/admin/BulkEnrichment"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -237,6 +238,7 @@ const AppRouterShell = () => {
             <Route path="/admin-reset-password" element={<AdminResetPassword />} />
             <Route path="/admin/maruti-scrape" element={<MarutiScrape />} />
             <Route path="/admin/brand-scrape" element={<BrandScrape />} />
+            <Route path="/admin/bulk-enrichment" element={<BulkEnrichment />} />
             <Route
               path="/workspace"
               element={
