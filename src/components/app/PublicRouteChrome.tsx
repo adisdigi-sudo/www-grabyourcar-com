@@ -4,6 +4,8 @@ import { FloatingCompareBar } from "@/components/FloatingCompareBar";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { SiteStructuredData } from "@/components/seo/SiteStructuredData";
 import { RiyaChatWidget } from "@/components/riya/RiyaChatWidget";
+import { VisitorEngagementPopups } from "@/components/VisitorEngagementPopups";
+import { useVisitorTracking } from "@/hooks/useVisitorTracking";
 import { normalizeBrandingSettings, useBrandingSettingsQuery } from "@/hooks/useBrandingSettings";
 
 const BrandingHeadSync = () => {
@@ -74,17 +76,23 @@ export const PublicRouteStructuredData = () => (
   </SectionErrorBoundary>
 );
 
-export const PublicRouteChrome = () => (
-  <>
-    <BrandingHeadSync />
-    <SectionErrorBoundary sectionName="floating-compare-bar" fallback={null}>
-      <FloatingCompareBar />
-    </SectionErrorBoundary>
-    <SectionErrorBoundary sectionName="cookie-consent-banner" fallback={null}>
-      <CookieConsentBanner />
-    </SectionErrorBoundary>
-    <SectionErrorBoundary sectionName="riya-chat-widget" fallback={null}>
-      <RiyaChatWidget />
-    </SectionErrorBoundary>
-  </>
-);
+export const PublicRouteChrome = () => {
+  useVisitorTracking();
+  return (
+    <>
+      <BrandingHeadSync />
+      <SectionErrorBoundary sectionName="floating-compare-bar" fallback={null}>
+        <FloatingCompareBar />
+      </SectionErrorBoundary>
+      <SectionErrorBoundary sectionName="cookie-consent-banner" fallback={null}>
+        <CookieConsentBanner />
+      </SectionErrorBoundary>
+      <SectionErrorBoundary sectionName="riya-chat-widget" fallback={null}>
+        <RiyaChatWidget />
+      </SectionErrorBoundary>
+      <SectionErrorBoundary sectionName="visitor-engagement-popups" fallback={null}>
+        <VisitorEngagementPopups />
+      </SectionErrorBoundary>
+    </>
+  );
+};
