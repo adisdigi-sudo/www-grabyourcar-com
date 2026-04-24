@@ -401,7 +401,9 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
         pros: car.pros || [],
         cons: car.cons || [],
         competitors: car.competitors || [],
-        brochureUrl: car.brochure_url || undefined
+        brochureUrl: car.brochure_url || (Array.isArray(car.car_brochures) && car.car_brochures.length > 0
+          ? [...car.car_brochures].sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0]?.url
+          : undefined) || undefined
       } as Car;
     });
 
