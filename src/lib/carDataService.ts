@@ -143,7 +143,8 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
       car_colors(id, name, hex_code, image_url, sort_order),
       car_variants(id, name, price, price_numeric, fuel_type, transmission, features, ex_showroom, rto, insurance, tcs, fastag, registration, handling, on_road_price, sort_order),
       car_specifications(category, label, value, sort_order),
-      car_offers(id, title, description, discount, valid_till, offer_type, sort_order)
+      car_offers(id, title, description, discount, valid_till, offer_type, sort_order),
+      car_brochures(url, sort_order)
     `);
 
     // Apply filters
@@ -400,7 +401,9 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
         pros: car.pros || [],
         cons: car.cons || [],
         competitors: car.competitors || [],
-        brochureUrl: car.brochure_url || undefined
+        brochureUrl: car.brochure_url || (Array.isArray(car.car_brochures) && car.car_brochures.length > 0
+          ? [...car.car_brochures].sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0]?.url
+          : undefined) || undefined
       } as Car;
     });
 

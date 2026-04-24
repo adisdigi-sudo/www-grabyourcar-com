@@ -899,7 +899,7 @@ const Cars = () => {
                               </Button>
                             </a>
                           </div>
-                          {/* Brochure — download if available, else WhatsApp request */}
+                          {/* Brochure — bold green button, always visible */}
                           {car.brochureUrl ? (
                             <a
                               href={car.brochureUrl}
@@ -909,7 +909,7 @@ const Cars = () => {
                               className="w-full"
                               aria-label={`Download ${car.name} brochure`}
                             >
-                              <Button variant="outline" size="sm" className="w-full gap-1.5 h-9 border-primary/30 hover:bg-primary/5 font-semibold">
+                              <Button size="sm" className="w-full gap-1.5 h-9 bg-green-600 hover:bg-green-700 text-white font-bold shadow-md">
                                 <FileText className="h-4 w-4" />
                                 Download Brochure
                               </Button>
@@ -924,9 +924,9 @@ const Cars = () => {
                               className="w-full"
                               aria-label={`Request ${car.name} brochure on WhatsApp`}
                             >
-                              <Button variant="outline" size="sm" className="w-full gap-1.5 h-9 border-dashed border-primary/40 hover:bg-primary/5 font-semibold text-foreground/80">
+                              <Button size="sm" className="w-full gap-1.5 h-9 bg-green-600 hover:bg-green-700 text-white font-bold shadow-md">
                                 <FileText className="h-4 w-4" />
-                                Request Brochure
+                                Get Brochure on WhatsApp
                               </Button>
                             </a>
                           )}
@@ -1037,7 +1037,7 @@ const Cars = () => {
                                 className="flex-1 min-w-[140px]"
                                 aria-label={`Download ${car.name} brochure`}
                               >
-                                <Button variant="outline" size="sm" className="w-full gap-1.5 h-9 border-primary/30 hover:bg-primary/5 font-semibold">
+                                <Button size="sm" className="w-full gap-1.5 h-9 bg-green-600 hover:bg-green-700 text-white font-bold shadow-md">
                                   <FileText className="h-4 w-4" />
                                   Brochure
                                 </Button>
@@ -1052,9 +1052,9 @@ const Cars = () => {
                                 className="flex-1 min-w-[140px]"
                                 aria-label={`Request ${car.name} brochure on WhatsApp`}
                               >
-                                <Button variant="outline" size="sm" className="w-full gap-1.5 h-9 border-dashed border-primary/40 hover:bg-primary/5 font-semibold text-foreground/80">
+                                <Button size="sm" className="w-full gap-1.5 h-9 bg-green-600 hover:bg-green-700 text-white font-bold shadow-md">
                                   <FileText className="h-4 w-4" />
-                                  Request Brochure
+                                  Get on WhatsApp
                                 </Button>
                               </a>
                             )}
