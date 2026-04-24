@@ -810,7 +810,7 @@ const Cars = () => {
                           )}
                         </div>
                         <p className="text-foreground font-bold text-lg mb-3">{car.price}</p>
-                        <div className="flex flex-wrap gap-2 mb-4">
+                        <div className="flex flex-wrap gap-2 mb-3">
                           <Badge variant="outline" className="text-xs gap-1">
                             <Fuel className="h-3 w-3" />
                             {car.fuelTypes.join(" / ")}
@@ -820,6 +820,66 @@ const Cars = () => {
                             {car.transmission.join(" / ")}
                           </Badge>
                         </div>
+
+                        {/* Smart Detail Strip — colors + key specs (fills empty space) */}
+                        {(() => {
+                          const colors = (car.colors || []).filter((c) => c?.hex);
+                          const specsObj: any = car.specifications || {};
+                          const flatSpecs: { label: string; value: string }[] = [
+                            ...(specsObj.engine || []),
+                            ...(specsObj.performance || []),
+                            ...(specsObj.dimensions || []),
+                          ];
+                          const pickSpec = (re: RegExp) =>
+                            flatSpecs.find((s) => re.test(s.label || ""));
+                          const mileage = pickSpec(/mileage|range|fuel\s*economy/i);
+                          const seating = pickSpec(/seating|capacity|seats/i);
+                          const engine = pickSpec(/engine|displacement|battery/i);
+                          const chips = [mileage, engine, seating].filter(Boolean) as { label: string; value: string }[];
+
+                          if (colors.length === 0 && chips.length === 0) return null;
+
+                          return (
+                            <div className="mb-3 rounded-lg border border-border/60 bg-muted/30 px-2.5 py-2 space-y-1.5">
+                              {colors.length > 0 && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground shrink-0">
+                                    Colors
+                                  </span>
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    {colors.slice(0, 6).map((c, i) => (
+                                      <span
+                                        key={`${car.id}-col-${i}`}
+                                        title={c.name}
+                                        className="h-3.5 w-3.5 rounded-full border border-border/70 shadow-sm"
+                                        style={{ backgroundColor: c.hex }}
+                                      />
+                                    ))}
+                                    {colors.length > 6 && (
+                                      <span className="text-[10px] font-medium text-muted-foreground">
+                                        +{colors.length - 6}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              {chips.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {chips.slice(0, 3).map((s, i) => (
+                                    <span
+                                      key={`${car.id}-chip-${i}`}
+                                      className="text-[10px] font-medium text-foreground/80 bg-background border border-border/60 rounded px-1.5 py-0.5"
+                                      title={s.label}
+                                    >
+                                      {s.value}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+
                         {/* Action Buttons - 3 CTAs */}
                         <div className="flex flex-col gap-2">
                           {/* View Details - Primary */}
@@ -839,8 +899,8 @@ const Cars = () => {
                               </Button>
                             </a>
                           </div>
-                          {/* Brochure Download — direct, no gate */}
-                          {car.brochureUrl && (
+                          {/* Brochure — download if available, else WhatsApp request */}
+                          {car.brochureUrl ? (
                             <a
                               href={car.brochureUrl}
                               target="_blank"
@@ -852,6 +912,21 @@ const Cars = () => {
                               <Button variant="outline" size="sm" className="w-full gap-1.5 h-9 border-primary/30 hover:bg-primary/5 font-semibold">
                                 <FileText className="h-4 w-4" />
                                 Download Brochure
+                              </Button>
+                            </a>
+                          ) : (
+                            <a
+                              href={`https://wa.me/919855924442?text=${encodeURIComponent(
+                                `Hi GrabYourCar! 📄\n\nPlease share the *latest brochure* for *${car.brand} ${car.name}*.\n\nThanks!`
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full"
+                              aria-label={`Request ${car.name} brochure on WhatsApp`}
+                            >
+                              <Button variant="outline" size="sm" className="w-full gap-1.5 h-9 border-dashed border-primary/40 hover:bg-primary/5 font-semibold text-foreground/80">
+                                <FileText className="h-4 w-4" />
+                                Request Brochure
                               </Button>
                             </a>
                           )}
@@ -910,6 +985,33 @@ const Cars = () => {
                                 </Badge>
                               )}
                             </div>
+                            {/* Color swatches (list view) */}
+                            {(() => {
+                              const colors = (car.colors || []).filter((c) => c?.hex);
+                              if (colors.length === 0) return null;
+                              return (
+                                <div className="flex items-center gap-1.5 mt-3">
+                                  <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                                    Colors
+                                  </span>
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    {colors.slice(0, 8).map((c, i) => (
+                                      <span
+                                        key={`${car.id}-lcol-${i}`}
+                                        title={c.name}
+                                        className="h-3.5 w-3.5 rounded-full border border-border/70 shadow-sm"
+                                        style={{ backgroundColor: c.hex }}
+                                      />
+                                    ))}
+                                    {colors.length > 8 && (
+                                      <span className="text-[10px] font-medium text-muted-foreground">
+                                        +{colors.length - 8}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                           {/* Action Buttons - 3 CTAs for List View */}
                           <div className="flex flex-wrap items-center gap-2 mt-4">
@@ -926,7 +1028,7 @@ const Cars = () => {
                                 Call
                               </Button>
                             </a>
-                            {car.brochureUrl && (
+                            {car.brochureUrl ? (
                               <a
                                 href={car.brochureUrl}
                                 target="_blank"
@@ -938,6 +1040,21 @@ const Cars = () => {
                                 <Button variant="outline" size="sm" className="w-full gap-1.5 h-9 border-primary/30 hover:bg-primary/5 font-semibold">
                                   <FileText className="h-4 w-4" />
                                   Brochure
+                                </Button>
+                              </a>
+                            ) : (
+                              <a
+                                href={`https://wa.me/919855924442?text=${encodeURIComponent(
+                                  `Hi GrabYourCar! 📄\n\nPlease share the *latest brochure* for *${car.brand} ${car.name}*.\n\nThanks!`
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 min-w-[140px]"
+                                aria-label={`Request ${car.name} brochure on WhatsApp`}
+                              >
+                                <Button variant="outline" size="sm" className="w-full gap-1.5 h-9 border-dashed border-primary/40 hover:bg-primary/5 font-semibold text-foreground/80">
+                                  <FileText className="h-4 w-4" />
+                                  Request Brochure
                                 </Button>
                               </a>
                             )}
