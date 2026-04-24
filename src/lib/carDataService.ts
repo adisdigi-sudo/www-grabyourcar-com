@@ -143,7 +143,8 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
       car_colors(id, name, hex_code, image_url, sort_order),
       car_variants(id, name, price, price_numeric, fuel_type, transmission, features, ex_showroom, rto, insurance, tcs, fastag, registration, handling, on_road_price, sort_order),
       car_specifications(category, label, value, sort_order),
-      car_offers(id, title, description, discount, valid_till, offer_type, sort_order)
+      car_offers(id, title, description, discount, valid_till, offer_type, sort_order),
+      car_brochures(url, sort_order)
     `);
 
     // Apply filters
