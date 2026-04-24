@@ -3716,6 +3716,7 @@ export type Database = {
       }
       car_scrape_jobs: {
         Row: {
+          attempt_count: number
           brand: string
           brochure_found: boolean | null
           car_id: string | null
@@ -3727,6 +3728,8 @@ export type Database = {
           ex_showroom_delhi: number | null
           firecrawl_credits_used: number | null
           id: string
+          job_batch_id: string | null
+          last_attempt_at: string | null
           model_name: string
           raw_data: Json | null
           source_url: string | null
@@ -3737,6 +3740,7 @@ export type Database = {
           variants_found: number | null
         }
         Insert: {
+          attempt_count?: number
           brand: string
           brochure_found?: boolean | null
           car_id?: string | null
@@ -3748,6 +3752,8 @@ export type Database = {
           ex_showroom_delhi?: number | null
           firecrawl_credits_used?: number | null
           id?: string
+          job_batch_id?: string | null
+          last_attempt_at?: string | null
           model_name: string
           raw_data?: Json | null
           source_url?: string | null
@@ -3758,6 +3764,7 @@ export type Database = {
           variants_found?: number | null
         }
         Update: {
+          attempt_count?: number
           brand?: string
           brochure_found?: boolean | null
           car_id?: string | null
@@ -3769,6 +3776,8 @@ export type Database = {
           ex_showroom_delhi?: number | null
           firecrawl_credits_used?: number | null
           id?: string
+          job_batch_id?: string | null
+          last_attempt_at?: string | null
           model_name?: string
           raw_data?: Json | null
           source_url?: string | null
