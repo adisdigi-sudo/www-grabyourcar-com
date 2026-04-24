@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Play, RefreshCw, RotateCcw, Trash2, Zap } from "lucide-react";
+import { Loader2, Play, RefreshCw, RotateCcw, Sparkles, Trash2, Zap } from "lucide-react";
 
 type Job = {
   id: string;
@@ -37,6 +37,9 @@ export default function BulkEnrichment() {
   const [enqueueing, setEnqueueing] = useState(false);
   const [running, setRunning] = useState(false);
   const [autoRun, setAutoRun] = useState(false);
+  const [geminiRunning, setGeminiRunning] = useState(false);
+  const [geminiAuto, setGeminiAuto] = useState(false);
+  const [geminiLog, setGeminiLog] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   const loadJobs = async () => {
@@ -65,6 +68,14 @@ export default function BulkEnrichment() {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRun]);
+
+  // Auto-run Gemini every 6 sec (cheap & fast)
+  useEffect(() => {
+    if (!geminiAuto) return;
+    const interval = setInterval(() => { runGemini(true); }, 6000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geminiAuto]);
 
   const enqueue = async (onlyMissing: boolean) => {
     setEnqueueing(true);
@@ -99,6 +110,27 @@ export default function BulkEnrichment() {
       if (!silent) toast({ title: "Worker error", description: String(e), variant: "destructive" });
     } finally {
       setRunning(false);
+    }
+  };
+
+  const runGemini = async (silent = false) => {
+    setGeminiRunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("gemini-car-bulk-fill", {
+        body: { batchSize: 8 },
+      });
+      if (error) throw error;
+      const msg = `${data.processed ?? 0} processed · ${data.successes ?? 0} ok · ${data.failures ?? 0} failed`;
+      setGeminiLog(`${new Date().toLocaleTimeString()} — ${msg}`);
+      if (!silent) toast({ title: "Gemini batch", description: msg });
+      if (data.processed === 0) {
+        setGeminiAuto(false);
+        toast({ title: "All filled", description: "No more cars need specs/variants/colors." });
+      }
+    } catch (e) {
+      if (!silent) toast({ title: "Gemini error", description: String(e), variant: "destructive" });
+    } finally {
+      setGeminiRunning(false);
     }
   };
 
@@ -159,9 +191,44 @@ export default function BulkEnrichment() {
         <p className="text-muted-foreground">Background Firecrawl worker · brochure / colors / variants / specs</p>
       </div>
 
-      {/* Controls */}
+      {/* Gemini AI bulk-fill (specs/variants/colors) */}
+      <Card className="border-2 border-emerald-500/50 bg-emerald-50/30 dark:bg-emerald-950/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-emerald-600" />
+            Gemini AI Fill — Specs / Variants / Colors
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Free + fast. Fills missing specs, variants, and colors using Gemini 2.5 Flash.
+            Skips brochures, images, exact prices (those need Firecrawl).
+          </p>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-3 items-center">
+          <Button
+            onClick={() => runGemini()}
+            disabled={geminiRunning}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            {geminiRunning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+            Run 1 Gemini Batch (8 cars)
+          </Button>
+          <Button
+            variant={geminiAuto ? "default" : "outline"}
+            onClick={() => setGeminiAuto(v => !v)}
+            className={geminiAuto ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${geminiAuto ? "animate-spin" : ""}`} />
+            Auto-Run {geminiAuto ? "ON" : "OFF"}
+          </Button>
+          {geminiLog && (
+            <span className="text-xs text-muted-foreground ml-2">Last: {geminiLog}</span>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Controls — Firecrawl */}
       <Card>
-        <CardHeader><CardTitle>Controls</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Firecrawl Worker (Brochure / Image scraping)</CardTitle></CardHeader>
         <CardContent className="flex flex-wrap gap-3">
           <Button onClick={() => enqueue(true)} disabled={enqueueing}>
             {enqueueing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
@@ -189,6 +256,7 @@ export default function BulkEnrichment() {
           </Button>
         </CardContent>
       </Card>
+
 
       {/* Overall progress */}
       <Card>
