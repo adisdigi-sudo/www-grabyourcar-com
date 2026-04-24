@@ -59,12 +59,14 @@ async function askGemini(brand: string, model: string, missing: { specs: boolean
 
 Need: ${need.join(', ')}.
 
-Rules:
-- Use real, official data only. If you don't know a value, omit that key entirely.
+CRITICAL RULES:
+- ALWAYS populate the specs object with at least: mileage, engine_cc, max_power, max_torque, seating_capacity, fuel_tank, length, width, height, wheelbase, airbags. Use your best knowledge of the model — for popular/luxury cars these are public information.
+- For variants: list every official trim/variant sold in India with fuel_type, transmission, and ex_showroom_price. If only one variant exists, return one. Never return an empty array if the car has trims.
+- For colors: list every officially advertised exterior color with hex codes. Never return empty for cars sold in India.
 - Prices in INR (numeric, no commas, ex-showroom Delhi).
-- Specs values as concise strings with units (e.g. mileage "20.5 kmpl", max_power "120 bhp @ 6000 rpm").
-- Hex colors must include the # prefix.
-- Return ONLY the structured JSON.`;
+- Specs values as concise strings WITH UNITS (e.g. mileage "20.5 kmpl", max_power "120 bhp @ 6000 rpm", seating_capacity "5", length "4395 mm").
+- Hex colors must be 6-digit with # prefix (e.g. "#FFFFFF").
+- Return ONLY the structured JSON via the function call.`;
 
   const resp = await fetch(AI_URL, {
     method: 'POST',
