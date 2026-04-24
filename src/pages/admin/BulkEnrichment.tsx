@@ -125,6 +125,8 @@ export default function BulkEnrichment() {
       setGeminiRunning(false);
     }
   };
+
+  const retryFailed = async () => {
     const { error } = await supabase
       .from("car_scrape_jobs")
       .update({ status: "queued", error_message: null })
