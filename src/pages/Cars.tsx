@@ -899,8 +899,8 @@ const Cars = () => {
                               </Button>
                             </a>
                           </div>
-                          {/* Brochure Download — direct, no gate */}
-                          {car.brochureUrl && (
+                          {/* Brochure — download if available, else WhatsApp request */}
+                          {car.brochureUrl ? (
                             <a
                               href={car.brochureUrl}
                               target="_blank"
@@ -912,6 +912,21 @@ const Cars = () => {
                               <Button variant="outline" size="sm" className="w-full gap-1.5 h-9 border-primary/30 hover:bg-primary/5 font-semibold">
                                 <FileText className="h-4 w-4" />
                                 Download Brochure
+                              </Button>
+                            </a>
+                          ) : (
+                            <a
+                              href={`https://wa.me/919855924442?text=${encodeURIComponent(
+                                `Hi GrabYourCar! 📄\n\nPlease share the *latest brochure* for *${car.brand} ${car.name}*.\n\nThanks!`
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full"
+                              aria-label={`Request ${car.name} brochure on WhatsApp`}
+                            >
+                              <Button variant="outline" size="sm" className="w-full gap-1.5 h-9 border-dashed border-primary/40 hover:bg-primary/5 font-semibold text-foreground/80">
+                                <FileText className="h-4 w-4" />
+                                Request Brochure
                               </Button>
                             </a>
                           )}
