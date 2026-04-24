@@ -268,6 +268,7 @@ const ErrorPrevention = lazy(() => import("@/components/admin/ErrorPrevention"))
 const WorkflowEngine = lazy(() => import("@/components/admin/WorkflowEngine"));
 const AutomationCommandCenter = lazy(() => import("@/components/admin/AutomationCommandCenter"));
 const AutoPilotDashboard = lazy(() => import("@/components/admin/AutoPilotDashboard"));
+const VisitorAnalyticsDashboard = lazy(() => import("@/components/admin/analytics/VisitorAnalyticsDashboard"));
 const LeadRoutingManager = lazy(() =>
   import("@/components/admin/LeadRoutingManager").then((module) => ({ default: module.LeadRoutingManager })),
 );
