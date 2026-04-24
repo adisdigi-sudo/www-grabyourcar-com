@@ -19356,6 +19356,234 @@ export type Database = {
         }
         Relationships: []
       }
+      visitor_captured_leads: {
+        Row: {
+          capture_page: string | null
+          capture_source: string
+          created_at: string
+          email: string | null
+          id: string
+          message: string | null
+          name: string | null
+          pages_viewed: number | null
+          phone: string | null
+          session_key: string
+          source: string | null
+          time_on_site_seconds: number | null
+          utm_campaign: string | null
+          utm_source: string | null
+          visitor_id: string | null
+        }
+        Insert: {
+          capture_page?: string | null
+          capture_source: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          message?: string | null
+          name?: string | null
+          pages_viewed?: number | null
+          phone?: string | null
+          session_key: string
+          source?: string | null
+          time_on_site_seconds?: number | null
+          utm_campaign?: string | null
+          utm_source?: string | null
+          visitor_id?: string | null
+        }
+        Update: {
+          capture_page?: string | null
+          capture_source?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          message?: string | null
+          name?: string | null
+          pages_viewed?: number | null
+          phone?: string | null
+          session_key?: string
+          source?: string | null
+          time_on_site_seconds?: number | null
+          utm_campaign?: string | null
+          utm_source?: string | null
+          visitor_id?: string | null
+        }
+        Relationships: []
+      }
+      visitor_events: {
+        Row: {
+          created_at: string
+          event_label: string | null
+          event_type: string
+          event_value: string | null
+          id: string
+          metadata: Json | null
+          page_path: string | null
+          session_key: string
+        }
+        Insert: {
+          created_at?: string
+          event_label?: string | null
+          event_type: string
+          event_value?: string | null
+          id?: string
+          metadata?: Json | null
+          page_path?: string | null
+          session_key: string
+        }
+        Update: {
+          created_at?: string
+          event_label?: string | null
+          event_type?: string
+          event_value?: string | null
+          id?: string
+          metadata?: Json | null
+          page_path?: string | null
+          session_key?: string
+        }
+        Relationships: []
+      }
+      visitor_page_views: {
+        Row: {
+          created_at: string
+          entered_at: string
+          id: string
+          left_at: string | null
+          page_path: string
+          page_title: string | null
+          scroll_depth: number
+          session_key: string
+          time_spent_seconds: number
+        }
+        Insert: {
+          created_at?: string
+          entered_at?: string
+          id?: string
+          left_at?: string | null
+          page_path: string
+          page_title?: string | null
+          scroll_depth?: number
+          session_key: string
+          time_spent_seconds?: number
+        }
+        Update: {
+          created_at?: string
+          entered_at?: string
+          id?: string
+          left_at?: string | null
+          page_path?: string
+          page_title?: string | null
+          scroll_depth?: number
+          session_key?: string
+          time_spent_seconds?: number
+        }
+        Relationships: []
+      }
+      visitor_sessions: {
+        Row: {
+          browser: string | null
+          campaign: string | null
+          captured_email: string | null
+          captured_name: string | null
+          captured_phone: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          device_type: string | null
+          ended_at: string | null
+          exit_page: string | null
+          id: string
+          ip_hash: string | null
+          is_bounced: boolean
+          landing_page: string | null
+          last_active_at: string
+          medium: string | null
+          os: string | null
+          page_count: number
+          referrer: string | null
+          session_key: string
+          source: string | null
+          started_at: string
+          total_time_seconds: number
+          updated_at: string
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          visitor_id: string
+        }
+        Insert: {
+          browser?: string | null
+          campaign?: string | null
+          captured_email?: string | null
+          captured_name?: string | null
+          captured_phone?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          ended_at?: string | null
+          exit_page?: string | null
+          id?: string
+          ip_hash?: string | null
+          is_bounced?: boolean
+          landing_page?: string | null
+          last_active_at?: string
+          medium?: string | null
+          os?: string | null
+          page_count?: number
+          referrer?: string | null
+          session_key: string
+          source?: string | null
+          started_at?: string
+          total_time_seconds?: number
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          visitor_id: string
+        }
+        Update: {
+          browser?: string | null
+          campaign?: string | null
+          captured_email?: string | null
+          captured_name?: string | null
+          captured_phone?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          ended_at?: string | null
+          exit_page?: string | null
+          id?: string
+          ip_hash?: string | null
+          is_bounced?: boolean
+          landing_page?: string | null
+          last_active_at?: string
+          medium?: string | null
+          os?: string | null
+          page_count?: number
+          referrer?: string | null
+          session_key?: string
+          source?: string | null
+          started_at?: string
+          total_time_seconds?: number
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          visitor_id?: string
+        }
+        Relationships: []
+      }
       wa_automation_log: {
         Row: {
           created_at: string | null
