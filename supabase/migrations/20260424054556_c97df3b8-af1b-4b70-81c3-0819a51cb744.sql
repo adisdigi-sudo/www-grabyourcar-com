@@ -1,0 +1,1 @@
+DELETE FROM public.promotional_banners WHERE slug IN ('homepage-mega-deal', 'insurance-renewal', 'hsrp-fast');
