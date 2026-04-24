@@ -186,17 +186,25 @@ serve(async (req) => {
         if (car.missing.variants && Array.isArray(ai.variants) && ai.variants.length) {
           const rows = ai.variants
             .filter((v: any) => v?.name)
-            .map((v: any, i: number) => ({
-              car_id: car.id,
-              name: String(v.name).slice(0, 100),
-              fuel_type: v.fuel_type ? String(v.fuel_type).slice(0, 30) : null,
-              transmission: v.transmission ? String(v.transmission).slice(0, 30) : null,
-              price_numeric: typeof v.ex_showroom_price === 'number' ? Math.round(v.ex_showroom_price) : null,
-              ex_showroom: typeof v.ex_showroom_price === 'number' ? Math.round(v.ex_showroom_price) : null,
-              sort_order: i,
-            }));
+            .map((v: any, i: number) => {
+              const priceNum = typeof v.ex_showroom_price === 'number' ? Math.round(v.ex_showroom_price) : null;
+              const priceText = priceNum != null
+                ? `₹${(priceNum / 100000).toFixed(2)} Lakh`
+                : 'Price on request';
+              return {
+                car_id: car.id,
+                name: String(v.name).slice(0, 100),
+                price: priceText,
+                fuel_type: v.fuel_type ? String(v.fuel_type).slice(0, 30) : null,
+                transmission: v.transmission ? String(v.transmission).slice(0, 30) : null,
+                price_numeric: priceNum,
+                ex_showroom: priceNum,
+                sort_order: i,
+              };
+            });
           if (rows.length) {
-            await supabase.from('car_variants').insert(rows);
+            const { error: vErr } = await supabase.from('car_variants').insert(rows);
+            if (vErr) throw new Error(`variants insert: ${vErr.message}`);
             variantsCount = rows.length;
           }
         }
