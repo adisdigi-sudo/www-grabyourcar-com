@@ -255,6 +255,12 @@ const navItems: NavItem[] = [
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin"] },
 
+  // ── Visitor Analytics — marketing ──
+  { id: "visitor-analytics", label: "👀 Visitor Analytics", icon: Activity, badge: "LIVE",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin", "marketing"] },
+
+
   // ── Settings & Integrations (consolidated) ──
   { 
     id: "profile", 
