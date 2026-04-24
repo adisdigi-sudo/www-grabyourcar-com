@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Play, RefreshCw, RotateCcw, Trash2, Zap } from "lucide-react";
+import { Loader2, Play, RefreshCw, RotateCcw, Sparkles, Trash2, Zap } from "lucide-react";
 
 type Job = {
   id: string;
@@ -37,6 +37,9 @@ export default function BulkEnrichment() {
   const [enqueueing, setEnqueueing] = useState(false);
   const [running, setRunning] = useState(false);
   const [autoRun, setAutoRun] = useState(false);
+  const [geminiRunning, setGeminiRunning] = useState(false);
+  const [geminiAuto, setGeminiAuto] = useState(false);
+  const [geminiLog, setGeminiLog] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   const loadJobs = async () => {
@@ -102,7 +105,26 @@ export default function BulkEnrichment() {
     }
   };
 
-  const retryFailed = async () => {
+  const runGemini = async (silent = false) => {
+    setGeminiRunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("gemini-car-bulk-fill", {
+        body: { batchSize: 8 },
+      });
+      if (error) throw error;
+      const msg = `${data.processed ?? 0} processed · ${data.successes ?? 0} ok · ${data.failures ?? 0} failed`;
+      setGeminiLog(`${new Date().toLocaleTimeString()} — ${msg}`);
+      if (!silent) toast({ title: "Gemini batch", description: msg });
+      if (data.processed === 0) {
+        setGeminiAuto(false);
+        toast({ title: "All filled", description: "No more cars need specs/variants/colors." });
+      }
+    } catch (e) {
+      if (!silent) toast({ title: "Gemini error", description: String(e), variant: "destructive" });
+    } finally {
+      setGeminiRunning(false);
+    }
+  };
     const { error } = await supabase
       .from("car_scrape_jobs")
       .update({ status: "queued", error_message: null })
