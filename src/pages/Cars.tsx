@@ -985,6 +985,33 @@ const Cars = () => {
                                 </Badge>
                               )}
                             </div>
+                            {/* Color swatches (list view) */}
+                            {(() => {
+                              const colors = (car.colors || []).filter((c) => c?.hex);
+                              if (colors.length === 0) return null;
+                              return (
+                                <div className="flex items-center gap-1.5 mt-3">
+                                  <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                                    Colors
+                                  </span>
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    {colors.slice(0, 8).map((c, i) => (
+                                      <span
+                                        key={`${car.id}-lcol-${i}`}
+                                        title={c.name}
+                                        className="h-3.5 w-3.5 rounded-full border border-border/70 shadow-sm"
+                                        style={{ backgroundColor: c.hex }}
+                                      />
+                                    ))}
+                                    {colors.length > 8 && (
+                                      <span className="text-[10px] font-medium text-muted-foreground">
+                                        +{colors.length - 8}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                           {/* Action Buttons - 3 CTAs for List View */}
                           <div className="flex flex-wrap items-center gap-2 mt-4">
