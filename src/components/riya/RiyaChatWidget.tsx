@@ -102,6 +102,14 @@ export const RiyaChatWidget = ({
     }
   }, [messages, loading]);
 
+  // Allow other components (engagement popups, CTAs) to open Riya programmatically.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const open = () => setIsOpen(true);
+    window.addEventListener("riya:open", open);
+    return () => window.removeEventListener("riya:open", open);
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (sessionUuid) {

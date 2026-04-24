@@ -268,6 +268,7 @@ const ErrorPrevention = lazy(() => import("@/components/admin/ErrorPrevention"))
 const WorkflowEngine = lazy(() => import("@/components/admin/WorkflowEngine"));
 const AutomationCommandCenter = lazy(() => import("@/components/admin/AutomationCommandCenter"));
 const AutoPilotDashboard = lazy(() => import("@/components/admin/AutoPilotDashboard"));
+const VisitorAnalyticsDashboard = lazy(() => import("@/components/admin/analytics/VisitorAnalyticsDashboard"));
 const LeadRoutingManager = lazy(() =>
   import("@/components/admin/LeadRoutingManager").then((module) => ({ default: module.LeadRoutingManager })),
 );
@@ -468,6 +469,7 @@ const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
         "roles",
         "team-management",
         "settings",
+        "visitor-analytics",
       ].includes(tab);
     case "accounts":
       return tab.startsWith("accounts-");
@@ -769,6 +771,8 @@ const AdminLayout = () => {
         return <EmployeePerformanceDashboard />;
       case "ai-automation-hub":
         return <AIAutomationHub />;
+      case "visitor-analytics":
+        return <VisitorAnalyticsDashboard />;
       case "reply-agents":
         return <ReplyAgentsBuilder verticalSlug={replyAgentVerticalSlug} />;
       case "lead-scoring":

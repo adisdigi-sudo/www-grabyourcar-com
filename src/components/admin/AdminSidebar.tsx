@@ -43,6 +43,7 @@ import {
   Trophy,
   Bot,
   Crown,
+  Activity,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
@@ -254,6 +255,12 @@ const navItems: NavItem[] = [
   { id: "smart-excel", label: "📊 Smart Excel Upload", icon: Database,
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin"] },
+
+  // ── Visitor Analytics — marketing ──
+  { id: "visitor-analytics", label: "👀 Visitor Analytics", icon: Activity, badge: "LIVE",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin", "marketing"] },
+
 
   // ── Settings & Integrations (consolidated) ──
   { 
