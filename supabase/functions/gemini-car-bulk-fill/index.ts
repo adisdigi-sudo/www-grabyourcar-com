@@ -177,7 +177,8 @@ serve(async (req) => {
               sort_order: i,
             }));
           if (rows.length) {
-            await supabase.from('car_specifications').insert(rows);
+            const { error: sErr } = await supabase.from('car_specifications').insert(rows);
+            if (sErr) throw new Error(`specs insert: ${sErr.message}`);
             specsCount = rows.length;
           }
         }
