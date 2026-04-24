@@ -469,6 +469,7 @@ const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
         "roles",
         "team-management",
         "settings",
+        "visitor-analytics",
       ].includes(tab);
     case "accounts":
       return tab.startsWith("accounts-");
@@ -770,6 +771,8 @@ const AdminLayout = () => {
         return <EmployeePerformanceDashboard />;
       case "ai-automation-hub":
         return <AIAutomationHub />;
+      case "visitor-analytics":
+        return <VisitorAnalyticsDashboard />;
       case "reply-agents":
         return <ReplyAgentsBuilder verticalSlug={replyAgentVerticalSlug} />;
       case "lead-scoring":
