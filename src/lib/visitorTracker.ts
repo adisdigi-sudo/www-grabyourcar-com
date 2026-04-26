@@ -1,11 +1,10 @@
 /**
  * Visitor Tracker — custom analytics for GrabYourCar.
  *
- * Captures: session, source/UTM, page views, time-on-page, scroll depth,
- * custom events, and exposes a global helper for popup lead capture.
- *
- * All writes hit the public `visitor_*` Supabase tables.
- * Admin dashboards read these tables.
+ * IMPORTANT: All tracking calls are fire-and-forget. They MUST never block
+ * UI rendering, never throw, and never propagate errors to the page. If the
+ * backend is slow/unreachable or RLS rejects an insert, the site continues
+ * to work seamlessly.
  */
 import { supabase } from "@/integrations/supabase/client";
 
@@ -16,10 +15,24 @@ const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 min
 
 let currentPagePath: string | null = null;
 let currentPageEnteredAt = 0;
-let currentPageViewId: string | null = null;
+// Client-generated id so we can update without needing SELECT permission.
+let currentPageViewClientId: string | null = null;
 let maxScrollDepth = 0;
 let sessionStartedAt = 0;
 let pageCount = 0;
+
+const safe = (fn: () => Promise<unknown> | unknown) => {
+  try {
+    const r = fn();
+    if (r && typeof (r as Promise<unknown>).then === "function") {
+      (r as Promise<unknown>).catch(() => {
+        /* swallow */
+      });
+    }
+  } catch {
+    /* swallow */
+  }
+};
 
 function uid(prefix: string) {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
@@ -27,16 +40,16 @@ function uid(prefix: string) {
 
 function getOrCreate(key: string, prefix: string): string {
   if (typeof window === "undefined") return uid(prefix);
-  let v = window.localStorage.getItem(key);
-  if (!v) {
-    v = uid(prefix);
-    try {
+  try {
+    let v = window.localStorage.getItem(key);
+    if (!v) {
+      v = uid(prefix);
       window.localStorage.setItem(key, v);
-    } catch {
-      // storage blocked
     }
+    return v;
+  } catch {
+    return uid(prefix);
   }
-  return v;
 }
 
 export function getVisitorId(): string {
@@ -45,27 +58,20 @@ export function getVisitorId(): string {
 
 export function getSessionKey(): string {
   if (typeof window === "undefined") return uid("s");
-  const tsRaw = window.sessionStorage.getItem(SESSION_TS);
-  const lastTs = tsRaw ? parseInt(tsRaw, 10) : 0;
-  const now = Date.now();
-  let key = window.sessionStorage.getItem(SESSION_KEY);
-
-  if (!key || now - lastTs > SESSION_TIMEOUT_MS) {
-    key = uid("s");
-    try {
+  try {
+    const tsRaw = window.sessionStorage.getItem(SESSION_TS);
+    const lastTs = tsRaw ? parseInt(tsRaw, 10) : 0;
+    const now = Date.now();
+    let key = window.sessionStorage.getItem(SESSION_KEY);
+    if (!key || now - lastTs > SESSION_TIMEOUT_MS) {
+      key = uid("s");
       window.sessionStorage.setItem(SESSION_KEY, key);
-      window.sessionStorage.setItem(SESSION_TS, String(now));
-    } catch {
-      // ignore
     }
-  } else {
-    try {
-      window.sessionStorage.setItem(SESSION_TS, String(now));
-    } catch {
-      // ignore
-    }
+    window.sessionStorage.setItem(SESSION_TS, String(now));
+    return key;
+  } catch {
+    return uid("s");
   }
-  return key;
 }
 
 function detectSource(referrer: string, urlParams: URLSearchParams) {
@@ -124,20 +130,22 @@ function detectDevice(ua: string) {
   return { device_type, browser, os };
 }
 
-let sessionInitPromise: Promise<void> | null = null;
+let sessionInitialized = false;
 
-async function ensureSession(): Promise<void> {
-  if (sessionInitPromise) return sessionInitPromise;
-  if (typeof window === "undefined") return;
+function ensureSession(): void {
+  if (sessionInitialized || typeof window === "undefined") return;
+  sessionInitialized = true;
 
-  const sessionKey = getSessionKey();
-  const visitorId = getVisitorId();
+  safe(async () => {
+    const sessionKey = getSessionKey();
+    const visitorId = getVisitorId();
+    const initFlag = `${sessionKey}_init`;
+    try {
+      if (window.sessionStorage.getItem(initFlag) === "1") return;
+    } catch {
+      /* ignore */
+    }
 
-  // Already initialized this tab session?
-  const initFlag = `${sessionKey}_init`;
-  if (window.sessionStorage.getItem(initFlag) === "1") return;
-
-  sessionInitPromise = (async () => {
     const params = new URLSearchParams(window.location.search);
     const src = detectSource(document.referrer || "", params);
     const dev = detectDevice(navigator.userAgent);
@@ -170,52 +178,54 @@ async function ensureSession(): Promise<void> {
       try {
         window.sessionStorage.setItem(initFlag, "1");
       } catch {
-        // ignore
+        /* ignore */
       }
     }
-  })();
-
-  return sessionInitPromise;
+  });
 }
 
-async function flushPageView() {
-  if (!currentPagePath || !currentPageViewId) return;
+function flushPageView() {
+  if (!currentPagePath || !currentPageViewClientId) return;
   const timeSpent = Math.round((Date.now() - currentPageEnteredAt) / 1000);
-  await supabase
-    .from("visitor_page_views")
-    .update({
-      time_spent_seconds: timeSpent,
-      scroll_depth: maxScrollDepth,
-      left_at: new Date().toISOString(),
-    })
-    .eq("id", currentPageViewId);
-
-  // Update session totals
   const sessionKey = getSessionKey();
+  const clientId = currentPageViewClientId;
+  const path = currentPagePath;
+  const scroll = maxScrollDepth;
+
+  safe(async () => {
+    await supabase
+      .from("visitor_page_views")
+      .update({
+        time_spent_seconds: timeSpent,
+        scroll_depth: scroll,
+        left_at: new Date().toISOString(),
+      })
+      .eq("session_key", sessionKey)
+      .eq("client_id", clientId);
+  });
+
   pageCount += 1;
   const totalTime = Math.round((Date.now() - sessionStartedAt) / 1000);
-  await supabase
-    .from("visitor_sessions")
-    .update({
-      page_count: pageCount,
-      total_time_seconds: totalTime,
-      exit_page: currentPagePath,
-      last_active_at: new Date().toISOString(),
-      is_bounced: pageCount <= 1 && totalTime < 15,
-    })
-    .eq("session_key", sessionKey);
+  safe(async () => {
+    await supabase
+      .from("visitor_sessions")
+      .update({
+        page_count: pageCount,
+        total_time_seconds: totalTime,
+        exit_page: path,
+        last_active_at: new Date().toISOString(),
+        is_bounced: pageCount <= 1 && totalTime < 15,
+      })
+      .eq("session_key", sessionKey);
+  });
 }
 
-export async function trackPageView(pathname: string, title?: string): Promise<void> {
+export function trackPageView(pathname: string, title?: string): void {
   if (typeof window === "undefined") return;
-  await ensureSession();
+  ensureSession();
 
-  // Flush previous page view first
-  if (currentPagePath && currentPagePath !== pathname) {
-    await flushPageView();
-  } else if (currentPagePath === pathname) {
-    return; // already tracked
-  }
+  if (currentPagePath === pathname) return;
+  if (currentPagePath && currentPagePath !== pathname) flushPageView();
 
   const sessionKey = getSessionKey();
   currentPagePath = pathname;
@@ -223,78 +233,83 @@ export async function trackPageView(pathname: string, title?: string): Promise<v
   maxScrollDepth = 0;
   if (sessionStartedAt === 0) sessionStartedAt = Date.now();
 
-  const { data } = await supabase
-    .from("visitor_page_views")
-    .insert({
+  const clientId = uid("pv");
+  currentPageViewClientId = clientId;
+
+  safe(async () => {
+    await supabase.from("visitor_page_views").insert({
       session_key: sessionKey,
       page_path: pathname,
       page_title: title || document.title,
       time_spent_seconds: 0,
       scroll_depth: 0,
-    })
-    .select("id")
-    .single();
-
-  currentPageViewId = data?.id ?? null;
-}
-
-export async function trackEvent(
-  type: string,
-  label?: string,
-  metadata?: Record<string, unknown>,
-): Promise<void> {
-  if (typeof window === "undefined") return;
-  await ensureSession();
-  const sessionKey = getSessionKey();
-  await supabase.from("visitor_events").insert({
-    session_key: sessionKey,
-    event_type: type,
-    event_label: label || null,
-    page_path: window.location.pathname,
-    metadata: (metadata || {}) as never,
+      client_id: clientId,
+    });
   });
 }
 
-export async function captureLead(payload: {
+export function trackEvent(
+  type: string,
+  label?: string,
+  metadata?: Record<string, unknown>,
+): void {
+  if (typeof window === "undefined") return;
+  ensureSession();
+  const sessionKey = getSessionKey();
+  safe(async () => {
+    await supabase.from("visitor_events").insert({
+      session_key: sessionKey,
+      event_type: type,
+      event_label: label || null,
+      page_path: window.location.pathname,
+      metadata: (metadata || {}) as never,
+    });
+  });
+}
+
+export function captureLead(payload: {
   name?: string;
   phone?: string;
   email?: string;
   message?: string;
-  source: string; // e.g. "exit_popup", "time_popup", "riya_chat"
-}): Promise<void> {
+  source: string;
+}): void {
   if (typeof window === "undefined") return;
   if (!payload.phone && !payload.email) return;
-  await ensureSession();
+  ensureSession();
   const sessionKey = getSessionKey();
   const visitorId = getVisitorId();
   const params = new URLSearchParams(window.location.search);
   const src = detectSource(document.referrer || "", params);
 
-  await supabase.from("visitor_captured_leads").insert({
-    session_key: sessionKey,
-    visitor_id: visitorId,
-    name: payload.name || null,
-    phone: payload.phone || null,
-    email: payload.email || null,
-    message: payload.message || null,
-    capture_source: payload.source,
-    capture_page: window.location.pathname,
-    source: src.source,
-    utm_source: src.utm_source || null,
-    utm_campaign: src.utm_campaign || null,
-    pages_viewed: pageCount,
-    time_on_site_seconds: Math.round((Date.now() - sessionStartedAt) / 1000),
+  safe(async () => {
+    await supabase.from("visitor_captured_leads").insert({
+      session_key: sessionKey,
+      visitor_id: visitorId,
+      name: payload.name || null,
+      phone: payload.phone || null,
+      email: payload.email || null,
+      message: payload.message || null,
+      capture_source: payload.source,
+      capture_page: window.location.pathname,
+      source: src.source,
+      utm_source: src.utm_source || null,
+      utm_campaign: src.utm_campaign || null,
+      pages_viewed: pageCount,
+      time_on_site_seconds: Math.round((Date.now() - sessionStartedAt) / 1000),
+    });
   });
 
-  // Mirror onto the session for fast filtering
-  await supabase
-    .from("visitor_sessions")
-    .update({
-      captured_phone: payload.phone || null,
-      captured_email: payload.email || null,
-      captured_name: payload.name || null,
-    })
-    .eq("session_key", sessionKey);
+  safe(async () => {
+    await supabase
+      .from("visitor_sessions")
+      .update({
+        captured_phone: payload.phone || null,
+        captured_email: payload.email || null,
+        captured_name: payload.name || null,
+      })
+      .eq("session_key", sessionKey);
+  });
 }
 
 function setupScrollTracking() {
@@ -313,40 +328,11 @@ function setupScrollTracking() {
 function setupUnloadFlush() {
   if (typeof window === "undefined") return;
   const flush = () => {
-    if (!currentPagePath || !currentPageViewId) return;
-    const timeSpent = Math.round((Date.now() - currentPageEnteredAt) / 1000);
-    const sessionKey = getSessionKey();
-    const totalTime = Math.round((Date.now() - sessionStartedAt) / 1000);
-
-    // Use sendBeacon for reliable unload delivery via REST
-    const url = `https://ynoiwioypxpurwdbjvyt.supabase.co/rest/v1/visitor_page_views?id=eq.${currentPageViewId}`;
-    const headers = new Blob(
-      [
-        JSON.stringify({
-          time_spent_seconds: timeSpent,
-          scroll_depth: maxScrollDepth,
-          left_at: new Date().toISOString(),
-        }),
-      ],
-      { type: "application/json" },
-    );
     try {
-      navigator.sendBeacon?.(url, headers);
+      if (currentPagePath && currentPageViewClientId) flushPageView();
     } catch {
-      // ignore
+      /* ignore */
     }
-
-    // Best-effort session update
-    void supabase
-      .from("visitor_sessions")
-      .update({
-        page_count: pageCount + 1,
-        total_time_seconds: totalTime,
-        exit_page: currentPagePath,
-        ended_at: new Date().toISOString(),
-        last_active_at: new Date().toISOString(),
-      })
-      .eq("session_key", sessionKey);
   };
   window.addEventListener("beforeunload", flush);
   window.addEventListener("pagehide", flush);
@@ -356,7 +342,14 @@ let booted = false;
 export function bootVisitorTracker() {
   if (booted || typeof window === "undefined") return;
   booted = true;
-  void ensureSession();
-  setupScrollTracking();
-  setupUnloadFlush();
+  // Defer all setup off the critical path
+  const idle = (window as unknown as { requestIdleCallback?: (cb: () => void) => void })
+    .requestIdleCallback;
+  const run = () => {
+    ensureSession();
+    setupScrollTracking();
+    setupUnloadFlush();
+  };
+  if (typeof idle === "function") idle(run);
+  else window.setTimeout(run, 1500);
 }
