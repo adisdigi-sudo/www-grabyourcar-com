@@ -19445,6 +19445,7 @@ export type Database = {
       }
       visitor_page_views: {
         Row: {
+          client_id: string | null
           created_at: string
           entered_at: string
           id: string
@@ -19456,6 +19457,7 @@ export type Database = {
           time_spent_seconds: number
         }
         Insert: {
+          client_id?: string | null
           created_at?: string
           entered_at?: string
           id?: string
@@ -19467,6 +19469,7 @@ export type Database = {
           time_spent_seconds?: number
         }
         Update: {
+          client_id?: string | null
           created_at?: string
           entered_at?: string
           id?: string
