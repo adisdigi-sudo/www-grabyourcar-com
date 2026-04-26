@@ -23,6 +23,6 @@ export const useVisitorTracking = () => {
       return;
     }
     bootVisitorTracker();
-    void trackPageView(path + location.search);
+    trackPageView(path + location.search);
   }, [location.pathname, location.search]);
 };
