@@ -93,7 +93,6 @@ const Brochures = () => {
         brochureUrl: brochure.url,
         carName: `${car.brand} ${car.name}`,
         carSlug: car.slug,
-        carId: String(car.id),
       });
       toast.success("Brochure download started", { id: toastId });
     } catch {
