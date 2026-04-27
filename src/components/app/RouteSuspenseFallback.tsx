@@ -10,8 +10,8 @@ import { performSafePreviewReload } from "@/lib/chunkLoadRecovery";
  * before any automatic action.
  */
 export const RouteSuspenseFallback = ({
-  hardTimeoutMs = 12000,
-  softTimeoutMs = 5000,
+  hardTimeoutMs = 3500,
+  softTimeoutMs = 1200,
 }: {
   hardTimeoutMs?: number;
   softTimeoutMs?: number;
@@ -46,14 +46,13 @@ export const RouteSuspenseFallback = ({
       data-startup-ready="route-suspense-loading"
     >
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      <p className="text-sm text-muted-foreground animate-pulse">Loading page...</p>
       {showReload && (
         <button
           type="button"
           onClick={() => performSafePreviewReload()}
           className="mt-2 text-xs underline text-muted-foreground hover:text-foreground"
         >
-          Taking too long? Tap to reload
+          Refresh
         </button>
       )}
     </main>
