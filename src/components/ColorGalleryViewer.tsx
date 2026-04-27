@@ -88,8 +88,11 @@ export const ColorGalleryViewer = ({
     <div className="space-y-3">
       {/* Main Image Display */}
       <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-secondary group">
-        <div 
-          className="absolute inset-0 z-10 pointer-events-none opacity-10 transition-opacity duration-500"
+        <div
+          className={cn(
+            "absolute inset-0 z-10 pointer-events-none transition-opacity duration-500 mix-blend-multiply",
+            overlayOpacityClass,
+          )}
           style={{ backgroundColor: colorOverlay }}
         />
         
