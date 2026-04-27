@@ -3,13 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { FileText, Shield, Loader2, CheckCircle, Download } from "lucide-react";
+import { FileText, Loader2, CheckCircle, Download } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
+import { downloadBrochureSafely } from "@/lib/brochureDownload";
 
 const formSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(100),
@@ -21,15 +21,31 @@ interface BrochureLeadGateProps {
   brochureUrl: string;
   carName: string;
   carSlug?: string;
+  carId?: string;
   children: React.ReactNode;
 }
 
-export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: BrochureLeadGateProps) => {
+export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, carId, children }: BrochureLeadGateProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<"form" | "otp" | "success">("form");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({ name: "", phone: "", city: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const triggerDownload = useCallback(async () => {
+    const toastId = toast.loading("Preparing brochure...");
+    try {
+      await downloadBrochureSafely({ brochureUrl, carName, carSlug, carId });
+      toast.success("Brochure download started", { id: toastId });
+      return true;
+    } catch (error) {
+      toast.error("Brochure not available right now", {
+        id: toastId,
+        description: "Please request it on WhatsApp and our team will share it.",
+      });
+      return false;
+    }
+  }, [brochureUrl, carName, carSlug, carId]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -38,24 +54,13 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
     // Check if lead already captured for this brochure
     const captured = localStorage.getItem(`gyc_brochure_lead_${carSlug || carName}`);
     if (captured) {
-      triggerDownload();
+      void triggerDownload();
       return;
     }
 
     setIsOpen(true);
     setStep("form");
-  }, [carSlug, carName]);
-
-  const triggerDownload = useCallback(() => {
-    const link = document.createElement("a");
-    link.href = brochureUrl;
-    link.download = `${carSlug || carName}-brochure.pdf`;
-    link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("Downloading brochure...");
-  }, [brochureUrl, carSlug, carName]);
+  }, [carSlug, carName, triggerDownload]);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,7 +96,7 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
 
       confetti({ particleCount: 60, spread: 50, origin: { y: 0.6 } });
       setStep("success");
-      triggerDownload();
+      await triggerDownload();
 
       setTimeout(() => setIsOpen(false), 3000);
     } catch {
