@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +13,8 @@ import { scheduleChunkLoadRecoveryReset } from "@/lib/chunkLoadRecovery";
 import { withPreviewParams } from "@/lib/previewRouting";
 import { RouteProviderGate } from "@/components/app/RouteProviderGate";
 import { PublicRouteChrome, PublicRouteStructuredData } from "@/components/app/PublicRouteChrome";
+import { RouteSuspenseFallback } from "@/components/app/RouteSuspenseFallback";
+import { lazyWithRetry as lazy } from "@/lib/lazyWithRetry";
 import AdminAuth from "./pages/AdminAuth";
 import AdminLayout from "./pages/AdminLayout";
 import AdminResetPassword from "./pages/AdminResetPassword";
@@ -173,19 +175,7 @@ const AppRouterShell = () => {
       isAdminExperience={isAdminExperience}
       requiresWorkspaceProviders={isAdminExperience && !isAdminAuthShell}
     >
-      <Suspense
-        fallback={
-          <main
-            className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background"
-            role="main"
-            aria-busy="true"
-            data-startup-ready="route-suspense-loading"
-          >
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-            <p className="text-sm text-muted-foreground animate-pulse">Loading page...</p>
-          </main>
-        }
-      >
+      <Suspense fallback={<RouteSuspenseFallback />}>
         <RouteAwareStructuredData isChromelessExperience={isChromelessExperience} />
         <PageViewTracker
           isAdminExperience={isAdminExperience}
