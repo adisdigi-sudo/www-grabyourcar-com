@@ -13,6 +13,7 @@ import { scheduleChunkLoadRecoveryReset } from "@/lib/chunkLoadRecovery";
 import { withPreviewParams } from "@/lib/previewRouting";
 import { RouteProviderGate } from "@/components/app/RouteProviderGate";
 import { PublicRouteChrome, PublicRouteStructuredData } from "@/components/app/PublicRouteChrome";
+import { RouteSuspenseFallback } from "@/components/app/RouteSuspenseFallback";
 import { lazyWithRetry as lazy } from "@/lib/lazyWithRetry";
 import AdminAuth from "./pages/AdminAuth";
 import AdminLayout from "./pages/AdminLayout";
