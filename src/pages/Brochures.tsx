@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, FileText, Download, AlertCircle, Eye, Phone } from "lucide-react";
+import { Search, FileText, Download, ExternalLink, AlertCircle, Eye, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCars } from "@/hooks/useCars";
 import { useAllCarsForBrochures, CarWithBrochure } from "@/hooks/useBrochures";
