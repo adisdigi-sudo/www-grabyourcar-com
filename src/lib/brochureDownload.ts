@@ -4,7 +4,7 @@ type DownloadBrochureInput = {
   brochureUrl?: string | null;
   carName: string;
   carSlug?: string;
-  carId?: string;
+  carId?: string | number;
 };
 
 const sanitizeFilePart = (value: string) =>
@@ -44,7 +44,7 @@ export const downloadBrochureSafely = async ({
   if (!isHostedBrochure(downloadUrl)) {
     const { data, error } = await supabase.functions.invoke("download-brochure", {
       body: {
-        carId,
+        carId: carId ? String(carId) : undefined,
         oemUrl: downloadUrl,
         carSlug: carSlug || sanitizeFilePart(carName),
       },
