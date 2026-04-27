@@ -72,6 +72,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { isValidImage } from "@/lib/imageUtils";
 import { CarImage } from "@/components/CarImage";
+import { downloadBrochureSafely } from "@/lib/brochureDownload";
+import { toast } from "sonner";
 
 const Cars = () => {
   const { user } = useAuth();
@@ -103,6 +105,26 @@ const Cars = () => {
       removeFromCompare(carId);
     } else {
       addToCompare(carId);
+    }
+  };
+
+  const handleBrochureDownload = async (car: (typeof allCars)[number]) => {
+    if (!car.brochureUrl) {
+      toast.info("Brochure not available for this car yet");
+      return;
+    }
+
+    const toastId = toast.loading("Preparing brochure...");
+    try {
+      await downloadBrochureSafely({
+        brochureUrl: car.brochureUrl,
+        carName: `${car.brand} ${car.name}`,
+        carSlug: car.slug,
+        carId: car.id,
+      });
+      toast.success("Brochure download started", { id: toastId });
+    } catch {
+      toast.error("Brochure not available right now", { id: toastId });
     }
   };
 
@@ -899,37 +921,17 @@ const Cars = () => {
                               </Button>
                             </a>
                           </div>
-                          {/* Brochure — bold green button, always visible */}
-                          {car.brochureUrl ? (
-                            <a
-                              href={car.brochureUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              download={`${car.slug}-brochure.pdf`}
-                              className="w-full"
-                              aria-label={`Download ${car.name} brochure`}
-                            >
-                              <Button size="sm" className="w-full gap-1.5 h-9 bg-green-600 hover:bg-green-700 text-white font-bold shadow-md">
-                                <FileText className="h-4 w-4" />
-                                Download Brochure
-                              </Button>
-                            </a>
-                          ) : (
-                            <a
-                              href={`https://wa.me/919855924442?text=${encodeURIComponent(
-                                `Hi GrabYourCar! 📄\n\nPlease share the *latest brochure* for *${car.brand} ${car.name}*.\n\nThanks!`
-                              )}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-full"
-                              aria-label={`Request ${car.name} brochure on WhatsApp`}
-                            >
-                              <Button size="sm" className="w-full gap-1.5 h-9 bg-green-600 hover:bg-green-700 text-white font-bold shadow-md">
-                                <FileText className="h-4 w-4" />
-                                Get Brochure on WhatsApp
-                              </Button>
-                            </a>
-                          )}
+                          <Button
+                            variant={car.brochureUrl ? "cta" : "secondary"}
+                            size="sm"
+                            className="w-full gap-1.5 h-9 font-bold"
+                            onClick={() => handleBrochureDownload(car)}
+                            disabled={!car.brochureUrl}
+                            aria-label={car.brochureUrl ? `Download ${car.name} brochure` : `${car.name} brochure not available`}
+                          >
+                            <FileText className="h-4 w-4" />
+                            {car.brochureUrl ? "Download Brochure" : "No Brochure"}
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -1028,36 +1030,17 @@ const Cars = () => {
                                 Call
                               </Button>
                             </a>
-                            {car.brochureUrl ? (
-                              <a
-                                href={car.brochureUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                download={`${car.slug}-brochure.pdf`}
-                                className="flex-1 min-w-[140px]"
-                                aria-label={`Download ${car.name} brochure`}
-                              >
-                                <Button size="sm" className="w-full gap-1.5 h-9 bg-green-600 hover:bg-green-700 text-white font-bold shadow-md">
-                                  <FileText className="h-4 w-4" />
-                                  Brochure
-                                </Button>
-                              </a>
-                            ) : (
-                              <a
-                                href={`https://wa.me/919855924442?text=${encodeURIComponent(
-                                  `Hi GrabYourCar! 📄\n\nPlease share the *latest brochure* for *${car.brand} ${car.name}*.\n\nThanks!`
-                                )}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 min-w-[140px]"
-                                aria-label={`Request ${car.name} brochure on WhatsApp`}
-                              >
-                                <Button size="sm" className="w-full gap-1.5 h-9 bg-green-600 hover:bg-green-700 text-white font-bold shadow-md">
-                                  <FileText className="h-4 w-4" />
-                                  Get on WhatsApp
-                                </Button>
-                              </a>
-                            )}
+                            <Button
+                              variant={car.brochureUrl ? "cta" : "secondary"}
+                              size="sm"
+                              className="flex-1 min-w-[140px] gap-1.5 h-9 font-bold"
+                              onClick={() => handleBrochureDownload(car)}
+                              disabled={!car.brochureUrl}
+                              aria-label={car.brochureUrl ? `Download ${car.name} brochure` : `${car.name} brochure not available`}
+                            >
+                              <FileText className="h-4 w-4" />
+                              {car.brochureUrl ? "Brochure" : "No Brochure"}
+                            </Button>
                             {user && (
                               <Button
                                 variant="outline"

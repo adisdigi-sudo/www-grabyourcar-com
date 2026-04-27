@@ -13,6 +13,8 @@ import { useAllCarsForBrochures, CarWithBrochure } from "@/hooks/useBrochures";
 import { CarPagination } from "@/components/CarPagination";
 import { WhatsAppCardButton } from "@/components/WhatsAppCTA";
 import { BrochureLeadGate } from "@/components/BrochureLeadGate";
+import { downloadBrochureSafely } from "@/lib/brochureDownload";
+import { toast } from "sonner";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -77,21 +79,25 @@ const Brochures = () => {
     setCurrentPage(1);
   };
 
-  const handleDownload = (car: typeof paginatedCars[0]) => {
-    // Priority: car_brochures table > brochure_url field > car detail page
-    if (car.brochures && car.brochures.length > 0) {
-      // Open the first brochure URL
-      window.open(car.brochures[0].url, "_blank");
-    } else if (car.brochureUrl) {
-      window.open(car.brochureUrl, "_blank");
-    } else {
-      // Fallback to car detail page
-      window.open(`/cars/${car.slug}`, "_blank");
-    }
-  };
-
   const hasBrochure = (car: typeof paginatedCars[0]) => {
     return (car.brochures && car.brochures.length > 0) || car.brochureUrl;
+  };
+
+  const handleVariantBrochureDownload = async (
+    car: typeof paginatedCars[0],
+    brochure: NonNullable<typeof paginatedCars[0]["brochures"]>[number]
+  ) => {
+    const toastId = toast.loading("Preparing brochure...");
+    try {
+      await downloadBrochureSafely({
+        brochureUrl: brochure.url,
+        carName: `${car.brand} ${car.name}`,
+        carSlug: car.slug,
+      });
+      toast.success("Brochure download started", { id: toastId });
+    } catch {
+      toast.error("Brochure not available right now", { id: toastId });
+    }
   };
 
   const isLoading = isLoadingDb;
@@ -243,9 +249,9 @@ const Brochures = () => {
                                 carSlug={car.slug}
                               >
                                 <Button
-                                  variant="default"
+                                  variant="cta"
                                   size="sm"
-                                  className="gap-1 h-8"
+                                  className="gap-1 h-8 font-bold"
                                 >
                                   <Download className="h-3.5 w-3.5" />
                                   Brochure
@@ -255,11 +261,11 @@ const Brochures = () => {
                               <Button
                                 variant="secondary"
                                 size="sm"
-                                className="gap-1 h-8"
+                                className="gap-1 h-8 font-bold"
                                 disabled
                               >
                                 <Download className="h-3.5 w-3.5" />
-                                N/A
+                                No Brochure
                               </Button>
                             )}
                           </div>
@@ -302,7 +308,7 @@ const Brochures = () => {
                                 key={brochure.id}
                                 variant="outline"
                                 className="text-xs cursor-pointer hover:bg-primary/10"
-                                onClick={() => window.open(brochure.url, "_blank")}
+                                onClick={() => handleVariantBrochureDownload(car, brochure)}
                               >
                                 {brochure.variant_name || brochure.title}
                               </Badge>

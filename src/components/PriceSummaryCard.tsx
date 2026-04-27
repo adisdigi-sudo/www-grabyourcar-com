@@ -539,15 +539,20 @@ export const PriceSummaryCard = ({
           </div>
         </div>
 
-        {/* Brochure Download - gated with lead capture */}
-        {brochureUrl && brochureUrl.includes('supabase.co') && (
+        {/* Brochure Download - always visible */}
+        {brochureUrl ? (
           <BrochureLeadGate brochureUrl={brochureUrl} carName={`${carBrand} ${carName}`}>
-            <div className="flex items-center justify-center gap-2 p-3 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors group cursor-pointer">
-              <FileText className="h-4 w-4 text-foreground group-hover:scale-110 transition-transform" />
-              <span className="text-sm font-medium">Download Brochure</span>
-              <Download className="h-4 w-4 text-muted-foreground" />
-            </div>
+            <Button variant="cta" className="w-full gap-2 font-bold">
+              <FileText className="h-4 w-4" />
+              Download Brochure
+              <Download className="h-4 w-4" />
+            </Button>
           </BrochureLeadGate>
+        ) : (
+          <Button variant="secondary" className="w-full gap-2 font-bold" disabled>
+            <FileText className="h-4 w-4" />
+            No Brochure Available
+          </Button>
         )}
 
         {/* Trust Indicators */}

@@ -14,9 +14,16 @@ Deno.serve(async (req) => {
   try {
     const { carId, oemUrl, carSlug } = await req.json();
 
-    if (!carId || !oemUrl || !carSlug) {
+    if (!oemUrl || !carSlug) {
       return new Response(
-        JSON.stringify({ success: false, error: "Missing required fields: carId, oemUrl, carSlug" }),
+        JSON.stringify({ success: false, error: "Missing required fields: oemUrl, carSlug" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!/^https?:\/\//i.test(oemUrl)) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid brochure URL" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -77,22 +84,23 @@ Deno.serve(async (req) => {
     const publicUrl = publicUrlData.publicUrl;
     console.log(`Uploaded to: ${publicUrl}`);
 
-    // Update the car record with the new brochure URL
-    const { error: updateError } = await supabase
-      .from("cars")
-      .update({ brochure_url: publicUrl })
-      .eq("id", carId);
+    if (carId) {
+      const { error: updateError } = await supabase
+        .from("cars")
+        .update({ brochure_url: publicUrl })
+        .eq("id", carId);
 
-    if (updateError) {
-      console.error("Update error:", updateError);
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          url: publicUrl,
-          warning: `Brochure uploaded but car record update failed: ${updateError.message}` 
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (updateError) {
+        console.error("Update error:", updateError);
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            url: publicUrl,
+            warning: `Brochure uploaded but car record update failed: ${updateError.message}` 
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     return new Response(
