@@ -72,6 +72,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { isValidImage } from "@/lib/imageUtils";
 import { CarImage } from "@/components/CarImage";
+import { downloadBrochureSafely } from "@/lib/brochureDownload";
+import { toast } from "sonner";
 
 const Cars = () => {
   const { user } = useAuth();
@@ -103,6 +105,26 @@ const Cars = () => {
       removeFromCompare(carId);
     } else {
       addToCompare(carId);
+    }
+  };
+
+  const handleBrochureDownload = async (car: (typeof allCars)[number]) => {
+    if (!car.brochureUrl) {
+      toast.info("Brochure not available for this car yet");
+      return;
+    }
+
+    const toastId = toast.loading("Preparing brochure...");
+    try {
+      await downloadBrochureSafely({
+        brochureUrl: car.brochureUrl,
+        carName: `${car.brand} ${car.name}`,
+        carSlug: car.slug,
+        carId: car.id,
+      });
+      toast.success("Brochure download started", { id: toastId });
+    } catch {
+      toast.error("Brochure not available right now", { id: toastId });
     }
   };
 
