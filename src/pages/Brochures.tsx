@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, FileText, Download, ExternalLink, AlertCircle, Eye, Phone } from "lucide-react";
+import { Search, FileText, Download, AlertCircle, Eye, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCars } from "@/hooks/useCars";
 import { useAllCarsForBrochures, CarWithBrochure } from "@/hooks/useBrochures";
@@ -75,19 +75,6 @@ const Brochures = () => {
   const handleBrandChange = (brand: string | null) => {
     setSelectedBrand(brand);
     setCurrentPage(1);
-  };
-
-  const handleDownload = (car: typeof paginatedCars[0]) => {
-    // Priority: car_brochures table > brochure_url field > car detail page
-    if (car.brochures && car.brochures.length > 0) {
-      // Open the first brochure URL
-      window.open(car.brochures[0].url, "_blank");
-    } else if (car.brochureUrl) {
-      window.open(car.brochureUrl, "_blank");
-    } else {
-      // Fallback to car detail page
-      window.open(`/cars/${car.slug}`, "_blank");
-    }
   };
 
   const hasBrochure = (car: typeof paginatedCars[0]) => {
@@ -243,9 +230,9 @@ const Brochures = () => {
                                 carSlug={car.slug}
                               >
                                 <Button
-                                  variant="default"
+                                  variant="cta"
                                   size="sm"
-                                  className="gap-1 h-8"
+                                  className="gap-1 h-8 font-bold"
                                 >
                                   <Download className="h-3.5 w-3.5" />
                                   Brochure
@@ -255,11 +242,11 @@ const Brochures = () => {
                               <Button
                                 variant="secondary"
                                 size="sm"
-                                className="gap-1 h-8"
+                                className="gap-1 h-8 font-bold"
                                 disabled
                               >
                                 <Download className="h-3.5 w-3.5" />
-                                N/A
+                                No Brochure
                               </Button>
                             )}
                           </div>
