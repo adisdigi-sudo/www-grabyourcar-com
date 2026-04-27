@@ -12,6 +12,8 @@ import { WhatsAppCardButton } from "@/components/WhatsAppCTA";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CarImage } from "@/components/CarImage";
+import { downloadBrochureSafely } from "@/lib/brochureDownload";
+import { toast } from "sonner";
 
 interface CarWithImage {
   id: string;
@@ -116,6 +118,26 @@ export const CarListings = () => {
       removeFromCompare(carId);
     } else {
       addToCompare(carId);
+    }
+  };
+
+  const handleBrochureDownload = async (car: CarWithImage) => {
+    if (!car.brochure_url) {
+      toast.info("Brochure not available for this car yet");
+      return;
+    }
+
+    const toastId = toast.loading("Preparing brochure...");
+    try {
+      await downloadBrochureSafely({
+        brochureUrl: car.brochure_url,
+        carName: `${car.brand} ${car.name}`,
+        carSlug: car.slug,
+        carId: car.id,
+      });
+      toast.success("Brochure download started", { id: toastId });
+    } catch {
+      toast.error("Brochure not available right now", { id: toastId });
     }
   };
 
@@ -284,26 +306,17 @@ export const CarListings = () => {
                     </a>
                   </div>
 
-                  {/* Brochure Download — direct, no gate */}
-                  {car.brochure_url && (
-                    <a
-                      href={car.brochure_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      download={`${car.slug}-brochure.pdf`}
-                      className="w-full"
-                      aria-label={`Download ${car.name} brochure`}
-                    >
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full gap-1 text-[10px] sm:text-xs h-7 sm:h-8 font-semibold px-2 border-primary/30 hover:bg-primary/5"
-                      >
-                        <FileDown className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
-                        <span className="truncate">Brochure</span>
-                      </Button>
-                    </a>
-                  )}
+                  <Button
+                    variant={car.brochure_url ? "cta" : "secondary"}
+                    size="sm"
+                    className="w-full gap-1 text-[10px] sm:text-xs h-7 sm:h-8 font-semibold px-2"
+                    onClick={() => handleBrochureDownload(car)}
+                    disabled={!car.brochure_url}
+                    aria-label={car.brochure_url ? `Download ${car.name} brochure` : `${car.name} brochure not available`}
+                  >
+                    <FileDown className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                    <span className="truncate">{car.brochure_url ? "Brochure" : "No Brochure"}</span>
+                  </Button>
                 </CardFooter>
               </Card>
             );
