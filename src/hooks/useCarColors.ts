@@ -21,18 +21,40 @@ interface CarImage {
   alt_text: string | null;
 }
 
-// Helper to find matching color image from car_images
+// Helper to find matching color image from car_images.
+// Tries multiple strategies: exact alt match, normalized URL match, individual word match.
 const findColorImageFromGallery = (colorName: string, images: CarImage[]): string | undefined => {
-  const normalizedColorName = colorName.toLowerCase().replace(/\s+/g, '-');
-  
-  // Look for images that contain the color name in alt_text or URL
-  const matchingImage = images.find(img => {
-    const altMatch = img.alt_text?.toLowerCase().includes(colorName.toLowerCase());
-    const urlMatch = img.url.toLowerCase().includes(normalizedColorName);
-    return altMatch || urlMatch;
-  });
-  
-  return matchingImage?.url;
+  if (!colorName || images.length === 0) return undefined;
+
+  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const normColor = normalize(colorName);
+  // individual significant words (skip generic ones)
+  const stop = new Set(["color", "colour", "metallic", "pearl", "mica", "solid", "premium"]);
+  const words = colorName
+    .toLowerCase()
+    .split(/[\s_-]+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 3 && !stop.has(w));
+
+  // 1) exact alt match
+  let match = images.find((img) => img.alt_text && normalize(img.alt_text).includes(normColor));
+  if (match) return match.url;
+
+  // 2) URL contains normalized color
+  match = images.find((img) => normalize(img.url).includes(normColor));
+  if (match) return match.url;
+
+  // 3) any significant word matches alt or URL
+  for (const w of words) {
+    match = images.find(
+      (img) =>
+        (img.alt_text && img.alt_text.toLowerCase().includes(w)) ||
+        img.url.toLowerCase().includes(w),
+    );
+    if (match) return match.url;
+  }
+
+  return undefined;
 };
 
 // Fetch colors from database for a specific car
