@@ -37,11 +37,22 @@ export const ColorGalleryViewer = ({
   
   const currentColor = colors[selectedColor];
   const fallbackGallery = gallery.length > 0 ? gallery : (carImage ? [carImage] : []);
-  
+  const hasOwnColorImage = Boolean(currentColor?.image);
+
+  // Build the image list:
+  // - If this color has its own image → show ONLY that image (so switching colors is obvious).
+  //   We still include other generic gallery shots (interior/dashboard etc.) but the color image is always first.
+  // - Else fall back to the full gallery and rely on the colored tint overlay to show the color change.
   const colorImages = (() => {
     if (currentColor?.image) {
-      const uniqueGallery = fallbackGallery.filter(img => img !== currentColor.image);
-      return [currentColor.image, ...uniqueGallery];
+      // Other gallery images that are NOT another color's primary image
+      const otherColorImages = new Set(
+        colors.map((c) => c.image).filter((img): img is string => Boolean(img) && img !== currentColor.image),
+      );
+      const generics = fallbackGallery.filter(
+        (img) => img !== currentColor.image && !otherColorImages.has(img),
+      );
+      return [currentColor.image, ...generics];
     }
     return fallbackGallery.length > 0 ? fallbackGallery : [PLACEHOLDER_IMAGE];
   })();
@@ -69,13 +80,19 @@ export const ColorGalleryViewer = ({
   };
 
   const colorOverlay = currentColor?.hex || "#ffffff";
+  // Stronger tint when this color doesn't have its own dedicated image, so the color change is visually obvious.
+  const overlayOpacityClass = hasOwnColorImage ? "opacity-10" : "opacity-30";
+
 
   return (
     <div className="space-y-3">
       {/* Main Image Display */}
       <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-secondary group">
-        <div 
-          className="absolute inset-0 z-10 pointer-events-none opacity-10 transition-opacity duration-500"
+        <div
+          className={cn(
+            "absolute inset-0 z-10 pointer-events-none transition-opacity duration-500 mix-blend-multiply",
+            overlayOpacityClass,
+          )}
           style={{ backgroundColor: colorOverlay }}
         />
         
