@@ -13,6 +13,8 @@ import { useAllCarsForBrochures, CarWithBrochure } from "@/hooks/useBrochures";
 import { CarPagination } from "@/components/CarPagination";
 import { WhatsAppCardButton } from "@/components/WhatsAppCTA";
 import { BrochureLeadGate } from "@/components/BrochureLeadGate";
+import { downloadBrochureSafely } from "@/lib/brochureDownload";
+import { toast } from "sonner";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -79,6 +81,24 @@ const Brochures = () => {
 
   const hasBrochure = (car: typeof paginatedCars[0]) => {
     return (car.brochures && car.brochures.length > 0) || car.brochureUrl;
+  };
+
+  const handleVariantBrochureDownload = async (
+    car: typeof paginatedCars[0],
+    brochure: NonNullable<typeof paginatedCars[0]["brochures"]>[number]
+  ) => {
+    const toastId = toast.loading("Preparing brochure...");
+    try {
+      await downloadBrochureSafely({
+        brochureUrl: brochure.url,
+        carName: `${car.brand} ${car.name}`,
+        carSlug: car.slug,
+        carId: String(car.id),
+      });
+      toast.success("Brochure download started", { id: toastId });
+    } catch {
+      toast.error("Brochure not available right now", { id: toastId });
+    }
   };
 
   const isLoading = isLoadingDb;
@@ -289,7 +309,7 @@ const Brochures = () => {
                                 key={brochure.id}
                                 variant="outline"
                                 className="text-xs cursor-pointer hover:bg-primary/10"
-                                onClick={() => window.open(brochure.url, "_blank")}
+                                onClick={() => handleVariantBrochureDownload(car, brochure)}
                               >
                                 {brochure.variant_name || brochure.title}
                               </Badge>
