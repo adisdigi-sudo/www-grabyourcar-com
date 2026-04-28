@@ -63,8 +63,8 @@ export function ShopRocketEmbed({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="py-12" aria-hidden="true">
+        <div className="mx-auto h-40 max-w-4xl rounded-2xl bg-muted/60 animate-pulse" />
       </div>
     );
   }
