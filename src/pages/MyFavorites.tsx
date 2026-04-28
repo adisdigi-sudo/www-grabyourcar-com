@@ -8,7 +8,7 @@ import { cars } from "@/data/carsData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Loader2, Car, Trash2 } from "lucide-react";
+import { Heart, Car, Trash2 } from "lucide-react";
 
 const MyFavorites = () => {
   const navigate = useNavigate();
@@ -23,8 +23,34 @@ const MyFavorites = () => {
 
   if (authLoading || favLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+      <div className="min-h-screen bg-background">
+        <Header />
+        <section className="py-12 md:py-16">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Heart className="h-6 w-6 text-foreground" />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-heading font-bold">My Favorites</h1>
+                <p className="text-muted-foreground">Cars you have saved for later</p>
+              </div>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i} className="overflow-hidden animate-pulse">
+                  <div className="h-48 bg-muted" />
+                  <CardContent className="p-5 space-y-3">
+                    <div className="h-5 w-2/3 rounded bg-muted" />
+                    <div className="h-5 w-1/3 rounded bg-muted" />
+                    <div className="h-10 w-full rounded bg-muted" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+        <Footer />
       </div>
     );
   }
