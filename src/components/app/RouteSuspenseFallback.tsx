@@ -10,8 +10,8 @@ import { performSafePreviewReload } from "@/lib/chunkLoadRecovery";
  * before any automatic action.
  */
 export const RouteSuspenseFallback = ({
-  hardTimeoutMs = 3500,
-  softTimeoutMs = 1200,
+  hardTimeoutMs = 8000,
+  softTimeoutMs = 3000,
 }: {
   hardTimeoutMs?: number;
   softTimeoutMs?: number;

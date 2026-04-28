@@ -1,23 +1,11 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode } from "react";
 import { CartProvider } from "@/hooks/useCart";
 import { CompareProvider } from "@/hooks/useCompare";
 import { useGlobalRealtimeSync } from "@/hooks/useRealtimeSync";
 import { VerticalProvider } from "@/hooks/useVerticalAccess";
 
 const PublicRealtimeSyncProvider = ({ children }: { children: ReactNode }) => {
-  const [isRealtimeReady, setIsRealtimeReady] = useState(false);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setIsRealtimeReady(true);
-    }, 1200);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, []);
-
-  useGlobalRealtimeSync(isRealtimeReady);
+  useGlobalRealtimeSync(true);
   return <>{children}</>;
 };
 
