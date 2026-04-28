@@ -51,7 +51,8 @@ export const isSensitivePreviewRouteWindow = () => {
   }
 
   const { hostname, pathname } = window.location;
-  return hostname.startsWith("admin.") || isSensitivePreviewRoutePath(pathname);
+  const host = hostname.toLowerCase();
+  return host.startsWith("admin.") || host.startsWith("www.admin.") || isSensitivePreviewRoutePath(pathname);
 };
 
 // Disabled: the recovery overlay was interrupting normal dev HMR on sensitive
