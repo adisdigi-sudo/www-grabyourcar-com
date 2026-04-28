@@ -60,8 +60,29 @@ const Auth = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+      <div className="min-h-screen bg-background">
+        <Header />
+        <section className="py-12 md:py-20">
+          <div className="container mx-auto px-4">
+            <div className="max-w-md mx-auto">
+              <div className="text-center mb-8">
+                <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-success to-success/70 flex items-center justify-center mx-auto mb-4 glow-border-pulse">
+                  <Car className="h-8 w-8 text-white" />
+                </div>
+                <h1 className="text-3xl font-heading font-bold">Welcome to Grabyourcar</h1>
+                <p className="text-muted-foreground mt-2">Sign in with your WhatsApp number</p>
+              </div>
+              <Card className="glow-border-pulse">
+                <CardContent className="p-6 space-y-5 animate-pulse">
+                  <div className="h-5 w-40 rounded bg-muted" />
+                  <div className="h-12 w-full rounded bg-muted" />
+                  <div className="h-12 w-full rounded bg-muted" />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+        <Footer />
       </div>
     );
   }
