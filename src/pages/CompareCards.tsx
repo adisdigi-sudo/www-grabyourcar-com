@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, Plus, Car as CarIcon, Fuel, Gauge, Shield, Maximize, Zap, Loader2, Download } from "lucide-react";
+import { X, Plus, Car as CarIcon, Fuel, Gauge, Shield, Maximize, Zap, Download } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import logoImg from "@/assets/logo-grabyourcar-new.png";
@@ -344,9 +344,16 @@ const CompareCars = () => {
       <section className="py-6 md:py-8 border-b border-border">
         <div className="container mx-auto px-4">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-foreground" />
-              <span className="ml-2 text-muted-foreground">Loading cars...</span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i} className="relative overflow-hidden animate-pulse">
+                  <CardContent className="p-3 md:p-4 space-y-3">
+                    <div className="h-24 md:h-32 rounded-lg bg-muted" />
+                    <div className="h-5 w-2/3 rounded bg-muted" />
+                    <div className="h-4 w-1/3 rounded bg-muted" />
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">

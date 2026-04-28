@@ -6,9 +6,9 @@ import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { PromoBanner } from "@/components/marketing/PromoBanner";
 const HomeDeferredSections = lazy(() => import("@/components/home/HomeDeferredSections"));
 
-const SectionSkeleton = ({ label }: { label: string }) => (
-  <div className="flex min-h-[120px] items-center justify-center text-sm text-muted-foreground">
-    {label}
+const SectionSkeleton = () => (
+  <div className="container mx-auto px-4 py-8" aria-hidden="true">
+    <div className="h-[120px] rounded-2xl bg-muted/60 animate-pulse" />
   </div>
 );
 
@@ -54,7 +54,7 @@ const Index = () => {
             <RivianHero />
           </SectionErrorBoundary>
 
-          <Suspense fallback={<SectionSkeleton label="Loading homepage sections..." />}>
+          <Suspense fallback={<SectionSkeleton />}>
             <HomeDeferredSections loanPrefill={loanPrefill} onGetLoanQuote={handleGetLoanQuote} />
           </Suspense>
         </main>

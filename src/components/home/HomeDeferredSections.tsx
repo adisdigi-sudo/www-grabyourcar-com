@@ -22,12 +22,10 @@ const DynamicTestimonials = lazy(() => import("@/components/DynamicHomepageConte
 const DynamicCTABanners = lazy(() => import("@/components/DynamicHomepageContent").then((module) => ({ default: module.DynamicCTABanners })));
 const EMICalculator = lazy(() => import("@/components/EMICalculator"));
 
-const SectionSkeleton = ({ label }: { label: string }) => (
+const SectionSkeleton = () => (
   <section className="py-8">
     <div className="container mx-auto px-4">
-      <div className="flex min-h-[120px] items-center justify-center rounded-2xl border border-border/60 bg-card/40 text-sm text-muted-foreground">
-        {label}
-      </div>
+      <div className="min-h-[120px] rounded-2xl border border-border/60 bg-muted/60 animate-pulse" aria-hidden="true" />
     </div>
   </section>
 );
@@ -40,7 +38,7 @@ interface HomeDeferredSectionsProps {
 export const HomeDeferredSections = ({ loanPrefill, onGetLoanQuote }: HomeDeferredSectionsProps) => {
   return (
     <>
-      <Suspense fallback={<SectionSkeleton label="Loading homepage sections..." />}>
+      <Suspense fallback={<SectionSkeleton />}>
         <SectionErrorBoundary sectionName="category-grid" fallback={null}>
           <CategoryGrid />
         </SectionErrorBoundary>
@@ -75,7 +73,7 @@ export const HomeDeferredSections = ({ loanPrefill, onGetLoanQuote }: HomeDeferr
           <DealerLocatorWidget />
         </SectionErrorBoundary>
 
-        <SectionErrorBoundary sectionName="emi-calculator" fallback={<SectionSkeleton label="Loading EMI calculator..." />}>
+        <SectionErrorBoundary sectionName="emi-calculator" fallback={<SectionSkeleton />}>
           <EMICalculator onGetQuote={onGetLoanQuote} />
         </SectionErrorBoundary>
 
@@ -107,7 +105,7 @@ export const HomeDeferredSections = ({ loanPrefill, onGetLoanQuote }: HomeDeferr
           <HomepageSEOContent />
         </SectionErrorBoundary>
 
-        <SectionErrorBoundary sectionName="footer" fallback={<SectionSkeleton label="Loading footer..." />}>
+        <SectionErrorBoundary sectionName="footer" fallback={<SectionSkeleton />}>
           <Footer />
         </SectionErrorBoundary>
 

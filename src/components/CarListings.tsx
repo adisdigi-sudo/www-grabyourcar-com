@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Fuel, Cog, Clock, TrendingDown, Phone, Heart, GitCompare, Check, Eye, Loader2, FileDown } from "lucide-react";
+import { Fuel, Cog, Clock, TrendingDown, Phone, Heart, GitCompare, Check, Eye, FileDown } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompare } from "@/hooks/useCompare";
@@ -145,9 +145,27 @@ export const CarListings = () => {
     return (
       <section id="cars" className="py-10 md:py-16 lg:py-24">
         <div className="container mx-auto px-3 sm:px-4">
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-foreground" />
-            <span className="ml-3 text-muted-foreground">Loading cars...</span>
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 md:mb-12 gap-4">
+            <div>
+              <h2 className="font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-2 md:mb-4">
+                Hot Deals This Week
+              </h2>
+              <p className="text-muted-foreground text-sm md:text-base">
+                Exclusive discounts on India's most popular cars
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4 lg:gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} variant="deal" className="overflow-hidden flex flex-col">
+                <div className="relative aspect-[4/3] overflow-hidden bg-muted animate-pulse" />
+                <CardContent className="p-3 sm:p-4 space-y-3">
+                  <div className="h-4 w-3/4 rounded bg-muted animate-pulse" />
+                  <div className="h-3 w-1/2 rounded bg-muted animate-pulse" />
+                  <div className="h-8 w-full rounded bg-muted animate-pulse" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
