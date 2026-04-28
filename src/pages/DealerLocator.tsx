@@ -728,7 +728,7 @@ const DealerLocatorPage = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Map */}
                 <div className="lg:col-span-2">
-                  <Suspense fallback={<div className="h-[400px] lg:h-[600px] flex items-center justify-center bg-muted rounded-lg"><Loader2 className="h-8 w-8 animate-spin text-foreground" /></div>}>
+                  <Suspense fallback={<div className="h-[400px] lg:h-[600px] bg-muted rounded-lg animate-pulse" aria-hidden="true" />}>
                     <DealerMap
                       dealers={filteredDealers}
                       selectedDealer={selectedDealer}
