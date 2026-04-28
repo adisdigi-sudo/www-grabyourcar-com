@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Gift, Phone, Shield, Clock, Loader2, Car, MessageCircle, Percent, Star } from "lucide-react";
+import { Gift, Phone, Shield, Clock, Loader2, MessageCircle, Percent, Star } from "lucide-react";
 import { toast } from "sonner";
 import { trackLeadConversion } from "@/lib/adTracking";
 import { PHONE_NUMBER, getWhatsAppLink } from "@/config/contact";
