@@ -173,7 +173,7 @@ const AppRouterShell = () => {
       isAdminExperience={isAdminExperience}
       requiresWorkspaceProviders={isAdminExperience && !isAdminAuthShell}
     >
-      <Suspense fallback={<RouteSuspenseFallback />}>
+      <Suspense fallback={null}>
         <RouteAwareStructuredData isChromelessExperience={isChromelessExperience} />
         <PageViewTracker
           isAdminExperience={isAdminExperience}
@@ -224,9 +224,9 @@ const AppRouterShell = () => {
             />
             <Route path="/admin-auth" element={<AdminAuth />} />
             <Route path="/admin-reset-password" element={<AdminResetPassword />} />
-            <Route path="/admin/maruti-scrape" element={<MarutiScrape />} />
-            <Route path="/admin/brand-scrape" element={<BrandScrape />} />
-            <Route path="/admin/bulk-enrichment" element={<BulkEnrichment />} />
+            <Route path="/admin/maruti-scrape" element={<Suspense fallback={<RouteSuspenseFallback />}><MarutiScrape /></Suspense>} />
+            <Route path="/admin/brand-scrape" element={<Suspense fallback={<RouteSuspenseFallback />}><BrandScrape /></Suspense>} />
+            <Route path="/admin/bulk-enrichment" element={<Suspense fallback={<RouteSuspenseFallback />}><BulkEnrichment /></Suspense>} />
             <Route
               path="/workspace"
               element={
@@ -252,8 +252,8 @@ const AppRouterShell = () => {
             <Route path="/track-order" element={<TrackOrder />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/integration-control-center" element={<IntegrationControlCenter />} />
-            <Route path="*" element={<LegacyRouteHandler />} />
+            <Route path="/integration-control-center" element={<Suspense fallback={<RouteSuspenseFallback />}><IntegrationControlCenter /></Suspense>} />
+            <Route path="*" element={<Suspense fallback={null}><LegacyRouteHandler /></Suspense>} />
           </Routes>
           <RouteAwareChrome isChromelessExperience={isChromelessExperience} />
         </AdminSubdomainRouter>
