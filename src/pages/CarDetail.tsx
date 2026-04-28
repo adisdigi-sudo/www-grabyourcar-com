@@ -154,22 +154,40 @@ const CarDetail = () => {
     return car?.gallery || [];
   }, [dbGalleryImages, car?.gallery]);
 
-  // Loading state
+  // Loading state: keep the page chrome mounted immediately and only skeletonize the car data area.
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="container mx-auto px-4 py-12">
-          <div className="grid md:grid-cols-2 gap-8">
-            <Skeleton className="h-[400px] w-full rounded-xl" />
-            <div className="space-y-4">
-              <Skeleton className="h-8 w-3/4" />
-              <Skeleton className="h-6 w-1/2" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-32 w-full" />
+        <main className="pt-20">
+          <div className="bg-secondary/50 py-3">
+            <div className="container mx-auto px-4">
+              <Skeleton className="h-4 w-48" />
             </div>
           </div>
-        </div>
+          <section className="py-6 lg:py-12">
+            <div className="container mx-auto px-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
+                <div className="space-y-4">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-10 w-2/3" />
+                  <Skeleton className="aspect-[4/3] w-full rounded-xl" />
+                  <div className="grid grid-cols-4 gap-3">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <Skeleton key={i} className="aspect-square rounded-lg" />
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <Skeleton className="h-28 w-full rounded-xl" />
+                  <Skeleton className="h-40 w-full rounded-xl" />
+                  <Skeleton className="h-12 w-full rounded-lg" />
+                  <Skeleton className="h-12 w-full rounded-lg" />
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
         <Footer />
       </div>
     );
