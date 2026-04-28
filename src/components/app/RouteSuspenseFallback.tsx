@@ -4,7 +4,7 @@ import { performSafePreviewReload } from "@/lib/chunkLoadRecovery";
 /**
  * Shown inside <Suspense fallback={...}>. If the chunk takes more than `timeoutMs`,
  * we assume the dynamic import is hung (stale deploy / cache mismatch) and trigger
- * a cache-busted reload so the user is not stuck on "Loading page..." forever.
+ * a cache-busted reload so the user is not stuck on a route transition forever.
  *
  * After `softTimeoutMs` we offer a manual "Reload" button so the user has control
  * before any automatic action.
