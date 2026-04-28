@@ -133,11 +133,30 @@ const MyOrders = () => {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="container mx-auto px-4 py-12">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <main className="container mx-auto px-4 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold">My Orders</h1>
+            <p className="text-muted-foreground mt-2">Track and manage your accessory purchases</p>
           </div>
-        </div>
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="h-5 w-40 rounded bg-muted" />
+                    <div className="h-6 w-24 rounded-full bg-muted" />
+                  </div>
+                  <Separator />
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="h-4 rounded bg-muted" />
+                    <div className="h-4 rounded bg-muted" />
+                    <div className="h-4 rounded bg-muted" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </main>
         <Footer />
       </div>
     );
