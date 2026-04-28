@@ -6,8 +6,13 @@ import { useMemo } from "react";
 export const useAdminSubdomain = () => {
   const isAdminSubdomain = useMemo(() => {
     if (typeof window === "undefined") return false;
-    const hostname = window.location.hostname;
-    return hostname.startsWith("admin.") || hostname === "admin.grabyourcar.com";
+    const hostname = window.location.hostname.toLowerCase();
+    return (
+      hostname.startsWith("admin.") ||
+      hostname.startsWith("www.admin.") ||
+      hostname === "admin.grabyourcar.com" ||
+      hostname === "www.admin.grabyourcar.com"
+    );
   }, []);
 
   return { isAdminSubdomain };
