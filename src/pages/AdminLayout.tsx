@@ -335,7 +335,7 @@ const VALID_ADMIN_TABS = new Set([
   "accounts-bills", "accounts-banking", "accounts-chart", "accounts-journal", "accounts-reports", "accounts-documents",
   "hr-core", "hr-recruitment", "hr-workforce", "hr-attendance", "hr-payroll", "hr-expense", "hr-performance", "hr-engagement",
   "hr-assets", "hr-helpdesk", "hr-task-escalation", "hr-daily-reports", "ai-cofounder", "my-hr", "my-team",
-  "founder-cockpit", "cfo-cockpit"
+  "founder-cockpit", "cfo-cockpit", "ai-brain", "dealer-phone-manager"
 ]);
 
 const getInitialAdminTab = () => {
@@ -1024,6 +1024,10 @@ const AdminLayout = () => {
         return <MyHRDashboard />;
       case "live-chats":
         return <LiveChatsDashboard />;
+      case "ai-brain":
+        return <AIBrainPage />;
+      case "dealer-phone-manager":
+        return <DealerPhoneManagerPage />;
       default:
         return <AdminDashboard />;
     }
