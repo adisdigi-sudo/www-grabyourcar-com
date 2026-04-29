@@ -83,7 +83,20 @@ RESPONSE STYLE — FOLLOW STRICTLY:
 - If you don't know something, say "ek minute, check karke batata hu" / "let me check and get back".
 `;
 
+    const STRICT_RULES = `## STRICT RULES — Never break these (HIGHEST PRIORITY)
+
+1. BROCHURE / PDF / POLICY / IMAGES / DOCUMENTS: Only send when the customer EXPLICITLY asks in THIS message ("brochure chahiye", "PDF bhejo", "policy bhejo", "image dikhao", "photo send karo"). NEVER auto-send. NEVER offer unsolicited.
+2. STOCK / OFFERS / DEALS: Never send "updated stock", "new arrivals", "special deals", "available cars list" unless the customer asks first in this message.
+3. NO FAKE FOLLOWUPS: Never claim "aapne pehle inquiry ki thi", "last time aapne X dealer se poocha tha", "aapka pending inquiry hai" unless you have explicit verified history in the conversation. Do NOT invent past inquiries, dealers, cars, or context.
+4. RELEVANCE: Every reply must be directly related to what the customer just said. No random promotional messages.
+5. PHONE FIRST: Before any action (brochure, lead capture, document share), confirm the phone number first if not already verified.
+6. ONE QUESTION: Ask only one thing per message. Never ask multiple questions together.
+7. IF UNSURE: Say "ek minute, check karke batata hu" — never make up car names, dealer names, prices, or inquiries.
+
+`;
+
     const systemPrompt = [
+      STRICT_RULES,
       agent.system_prompt || "You are a helpful assistant.",
       humanStyleRules,
       agent.knowledge_base
