@@ -24,6 +24,8 @@ import { Shield } from "lucide-react";
 const LiveChatsDashboard = lazy(() =>
   import("@/components/admin/livechats/LiveChatsDashboard").then((m) => ({ default: m.LiveChatsDashboard }))
 );
+const AIBrainPage = lazy(() => import("@/pages/admin/AIBrain"));
+const DealerPhoneManagerPage = lazy(() => import("@/components/admin/dealer/DealerPhoneManager"));
 const PersonalizedWelcomeBanner = lazy(() =>
   import("@/components/admin/PersonalizedWelcomeBanner").then((module) => ({ default: module.PersonalizedWelcomeBanner })),
 );
@@ -335,7 +337,7 @@ const VALID_ADMIN_TABS = new Set([
   "accounts-bills", "accounts-banking", "accounts-chart", "accounts-journal", "accounts-reports", "accounts-documents",
   "hr-core", "hr-recruitment", "hr-workforce", "hr-attendance", "hr-payroll", "hr-expense", "hr-performance", "hr-engagement",
   "hr-assets", "hr-helpdesk", "hr-task-escalation", "hr-daily-reports", "ai-cofounder", "my-hr", "my-team",
-  "founder-cockpit", "cfo-cockpit"
+  "founder-cockpit", "cfo-cockpit", "ai-brain", "dealer-phone-manager"
 ]);
 
 const getInitialAdminTab = () => {
@@ -1024,6 +1026,10 @@ const AdminLayout = () => {
         return <MyHRDashboard />;
       case "live-chats":
         return <LiveChatsDashboard />;
+      case "ai-brain":
+        return <AIBrainPage />;
+      case "dealer-phone-manager":
+        return <DealerPhoneManagerPage />;
       default:
         return <AdminDashboard />;
     }

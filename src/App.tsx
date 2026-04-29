@@ -63,6 +63,7 @@ const IntegrationControlCenter = lazy(() => import("./pages/IntegrationControlCe
 const MarutiScrape = lazy(() => import("./pages/admin/MarutiScrape"));
 const BrandScrape = lazy(() => import("./pages/admin/BrandScrape"));
 const BulkEnrichment = lazy(() => import("./pages/admin/BulkEnrichment"));
+const AIBrain = lazy(() => import("./pages/admin/AIBrain"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -227,6 +228,7 @@ const AppRouterShell = () => {
             <Route path="/admin/maruti-scrape" element={<Suspense fallback={<RouteSuspenseFallback />}><MarutiScrape /></Suspense>} />
             <Route path="/admin/brand-scrape" element={<Suspense fallback={<RouteSuspenseFallback />}><BrandScrape /></Suspense>} />
             <Route path="/admin/bulk-enrichment" element={<Suspense fallback={<RouteSuspenseFallback />}><BulkEnrichment /></Suspense>} />
+            <Route path="/admin/ai-brain" element={<Suspense fallback={<RouteSuspenseFallback />}><AIBrain /></Suspense>} />
             <Route
               path="/workspace"
               element={

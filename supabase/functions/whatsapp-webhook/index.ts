@@ -213,7 +213,8 @@ async function syncDealerReply(supabase: any, phone: string, messageText: string
   // 🚗 Auto-ingest stock from EVERY dealer reply (the AI extractor will return zero cars
   // if the text doesn't actually describe stock, so it's safe to always fire).
   // Fire-and-forget so the webhook stays fast.
-  if (rep && messageText.trim().length >= 8) {
+  // DISABLED: auto-stock extraction was causing confusion — only run for actual dealer replies
+  if (false && rep && messageText.trim().length >= 8) {
     try {
       const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
       const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -577,55 +578,9 @@ Deno.serve(async (req) => {
                 console.log(`Sales engine handled reply for ${from}: action=${engineData.action}, status=${engineData.status}`);
                 engineHandled = true;
               } else if (engineData?.reason === "no_active_session") {
-                // ─── AUTO-START engine session if lead vertical matches ───
-                try {
-                  const leadVertical = await detectLeadVertical(supabase, from);
-
-                  if (leadVertical) {
-                    const { data: matchEngine } = await supabase
-                      .from("sales_engines")
-                      .select("id, name")
-                      .eq("is_active", true)
-                      .eq("vertical", leadVertical)
-                      .order("created_at", { ascending: false })
-                      .limit(1)
-                      .maybeSingle();
-
-                    if (matchEngine) {
-                      // Create a session at the first step so router can take over from next message
-                      const { data: firstStep } = await supabase
-                        .from("sales_engine_steps")
-                        .select("step_key")
-                        .eq("engine_id", matchEngine.id)
-                        .order("order_index", { ascending: true })
-                        .limit(1)
-                        .maybeSingle();
-
-                      if (firstStep) {
-                        await supabase.from("sales_engine_sessions").insert({
-                          engine_id: matchEngine.id,
-                          phone: from,
-                          customer_name: contactName,
-                          current_step_key: firstStep.step_key,
-                          status: "active",
-                          last_reply_at: new Date().toISOString(),
-                        });
-                        console.log(`Auto-started engine "${matchEngine.name}" for ${from} (vertical=${leadVertical})`);
-
-                        // Re-route this same message through the new session
-                        const reroute = await fetch(`${SUPABASE_URL}/functions/v1/sales-engine-router`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
-                          body: JSON.stringify({ phone: from, message_text: messageText, customer_name: contactName }),
-                        });
-                        const rerouteData = await reroute.json();
-                        if (rerouteData?.handled) engineHandled = true;
-                      }
-                    }
-                  }
-                } catch (autoErr) {
-                  console.error("auto-start engine failed:", autoErr);
-                }
+                // AUTO-START DISABLED — yeh purani conversations ke based pe galat replies deta tha
+                // Sales engine sirf tab chalega jab customer ne explicitly koi engine flow start kiya ho
+                console.log(`No active engine session for ${from} — falling through to AI`);
               }
             } catch (e) {
               console.error("sales-engine-router call failed:", e);
