@@ -24,6 +24,8 @@ import { Shield } from "lucide-react";
 const LiveChatsDashboard = lazy(() =>
   import("@/components/admin/livechats/LiveChatsDashboard").then((m) => ({ default: m.LiveChatsDashboard }))
 );
+const AIBrainPage = lazy(() => import("@/pages/admin/AIBrain"));
+const DealerPhoneManagerPage = lazy(() => import("@/components/admin/dealer/DealerPhoneManager"));
 const PersonalizedWelcomeBanner = lazy(() =>
   import("@/components/admin/PersonalizedWelcomeBanner").then((module) => ({ default: module.PersonalizedWelcomeBanner })),
 );
