@@ -44,6 +44,7 @@ import {
   Bot,
   Crown,
   Activity,
+  Phone,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
@@ -84,6 +85,7 @@ const navItems: NavItem[] = [
   { id: "cfo-cockpit", label: "📊 CFO Cockpit", icon: BarChart3, badge: "NEW", verticals: ["cfo-cockpit"], allowedRoles: ["super_admin", "admin", "finance"] },
   { id: "live-chats", label: "💬 Live Chats", icon: MessageCircle, badge: "LIVE" },
   { id: "ai-cofounder", label: "🤖 AI Co-Founder", icon: Brain, badge: "AI" },
+  { id: "ai-brain", label: "🤖 AI Brain", icon: Brain, badge: "MANAGE", allowedRoles: ["super_admin", "admin"] },
   { id: "my-hr", label: "📋 My HR", icon: LayoutDashboard },
 
   // ── Sales CRM — sales vertical ──
@@ -149,6 +151,7 @@ const navItems: NavItem[] = [
       { id: "dealer-reps", label: "Representatives", icon: Users },
       { id: "dealer-inventory", label: "Inventory", icon: Car },
       { id: "dealer-broadcast", label: "Broadcast", icon: Mail },
+      { id: "dealer-phone-manager", label: "📱 Phone Manager", icon: Phone },
     ]
   },
 
