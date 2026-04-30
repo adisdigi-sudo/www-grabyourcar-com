@@ -37,8 +37,9 @@ export default function AIBrain() {
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="riya">🤖 Riya (Website Bot)</TabsTrigger>
           <TabsTrigger value="rules">📱 WhatsApp Rules</TabsTrigger>
-          <TabsTrigger value="sessions">👥 Live Sessions</TabsTrigger>
+          <TabsTrigger value="followup">⏰ Auto Followup</TabsTrigger>
           <TabsTrigger value="documents">📁 Documents</TabsTrigger>
+          <TabsTrigger value="sessions">👥 Live Sessions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="riya" className="mt-4">
@@ -47,11 +48,14 @@ export default function AIBrain() {
         <TabsContent value="rules" className="mt-4">
           <WhatsAppRulesTab />
         </TabsContent>
-        <TabsContent value="sessions" className="mt-4">
-          <LiveSessionsTab />
+        <TabsContent value="followup" className="mt-4">
+          <AutoFollowupTab />
         </TabsContent>
         <TabsContent value="documents" className="mt-4">
           <DocumentsTab />
+        </TabsContent>
+        <TabsContent value="sessions" className="mt-4">
+          <LiveSessionsTab />
         </TabsContent>
       </Tabs>
     </div>
@@ -701,6 +705,211 @@ function UploadDialog({
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={submit} disabled={busy}>{busy ? "Uploading..." : "Upload"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ───────────────────────── Tab: Auto Followup ───────────────────────── */
+type FollowupSeq = {
+  id: string;
+  name: string;
+  trigger_event: string;
+  day_offset: number;
+  message_text: string;
+  is_active: boolean;
+};
+
+function AutoFollowupTab() {
+  const [rows, setRows] = useState<FollowupSeq[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<Partial<FollowupSeq> | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<FollowupSeq | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("wa_followup_sequences" as any)
+      .select("id,name,trigger_event,day_offset,message_text,is_active")
+      .order("trigger_event", { ascending: true })
+      .order("day_offset", { ascending: true });
+    setRows((data as any) || []);
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
+
+  const toggleActive = async (r: FollowupSeq, val: boolean) => {
+    setRows((prev) => prev.map((x) => (x.id === r.id ? { ...x, is_active: val } : x)));
+    const { error } = await supabase.from("wa_followup_sequences" as any).update({ is_active: val }).eq("id", r.id);
+    if (error) toast({ title: "Update failed", description: error.message, variant: "destructive" });
+  };
+
+  const onDelete = async () => {
+    if (!confirmDelete) return;
+    const { error } = await supabase.from("wa_followup_sequences" as any).delete().eq("id", confirmDelete.id);
+    if (error) toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+    setConfirmDelete(null);
+    load();
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Auto Followup Sequences</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Automatic WhatsApp followups based on lead events. Run via wa-followup-worker.
+          </p>
+        </div>
+        <Button size="sm" onClick={() => setEditing({ trigger_event: "no_reply", day_offset: 1, is_active: true })}>
+          <Plus className="w-4 h-4 mr-1" />Add Sequence
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {loading ? <p className="text-sm text-muted-foreground">Loading...</p> : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead className="w-32">Trigger</TableHead>
+                <TableHead className="w-20">Day +</TableHead>
+                <TableHead>Message</TableHead>
+                <TableHead className="w-20">Active</TableHead>
+                <TableHead className="w-24"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell><Badge variant="outline">{r.trigger_event}</Badge></TableCell>
+                  <TableCell>D+{r.day_offset}</TableCell>
+                  <TableCell className="text-xs max-w-[400px] truncate">{r.message_text}</TableCell>
+                  <TableCell>
+                    <Switch checked={!!r.is_active} onCheckedChange={(v) => toggleActive(r, v)} />
+                  </TableCell>
+                  <TableCell className="flex gap-1">
+                    <Button size="icon" variant="ghost" onClick={() => setEditing(r)}>
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => setConfirmDelete(r)}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {rows.length === 0 && (
+                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No sequences yet</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
+
+        <FollowupEditDialog
+          open={!!editing}
+          initial={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); load(); }}
+        />
+
+        <Dialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Delete sequence?</DialogTitle></DialogHeader>
+            <p className="text-sm">Delete "{confirmDelete?.name}"? This cannot be undone.</p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmDelete(null)}>Cancel</Button>
+              <Button variant="destructive" onClick={onDelete}>Delete</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FollowupEditDialog({
+  open, initial, onClose, onSaved,
+}: { open: boolean; initial: Partial<FollowupSeq> | null; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState<Partial<FollowupSeq>>({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { if (open && initial) setForm(initial); }, [open, initial]);
+
+  const submit = async () => {
+    if (!form.name?.trim() || !form.message_text?.trim()) {
+      toast({ title: "Name and message required", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    const payload = {
+      name: form.name!.trim(),
+      trigger_event: form.trigger_event || "no_reply",
+      day_offset: Number(form.day_offset ?? 1),
+      message_text: form.message_text!.trim(),
+      is_active: form.is_active ?? true,
+    };
+    const { error } = form.id
+      ? await supabase.from("wa_followup_sequences" as any).update(payload).eq("id", form.id)
+      : await supabase.from("wa_followup_sequences" as any).insert(payload);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Save failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    onSaved();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>{form.id ? "Edit" : "Add"} Followup Sequence</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Name</Label>
+            <Input value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div>
+            <Label>Trigger Event</Label>
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={form.trigger_event || "no_reply"}
+              onChange={(e) => setForm({ ...form, trigger_event: e.target.value })}
+            >
+              <option value="no_reply">no_reply</option>
+              <option value="brochure_sent">brochure_sent</option>
+              <option value="lead_captured">lead_captured</option>
+            </select>
+          </div>
+          <div>
+            <Label>Day Offset (days after trigger)</Label>
+            <Input
+              type="number"
+              min={0}
+              value={form.day_offset ?? 1}
+              onChange={(e) => setForm({ ...form, day_offset: parseInt(e.target.value || "0", 10) })}
+            />
+          </div>
+          <div>
+            <Label>Message Text</Label>
+            <Textarea
+              rows={5}
+              value={form.message_text || ""}
+              onChange={(e) => setForm({ ...form, message_text: e.target.value })}
+              placeholder="Hi {{name}}, just checking in about your enquiry..."
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={form.is_active ?? true}
+              onCheckedChange={(v) => setForm({ ...form, is_active: v })}
+            />
+            <Label>Active</Label>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={submit} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
