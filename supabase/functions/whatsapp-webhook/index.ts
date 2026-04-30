@@ -581,6 +581,7 @@ Deno.serve(async (req) => {
                 // AUTO-START DISABLED — yeh purani conversations ke based pe galat replies deta tha
                 // Sales engine sirf tab chalega jab customer ne explicitly koi engine flow start kiya ho
                 console.log(`No active engine session for ${from} — falling through to AI`);
+              }
             } catch (e) {
               console.error("sales-engine-router call failed:", e);
             }
