@@ -378,7 +378,7 @@ function WonPolicyDialog({
 
       const { data: activePolicies, error: activePoliciesError } = await supabase
         .from("insurance_policies")
-        .select("id, renewal_count, policy_number")
+        .select("id, renewal_count, policy_number, policy_document_url")
         .eq("client_id", client.id)
         .eq("status", "active")
         .order("updated_at", { ascending: false });
@@ -388,6 +388,14 @@ function WonPolicyDialog({
       const hasOwnActivePolicies = (activePolicies || []).length > 0;
       const isRenewal = hasExistingVehiclePolicy || hasOwnActivePolicies;
       const previousPolicy = activePolicies?.[0] || null;
+
+      if (
+        previousPolicy?.policy_document_url &&
+        normalizePolicyNumber(previousPolicy.policy_number) === nextPolicyNumber
+      ) {
+        toast.error("This policy is already uploaded for this vehicle. Edit the existing policy instead.");
+        return;
+      }
 
       if (activePolicies && activePolicies.length > 0) {
         await supabase
@@ -1936,20 +1944,11 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
         }}
         client={pendingMoveClient || selectedClient}
         onSuccess={() => {
-          const targetClient = pendingMoveClient || selectedClient;
           queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
           queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
           setShowWonDialog(false);
           setPendingMoveClient(null);
-          if (targetClient) {
-            // Use a short delay to let the WonDialog fully close before opening upload prompt
-            setTimeout(() => {
-              setSelectedClient(targetClient);
-              setShowUploadPolicy(true);
-            }, 400);
-          } else {
-            setSelectedClient(null);
-          }
+          setSelectedClient(null);
         }}
       />
 
