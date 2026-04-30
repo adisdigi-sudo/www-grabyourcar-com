@@ -584,6 +584,14 @@ serve(async (req) => {
               { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
+          // Car images successfully sent — return immediately so AI doesn't replace URLs with plain text
+          if (tc.function.name === "send_car_images" && parsed?.success === true) {
+            const persisted = await persistMessages(supabase, sessionKey, messages, parsed.customer_message, userAgent).catch(() => ({ sessionId: null, assistantMessageId: null }));
+            return new Response(
+              JSON.stringify({ message: parsed.customer_message, sessionId: sessionKey, sessionUuid: persisted.sessionId || sessionRow?.id || null, messageId: persisted.assistantMessageId }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
           conversationMessages.push({ role: "tool", tool_call_id: tc.id, content: result });
         }
         if (forcedReply) {
