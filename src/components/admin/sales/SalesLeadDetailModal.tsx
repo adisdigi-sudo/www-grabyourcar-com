@@ -154,6 +154,8 @@ export function SalesLeadDetailModal({
     }
     if (statusOutcome === "won") {
       updates.pipeline_stage = "won";
+      updates.incentive_eligible = true;
+      if (dealValue) updates.deal_value = Number(dealValue);
     }
     onUpdate(
       updates,
