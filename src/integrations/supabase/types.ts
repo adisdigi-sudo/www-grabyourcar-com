@@ -20692,6 +20692,77 @@ export type Database = {
         }
         Relationships: []
       }
+      wa_followup_logs: {
+        Row: {
+          error: string | null
+          id: string
+          lead_phone: string
+          message_text: string | null
+          sent_at: string
+          sequence_id: string | null
+          status: string | null
+        }
+        Insert: {
+          error?: string | null
+          id?: string
+          lead_phone: string
+          message_text?: string | null
+          sent_at?: string
+          sequence_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          error?: string | null
+          id?: string
+          lead_phone?: string
+          message_text?: string | null
+          sent_at?: string
+          sequence_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_followup_logs_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "wa_followup_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_followup_sequences: {
+        Row: {
+          created_at: string
+          day_offset: number
+          id: string
+          is_active: boolean
+          message_text: string
+          name: string
+          trigger_event: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_offset?: number
+          id?: string
+          is_active?: boolean
+          message_text: string
+          name: string
+          trigger_event: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_offset?: number
+          id?: string
+          is_active?: boolean
+          message_text?: string
+          name?: string
+          trigger_event?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       wa_inbox_messages: {
         Row: {
           button_payload: string | null
