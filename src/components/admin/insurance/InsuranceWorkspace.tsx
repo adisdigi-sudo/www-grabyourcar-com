@@ -199,7 +199,7 @@ export function InsuranceWorkspace() {
     const all: PolicyRecord[] = [
       ...allPolicies,
       ...policyBookPolicies.filter((p) => String(p.id).startsWith("fallback-")),
-    ];
+    ].filter((policy) => (policy.status || "").toLowerCase() === "active");
 
     // Deduplicate by client_id — keep best policy per client to prevent double-counting
     const bestByClient = new Map<string, PolicyRecord>();
@@ -208,7 +208,10 @@ export function InsuranceWorkspace() {
     all.forEach((policy) => {
       if (!policy.client_id) { noClient.push(policy); return; }
       const existing = bestByClient.get(policy.client_id);
+      const existingIsActive = (existing?.status || "").toLowerCase() === "active";
+      const policyIsActive = (policy.status || "").toLowerCase() === "active";
       if (!existing
+        || (policyIsActive && !existingIsActive)
         || (policy.policy_number && !existing.policy_number)
         || ((policy.updated_at || '') > (existing.updated_at || ''))
       ) {

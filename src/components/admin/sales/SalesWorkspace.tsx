@@ -158,9 +158,17 @@ export function SalesWorkspace() {
 
   const updateLeadMutation = useMutation({
     mutationFn: async ({ id, updates, logAction, logRemarks }: any) => {
+      const normalizedUpdates = { ...updates };
+      if (normalizedUpdates.pipeline_stage === "won") {
+        normalizedUpdates.status_outcome = "won";
+        normalizedUpdates.incentive_eligible = true;
+      } else if (normalizedUpdates.pipeline_stage === "lost") {
+        normalizedUpdates.status_outcome = "lost";
+      }
+
       const { error } = await supabase
         .from("sales_pipeline" as any)
-        .update({ ...updates, updated_at: new Date().toISOString(), last_activity_at: new Date().toISOString() })
+        .update({ ...normalizedUpdates, updated_at: new Date().toISOString(), last_activity_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
       if (logAction) {
@@ -174,6 +182,8 @@ export function SalesWorkspace() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-pipeline"] });
+      queryClient.invalidateQueries({ queryKey: ["sales-pipeline-perf"] });
+      queryClient.invalidateQueries({ queryKey: ["sales-deals"] });
       queryClient.invalidateQueries({ queryKey: ["sales-activity"] });
     },
     onError: (e: any) => toast.error(e.message),

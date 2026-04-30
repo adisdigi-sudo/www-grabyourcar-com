@@ -11186,6 +11186,7 @@ export type Database = {
           utm_medium: string | null
           utm_source: string | null
           vehicle_fuel_type: string | null
+          vehicle_key: string | null
           vehicle_make: string | null
           vehicle_model: string | null
           vehicle_number: string | null
@@ -11270,6 +11271,7 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
           vehicle_fuel_type?: string | null
+          vehicle_key?: string | null
           vehicle_make?: string | null
           vehicle_model?: string | null
           vehicle_number?: string | null
@@ -11354,6 +11356,7 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
           vehicle_fuel_type?: string | null
+          vehicle_key?: string | null
           vehicle_make?: string | null
           vehicle_model?: string | null
           vehicle_number?: string | null
@@ -11802,6 +11805,7 @@ export type Database = {
           payment_reference: string | null
           plan_name: string | null
           policy_document_url: string | null
+          policy_key: string | null
           policy_number: string | null
           policy_type: string
           premium_amount: number | null
@@ -11835,6 +11839,7 @@ export type Database = {
           payment_reference?: string | null
           plan_name?: string | null
           policy_document_url?: string | null
+          policy_key?: string | null
           policy_number?: string | null
           policy_type: string
           premium_amount?: number | null
@@ -11868,6 +11873,7 @@ export type Database = {
           payment_reference?: string | null
           plan_name?: string | null
           policy_document_url?: string | null
+          policy_key?: string | null
           policy_number?: string | null
           policy_type?: string
           premium_amount?: number | null
@@ -22411,6 +22417,8 @@ export type Database = {
         }
         Returns: number
       }
+      normalize_policy_key: { Args: { _value: string }; Returns: string }
+      normalize_vehicle_key: { Args: { _value: string }; Returns: string }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {

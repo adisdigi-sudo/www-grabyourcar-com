@@ -81,9 +81,13 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
     const noClient: PolicyRecord[] = [];
 
     policies.forEach((policy) => {
+      if ((policy.status || "").toLowerCase() !== "active") return;
       if (!policy.client_id) { noClient.push(policy); return; }
       const existing = bestByClient.get(policy.client_id);
+      const existingIsActive = (existing?.status || "").toLowerCase() === "active";
+      const policyIsActive = (policy.status || "").toLowerCase() === "active";
       if (!existing
+        || (policyIsActive && !existingIsActive)
         || (policy.policy_number && !existing.policy_number)
         || ((policy.updated_at || '') > (existing.updated_at || ''))
       ) {

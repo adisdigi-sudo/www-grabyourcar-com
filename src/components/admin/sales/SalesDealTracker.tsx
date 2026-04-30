@@ -13,7 +13,7 @@ export function SalesDealTracker() {
       const { data, error } = await supabase
         .from("sales_pipeline" as any)
         .select("*")
-        .eq("status_outcome", "won")
+        .or("status_outcome.eq.won,pipeline_stage.eq.won,pipeline_stage.eq.delivery,pipeline_stage.eq.delivered,pipeline_stage.eq.after_sales,pipeline_stage.eq.converted")
         .order("updated_at", { ascending: false })
         .limit(100);
       if (error) throw error;
