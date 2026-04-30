@@ -37,8 +37,9 @@ export default function AIBrain() {
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="riya">🤖 Riya (Website Bot)</TabsTrigger>
           <TabsTrigger value="rules">📱 WhatsApp Rules</TabsTrigger>
-          <TabsTrigger value="sessions">👥 Live Sessions</TabsTrigger>
+          <TabsTrigger value="followup">⏰ Auto Followup</TabsTrigger>
           <TabsTrigger value="documents">📁 Documents</TabsTrigger>
+          <TabsTrigger value="sessions">👥 Live Sessions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="riya" className="mt-4">
@@ -47,11 +48,14 @@ export default function AIBrain() {
         <TabsContent value="rules" className="mt-4">
           <WhatsAppRulesTab />
         </TabsContent>
-        <TabsContent value="sessions" className="mt-4">
-          <LiveSessionsTab />
+        <TabsContent value="followup" className="mt-4">
+          <AutoFollowupTab />
         </TabsContent>
         <TabsContent value="documents" className="mt-4">
           <DocumentsTab />
+        </TabsContent>
+        <TabsContent value="sessions" className="mt-4">
+          <LiveSessionsTab />
         </TabsContent>
       </Tabs>
     </div>
