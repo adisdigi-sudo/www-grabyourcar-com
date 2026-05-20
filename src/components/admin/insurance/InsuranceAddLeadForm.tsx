@@ -77,8 +77,8 @@ export function InsuranceAddLeadForm({ onSuccess }: { onSuccess?: () => void }) 
           description: `${dup.customer_name} • ${dup.vehicle_number || phone}`,
         });
       } else {
-        // Create new
-        const { data: newClient } = await supabase.from("insurance_clients").insert({
+        // Create new — tolerate dedup trigger swallowing the insert
+        const { data: insertedRows, error: insertErr } = await supabase.from("insurance_clients").insert({
           phone,
           customer_name: form.customer_name || null,
           email: form.email || null,
@@ -89,17 +89,25 @@ export function InsuranceAddLeadForm({ onSuccess }: { onSuccess?: () => void }) 
           current_insurer: form.current_insurer || null,
           lead_source: form.lead_source,
           notes: form.notes || null,
-        }).select("id").single();
+        }).select("id");
 
-        if (newClient) {
+        if (insertErr) throw insertErr;
+        const newClient = insertedRows && insertedRows.length > 0 ? insertedRows[0] : null;
+
+        if (!newClient && cleanVehicle) {
+          // Trigger merged into existing record — treat as duplicate update, not an error
+          toast.info("⚠️ Existing lead with same vehicle number updated", {
+            description: `Vehicle ${cleanVehicle} already existed — record merged.`,
+          });
+        } else if (newClient) {
           await supabase.from("insurance_activity_log").insert({
             client_id: newClient.id,
             activity_type: "lead_created",
             title: "New lead added manually",
             description: `New insurance lead from ${form.lead_source}`,
           });
+          toast.success("New insurance lead added!");
         }
-        toast.success("New insurance lead added!");
       }
 
       setForm({
