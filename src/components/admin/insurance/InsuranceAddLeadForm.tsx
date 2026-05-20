@@ -106,8 +106,8 @@ export function InsuranceAddLeadForm({ onSuccess }: { onSuccess?: () => void }) 
             title: "New lead added manually",
             description: `New insurance lead from ${form.lead_source}`,
           });
+          toast.success("New insurance lead added!");
         }
-        toast.success("New insurance lead added!");
       }
 
       setForm({
